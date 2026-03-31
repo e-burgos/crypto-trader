@@ -10,3 +10,5 @@ export const $Enums = {
   NewsSentiment: { POSITIVE: 'POSITIVE', NEGATIVE: 'NEGATIVE', NEUTRAL: 'NEUTRAL' },
   NotificationType: { TRADE_EXECUTED: 'TRADE_EXECUTED', POSITION_CLOSED: 'POSITION_CLOSED', RISK_ALERT: 'RISK_ALERT', DAILY_SUMMARY: 'DAILY_SUMMARY', SYSTEM: 'SYSTEM' },
 };
+export const TradingMode = { LIVE: 'LIVE', PAPER: 'PAPER' };
+export const NotificationType = $Enums.NotificationType;

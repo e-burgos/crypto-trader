@@ -7,7 +7,7 @@ export function calculatePnl(
   entryPrice: number,
   exitPrice: number,
   quantity: number,
-  feePct: number = TRADE_FEE_PCT
+  feePct: number = TRADE_FEE_PCT,
 ): { pnl: number; buyFee: number; sellFee: number; totalFees: number } {
   const buyFee = entryPrice * quantity * feePct;
   const sellFee = exitPrice * quantity * feePct;
@@ -19,7 +19,11 @@ export function calculatePnl(
 /**
  * Apply a fee percentage to a trade value.
  */
-export function applyFee(price: number, quantity: number, feePct: number = TRADE_FEE_PCT): number {
+export function applyFee(
+  price: number,
+  quantity: number,
+  feePct: number = TRADE_FEE_PCT,
+): number {
   return price * quantity * feePct;
 }
 

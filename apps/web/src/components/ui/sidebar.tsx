@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, History, Bot, Settings, LogOut, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, BarChart3, History, Bot, Settings, LogOut, TrendingUp, LineChart, SlidersHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from './button';
@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { to: '/dashboard/chart', label: 'Live Chart', icon: BarChart3 },
   { to: '/dashboard/history', label: 'Trade History', icon: History },
   { to: '/dashboard/agent', label: 'Agent Log', icon: Bot },
+  { to: '/dashboard/analytics', label: 'Analytics', icon: LineChart },
+  { to: '/dashboard/config', label: 'Config', icon: SlidersHorizontal },
   { to: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 

@@ -12,12 +12,14 @@ export function getSocket(): Socket | null {
   return socket;
 }
 
-export function useWebSocket() {
+export function useWebSocket(opts?: { enabled?: boolean }) {
   const { accessToken, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const connected = useRef(false);
+  const enabled = opts?.enabled ?? isAuthenticated;
 
   useEffect(() => {
+    if (!enabled) return;
     if (!isAuthenticated || !accessToken || connected.current) return;
 
     socket = io(`${WS_URL}/ws`, {

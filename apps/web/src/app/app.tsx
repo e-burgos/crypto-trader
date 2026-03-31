@@ -17,6 +17,8 @@ import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { AnalyticsPage } from '../pages/dashboard/analytics';
 import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';
+import { useWebSocket } from '../hooks/use-websocket';
+import { useAuthStore } from '../store/auth.store';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -32,10 +34,18 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Initializes WebSocket when the user is authenticated */
+function WebSocketInit() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  useWebSocket({ enabled: isAuthenticated });
+  return null;
+}
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
+        <WebSocketInit />
         <Toaster richColors position="top-right" />
         <Routes>
           <Route path="/" element={<PublicLayout><LandingPage /></PublicLayout>} />

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.worktrees/
+.env
+!.env.example
+**/generated/prisma
+
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

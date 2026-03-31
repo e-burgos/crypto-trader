@@ -1,6 +1,6 @@
 # Crypto Trader — Implementation Plan
 
-**Spec:** `docs/specs/crypto-trader-spec.md` (v1.1 — Approved)
+**Spec:** `docs/specs/crypto-trader-spec.md` (v1.2 — Approved)
 **Date:** 2026-03-31
 **Method:** Subagent-Driven Development (SDD)
 
@@ -21,32 +21,35 @@ Never commit directly to `main`.
 | 2 | Shared lib: types, DTOs, constants | 1 lib | haiku |
 | 3 | Database schema (Prisma) | 1 file | haiku |
 | 4 | Backend: Auth module | 2–3 files | sonnet |
-| 5 | Backend: Users module + Binance key encryption | 2–3 files | sonnet |
+| 5 | Backend: Users module + credential encryption (Binance + LLM keys) | 2–3 files | sonnet |
 | 6 | Backend: Data fetcher lib (Binance OHLCV + WebSocket) | 1 lib | sonnet |
 | 7 | Backend: News fetcher (CryptoPanic, CoinGecko, Reddit, RSS) | 1 lib | sonnet |
 | 8 | Backend: Analysis lib — technical indicators | 1 lib | sonnet |
-| 9 | Backend: Analysis lib — LLM integration (Claude API) | 1 lib | sonnet |
+| 9 | Backend: Analysis lib — Multi-LLM integration (Claude/OpenAI/Groq) | 1 lib | sonnet |
 | 10 | Backend: Trading engine lib — order execution + position tracking | 1 lib | sonnet |
 | 11 | Backend: Trading module — agent lifecycle + adaptive interval | 1 module | sonnet |
 | 12 | Backend: Admin module — kill-switch + platform management | 1 module | sonnet |
 | 13 | Backend: Notifications module + WebSocket gateway | 1 module | haiku |
 | 14 | Backend: Analytics module — P&L, win rate, Sharpe | 1 module | haiku |
-| 15 | Frontend: Project setup + design system + routing | scaffolding | haiku |
-| 16 | Frontend: Auth pages (login, register) | 2 pages | haiku |
-| 17 | Frontend: Dashboard layout + navigation | layout | haiku |
-| 18 | Frontend: Overview page (portfolio, P&L, agent status) | 1 page | sonnet |
-| 19 | Frontend: Live chart page (candlestick + indicator overlays) | 1 page | sonnet |
-| 20 | Frontend: Trade history page | 1 page | haiku |
-| 21 | Frontend: Agent log page (decisions + reasoning + news) | 1 page | haiku |
-| 22 | Frontend: Configuration panel (thresholds, API keys, sandbox toggle) | 1 page | sonnet |
-| 23 | Frontend: News feed page | 1 page | haiku |
-| 24 | Frontend: Analytics page (performance metrics) | 1 page | haiku |
-| 25 | Frontend: Admin panel (kill-switch, user management) | 1 page | haiku |
-| 26 | Frontend: Real-time WebSocket integration | cross-cutting | sonnet |
-| 27 | Frontend: Notification system (toasts + notification center) | component | haiku |
-| 28 | CI/CD: GitHub Actions (lint → test → build → deploy) | config | haiku |
-| 29 | Docker Compose for local dev | config | haiku |
-| 30 | E2E integration tests (critical flows) | tests | sonnet |
+| 15 | Frontend: Project setup + design system + GSAP + routing | scaffolding | sonnet |
+| 16 | Frontend: Landing / showcase page (GSAP animations) | 1 page | sonnet |
+| 17 | Frontend: Auth pages (login, register) | 2 pages | haiku |
+| 18 | Frontend: Onboarding wizard (3-step: wallet → API keys → trade) | 1 flow | sonnet |
+| 19 | Frontend: Dashboard layout + navigation | layout | haiku |
+| 20 | Frontend: Overview page (portfolio, P&L, agent status) — animated | 1 page | sonnet |
+| 21 | Frontend: Live chart page (candlestick + indicator overlays) | 1 page | sonnet |
+| 22 | Frontend: Trade history page | 1 page | haiku |
+| 23 | Frontend: Agent log page (decisions + reasoning + news) | 1 page | haiku |
+| 24 | Frontend: Configuration panel (thresholds, all API keys, sandbox toggle) | 1 page | sonnet |
+| 25 | Frontend: News feed page | 1 page | haiku |
+| 26 | Frontend: Analytics page (animated performance metrics) | 1 page | sonnet |
+| 27 | Frontend: Admin panel (kill-switch, user management) | 1 page | haiku |
+| 28 | Frontend: Real-time WebSocket integration | cross-cutting | sonnet |
+| 29 | Frontend: Notification system (GSAP toasts + notification center) | component | haiku |
+| 30 | Frontend: API client (Axios + interceptors) + React Query hooks | cross-cutting | sonnet |
+| 31 | CI/CD: GitHub Actions (lint → test → build → deploy) | config | haiku |
+| 32 | Docker Compose for local dev | config | haiku |
+| 33 | E2E integration tests (critical flows) | tests | sonnet |
 
 ---
 
@@ -148,24 +151,27 @@ Never commit directly to `main`.
 
 ---
 
-### Task 5 — Backend: Users Module + Binance Key Encryption
+### Task 5 — Backend: Users Module + Credential Encryption (Binance + LLM Keys)
 
-**Goal:** User profile management and secure storage of Binance API credentials.
+**Goal:** User profile management and secure storage of Binance API credentials AND LLM provider API keys (Claude/OpenAI/Groq).
 
 **Files:** `apps/api/src/users/`
 
 **Endpoints:**
 - `GET /users/me` — return profile (no sensitive fields)
 - `PUT /users/me` — update email/password
-- `POST /users/me/binance-keys` — encrypt and store API key + secret
-- `DELETE /users/me/binance-keys` — remove credentials
+- `POST /users/me/binance-keys` — encrypt and store Binance API key + secret
+- `DELETE /users/me/binance-keys` — remove Binance credentials
 - `GET /users/me/binance-keys/status` — returns `{ connected: boolean }`
+- `POST /users/me/llm-keys` — encrypt and store LLM provider API key. Body: `{ provider: CLAUDE|OPENAI|GROQ, apiKey, selectedModel }`
+- `DELETE /users/me/llm-keys/:provider` — remove LLM credentials for a provider
+- `GET /users/me/llm-keys/status` — returns `{ providers: [{ provider, connected, selectedModel }] }`
 - `GET /admin/users` — list all users (ADMIN only)
 - `PATCH /admin/users/:id/status` — activate/deactivate user (ADMIN only)
 
-**Encryption:** AES-256-GCM. Master key from `BINANCE_KEY_ENCRYPTION_KEY` env var. Each credential gets a random 12-byte IV stored alongside the ciphertext. Service method: `encrypt(plaintext): { iv, ciphertext }` / `decrypt(iv, ciphertext): string`.
+**Encryption:** AES-256-GCM. Master key from `BINANCE_KEY_ENCRYPTION_KEY` env var. Each credential gets a random 12-byte IV stored alongside the ciphertext. Service method: `encrypt(plaintext): { iv, ciphertext }` / `decrypt(iv, ciphertext): string`. Same encryption used for both Binance and LLM keys.
 
-**Done when:** API keys saved/retrieved correctly. Unit tests verify encryption roundtrip and that plaintext never appears in DB records.
+**Done when:** Binance and LLM API keys saved/retrieved correctly. Unit tests verify encryption roundtrip for both credential types. Plaintext never appears in DB records.
 
 ---
 
@@ -237,28 +243,35 @@ Never commit directly to `main`.
 
 ---
 
-### Task 9 — Backend: Analysis Lib — LLM Integration
+### Task 9 — Backend: Analysis Lib — Multi-LLM Integration (Claude/OpenAI/Groq)
 
-**Goal:** Use Claude API to produce a structured trading decision from indicators + news + history.
+**Goal:** Produce a structured trading decision using the user's chosen LLM provider (Claude, OpenAI, or Groq).
 
 **Files:** `libs/analysis/src/llm/`
 
+**Architecture — Strategy pattern:**
+- `LLMProvider` interface: `analyze(input: LLMAnalysisInput): Promise<LLMDecision>`
+- `ClaudeProvider` — uses `@anthropic-ai/sdk`. Models: `claude-sonnet-4-6`, `claude-haiku-4-5`
+- `OpenAIProvider` — uses `openai` SDK. Models: `gpt-4o`, `gpt-4o-mini`
+- `GroqProvider` — uses `groq-sdk`. Models: `llama-3.3-70b-versatile`, `mixtral-8x7b-32768`
+- `LLMProviderFactory` — creates the right provider from `{ provider, apiKey, model }`
+
 **Exports:**
 - `LLMAnalyzer` class:
-  - `analyze(input: LLMAnalysisInput)` → `LLMDecision`
+  - `analyze(input: LLMAnalysisInput, credentials: LLMCredential)` → `LLMDecision`
   - Input: `{ asset, pair, indicatorSnapshot, recentCandles (last 5 summary), newsItems (last 10), recentTrades (last 10), userConfig }`
   - Output: `{ decision: BUY | SELL | HOLD, confidence: number (0-100), reasoning: string, suggestedWaitMinutes: number }`
 
-**Prompt design:**
+**Prompt design (same across providers):**
 - System prompt: role as a crypto trading analyst, instructions for structured JSON output, risk management rules
 - User prompt: formatted snapshot of all inputs
 - Response: parsed and validated with Zod schema
-- Model: `claude-sonnet-4-6`
 - Max tokens: 1024
 - Temperature: 0.3 (low randomness for consistency)
 - Retry on parse failure (up to 2 retries)
+- On provider error: pause agent, notify user (NO silent fallback to another provider)
 
-**Done when:** Unit test with mocked Anthropic SDK verifies prompt construction, JSON parsing, Zod validation, and retry logic. Integration test (optional, behind env flag) calls real API and verifies shape of response.
+**Done when:** Unit tests with mocked SDKs for all 3 providers verify prompt construction, JSON parsing, Zod validation, retry logic, and error handling. Factory correctly instantiates each provider.
 
 ---
 
@@ -398,41 +411,62 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 15 — Frontend: Project Setup + Design System + Routing
+### Task 15 — Frontend: Project Setup + Design System + GSAP + Routing
 
-**Goal:** Configure React 19 app with Tailwind, design tokens, routing, and global providers.
+**Goal:** Configure React 19 app with Tailwind, GSAP, design tokens, routing, and global providers.
 
 **Files:** `apps/web/src/`
 
 **Steps:**
-1. Configure Tailwind with custom design tokens (colors, spacing, typography) following UI/UX Pro Max skill guidelines.
-2. Set up React Router v7 with routes:
+1. Install GSAP: `gsap`, `@gsap/react`. Register GSAP plugins: `ScrollTrigger`, `TextPlugin`.
+2. Configure Tailwind with custom design tokens (colors, spacing, typography) following UI/UX Pro Max skill guidelines.
+3. Set up React Router v7 with routes:
+   - `/` — landing page (public)
    - `/login`, `/register` (public)
+   - `/onboarding` — 3-step wizard (authenticated, first-time users)
    - `/dashboard` → redirect to `/dashboard/overview`
-   - `/dashboard/overview`
-   - `/dashboard/chart`
-   - `/dashboard/history`
-   - `/dashboard/decisions`
-   - `/dashboard/config`
-   - `/dashboard/news`
-   - `/dashboard/analytics`
+   - `/dashboard/overview`, `/dashboard/chart`, `/dashboard/history`
+   - `/dashboard/decisions`, `/dashboard/config`, `/dashboard/news`, `/dashboard/analytics`
    - `/admin` (admin only)
-3. Global providers: `QueryClientProvider`, `AuthProvider`, `SocketProvider`, `NotificationProvider`.
-4. Auth guard: protected routes redirect to `/login` if not authenticated.
-5. HTTP client: Axios instance with JWT interceptor (auto-attach token, auto-refresh on 401).
+4. Global providers: `QueryClientProvider`, `AuthProvider`, `SocketProvider`, `NotificationProvider`.
+5. Auth guard: protected routes redirect to `/login` if not authenticated. First-time users (no Binance keys) redirect to `/onboarding`.
 6. Zustand stores: `useAuthStore`, `useAgentStore`, `usePriceStore`.
 
 **Design system (`libs/ui/src/`):**
-- Color palette: dark theme (charcoal/slate base), green for gains, red for losses, amber for warnings
+- Color palette: dark theme (charcoal/slate base), green for gains, red for losses, amber for warnings, electric blue for accents
 - Typography: Inter font
-- Components: Button, Input, Badge, Card, Modal, Spinner, Tooltip, Dropdown
-- Animations: follow Emil Kowalski principles — fast (150–300ms), purposeful easing, `prefers-reduced-motion` respected
+- Components: Button, Input, Badge, Card, Modal, Spinner, Tooltip, Dropdown, Stepper, AnimatedNumber
+- `AnimatedNumber` component: uses GSAP to count up/down numbers smoothly
+- Animations: GSAP + Emil Kowalski principles — fast (150–300ms), purposeful easing, `prefers-reduced-motion` respected
+- GSAP utilities: `useFadeIn()`, `useSlideIn()`, `useStaggerChildren()`, `useCountUp()` custom hooks
 
-**Done when:** All routes render without errors. Design system components render correctly in Storybook (optional) or simple test page. Auth guard redirects unauthenticated users.
+**Done when:** All routes render without errors. Design system components render correctly. GSAP animations work. Auth guard and onboarding redirect work.
 
 ---
 
-### Task 16 — Frontend: Auth Pages (Login + Register)
+### Task 16 — Frontend: Landing / Showcase Page (GSAP Animations)
+
+**Goal:** Public landing page that showcases the platform with stunning GSAP animations.
+
+**Files:** `apps/web/src/pages/landing/`
+
+**Sections (top to bottom):**
+1. **Hero**: animated background with floating crypto icons (GSAP), headline "Trade Smarter with AI", sub-headline explaining the hybrid agent, CTA button with hover animation → register.
+2. **Live ticker**: real-time BTC/ETH prices from public Binance API, scrolling marquee with GSAP.
+3. **How it works**: 3-step animated flow (Connect → Configure → Trade). Each step animates in on scroll with `ScrollTrigger`. Icons/illustrations animate with `gsap.from()`.
+4. **Feature cards**: 6 cards (AI Analysis, Multi-LLM, Sandbox Mode, Real-time Charts, Smart Thresholds, News Sentiment). Staggered reveal on scroll, hover tilt effect.
+5. **Dashboard preview**: animated screenshot/mockup of the dashboard with GSAP parallax layers.
+6. **Stats counter**: "X trades executed, Y% average win rate, Z users" with GSAP CountUp on scroll.
+7. **CTA section**: "Start Trading in Minutes" with register button. Background gradient animation.
+8. **Footer**: links, social, copyright.
+
+**Tech:** GSAP ScrollTrigger for all scroll animations, `prefers-reduced-motion` respected (disable animations).
+
+**Done when:** Landing page renders at `/`. All scroll animations trigger correctly. Mobile responsive. Performance: no layout shift, smooth 60fps animations.
+
+---
+
+### Task 17 — Frontend: Auth Pages (Login + Register)
 
 **Goal:** Login and register forms with validation and JWT storage.
 
@@ -443,43 +477,84 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 - Submit → `POST /auth/login` → store tokens in memory (access) + httpOnly cookie (refresh, handled by backend) or localStorage
 - Error states: wrong credentials, network error
 - Link to register
+- Background: subtle animated gradient (GSAP)
 
 **Register page:**
 - Email + password + confirm password
-- Submit → `POST /auth/register` → auto-login
+- Submit → `POST /auth/register` → auto-login → redirect to `/onboarding`
 - Validation: email format, password min 8 chars, passwords match
 
-**UX:** smooth form transitions (Emil Kowalski), clear error messages inline, loading state on submit button.
+**UX:** smooth form transitions (Emil Kowalski), clear error messages inline, loading state on submit button. GSAP entrance animation for form card.
 
-**Done when:** Login and register work end-to-end with the running backend. Form validation shows errors without submitting. Redirects to dashboard on success.
+**Done when:** Login and register work end-to-end with the running backend. Form validation shows errors without submitting. Register redirects to onboarding. Login redirects to dashboard.
 
 ---
 
-### Task 17 — Frontend: Dashboard Layout + Navigation
+### Task 18 — Frontend: Onboarding Wizard (3-step)
 
-**Goal:** Persistent shell with sidebar navigation and top bar.
+**Goal:** Guided 3-step setup for new users, especially non-technical ones.
+
+**Files:** `apps/web/src/pages/onboarding/`
+
+**Component:** `<OnboardingWizard>` with `<Stepper>` component (animated progress bar).
+
+**Step 1 — Connect Binance Wallet:**
+- Clear instructions: "How to create a Binance API key" with collapsible screenshot guide
+- Input fields: API Key + Secret (masked by default, eye icon to reveal)
+- "Test Connection" button → calls backend to verify credentials → shows balance if OK
+- Animated success state (green checkmark with GSAP)
+- Skip option: "I'll do this later" (proceeds but can't start live trading)
+
+**Step 2 — Add AI Provider:**
+- Card selection: Claude / OpenAI / Groq (each with logo, brief description, recommended model)
+- Recommended badge: "Recommended" on Claude card
+- Input: API key for selected provider
+- Model selector dropdown (per provider)
+- "What is this?" tooltip explaining why an LLM key is needed
+- Skip option: "I'll use defaults" (if platform has a fallback key configured by admin, or proceed without)
+
+**Step 3 — Start Trading:**
+- Mode selector: SANDBOX (recommended, highlighted) vs LIVE
+- Pre-configured conservative defaults shown (readonly):
+  - Max trade: 5%, Stop-loss: 3%, Take-profit: 5%, Interval: 15min
+- "These defaults are safe for beginners. You can customize later."
+- Asset selection: BTC ✓, ETH ✓ (pre-checked)
+- Big "Start Agent" button with animated pulse (GSAP)
+- Confetti animation on agent start (GSAP particles or canvas)
+
+**Transitions:** each step slides in from right (GSAP), progress bar animates smoothly.
+
+**Done when:** Full wizard flow works. Credentials saved. Agent starts on step 3. Skipping steps works gracefully. First-time users are redirected here after register.
+
+---
+
+### Task 19 — Frontend: Dashboard Layout + Navigation
+
+**Goal:** Persistent shell with sidebar navigation, top bar, and animated route transitions.
 
 **Files:** `apps/web/src/layouts/`
 
 **Sidebar:**
-- Logo + app name
+- Logo + app name (GSAP hover animation)
 - Nav links: Overview, Chart, History, Decisions, Configuration, News, Analytics
 - Admin link (visible only for ADMIN role)
-- Agent status indicator (running / stopped / error) with pulsing dot animation
+- Agent status indicator (running / stopped / error) with GSAP pulsing dot
 - User menu (profile, logout)
 
 **Top bar:**
-- Current asset prices (BTC/USDT, ETH/USDT) — updated from WebSocket
-- Notification bell with unread count badge
-- Trading mode badge (LIVE / SANDBOX)
+- Current asset prices (BTC/USDT, ETH/USDT) — WebSocket updated, animated number changes (GSAP)
+- Notification bell with unread count badge (GSAP bounce on new)
+- Trading mode badge (LIVE red glow / SANDBOX blue glow)
 
-**Responsive:** collapsible sidebar on smaller screens.
+**Responsive:** collapsible sidebar with GSAP slide animation.
 
-**Done when:** Layout renders on all dashboard routes. Active nav item highlighted. Agent status updates in real-time from WebSocket.
+**Route transitions:** page content fades in with GSAP on route change (200ms).
+
+**Done when:** Layout renders on all dashboard routes. Active nav item highlighted. Agent status updates in real-time. Animations smooth at 60fps.
 
 ---
 
-### Task 18 — Frontend: Overview Page
+### Task 20 — Frontend: Overview Page
 
 **Goal:** Main dashboard with portfolio snapshot and agent activity.
 
@@ -498,7 +573,7 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 19 — Frontend: Live Chart Page
+### Task 21 — Frontend: Live Chart Page
 
 **Goal:** Candlestick chart with technical indicator overlays.
 
@@ -518,7 +593,7 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 20 — Frontend: Trade History Page
+### Task 22 — Frontend: Trade History Page
 
 **Goal:** Filterable, paginated table of all executed trades.
 
@@ -538,7 +613,7 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 21 — Frontend: Agent Log Page
+### Task 23 — Frontend: Agent Log Page
 
 **Goal:** Timeline of every agent decision with full context.
 
@@ -560,7 +635,7 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 22 — Frontend: Configuration Panel
+### Task 24 — Frontend: Configuration Panel
 
 **Goal:** User configures trading parameters, manages API keys, and toggles modes.
 
@@ -572,6 +647,12 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 - Input fields for API Key + Secret (masked)
 - Connect / Disconnect button
 - Status: connected ✓ / disconnected
+
+**LLM Provider Keys:**
+- Card per provider: Claude / OpenAI / Groq
+- Each: API key input (masked), model selector dropdown, connect/disconnect
+- Active provider highlighted
+- Status badges: connected ✓ / disconnected
 
 **Trading Configuration (per asset: BTC, ETH):**
 - Asset toggle (enable/disable)
@@ -588,11 +669,11 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 - LIVE / SANDBOX toggle (large, prominent, with confirmation modal for switching to LIVE)
 - Sandbox virtual balance input (only in SANDBOX mode)
 
-**Done when:** Form saves to API. Switching to LIVE mode requires confirmation. Binance key connection status reflects correctly.
+**Done when:** Form saves to API. All credential types work (Binance + LLM). Switching to LIVE mode requires confirmation. Connection statuses reflect correctly.
 
 ---
 
-### Task 23 — Frontend: News Feed Page
+### Task 25 — Frontend: News Feed Page
 
 **Goal:** Display latest crypto news used by the agent.
 
@@ -610,24 +691,24 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 24 — Frontend: Analytics Page
+### Task 26 — Frontend: Analytics Page (Animated Performance Metrics)
 
-**Goal:** Trading performance dashboard with charts and metrics.
+**Goal:** Trading performance dashboard with animated charts and metrics.
 
 **Files:** `apps/web/src/pages/dashboard/analytics/`
 
 **Sections:**
-- **Summary cards**: Win rate %, Total P&L, Avg P&L per trade, Best trade, Worst trade, Current drawdown, Sharpe ratio
-- **P&L over time**: line chart (daily P&L, last 30 days)
-- **Asset breakdown**: donut chart (BTC vs ETH P&L contribution)
-- **Trade frequency**: bar chart (trades per day, last 30 days)
-- **Mode comparison**: side-by-side LIVE vs SANDBOX stats
+- **Summary cards**: Win rate %, Total P&L, Avg P&L per trade, Best trade, Worst trade, Current drawdown, Sharpe ratio — all with GSAP CountUp animation on mount
+- **P&L over time**: line chart (daily P&L, last 30 days) with GSAP draw-in effect
+- **Asset breakdown**: donut chart (BTC vs ETH P&L contribution) with animated arc fill
+- **Trade frequency**: bar chart (trades per day, last 30 days) with staggered bar grow animation
+- **Mode comparison**: side-by-side LIVE vs SANDBOX stats with animated highlight on hover
 
-**Done when:** All charts render with real data from `/analytics/*` endpoints. Empty states handled gracefully.
+**Done when:** All charts render with real data from `/analytics/*` endpoints. All animations smooth at 60fps. Empty states handled gracefully with animated illustrations.
 
 ---
 
-### Task 25 — Frontend: Admin Panel
+### Task 27 — Frontend: Admin Panel
 
 **Goal:** Admin interface for platform management.
 
@@ -643,7 +724,7 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 26 — Frontend: Real-time WebSocket Integration
+### Task 28 — Frontend: Real-time WebSocket Integration
 
 **Goal:** Connect Socket.io client and wire events to all relevant UI components.
 
@@ -663,9 +744,9 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 27 — Frontend: Notification System
+### Task 29 — Frontend: Notification System (GSAP Toasts)
 
-**Goal:** Toast notifications and notification center.
+**Goal:** Toast notifications and notification center with GSAP animations.
 
 **Files:** `apps/web/src/components/notifications/`
 
@@ -673,21 +754,66 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 - Variants: success (green), error (red), warning (amber), info (blue)
 - Auto-dismiss after 5s (configurable)
 - Stacked (up to 3 visible, older ones shift down)
-- Slide-in from top-right, slide-out on dismiss
+- GSAP slide-in from top-right, slide-out on dismiss
 - Accessible: `role="alert"`, `aria-live="polite"`
 
 **Notification center (dropdown from bell icon):**
+- GSAP scale+fade animation on open
 - List of all notifications (most recent first)
-- Unread highlighted
-- Mark as read on click
+- Unread highlighted with subtle glow
+- Mark as read on click (GSAP fade transition)
 - "Mark all as read" button
-- Empty state illustration
+- Animated empty state illustration
 
-**Done when:** Toasts appear for all WebSocket events. Notification center opens and loads from API. Mark as read works.
+**Done when:** Toasts appear for all WebSocket events with smooth animations. Notification center opens and loads from API. Mark as read works.
 
 ---
 
-### Task 28 — CI/CD: GitHub Actions
+### Task 30 — Frontend: API Client (Axios + Interceptors) + React Query Hooks
+
+**Goal:** Centralized API client layer and React Query hooks for all backend endpoints.
+
+**Files:** `apps/web/src/api/`, `apps/web/src/hooks/`
+
+**API Client (`apps/web/src/api/client.ts`):**
+- Axios instance with `baseURL` from env
+- Request interceptor: attach `Authorization: Bearer <token>` from Zustand auth store
+- Response interceptor: on 401 → attempt refresh token → retry original request. If refresh fails → logout + redirect to `/login`
+- Error transformer: normalize error shapes into `{ message, code, details }`
+
+**API modules (`apps/web/src/api/`):**
+- `auth.api.ts` — register, login, refresh, logout
+- `users.api.ts` — profile, binance keys, LLM keys
+- `trading.api.ts` — config, start/stop, positions, history, decisions
+- `market.api.ts` — OHLCV, news
+- `analytics.api.ts` — summary, P&L chart, breakdown
+- `admin.api.ts` — kill-switch, users, stats
+- `notifications.api.ts` — list, mark read
+
+**React Query hooks (`apps/web/src/hooks/`):**
+- `useAuth()` — `useLoginMutation`, `useRegisterMutation`, `useRefreshMutation`
+- `useProfile()` — `useProfileQuery`, `useUpdateProfileMutation`
+- `useBinanceKeys()` — `useBinanceStatusQuery`, `useConnectBinanceMutation`, `useDisconnectBinanceMutation`
+- `useLLMKeys()` — `useLLMStatusQuery`, `useConnectLLMMutation`, `useDisconnectLLMMutation`
+- `useTradingConfig()` — `useTradingConfigQuery`, `useUpdateConfigMutation`
+- `useAgent()` — `useAgentStatusQuery`, `useStartAgentMutation`, `useStopAgentMutation`
+- `usePositions()` — `useOpenPositionsQuery`
+- `useTradeHistory(filters)` — `useTradeHistoryQuery` with pagination
+- `useDecisions()` — `useDecisionsQuery` with pagination
+- `useMarketData(asset, interval)` — `useOHLCVQuery`
+- `useNews(filters)` — `useNewsQuery`
+- `useAnalytics()` — `useAnalyticsSummaryQuery`, `usePnlChartQuery`, `useBreakdownQuery`
+- `useAdmin()` — `useAdminUsersQuery`, `useKillSwitchMutation`, `useToggleUserMutation`
+- `useNotifications()` — `useNotificationsQuery`, `useMarkReadMutation`
+
+**Query key conventions:** `['entity', params]` — e.g., `['positions', { status: 'open' }]`
+**Stale times:** market data 30s, analytics 60s, profile 5min, news 10min
+
+**Done when:** All API modules have typed functions. All hooks are typed and tested. Interceptors work (auth header, refresh, error normalization). No raw Axios calls outside `api/` directory.
+
+---
+
+### Task 31 — CI/CD: GitHub Actions
 
 **Goal:** Automated lint, test, build, and deploy pipeline.
 
@@ -707,13 +833,13 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 `deploy-api.yml` (on push to main, only if `apps/api` affected):
 1. Trigger Railway deploy via webhook (`RAILWAY_WEBHOOK_URL` secret)
 
-**Secrets needed:** `ANTHROPIC_API_KEY`, `RAILWAY_WEBHOOK_URL`, `GITHUB_TOKEN` (auto)
+**Secrets needed:** `RAILWAY_WEBHOOK_URL`, `GITHUB_TOKEN` (auto)
 
 **Done when:** PR opens → CI runs and passes. Merge to main → web deploys to GitHub Pages, API deploy webhook fires.
 
 ---
 
-### Task 29 — Docker Compose for Local Dev
+### Task 32 — Docker Compose for Local Dev
 
 **Goal:** Single `docker-compose.yml` to run the full stack locally.
 
@@ -733,7 +859,7 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 ---
 
-### Task 30 — E2E Integration Tests (Critical Flows)
+### Task 33 — E2E Integration Tests (Critical Flows)
 
 **Goal:** Test the most critical user flows end-to-end.
 
@@ -743,19 +869,22 @@ pnl = (exitPrice - entryPrice) * quantity - buyFee - sellFee
 
 1. **Auth flow**: register → login → refresh token → access protected route
 2. **Binance keys**: connect keys → verify status → disconnect
-3. **Trading config**: create config → update thresholds → get config
-4. **Agent lifecycle**: start agent (sandbox) → verify status → stop agent
-5. **Kill-switch**: start 2 users' agents → admin kill-switch → verify both stopped
-6. **Trade execution (sandbox)**: start agent → mock LLM decision (BUY, confidence 90) → verify trade created + position opened → mock SELL decision → verify position closed with P&L
-7. **Notifications**: execute trade → verify notification created → mark as read
+3. **LLM keys**: connect Claude key → connect OpenAI key → switch active provider → disconnect
+4. **Trading config**: create config → update thresholds → get config
+5. **Agent lifecycle**: start agent (sandbox) → verify status → stop agent
+6. **Kill-switch**: start 2 users' agents → admin kill-switch → verify both stopped
+7. **Trade execution (sandbox)**: start agent → mock LLM decision (BUY, confidence 90) → verify trade created + position opened → mock SELL decision → verify position closed with P&L
+8. **Onboarding flow**: register → verify redirect to onboarding → complete 3 steps → verify config created
+9. **Notifications**: execute trade → verify notification created → mark as read
+10. **Admin user management**: admin enables/disables user → verify user agent stops on disable
 
-**Done when:** All 7 flows pass. Tests run in CI. Database is reset between test suites.
+**Done when:** All 10 flows pass. Tests run in CI. Database is reset between test suites.
 
 ---
 
 ## Post-Implementation
 
-After all 30 tasks are complete, run `superpowers:finishing-a-development-branch`:
+After all 33 tasks are complete, run `superpowers:finishing-a-development-branch`:
 1. Final code review subagent
 2. Update CHANGELOG
 3. Create PR from `feature/initial-implementation` → `main`

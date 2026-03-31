@@ -1,0 +1,254 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ────────────────────────────────────────────────
+
+enum UserRole {
+  TRADER
+  ADMIN
+}
+
+enum Asset {
+  BTC
+  ETH
+}
+
+enum QuoteCurrency {
+  USDT
+  USDC
+}
+
+enum TradingMode {
+  LIVE
+  SANDBOX
+}
+
+enum PositionStatus {
+  OPEN
+  CLOSED
+}
+
+enum TradeType {
+  BUY
+  SELL
+}
+
+enum Decision {
+  BUY
+  SELL
+  HOLD
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum NotificationType {
+  TRADE_EXECUTED
+  STOP_LOSS_TRIGGERED
+  TAKE_PROFIT_HIT
+  AGENT_ERROR
+  AGENT_STARTED
+  AGENT_STOPPED
+  AGENT_KILLED
+}
+
+enum LLMProvider {
+  CLAUDE
+  OPENAI
+  GROQ
+}
+
+// ── Models ───────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(TRADER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  binanceCredential BinanceCredential?
+  llmCredentials    LLMCredential[]
+  tradingConfigs    TradingConfig[]
+  positions         Position[]
+  trades            Trade[]
+  agentDecisions    AgentDecision[]
+  notifications     Notification[]
+  adminActions      AdminAction[]      @relation("AdminActions")
+  targetedActions   AdminAction[]      @relation("TargetedActions")
+
+  @@map("users")
+}
+
+model BinanceCredential {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  apiKeyEncrypted String
+  secretEncrypted String
+  apiKeyIv        String
+  secretIv        String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("binance_credentials")
+}
+
+model LLMCredential {
+  id              String      @id @default(cuid())
+  userId          String
+  provider        LLMProvider
+  apiKeyEncrypted String
+  apiKeyIv        String
+  selectedModel   String
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("llm_credentials")
+}
+
+model TradingConfig {
+  id                     String        @id @default(cuid())
+  userId                 String
+  asset                  Asset
+  pair                   QuoteCurrency
+  buyThreshold           Float         @default(70)
+  sellThreshold          Float         @default(70)
+  stopLossPct            Float         @default(0.03)
+  takeProfitPct          Float         @default(0.05)
+  maxTradePct            Float         @default(0.05)
+  maxConcurrentPositions Int           @default(2)
+  minIntervalMinutes     Int           @default(5)
+  mode                   TradingMode   @default(SANDBOX)
+  isRunning              Boolean       @default(false)
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions Position[]
+
+  @@unique([userId, asset, pair])
+  @@map("trading_configs")
+}
+
+model Position {
+  id         String         @id @default(cuid())
+  userId     String
+  configId   String
+  asset      Asset
+  pair       QuoteCurrency
+  mode       TradingMode
+  entryPrice Float
+  quantity   Float
+  entryAt    DateTime       @default(now())
+  exitPrice  Float?
+  exitAt     DateTime?
+  status     PositionStatus @default(OPEN)
+  pnl        Float?
+  fees       Float          @default(0)
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config TradingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  trades Trade[]
+
+  @@index([userId, status])
+  @@index([userId, asset, status])
+  @@map("positions")
+}
+
+model Trade {
+  id             String      @id @default(cuid())
+  userId         String
+  positionId     String
+  type           TradeType
+  price          Float
+  quantity       Float
+  fee            Float
+  executedAt     DateTime    @default(now())
+  mode           TradingMode
+  binanceOrderId String?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, executedAt])
+  @@index([userId, mode])
+  @@map("trades")
+}
+
+model AgentDecision {
+  id            String        @id @default(cuid())
+  userId        String
+  asset         Asset
+  pair          QuoteCurrency
+  decision      Decision
+  confidence    Float
+  reasoning     String
+  indicators    Json
+  newsHeadlines Json
+  waitMinutes   Int
+  createdAt     DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("agent_decisions")
+}
+
+model NewsItem {
+  id          String    @id @default(cuid())
+  source      String
+  headline    String
+  url         String    @unique
+  sentiment   Sentiment @default(NEUTRAL)
+  publishedAt DateTime
+  cachedAt    DateTime  @default(now())
+
+  @@index([publishedAt])
+  @@map("news_items")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
+}
+
+model AdminAction {
+  id           String   @id @default(cuid())
+  adminId      String
+  action       String
+  targetUserId String?
+  details      Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  admin  User  @relation("AdminActions", fields: [adminId], references: [id], onDelete: Cascade)
+  target User? @relation("TargetedActions", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, createdAt])
+  @@map("admin_actions")
+}

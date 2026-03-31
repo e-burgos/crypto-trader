@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .worktrees/
+.env
+!.env.example
+**/generated/prisma
 
 .nx/installation
 .nx/cache

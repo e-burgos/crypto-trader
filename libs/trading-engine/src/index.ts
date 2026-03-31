@@ -1,1 +1,1 @@
-export * from './lib/trading-engine';
+export * from './lib';

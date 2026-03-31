@@ -63,6 +63,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vitest/coverage-v8": "~4.0.0",
@@ -124,6 +125,7 @@
     "rxjs": "^7.8.0",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
+    "ws": "^8.20.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.12"
   },

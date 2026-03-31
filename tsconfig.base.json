@@ -1,0 +1,32 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "downlevelIteration": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "target": "es2020",
+    "module": "esnext",
+    "lib": ["es2020"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@crypto-trader/shared": ["libs/shared/src/index.ts"],
+      "@crypto-trader/trading-engine": ["libs/trading-engine/src/index.ts"],
+      "@crypto-trader/analysis": ["libs/analysis/src/index.ts"],
+      "@crypto-trader/data-fetcher": ["libs/data-fetcher/src/index.ts"],
+      "@crypto-trader/ui": ["libs/ui/src/index.ts"],
+      "shared": ["libs/shared/src/index.ts"],
+      "trading-engine": ["libs/trading-engine/src/index.ts"],
+      "analysis": ["libs/analysis/src/index.ts"],
+      "data-fetcher": ["libs/data-fetcher/src/index.ts"],
+      "ui": ["libs/ui/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}

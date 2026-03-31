@@ -1,1 +1,10 @@
 .worktrees/
+
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

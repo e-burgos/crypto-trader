@@ -76,7 +76,9 @@ export function AnalyticsPage() {
     <div ref={containerRef} className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
-        <p className="text-sm text-muted-foreground">Performance metrics and statistics</p>
+        <p className="text-sm text-muted-foreground">
+          Performance metrics and statistics
+        </p>
       </div>
 
       {/* Metrics Grid */}
@@ -85,7 +87,9 @@ export function AnalyticsPage() {
           label={t('analytics.netPnl')}
           value={`$${(portfolio?.netPnl ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
           sub={t('common.afterFees')}
-          color={(portfolio?.netPnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}
+          color={
+            (portfolio?.netPnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+          }
           tooltip="Profit and Loss — total realized gains minus fees"
         />
         <MetricCard
@@ -96,26 +100,34 @@ export function AnalyticsPage() {
         />
         <MetricCard
           label={t('analytics.sharpeRatio')}
-          value={summary ? summary.sharpeRatio.toFixed(2) : '–'}
+          value={summary?.sharpeRatio != null ? summary.sharpeRatio.toFixed(2) : '–'}
           sub="Risk-adjusted return"
           tooltip="Measures return adjusted for risk. > 1 is good, > 2 is excellent"
         />
         <MetricCard
           label={t('analytics.drawdown')}
-          value={summary ? `${(summary.currentDrawdown * 100).toFixed(1)}%` : '–'}
+          value={
+            summary?.currentDrawdown != null
+              ? `${(summary.currentDrawdown * 100).toFixed(1)}%`
+              : '–'
+          }
           sub="From peak portfolio value"
-          color={summary && summary.currentDrawdown > 0.1 ? 'text-red-500' : undefined}
+          color={
+            summary?.currentDrawdown != null && summary.currentDrawdown > 0.1
+              ? 'text-red-500'
+              : undefined
+          }
           tooltip="Maximum drop from the highest portfolio value peak"
         />
         <MetricCard
           label={t('analytics.bestTrade')}
-          value={summary ? `$${summary.bestTrade.toFixed(2)}` : '–'}
+          value={summary?.bestTrade != null ? `$${summary.bestTrade.toFixed(2)}` : '–'}
           color="text-emerald-500"
           tooltip="Highest profit from a single closed trade"
         />
         <MetricCard
           label={t('analytics.worstTrade')}
-          value={summary ? `$${summary.worstTrade.toFixed(2)}` : '–'}
+          value={summary?.worstTrade != null ? `$${summary.worstTrade.toFixed(2)}` : '–'}
           color="text-red-500"
           tooltip="Largest loss from a single closed trade"
         />
@@ -134,16 +146,28 @@ export function AnalyticsPage() {
       {/* PnL Chart */}
       <div className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-1 font-semibold">{t('analytics.pnlChart')}</h2>
-        <p className="mb-4 text-xs text-muted-foreground">{t('analytics.last30Days')}</p>
+        <p className="mb-4 text-xs text-muted-foreground">
+          {t('analytics.last30Days')}
+        </p>
         {pnlChart.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
             No P&L data yet
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={pnlChart} margin={{ top: 5, right: 16, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
+            <LineChart
+              data={pnlChart}
+              margin={{ top: 5, right: 16, bottom: 5, left: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.05)"
+              />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11 }}
+                tickFormatter={(v) => v.slice(5)}
+              />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
               <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'P&L']} />
               <Line
@@ -162,18 +186,22 @@ export function AnalyticsPage() {
       {/* Asset Breakdown */}
       {assetBreakdown.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="mb-4 font-semibold">{t('analytics.assetBreakdown')}</h2>
+          <h2 className="mb-4 font-semibold">
+            {t('analytics.assetBreakdown')}
+          </h2>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={assetBreakdown} margin={{ top: 5, right: 16, bottom: 5, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <BarChart
+              data={assetBreakdown}
+              margin={{ top: 5, right: 16, bottom: 5, left: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.05)"
+              />
               <XAxis dataKey="asset" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
               <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'P&L']} />
-              <Bar
-                dataKey="totalPnl"
-                fill="#6366f1"
-                radius={[4, 4, 0, 0]}
-              />
+              <Bar dataKey="totalPnl" fill="#6366f1" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -181,5 +209,3 @@ export function AnalyticsPage() {
     </div>
   );
 }
-
-

@@ -25,24 +25,46 @@ interface OnboardingState {
 
 const STEPS = ['Connect Exchange', 'AI Provider', 'Trading Mode'];
 
-const LLM_PROVIDERS: { value: LLMProvider; label: string; models: string[] }[] = [
-  { value: 'CLAUDE', label: 'Anthropic Claude', models: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'] },
-  { value: 'OPENAI', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
-  { value: 'GROQ', label: 'Groq', models: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'] },
-];
+const LLM_PROVIDERS: { value: LLMProvider; label: string; models: string[] }[] =
+  [
+    {
+      value: 'CLAUDE',
+      label: 'Anthropic Claude',
+      models: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'],
+    },
+    {
+      value: 'OPENAI',
+      label: 'OpenAI',
+      models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+    },
+    {
+      value: 'GROQ',
+      label: 'Groq',
+      models: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
+    },
+  ];
 
 // ── Step Components ───────────────────────────────────────────────────────────
-function StepBinance({ state, onChange }: { state: OnboardingState; onChange: (s: Partial<OnboardingState>) => void }) {
+function StepBinance({
+  state,
+  onChange,
+}: {
+  state: OnboardingState;
+  onChange: (s: Partial<OnboardingState>) => void;
+}) {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-600 dark:text-amber-400">
-        <strong>Tip:</strong> You can skip this step and use Paper Trading mode to practice risk-free.
+        <strong>Tip:</strong> You can skip this step and use Paper Trading mode
+        to practice risk-free.
       </div>
 
       {!state.skipBinance && (
         <>
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Binance API Key</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              Binance API Key
+            </label>
             <input
               type="text"
               value={state.binanceApiKey}
@@ -52,7 +74,9 @@ function StepBinance({ state, onChange }: { state: OnboardingState; onChange: (s
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium">Binance API Secret</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              Binance API Secret
+            </label>
             <input
               type="password"
               value={state.binanceApiSecret}
@@ -62,7 +86,8 @@ function StepBinance({ state, onChange }: { state: OnboardingState; onChange: (s
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Create a read+trade (no withdrawal) API key in Binance account settings.
+            Create a read+trade (no withdrawal) API key in Binance account
+            settings.
           </p>
         </>
       )}
@@ -72,18 +97,28 @@ function StepBinance({ state, onChange }: { state: OnboardingState; onChange: (s
         onClick={() => onChange({ skipBinance: !state.skipBinance })}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
-        <div className={cn(
-          'h-4 w-4 rounded border-2 transition-colors',
-          state.skipBinance ? 'border-primary bg-primary' : 'border-border',
-        )} />
+        <div
+          className={cn(
+            'h-4 w-4 rounded border-2 transition-colors',
+            state.skipBinance ? 'border-primary bg-primary' : 'border-border',
+          )}
+        />
         Skip for now — use Paper Trading
       </button>
     </div>
   );
 }
 
-function StepLLM({ state, onChange }: { state: OnboardingState; onChange: (s: Partial<OnboardingState>) => void }) {
-  const provider = LLM_PROVIDERS.find((p) => p.value === state.llmProvider) || LLM_PROVIDERS[0];
+function StepLLM({
+  state,
+  onChange,
+}: {
+  state: OnboardingState;
+  onChange: (s: Partial<OnboardingState>) => void;
+}) {
+  const provider =
+    LLM_PROVIDERS.find((p) => p.value === state.llmProvider) ||
+    LLM_PROVIDERS[0];
 
   return (
     <div className="space-y-4">
@@ -96,7 +131,9 @@ function StepLLM({ state, onChange }: { state: OnboardingState; onChange: (s: Pa
           <button
             key={p.value}
             type="button"
-            onClick={() => onChange({ llmProvider: p.value, llmModel: p.models[0] })}
+            onClick={() =>
+              onChange({ llmProvider: p.value, llmModel: p.models[0] })
+            }
             className={cn(
               'rounded-lg border p-3 text-center text-sm font-medium transition-colors',
               state.llmProvider === p.value
@@ -117,7 +154,9 @@ function StepLLM({ state, onChange }: { state: OnboardingState; onChange: (s: Pa
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
         >
           {provider.models.map((m) => (
-            <option key={m} value={m}>{m}</option>
+            <option key={m} value={m}>
+              {m}
+            </option>
           ))}
         </select>
       </div>
@@ -137,7 +176,13 @@ function StepLLM({ state, onChange }: { state: OnboardingState; onChange: (s: Pa
   );
 }
 
-function StepMode({ state, onChange }: { state: OnboardingState; onChange: (s: Partial<OnboardingState>) => void }) {
+function StepMode({
+  state,
+  onChange,
+}: {
+  state: OnboardingState;
+  onChange: (s: Partial<OnboardingState>) => void;
+}) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -148,17 +193,23 @@ function StepMode({ state, onChange }: { state: OnboardingState; onChange: (s: P
             onClick={() => onChange({ mode })}
             className={cn(
               'rounded-xl border p-5 text-left transition-all',
-              state.mode === mode ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40',
+              state.mode === mode
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/40',
             )}
           >
-            <div className="mb-1 font-semibold">{mode === 'PAPER' ? 'Paper Trading' : 'Live Trading'}</div>
+            <div className="mb-1 font-semibold">
+              {mode === 'PAPER' ? 'Paper Trading' : 'Live Trading'}
+            </div>
             <div className="text-xs text-muted-foreground">
               {mode === 'PAPER'
                 ? 'Simulate trades risk-free. Perfect for learning and testing strategies.'
                 : 'Trade with real funds. Requires Binance API keys.'}
             </div>
             {mode === 'PAPER' && (
-              <div className="mt-2 text-xs font-medium text-emerald-500">Recommended for beginners</div>
+              <div className="mt-2 text-xs font-medium text-emerald-500">
+                Recommended for beginners
+              </div>
             )}
           </button>
         ))}
@@ -204,7 +255,10 @@ export function OnboardingPage() {
   }
 
   function canNext(): boolean {
-    if (step === 0) return state.skipBinance || (!!state.binanceApiKey && !!state.binanceApiSecret);
+    if (step === 0)
+      return (
+        state.skipBinance || (!!state.binanceApiKey && !!state.binanceApiSecret)
+      );
     if (step === 1) return !!state.llmApiKey;
     return !!state.initialCapital;
   }
@@ -230,7 +284,10 @@ export function OnboardingPage() {
 
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
-      setError((err as { message?: string })?.message || 'Setup failed. Please try again.');
+      setError(
+        (err as { message?: string })?.message ||
+          'Setup failed. Please try again.',
+      );
       setIsLoading(false);
     }
   }
@@ -242,15 +299,26 @@ export function OnboardingPage() {
         <div className="mb-8 flex items-center justify-center gap-2">
           {STEPS.map((label, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors',
-                i < step ? 'bg-primary text-primary-foreground' :
-                i === step ? 'border-2 border-primary text-primary' :
-                'border-2 border-border text-muted-foreground',
-              )}>
+              <div
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors',
+                  i < step
+                    ? 'bg-primary text-primary-foreground'
+                    : i === step
+                      ? 'border-2 border-primary text-primary'
+                      : 'border-2 border-border text-muted-foreground',
+                )}
+              >
                 {i < step ? <CheckCircle className="h-4 w-4" /> : i + 1}
               </div>
-              <span className={cn('text-sm hidden sm:block', i === step ? 'font-medium' : 'text-muted-foreground')}>{label}</span>
+              <span
+                className={cn(
+                  'text-sm hidden sm:block',
+                  i === step ? 'font-medium' : 'text-muted-foreground',
+                )}
+              >
+                {label}
+              </span>
               {i < STEPS.length - 1 && <div className="h-px w-8 bg-border" />}
             </div>
           ))}
@@ -263,7 +331,9 @@ export function OnboardingPage() {
           </p>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div>
+            <div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {error}
+            </div>
           )}
 
           {step === 0 && <StepBinance state={state} onChange={update} />}
@@ -275,7 +345,9 @@ export function OnboardingPage() {
               <Button variant="ghost" onClick={() => setStep(step - 1)}>
                 <ChevronLeft className="h-4 w-4 mr-1" /> Back
               </Button>
-            ) : <div />}
+            ) : (
+              <div />
+            )}
 
             {step < STEPS.length - 1 ? (
               <Button onClick={() => setStep(step + 1)} disabled={!canNext()}>
@@ -283,7 +355,11 @@ export function OnboardingPage() {
               </Button>
             ) : (
               <Button onClick={handleFinish} disabled={isLoading || !canNext()}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Start Trading'}
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Start Trading'
+                )}
               </Button>
             )}
           </div>

@@ -1,7 +1,20 @@
-import { usePortfolioSummary, useTradeHistory } from '../../hooks/use-analytics';
+import {
+  usePortfolioSummary,
+  useTradeHistory,
+} from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
 
-function MetricCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+function MetricCard({
+  label,
+  value,
+  sub,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  color?: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="mb-1 text-sm text-muted-foreground">{label}</div>
@@ -27,7 +40,9 @@ export function AnalyticsPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted-foreground">Performance metrics and statistics</p>
+        <p className="text-sm text-muted-foreground">
+          Performance metrics and statistics
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -35,7 +50,9 @@ export function AnalyticsPage() {
           label="Net P&L"
           value={`$${(portfolio?.netPnl ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
           sub="After fees"
-          color={(portfolio?.netPnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}
+          color={
+            (portfolio?.netPnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+          }
         />
         <MetricCard
           label="Total Trades"
@@ -66,7 +83,9 @@ export function AnalyticsPage() {
 
       {total === 0 && (
         <div className="mt-8 rounded-xl border border-dashed border-border p-12 text-center">
-          <p className="text-muted-foreground">No trades yet. Start a trading agent to see analytics.</p>
+          <p className="text-muted-foreground">
+            No trades yet. Start a trading agent to see analytics.
+          </p>
         </div>
       )}
     </div>

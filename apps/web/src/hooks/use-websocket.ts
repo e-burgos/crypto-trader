@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/auth.store';
 import { useQueryClient } from '@tanstack/react-query';
 
-const WS_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+const WS_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 let socket: Socket | null = null;
 

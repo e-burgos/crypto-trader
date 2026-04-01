@@ -21,7 +21,10 @@ describe('AdminService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AdminService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        AdminService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     }).compile();
     service = module.get<AdminService>(AdminService);
   });

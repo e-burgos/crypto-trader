@@ -22,12 +22,35 @@ export function estimateSentiment(text: string): Sentiment {
   const lower = text.toLowerCase();
 
   const bullish = [
-    'surge', 'rally', 'bullish', 'soar', 'gain', 'up', 'high',
-    'record', 'breakout', 'moon', 'pump', 'adoption', 'institutional',
+    'surge',
+    'rally',
+    'bullish',
+    'soar',
+    'gain',
+    'up',
+    'high',
+    'record',
+    'breakout',
+    'moon',
+    'pump',
+    'adoption',
+    'institutional',
   ];
   const bearish = [
-    'crash', 'bearish', 'plunge', 'drop', 'down', 'low', 'sell-off',
-    'dump', 'hack', 'scam', 'fraud', 'ban', 'regulation', 'fine',
+    'crash',
+    'bearish',
+    'plunge',
+    'drop',
+    'down',
+    'low',
+    'sell-off',
+    'dump',
+    'hack',
+    'scam',
+    'fraud',
+    'ban',
+    'regulation',
+    'fine',
   ];
 
   let score = 0;
@@ -38,9 +61,9 @@ export function estimateSentiment(text: string): Sentiment {
     if (lower.includes(word)) score--;
   }
 
-  if (score > 0) return 'POSITIVE';
-  if (score < 0) return 'NEGATIVE';
-  return 'NEUTRAL';
+  if (score > 0) return Sentiment.POSITIVE;
+  if (score < 0) return Sentiment.NEGATIVE;
+  return Sentiment.NEUTRAL;
 }
 
 /**

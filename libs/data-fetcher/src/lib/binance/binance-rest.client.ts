@@ -1,4 +1,4 @@
-import { Candle, Balance, OrderResult } from '@crypto-trader/shared';
+import { Candle, Balance, OrderResult, TradeType } from '@crypto-trader/shared';
 import { CandleInterval } from '@crypto-trader/shared';
 import axios, { AxiosInstance } from 'axios';
 
@@ -124,7 +124,7 @@ export class BinanceRestClient {
     return {
       orderId: String(data.orderId),
       symbol: data.symbol,
-      side: data.side === 'BUY' ? 'BUY' : 'SELL',
+      side: data.side === 'BUY' ? TradeType.BUY : TradeType.SELL,
       price: parseFloat(data.price),
       quantity: parseFloat(data.executedQty),
       status: data.status,

@@ -1,9 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppGateway } from '../gateway/app.gateway';
+import { TradingService } from '../trading/trading.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly gateway: AppGateway,
+    @Inject(forwardRef(() => TradingService))
+    private readonly tradingService: TradingService,
+  ) {}
 
   async getStats() {
     const [totalUsers, activeUsers, totalTrades, openPositions, totalVolume] =
@@ -37,24 +44,28 @@ export class AdminService {
   }
 
   async killSwitch(adminId: string) {
-    // Pausa todos los configs activos
-    const updated = await this.prisma.tradingConfig.updateMany({
-      where: { isRunning: true },
-      data: { isRunning: false },
-    });
+    // Cancel all Bull jobs + update DB via TradingService
+    const { stopped } = await this.tradingService.stopAllAgents();
 
     await this.prisma.adminAction.create({
       data: {
         adminId,
         action: 'KILL_SWITCH',
-        details: { stoppedConfigs: updated.count },
+        details: { stoppedConfigs: stopped },
       },
     });
 
-    return { stopped: updated.count };
+    // Broadcast to all connected WebSocket clients
+    this.gateway.server.emit('agent:killed', { stoppedConfigs: stopped });
+
+    return { stopped };
   }
 
-  async getAuditLog(adminId: string) {
+  async getAllAgentsStatus() {
+    return this.tradingService.getAllAgentsStatus();
+  }
+
+  async getAuditLog() {
     return this.prisma.adminAction.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,

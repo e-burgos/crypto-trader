@@ -40,6 +40,7 @@ export function LiveChartPage() {
     chartInstanceRef.current?.remove();
 
     const chart = createChart(chartRef.current, {
+      autoSize: true,
       layout: {
         background: {
           type: ColorType.Solid,
@@ -55,8 +56,6 @@ export function LiveChartPage() {
           color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
         },
       },
-      width: chartRef.current.clientWidth,
-      height: 420,
       crosshair: { mode: 1 },
       timeScale: {
         borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
@@ -78,7 +77,7 @@ export function LiveChartPage() {
       // Normalize timestamps to UTC seconds, filter invalids, sort ascending
       const mapped = candles
         .map((c) => {
-          let t: number =
+          const t: number =
             typeof c.time === 'string'
               ? Math.floor(new Date(c.time).getTime() / 1000)
               : c.time > 1e12
@@ -98,14 +97,7 @@ export function LiveChartPage() {
       }
     }
 
-    const handleResize = () => {
-      if (chartRef.current)
-        chart.applyOptions({ width: chartRef.current.clientWidth });
-    };
-    window.addEventListener('resize', handleResize);
-
     return () => {
-      window.removeEventListener('resize', handleResize);
       chart.remove();
       chartInstanceRef.current = null;
     };
@@ -168,16 +160,14 @@ export function LiveChartPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="relative rounded-xl border border-border bg-card overflow-hidden h-[420px]">
         {isLoading && (
-          <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              Loading candles...
-            </div>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground bg-card/80 backdrop-blur-sm">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            Loading candles...
           </div>
         )}
-        <div ref={chartRef} className={cn('w-full', isLoading && 'hidden')} />
+        <div ref={chartRef} className="w-full h-full" />
       </div>
     </div>
   );

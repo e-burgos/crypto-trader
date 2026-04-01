@@ -28,8 +28,16 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
 
   constructor(initialBalance = 10_000) {
     this.balances = new Map();
-    this.balances.set('USDT', { asset: 'USDT', free: initialBalance, locked: 0 });
-    this.balances.set('USDC', { asset: 'USDC', free: initialBalance, locked: 0 });
+    this.balances.set('USDT', {
+      asset: 'USDT',
+      free: initialBalance,
+      locked: 0,
+    });
+    this.balances.set('USDC', {
+      asset: 'USDC',
+      free: initialBalance,
+      locked: 0,
+    });
   }
 
   private currentPrices: Map<string, number> = new Map();
@@ -63,7 +71,9 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     if (side === TradeType.BUY) {
       const quoteBalance = await this.getBalance(quote);
       if (quoteBalance.free < cost + fee) {
-        throw new Error(`Insufficient ${quote} balance: need ${cost + fee}, have ${quoteBalance.free}`);
+        throw new Error(
+          `Insufficient ${quote} balance: need ${cost + fee}, have ${quoteBalance.free}`,
+        );
       }
       quoteBalance.free -= cost + fee;
       this.balances.set(quote, quoteBalance);
@@ -74,7 +84,9 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     } else {
       const baseBalance = await this.getBalance(base);
       if (baseBalance.free < quantity) {
-        throw new Error(`Insufficient ${base} balance: need ${quantity}, have ${baseBalance.free}`);
+        throw new Error(
+          `Insufficient ${base} balance: need ${quantity}, have ${baseBalance.free}`,
+        );
       }
       baseBalance.free -= quantity;
       this.balances.set(base, baseBalance);
@@ -111,7 +123,11 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
 export class LiveOrderExecutor implements OrderExecutorPort {
   constructor(
     private readonly binance: {
-      placeMarketOrder(symbol: string, side: TradeType, quantity: number): Promise<OrderResult>;
+      placeMarketOrder(
+        symbol: string,
+        side: TradeType,
+        quantity: number,
+      ): Promise<OrderResult>;
       getBalances(): Promise<Balance[]>;
       getTickerPrice(symbol: string): Promise<number>;
     },
@@ -127,7 +143,9 @@ export class LiveOrderExecutor implements OrderExecutorPort {
 
   async getBalance(asset: string): Promise<Balance> {
     const balances = await this.binance.getBalances();
-    return balances.find((b) => b.asset === asset) ?? { asset, free: 0, locked: 0 };
+    return (
+      balances.find((b) => b.asset === asset) ?? { asset, free: 0, locked: 0 }
+    );
   }
 
   async getPrice(symbol: string): Promise<number> {

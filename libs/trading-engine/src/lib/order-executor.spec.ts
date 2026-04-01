@@ -1,4 +1,8 @@
-import { SandboxOrderExecutor, calculateTradeQuantity, createTradeRecord } from './order-executor';
+import {
+  SandboxOrderExecutor,
+  calculateTradeQuantity,
+  createTradeRecord,
+} from './order-executor';
 import { TradingMode, TradeType } from '@crypto-trader/shared';
 
 describe('SandboxOrderExecutor', () => {
@@ -11,7 +15,11 @@ describe('SandboxOrderExecutor', () => {
 
   describe('BUY', () => {
     it('should execute a buy order and update balances', async () => {
-      const order = await executor.placeMarketOrder('BTCUSDT', TradeType.BUY, 0.1);
+      const order = await executor.placeMarketOrder(
+        'BTCUSDT',
+        TradeType.BUY,
+        0.1,
+      );
 
       expect(order.side).toBe('BUY');
       expect(order.price).toBe(65_000);
@@ -38,7 +46,11 @@ describe('SandboxOrderExecutor', () => {
       await executor.placeMarketOrder('BTCUSDT', TradeType.BUY, 0.1);
 
       executor.setPrice('BTCUSDT', 70_000);
-      const order = await executor.placeMarketOrder('BTCUSDT', TradeType.SELL, 0.1);
+      const order = await executor.placeMarketOrder(
+        'BTCUSDT',
+        TradeType.SELL,
+        0.1,
+      );
 
       expect(order.side).toBe('SELL');
       expect(order.price).toBe(70_000);
@@ -96,7 +108,7 @@ describe('calculateTradeQuantity', () => {
   it('should calculate quantity based on balance and max trade pct', () => {
     const quantity = calculateTradeQuantity(10_000, 65_000, 0.05);
     // 10000 * 0.05 / 65000 = 0.00769230...
-    expect(quantity).toBeCloseTo(0.00769230, 4);
+    expect(quantity).toBeCloseTo(0.0076923, 4);
   });
 
   it('should return 0 for zero balance', () => {
@@ -123,7 +135,12 @@ describe('createTradeRecord', () => {
       executedAt: new Date(),
     };
 
-    const record = createTradeRecord(order, 'user-1', 'pos-1', TradingMode.SANDBOX);
+    const record = createTradeRecord(
+      order,
+      'user-1',
+      'pos-1',
+      TradingMode.SANDBOX,
+    );
 
     expect(record.userId).toBe('user-1');
     expect(record.positionId).toBe('pos-1');

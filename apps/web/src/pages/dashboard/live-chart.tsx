@@ -1,37 +1,43 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createChart, CandlestickSeries, ColorType } from 'lightweight-charts';
 import { useThemeStore } from '../../store/theme.store';
+import { useOhlcv } from '../../hooks/use-market';
+import { useMarketStore } from '../../store/market.store';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
+import { cn } from '../../lib/utils';
 
-// Mock OHLCV data for demo (will be replaced by real Binance data in Spec 11)
-function generateMockCandles(n = 100) {
-  const candles = [];
-  let time = Math.floor(Date.now() / 1000) - n * 3600;
-  let close = 65000;
-
-  for (let i = 0; i < n; i++) {
-    const change = (Math.random() - 0.48) * 1000;
-    const open = close;
-    close = Math.max(1000, open + change);
-    const high = Math.max(open, close) * (1 + Math.random() * 0.01);
-    const low = Math.min(open, close) * (1 - Math.random() * 0.01);
-    candles.push({
-      time: (time + i * 3600) as unknown as import('lightweight-charts').UTCTimestamp,
-      open: parseFloat(open.toFixed(2)),
-      high: parseFloat(high.toFixed(2)),
-      low: parseFloat(low.toFixed(2)),
-      close: parseFloat(close.toFixed(2)),
-    });
-  }
-  return candles;
-}
+const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
+type Interval = typeof INTERVALS[number];
 
 export function LiveChartPage() {
   const chartRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<ReturnType<typeof createChart> | null>(null);
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
+  const [asset, setAsset] = useState<'BTC' | 'ETH'>('BTC');
+  const [interval, setInterval] = useState<Interval>('1h');
+  const { data: candles, isLoading } = useOhlcv(asset, interval, 200);
+  const prices = useMarketStore((s) => s.prices);
+  const currentPrice = prices[`${asset}USDT`]?.price;
+
+  useGSAP(
+    () => {
+      gsap.fromTo(
+        containerRef.current,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
+      );
+    },
+    { scope: containerRef },
+  );
 
   useEffect(() => {
     if (!chartRef.current) return;
+
+    // Cleanup previous chart
+    chartInstanceRef.current?.remove();
 
     const chart = createChart(chartRef.current, {
       layout: {
@@ -43,10 +49,12 @@ export function LiveChartPage() {
         horzLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
       },
       width: chartRef.current.clientWidth,
-      height: 400,
+      height: 420,
       crosshair: { mode: 1 },
       timeScale: { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
     });
+
+    chartInstanceRef.current = chart;
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981',
@@ -57,8 +65,15 @@ export function LiveChartPage() {
       wickDownColor: '#ef4444',
     });
 
-    candleSeries.setData(generateMockCandles());
-    chart.timeScale().fitContent();
+    if (candles && candles.length > 0) {
+      // Convert ms timestamps to seconds for lightweight-charts
+      const mapped = candles.map((c) => ({
+        ...c,
+        time: (c.time > 1e12 ? Math.floor(c.time / 1000) : c.time) as import('lightweight-charts').UTCTimestamp,
+      }));
+      candleSeries.setData(mapped);
+      chart.timeScale().fitContent();
+    }
 
     const handleResize = () => {
       if (chartRef.current) chart.applyOptions({ width: chartRef.current.clientWidth });
@@ -68,33 +83,74 @@ export function LiveChartPage() {
     return () => {
       window.removeEventListener('resize', handleResize);
       chart.remove();
+      chartInstanceRef.current = null;
     };
-  }, [isDark]);
+  }, [isDark, candles]);
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div ref={containerRef} className="p-6">
+      <div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
         <div>
           <h1 className="text-2xl font-bold">Live Chart</h1>
-          <p className="text-sm text-muted-foreground">BTC/USDT — 1H (demo data)</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            {asset}/USDT
+            {currentPrice && (
+              <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-500">
+                ${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            )}
+          </p>
         </div>
-        <div className="flex gap-2">
-          {['1m', '5m', '15m', '1h', '4h', '1d'].map((tf) => (
-            <button
-              key={tf}
-              className="rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
-            >
-              {tf}
-            </button>
-          ))}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Asset toggle */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            {(['BTC', 'ETH'] as const).map((a) => (
+              <button
+                key={a}
+                onClick={() => setAsset(a)}
+                className={cn(
+                  'px-4 py-1.5 text-sm font-medium transition-colors',
+                  asset === a ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+
+          {/* Interval buttons */}
+          <div className="flex flex-wrap gap-1">
+            {INTERVALS.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setInterval(tf)}
+                className={cn(
+                  'rounded-md border px-3 py-1 text-xs font-medium transition-colors',
+                  interval === tf
+                    ? 'border-primary/50 bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                )}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div ref={chartRef} className="w-full" />
+        {isLoading && (
+          <div className="flex h-[420px] items-center justify-center text-sm text-muted-foreground">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Loading candles...
+            </div>
+          </div>
+        )}
+        <div ref={chartRef} className={cn('w-full', isLoading && 'hidden')} />
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Demo data shown. Real-time Binance data available after connecting your API keys.
-      </p>
     </div>
   );
 }
+

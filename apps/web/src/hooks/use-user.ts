@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
-import { useAuthStore } from '../store/auth.store';
 
 export interface UserProfile {
   id: string;
@@ -60,6 +59,19 @@ export function useSetBinanceKeys() {
   });
 }
 
+export function useDeleteBinanceKeys() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete('/users/me/binance-keys'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'binance-status'] });
+      toast.success('Binance keys removed');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to remove keys'),
+  });
+}
+
 export function useSetLLMKey() {
   const qc = useQueryClient();
   return useMutation({
@@ -77,14 +89,31 @@ export function useSetLLMKey() {
   });
 }
 
-export function useUpdateProfile() {
-  const { user } = useAuthStore();
+export function useDeleteLLMKey() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { isActive?: boolean }) =>
-      api.patch(`/users/${user?.id}/status`, data),
+    mutationFn: (provider: string) =>
+      api.delete(`/users/me/llm-keys/${provider}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['user', 'profile'] });
+      qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      toast.success('LLM key removed');
     },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to remove key'),
   });
 }
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { email?: string; password?: string }) =>
+      api.put('/users/me', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'profile'] });
+      toast.success('Profile updated');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to update profile'),
+  });
+}
+

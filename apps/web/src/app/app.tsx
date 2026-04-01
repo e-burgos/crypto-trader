@@ -9,6 +9,7 @@ import { LandingPage } from '../pages/landing';
 import { LoginPage } from '../pages/login';
 import { RegisterPage } from '../pages/register';
 import { OnboardingPage } from '../pages/onboarding';
+import { HelpPage } from '../pages/help';
 import { DashboardLayout } from '../layouts/dashboard-layout';
 import { OverviewPage } from '../pages/dashboard/overview';
 import { LiveChartPage } from '../pages/dashboard/live-chart';
@@ -17,6 +18,11 @@ import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { AnalyticsPage } from '../pages/dashboard/analytics';
 import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';
+import { PositionsPage } from '../pages/dashboard/positions';
+import { NewsFeedPage } from '../pages/dashboard/news-feed';
+import { AdminLayout } from '../pages/admin/index';
+import { AdminStatsPage } from '../pages/admin/stats';
+import { AdminUsersPage } from '../pages/admin/users';
 import { useWebSocket } from '../hooks/use-websocket';
 import { useAuthStore } from '../store/auth.store';
 
@@ -72,6 +78,7 @@ export function App() {
               </PublicLayout>
             }
           />
+          <Route path="/help" element={<HelpPage />} />
           <Route
             path="/onboarding"
             element={
@@ -92,11 +99,24 @@ export function App() {
           >
             <Route index element={<OverviewPage />} />
             <Route path="chart" element={<LiveChartPage />} />
+            <Route path="positions" element={<PositionsPage />} />
             <Route path="history" element={<TradeHistoryPage />} />
             <Route path="agent" element={<AgentLogPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="news" element={<NewsFeedPage />} />
             <Route path="config" element={<ConfigPage />} />
             <Route path="settings" element={<SettingsPage />} />
+          </Route>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminStatsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
           </Route>
         </Routes>
       </ThemeProvider>

@@ -7,8 +7,18 @@ export const $Enums = {
   OrderType: { MARKET: 'MARKET', LIMIT: 'LIMIT', STOP_LOSS: 'STOP_LOSS' },
   PositionStatus: { OPEN: 'OPEN', CLOSED: 'CLOSED', LIQUIDATED: 'LIQUIDATED' },
   AgentAction: { BUY: 'BUY', SELL: 'SELL', HOLD: 'HOLD', CLOSE: 'CLOSE' },
-  NewsSentiment: { POSITIVE: 'POSITIVE', NEGATIVE: 'NEGATIVE', NEUTRAL: 'NEUTRAL' },
-  NotificationType: { TRADE_EXECUTED: 'TRADE_EXECUTED', POSITION_CLOSED: 'POSITION_CLOSED', RISK_ALERT: 'RISK_ALERT', DAILY_SUMMARY: 'DAILY_SUMMARY', SYSTEM: 'SYSTEM' },
+  NewsSentiment: {
+    POSITIVE: 'POSITIVE',
+    NEGATIVE: 'NEGATIVE',
+    NEUTRAL: 'NEUTRAL',
+  },
+  NotificationType: {
+    TRADE_EXECUTED: 'TRADE_EXECUTED',
+    POSITION_CLOSED: 'POSITION_CLOSED',
+    RISK_ALERT: 'RISK_ALERT',
+    DAILY_SUMMARY: 'DAILY_SUMMARY',
+    SYSTEM: 'SYSTEM',
+  },
 };
 export const TradingMode = { LIVE: 'LIVE', PAPER: 'PAPER' };
 export const NotificationType = $Enums.NotificationType;

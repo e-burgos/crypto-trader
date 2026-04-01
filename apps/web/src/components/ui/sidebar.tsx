@@ -1,5 +1,15 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, History, Bot, Settings, LogOut, TrendingUp, LineChart, SlidersHorizontal } from 'lucide-react';
+import {
+  LayoutDashboard,
+  BarChart3,
+  History,
+  Bot,
+  Settings,
+  LogOut,
+  TrendingUp,
+  LineChart,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from './button';
@@ -33,12 +43,14 @@ export function Sidebar() {
               <NavLink
                 to={to}
                 end={end}
-                className={({ isActive }) => cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                )}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )
+                }
               >
                 <Icon className="h-4 w-4" />
                 {label}
@@ -50,8 +62,15 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-border p-3">
-        <div className="mb-2 px-2 text-xs text-muted-foreground truncate">{user?.email}</div>
-        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" onClick={logout}>
+        <div className="mb-2 px-2 text-xs text-muted-foreground truncate">
+          {user?.email}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-muted-foreground"
+          onClick={logout}
+        >
           <LogOut className="h-4 w-4" />
           Sign Out
         </Button>

@@ -27,7 +27,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw { message: err.message || 'Request failed', statusCode: res.status } as ApiError;
+    throw {
+      message: err.message || 'Request failed',
+      statusCode: res.status,
+    } as ApiError;
   }
 
   return res.json();

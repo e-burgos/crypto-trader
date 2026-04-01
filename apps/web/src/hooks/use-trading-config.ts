@@ -28,12 +28,14 @@ export function useTradingConfigs() {
 export function useCreateConfig() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<TradingConfig>) => api.post<TradingConfig>('/trading-config', data),
+    mutationFn: (data: Partial<TradingConfig>) =>
+      api.post<TradingConfig>('/trading-config', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading-configs'] });
       toast.success('Configuration saved');
     },
-    onError: (err: { message?: string }) => toast.error(err?.message || 'Failed to save'),
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to save'),
   });
 }
 

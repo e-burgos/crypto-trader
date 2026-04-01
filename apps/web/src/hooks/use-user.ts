@@ -55,20 +55,25 @@ export function useSetBinanceKeys() {
       qc.invalidateQueries({ queryKey: ['user', 'binance-status'] });
       toast.success('Binance API keys saved');
     },
-    onError: (err: { message?: string }) => toast.error(err?.message || 'Failed to save keys'),
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to save keys'),
   });
 }
 
 export function useSetLLMKey() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { provider: string; apiKey: string; selectedModel: string }) =>
-      api.post('/users/me/llm-keys', data),
+    mutationFn: (data: {
+      provider: string;
+      apiKey: string;
+      selectedModel: string;
+    }) => api.post('/users/me/llm-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
       toast.success('LLM API key saved');
     },
-    onError: (err: { message?: string }) => toast.error(err?.message || 'Failed to save key'),
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to save key'),
   });
 }
 

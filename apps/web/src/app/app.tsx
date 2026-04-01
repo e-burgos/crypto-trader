@@ -48,15 +48,48 @@ export function App() {
         <WebSocketInit />
         <Toaster richColors position="top-right" />
         <Routes>
-          <Route path="/" element={<PublicLayout><LandingPage /></PublicLayout>} />
-          <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
-          <Route path="/register" element={<PublicLayout><RegisterPage /></PublicLayout>} />
-          <Route path="/onboarding" element={
-            <ProtectedRoute><PublicLayout><OnboardingPage /></PublicLayout></ProtectedRoute>
-          } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute><DashboardLayout /></ProtectedRoute>
-          }>
+          <Route
+            path="/"
+            element={
+              <PublicLayout>
+                <LandingPage />
+              </PublicLayout>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicLayout>
+                <LoginPage />
+              </PublicLayout>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicLayout>
+                <RegisterPage />
+              </PublicLayout>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <PublicLayout>
+                  <OnboardingPage />
+                </PublicLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<OverviewPage />} />
             <Route path="chart" element={<LiveChartPage />} />
             <Route path="history" element={<TradeHistoryPage />} />
@@ -72,6 +105,3 @@ export function App() {
 }
 
 export default App;
-
-
-

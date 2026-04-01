@@ -44,7 +44,9 @@ export function RegisterPage() {
             <TrendingUp className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Start trading with AI in minutes</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Start trading with AI in minutes
+          </p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
@@ -56,7 +58,12 @@ export function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium">Email</label>
+              <label
+                htmlFor="email"
+                className="mb-1.5 block text-sm font-medium"
+              >
+                Email
+              </label>
               <input
                 id="email"
                 type="email"
@@ -70,7 +77,12 @@ export function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium">Password</label>
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-sm font-medium"
+              >
+                Password
+              </label>
               <input
                 id="password"
                 type="password"
@@ -84,7 +96,12 @@ export function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="confirm" className="mb-1.5 block text-sm font-medium">Confirm Password</label>
+              <label
+                htmlFor="confirm"
+                className="mb-1.5 block text-sm font-medium"
+              >
+                Confirm Password
+              </label>
               <input
                 id="confirm"
                 type="password"
@@ -98,14 +115,21 @@ export function RegisterPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Account'}
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Create Account'
+              )}
             </Button>
           </form>
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:underline">
+          <Link
+            to="/login"
+            className="font-medium text-primary hover:underline"
+          >
             Sign in
           </Link>
         </p>

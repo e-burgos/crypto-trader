@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: crypto
+          POSTGRES_PASSWORD: crypto123
+          POSTGRES_DB: crypto_trader_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U crypto -d crypto_trader_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://crypto:crypto123@localhost:5432/crypto_trader_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-jwt-secret-32-chars-minimum-ok
+      JWT_REFRESH_SECRET: ci-refresh-secret-32-chars-min-ok
+      BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-exactly-32-chars!
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Prisma migrations (test DB)
+        working-directory: apps/api
+        run: pnpm exec prisma migrate deploy
+
+      - name: Lint all projects
+        run: pnpm nx run-many --target=lint --all --parallel=3 || true
+
+      - name: Run API tests
+        run: pnpm nx test api --skip-nx-cache
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build API
+        run: pnpm nx build api --skip-nx-cache
+
+      - name: Build Web
+        run: pnpm nx build web --skip-nx-cache
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:3000' }}
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist/apps/web
+          retention-days: 1

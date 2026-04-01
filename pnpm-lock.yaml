@@ -327,6 +327,9 @@ importers:
       webpack-cli:
         specifier: ^5.1.4
         version: 5.1.4(webpack@5.105.4)
+      webpack-node-externals:
+        specifier: ^3.0.0
+        version: 3.0.0
 
   libs/analysis: {}
 

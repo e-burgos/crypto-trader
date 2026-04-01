@@ -1,5 +1,6 @@
 const { NxAppWebpackPlugin } = require('@nx/webpack/app-plugin');
 const { join } = require('path');
+const nodeExternals = require('webpack-node-externals');
 
 module.exports = {
   output: {
@@ -10,19 +11,15 @@ module.exports = {
     }),
   },
   externals: [
-    function ({ request }, callback) {
-      // Keep the generated Prisma client out of the webpack bundle so that
-      // native ES class inheritance works correctly at runtime.
-      if (request && request.includes('generated/prisma')) {
-        return callback(null, 'commonjs ' + request);
-      }
-      callback();
-    },
+    nodeExternals({
+      // Allow webpack to bundle workspace packages (libs/*)
+      allowlist: [/@crypto-trader\/.*/],
+    }),
   ],
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',
-      compiler: 'swc',
+      compiler: 'tsc',
       main: './src/main.ts',
       tsConfig: './tsconfig.app.json',
       assets: ['./src/assets'],

@@ -53,7 +53,7 @@
     "@nx/vitest": "22.6.3",
     "@nx/web": "22.6.3",
     "@nx/webpack": "22.6.3",
-    "@playwright/test": "^1.36.0",
+    "@playwright/test": "^1.58.2",
     "@swc-node/register": "~1.11.1",
     "@swc/core": "~1.15.5",
     "@swc/helpers": "~0.5.18",

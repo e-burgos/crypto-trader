@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { createChart, CandlestickSeries, ColorType } from 'lightweight-charts';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  createChart,
+  CandlestickSeries,
+  ColorType,
+  IChartApi,
+  ISeriesApi,
+  CandlestickSeriesOptions,
+  DeepPartial,
+} from 'lightweight-charts';
 import { useThemeStore } from '../../store/theme.store';
 import { useOhlcv } from '../../hooks/use-market';
 import { useMarketStore } from '../../store/market.store';
@@ -10,10 +18,38 @@ import { cn } from '../../lib/utils';
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
 type Interval = (typeof INTERVALS)[number];
 
+function chartColors(isDark: boolean) {
+  return {
+    bg: isDark ? '#0a0f1e' : '#ffffff',
+    text: isDark ? 'rgba(255,255,255,0.7)' : '#1a1a2e',
+    gridLine: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)',
+    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
+  };
+}
+
+function normalizeCandles(
+  raw: { time: number | string; open: number; high: number; low: number; close: number; volume: number }[],
+) {
+  return raw
+    .map((c) => {
+      const t: number =
+        typeof c.time === 'string'
+          ? Math.floor(new Date(c.time).getTime() / 1000)
+          : c.time > 1e12
+            ? Math.floor(c.time / 1000)
+            : c.time;
+      return { ...c, time: t } as { time: number; open: number; high: number; low: number; close: number; volume: number };
+    })
+    .filter((c) => c.time > 0)
+    .sort((a, b) => a.time - b.time);
+}
+
 export function LiveChartPage() {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartInstanceRef = useRef<ReturnType<typeof createChart> | null>(null);
+  const chartApi = useRef<IChartApi | null>(null);
+  const seriesApi = useRef<ISeriesApi<'Candlestick'> | null>(null);
+
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
   const [asset, setAsset] = useState<'BTC' | 'ETH'>('BTC');
@@ -33,75 +69,80 @@ export function LiveChartPage() {
     { scope: containerRef },
   );
 
-  useEffect(() => {
+  // ── 1. Create chart once on mount ────────────────────────────────────────
+  useLayoutEffect(() => {
     if (!chartRef.current) return;
-
-    // Cleanup previous chart
-    chartInstanceRef.current?.remove();
+    const colors = chartColors(isDark);
 
     const chart = createChart(chartRef.current, {
       autoSize: true,
       layout: {
-        background: {
-          type: ColorType.Solid,
-          color: isDark ? 'hsl(222.2, 84%, 4.9%)' : '#ffffff',
-        },
-        textColor: isDark ? 'hsl(210, 40%, 80%)' : 'hsl(222.2, 84%, 4.9%)',
+        background: { type: ColorType.Solid, color: colors.bg },
+        textColor: colors.text,
+        attributionLogo: false,
       },
       grid: {
-        vertLines: {
-          color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-        },
-        horzLines: {
-          color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-        },
+        vertLines: { color: colors.gridLine },
+        horzLines: { color: colors.gridLine },
       },
       crosshair: { mode: 1 },
       timeScale: {
-        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+        borderColor: colors.border,
+        timeVisible: true,
+        secondsVisible: false,
       },
+      rightPriceScale: { borderColor: colors.border },
     });
 
-    chartInstanceRef.current = chart;
-
-    const candleSeries = chart.addSeries(CandlestickSeries, {
+    const series = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981',
       downColor: '#ef4444',
       borderUpColor: '#10b981',
       borderDownColor: '#ef4444',
       wickUpColor: '#10b981',
       wickDownColor: '#ef4444',
-    });
+    } as DeepPartial<CandlestickSeriesOptions>);
 
-    if (candles && candles.length > 0) {
-      // Normalize timestamps to UTC seconds, filter invalids, sort ascending
-      const mapped = candles
-        .map((c) => {
-          const t: number =
-            typeof c.time === 'string'
-              ? Math.floor(new Date(c.time).getTime() / 1000)
-              : c.time > 1e12
-                ? Math.floor(c.time / 1000)
-                : c.time;
-          return {
-            ...c,
-            time: t as import('lightweight-charts').UTCTimestamp,
-          };
-        })
-        .filter((c) => (c.time as number) > 0)
-        .sort((a, b) => (a.time as number) - (b.time as number));
-
-      if (mapped.length > 0) {
-        candleSeries.setData(mapped);
-        chart.timeScale().fitContent();
-      }
-    }
+    chartApi.current = chart;
+    seriesApi.current = series;
 
     return () => {
       chart.remove();
-      chartInstanceRef.current = null;
+      chartApi.current = null;
+      seriesApi.current = null;
     };
-  }, [isDark, candles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // only on mount/unmount
+
+  // ── 2. Update theme colors without recreating ────────────────────────────
+  useEffect(() => {
+    if (!chartApi.current) return;
+    const colors = chartColors(isDark);
+    chartApi.current.applyOptions({
+      layout: {
+        background: { type: ColorType.Solid, color: colors.bg },
+        textColor: colors.text,
+      },
+      grid: {
+        vertLines: { color: colors.gridLine },
+        horzLines: { color: colors.gridLine },
+      },
+      timeScale: { borderColor: colors.border },
+      rightPriceScale: { borderColor: colors.border },
+    });
+  }, [isDark]);
+
+  // ── 3. Push new data when candles change ─────────────────────────────────
+  useEffect(() => {
+    if (!seriesApi.current || !candles?.length) return;
+    const mapped = normalizeCandles(candles);
+    if (mapped.length === 0) return;
+    // Cast to satisfy strict UTCTimestamp type
+    seriesApi.current.setData(
+      mapped as unknown as Parameters<typeof seriesApi.current.setData>[0],
+    );
+    chartApi.current?.timeScale().fitContent();
+  }, [candles]);
 
   return (
     <div ref={containerRef} className="p-6">

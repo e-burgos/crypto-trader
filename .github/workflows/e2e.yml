@@ -1,0 +1,105 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: crypto
+          POSTGRES_PASSWORD: crypto123
+          POSTGRES_DB: crypto_trader_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U crypto -d crypto_trader_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://crypto:crypto123@localhost:5432/crypto_trader_e2e
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-jwt-secret-32-chars-minimum-ok
+      JWT_REFRESH_SECRET: ci-refresh-secret-32-chars-min-ok
+      BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-exactly-32-chars!
+      NODE_ENV: test
+      BASE_URL: http://localhost:4200
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'e2e@test.com' }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || 'Password123!' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Prisma migrations
+        working-directory: apps/api
+        run: pnpm exec prisma migrate deploy
+
+      - name: Start API server
+        run: pnpm nx serve api &
+        env:
+          PORT: 3000
+
+      - name: Build and serve web
+        run: |
+          pnpm nx build web --skip-nx-cache
+          pnpm dlx serve -s dist/apps/web -l 4200 &
+        env:
+          VITE_API_URL: http://localhost:3000
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:3000/api/health http://localhost:4200 --timeout 60000
+
+      - name: Run Playwright tests
+        run: pnpm exec playwright test --reporter=html
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

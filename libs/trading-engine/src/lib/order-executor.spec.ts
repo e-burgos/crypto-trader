@@ -1,5 +1,5 @@
 import { SandboxOrderExecutor, calculateTradeQuantity, createTradeRecord } from './order-executor';
-import { TradingMode } from '@crypto-trader/shared';
+import { TradingMode, TradeType } from '@crypto-trader/shared';
 
 describe('SandboxOrderExecutor', () => {
   let executor: SandboxOrderExecutor;
@@ -11,7 +11,7 @@ describe('SandboxOrderExecutor', () => {
 
   describe('BUY', () => {
     it('should execute a buy order and update balances', async () => {
-      const order = await executor.placeMarketOrder('BTCUSDT', 'BUY', 0.1);
+      const order = await executor.placeMarketOrder('BTCUSDT', TradeType.BUY, 0.1);
 
       expect(order.side).toBe('BUY');
       expect(order.price).toBe(65_000);
@@ -28,17 +28,17 @@ describe('SandboxOrderExecutor', () => {
 
     it('should reject buy with insufficient balance', async () => {
       await expect(
-        executor.placeMarketOrder('BTCUSDT', 'BUY', 1),
+        executor.placeMarketOrder('BTCUSDT', TradeType.BUY, 1),
       ).rejects.toThrow('Insufficient USDT balance');
     });
   });
 
   describe('SELL', () => {
     it('should execute a sell order after buying', async () => {
-      await executor.placeMarketOrder('BTCUSDT', 'BUY', 0.1);
+      await executor.placeMarketOrder('BTCUSDT', TradeType.BUY, 0.1);
 
       executor.setPrice('BTCUSDT', 70_000);
-      const order = await executor.placeMarketOrder('BTCUSDT', 'SELL', 0.1);
+      const order = await executor.placeMarketOrder('BTCUSDT', TradeType.SELL, 0.1);
 
       expect(order.side).toBe('SELL');
       expect(order.price).toBe(70_000);
@@ -53,7 +53,7 @@ describe('SandboxOrderExecutor', () => {
 
     it('should reject sell with insufficient base balance', async () => {
       await expect(
-        executor.placeMarketOrder('BTCUSDT', 'SELL', 1),
+        executor.placeMarketOrder('BTCUSDT', TradeType.SELL, 1),
       ).rejects.toThrow('Insufficient BTC balance');
     });
   });
@@ -85,7 +85,7 @@ describe('SandboxOrderExecutor', () => {
       const initialUsdc = await executor.getBalance('USDC');
       expect(initialUsdc.free).toBe(10_000);
 
-      await executor.placeMarketOrder('BTCUSDC', 'BUY', 0.01);
+      await executor.placeMarketOrder('BTCUSDC', TradeType.BUY, 0.01);
       const usdc = await executor.getBalance('USDC');
       expect(usdc.free).toBeLessThan(10_000);
     });
@@ -113,10 +113,10 @@ describe('calculateTradeQuantity', () => {
 
 describe('createTradeRecord', () => {
   it('should create a trade record from order result', () => {
-    const order = {
+    const order: import('@crypto-trader/shared').OrderResult = {
       orderId: 'test-123',
       symbol: 'BTCUSDT',
-      side: 'BUY' as const,
+      side: TradeType.BUY,
       price: 65000,
       quantity: 0.1,
       status: 'FILLED',

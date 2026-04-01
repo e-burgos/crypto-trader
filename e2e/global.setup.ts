@@ -6,8 +6,12 @@ const authFile = path.join(__dirname, '.auth/user.json');
 setup('authenticate', async ({ page }) => {
   await page.goto('/login');
 
-  await page.getByLabel(/email/i).fill(process.env.E2E_USER_EMAIL || 'test@example.com');
-  await page.getByLabel(/password/i).fill(process.env.E2E_USER_PASSWORD || 'Password123!');
+  await page
+    .getByLabel(/email/i)
+    .fill(process.env.E2E_USER_EMAIL || 'test@example.com');
+  await page
+    .getByLabel(/password/i)
+    .fill(process.env.E2E_USER_PASSWORD || 'Password123!');
   await page.getByRole('button', { name: /sign in|login/i }).click();
 
   // Wait for redirect to dashboard

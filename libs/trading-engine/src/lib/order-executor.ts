@@ -4,7 +4,6 @@ import {
   TradeRecord,
   TradeType,
   TradingMode,
-  TradingConfigData,
 } from '@crypto-trader/shared';
 import { TRADE_FEE_PCT } from '@crypto-trader/shared';
 
@@ -14,7 +13,7 @@ import { TRADE_FEE_PCT } from '@crypto-trader/shared';
 export interface OrderExecutorPort {
   placeMarketOrder(
     symbol: string,
-    side: 'BUY' | 'SELL',
+    side: TradeType,
     quantity: number,
   ): Promise<OrderResult>;
   getBalance(asset: string): Promise<Balance>;
@@ -51,7 +50,7 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
 
   async placeMarketOrder(
     symbol: string,
-    side: 'BUY' | 'SELL',
+    side: TradeType,
     quantity: number,
   ): Promise<OrderResult> {
     const price = await this.getPrice(symbol);
@@ -61,7 +60,7 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     // Extract base and quote from symbol (e.g., BTCUSDT → BTC, USDT)
     const { base, quote } = this.parseSymbol(symbol);
 
-    if (side === 'BUY') {
+    if (side === TradeType.BUY) {
       const quoteBalance = await this.getBalance(quote);
       if (quoteBalance.free < cost + fee) {
         throw new Error(`Insufficient ${quote} balance: need ${cost + fee}, have ${quoteBalance.free}`);
@@ -112,7 +111,7 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
 export class LiveOrderExecutor implements OrderExecutorPort {
   constructor(
     private readonly binance: {
-      placeMarketOrder(symbol: string, side: 'BUY' | 'SELL', quantity: number): Promise<OrderResult>;
+      placeMarketOrder(symbol: string, side: TradeType, quantity: number): Promise<OrderResult>;
       getBalances(): Promise<Balance[]>;
       getTickerPrice(symbol: string): Promise<number>;
     },
@@ -120,7 +119,7 @@ export class LiveOrderExecutor implements OrderExecutorPort {
 
   async placeMarketOrder(
     symbol: string,
-    side: 'BUY' | 'SELL',
+    side: TradeType,
     quantity: number,
   ): Promise<OrderResult> {
     return this.binance.placeMarketOrder(symbol, side, quantity);

@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Save, Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { Save, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';

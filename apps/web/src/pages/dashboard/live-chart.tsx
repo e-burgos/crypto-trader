@@ -79,17 +79,20 @@ export function LiveChartPage() {
   );
 
   // Single effect: create chart + load data together.
-  // Using one effect avoids the React Strict Mode double-invoke bug where
-  // useEffect([candles]) won't re-run after the StrictMode cleanup/remount
-  // cycle because candles hasn't changed reference.
+  // - DO NOT use autoSize:true — ResizeObserver fires asynchronously, so the
+  //   chart starts at 0×0 and setData is called before the first resize fires.
+  // - Read clientWidth/Height explicitly so the chart is correctly sized on creation.
+  // - Manual ResizeObserver updates width on container resize.
   useEffect(() => {
     const container = chartRef.current;
     if (!container) return;
 
     const colors = chartColors(isDark);
+    const h = 420;
 
     const chart = createChart(container, {
-      autoSize: true,
+      width: container.clientWidth || container.offsetWidth || 800,
+      height: h,
       layout: {
         background: { type: ColorType.Solid, color: colors.bg },
         textColor: colors.text,
@@ -125,11 +128,17 @@ export function LiveChartPage() {
       }
     }
 
+    // Keep chart width in sync with container after creation
+    const ro = new ResizeObserver(() => {
+      chart.applyOptions({ width: container.clientWidth });
+    });
+    ro.observe(container);
+
     return () => {
+      ro.disconnect();
       chart.remove();
     };
-  // Recreate chart when theme or data changes — autoSize handles sizing.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Recreate when theme or data changes — explicit width avoids async resize race.
   }, [isDark, candles]);
 
   return (
@@ -189,14 +198,14 @@ export function LiveChartPage() {
         </div>
       </div>
 
-      <div className="relative rounded-xl border border-border bg-card overflow-hidden h-[420px]">
+      <div className="rounded-xl border border-border bg-card overflow-hidden relative">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground bg-card/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground bg-card/80 backdrop-blur-sm" style={{ height: 420 }}>
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             Loading candles...
           </div>
         )}
-        <div ref={chartRef} className="w-full h-full" />
+        <div ref={chartRef} className="w-full" />
       </div>
     </div>
   );

@@ -135,7 +135,8 @@ export class AnalyticsService {
     const dailyReturns = Array.from(dailyMap.values());
     let sharpeRatio = 0;
     if (dailyReturns.length > 1) {
-      const mean = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+      const mean =
+        dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
       const variance =
         dailyReturns.reduce((sum, r) => sum + (r - mean) ** 2, 0) /
         dailyReturns.length;
@@ -148,8 +149,16 @@ export class AnalyticsService {
       winRate: Math.round(winRate * 100) / 100,
       avgPnl: Math.round(avgPnl * 100) / 100,
       totalPnl: Math.round(totalPnl * 100) / 100,
-      bestTrade: { pnl: bestTradePos.pnl, asset: bestTradePos.asset, executedAt: bestTradePos.exitAt },
-      worstTrade: { pnl: worstTradePos.pnl, asset: worstTradePos.asset, executedAt: worstTradePos.exitAt },
+      bestTrade: {
+        pnl: bestTradePos.pnl,
+        asset: bestTradePos.asset,
+        executedAt: bestTradePos.exitAt,
+      },
+      worstTrade: {
+        pnl: worstTradePos.pnl,
+        asset: worstTradePos.asset,
+        executedAt: worstTradePos.exitAt,
+      },
       currentDrawdown: Math.round(maxDrawdown * 10000) / 100,
       sharpeRatio: Math.round(sharpeRatio * 100) / 100,
     };
@@ -187,7 +196,10 @@ export class AnalyticsService {
       select: { asset: true, pnl: true },
     });
 
-    const assetMap = new Map<string, { totalPnl: number; trades: number; wins: number }>();
+    const assetMap = new Map<
+      string,
+      { totalPnl: number; trades: number; wins: number }
+    >();
     for (const pos of positions) {
       const key = pos.asset;
       const current = assetMap.get(key) ?? { totalPnl: 0, trades: 0, wins: 0 };
@@ -201,7 +213,10 @@ export class AnalyticsService {
       asset,
       totalPnl: Math.round(data.totalPnl * 100) / 100,
       trades: data.trades,
-      winRate: data.trades > 0 ? Math.round((data.wins / data.trades) * 10000) / 100 : 0,
+      winRate:
+        data.trades > 0
+          ? Math.round((data.wins / data.trades) * 10000) / 100
+          : 0,
     }));
   }
 }

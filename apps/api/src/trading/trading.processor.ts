@@ -8,7 +8,10 @@ import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
 
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
-import { CryptoPanicFetcher, NewsAggregator } from '@crypto-trader/data-fetcher';
+import {
+  CryptoPanicFetcher,
+  NewsAggregator,
+} from '@crypto-trader/data-fetcher';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
 import { LLMAnalyzer, createLLMProvider } from '@crypto-trader/analysis';
 import {
@@ -18,7 +21,12 @@ import {
   calculateTradeQuantity,
 } from '@crypto-trader/trading-engine';
 
-import { Decision, TradingMode, TradeType, NotificationType } from '@crypto-trader/shared';
+import {
+  Decision,
+  TradingMode,
+  TradeType,
+  NotificationType,
+} from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 
@@ -42,7 +50,9 @@ export class TradingProcessor {
   @Process('run-cycle')
   async runCycle(job: Job<AgentJobData>) {
     const { userId, configId } = job.data;
-    this.logger.log(`Running agent cycle for user=${userId} config=${configId}`);
+    this.logger.log(
+      `Running agent cycle for user=${userId} config=${configId}`,
+    );
 
     try {
       // 1. Load config
@@ -57,7 +67,8 @@ export class TradingProcessor {
       const pair = SUPPORTED_PAIRS.find(
         (p) => p.asset === config.asset && p.quote === config.pair,
       );
-      if (!pair) throw new Error(`Unsupported pair: ${config.asset}/${config.pair}`);
+      if (!pair)
+        throw new Error(`Unsupported pair: ${config.asset}/${config.pair}`);
 
       // 2. Decrypt Binance credentials
       const binanceCreds = await this.prisma.binanceCredential.findUnique({
@@ -67,8 +78,14 @@ export class TradingProcessor {
       let binanceApiKey: string | undefined;
       let binanceSecret: string | undefined;
       if (binanceCreds && config.mode === TradingMode.LIVE) {
-        binanceApiKey = decrypt(binanceCreds.apiKeyEncrypted, binanceCreds.apiKeyIv);
-        binanceSecret = decrypt(binanceCreds.secretEncrypted, binanceCreds.secretIv);
+        binanceApiKey = decrypt(
+          binanceCreds.apiKeyEncrypted,
+          binanceCreds.apiKeyIv,
+        );
+        binanceSecret = decrypt(
+          binanceCreds.secretEncrypted,
+          binanceCreds.secretIv,
+        );
       }
 
       // 3. Decrypt LLM credentials
@@ -77,7 +94,9 @@ export class TradingProcessor {
         orderBy: { createdAt: 'desc' },
       });
       if (!llmCred) {
-        this.logger.warn(`No LLM credentials for user ${userId} — pausing agent`);
+        this.logger.warn(
+          `No LLM credentials for user ${userId} — pausing agent`,
+        );
         await this.prisma.tradingConfig.update({
           where: { id: configId },
           data: { isRunning: false },
@@ -180,11 +199,25 @@ export class TradingProcessor {
         decision.decision === Decision.BUY &&
         confidencePct >= config.buyThreshold
       ) {
-        await this.executeBuy(userId, config, pair.symbol, config.mode as TradingMode, binanceApiKey, binanceSecret);
+        await this.executeBuy(
+          userId,
+          config,
+          pair.symbol,
+          config.mode as TradingMode,
+          binanceApiKey,
+          binanceSecret,
+        );
       }
 
       // 11. Check stop-loss / take-profit on open positions
-      await this.checkOpenPositions(userId, config, pair.symbol, config.mode as TradingMode, binanceApiKey, binanceSecret);
+      await this.checkOpenPositions(
+        userId,
+        config,
+        pair.symbol,
+        config.mode as TradingMode,
+        binanceApiKey,
+        binanceSecret,
+      );
 
       // 12. Schedule next cycle
       const waitMinutes = Math.max(
@@ -202,22 +235,32 @@ export class TradingProcessor {
         await job.queue.add(
           'run-cycle',
           { userId, configId },
-          { jobId: `agent-${userId}-${configId}`, delay, removeOnComplete: true },
+          {
+            jobId: `agent-${userId}-${configId}`,
+            delay,
+            removeOnComplete: true,
+          },
         );
-        this.logger.log(`Next cycle for config ${configId} in ${waitMinutes}min`);
+        this.logger.log(
+          `Next cycle for config ${configId} in ${waitMinutes}min`,
+        );
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Agent cycle error for user=${userId}: ${message}`);
-      await this.prisma.tradingConfig.update({
-        where: { id: configId },
-        data: { isRunning: false },
-      }).catch(() => null);
-      await this.notificationsService.create(
-        userId,
-        NotificationType.AGENT_ERROR,
-        `Agent error: ${message.slice(0, 200)}`,
-      ).catch(() => null);
+      await this.prisma.tradingConfig
+        .update({
+          where: { id: configId },
+          data: { isRunning: false },
+        })
+        .catch(() => null);
+      await this.notificationsService
+        .create(
+          userId,
+          NotificationType.AGENT_ERROR,
+          `Agent error: ${message.slice(0, 200)}`,
+        )
+        .catch(() => null);
     }
   }
 
@@ -251,7 +294,11 @@ export class TradingProcessor {
     );
     if (quantity <= 0) return;
 
-    const order = await executor.placeMarketOrder(symbol, TradeType.BUY, quantity);
+    const order = await executor.placeMarketOrder(
+      symbol,
+      TradeType.BUY,
+      quantity,
+    );
 
     const positionData = this.positionManager.openPosition({
       userId,
@@ -285,7 +332,9 @@ export class TradingProcessor {
       NotificationType.TRADE_EXECUTED,
       `BUY ${order.quantity} ${config.asset} @ $${order.price.toFixed(2)} (${mode})`,
     );
-    this.gateway.emitToUser(userId, 'trade:executed', { position: savedPosition });
+    this.gateway.emitToUser(userId, 'trade:executed', {
+      position: savedPosition,
+    });
   }
 
   private async checkOpenPositions(
@@ -309,13 +358,35 @@ export class TradingProcessor {
     if (!currentPrice) return;
 
     for (const pos of openPositions) {
-      const posData = { ...pos, asset: pos.asset as any, pair: pos.pair as any, mode: pos.mode as any, status: pos.status as any, exitPrice: pos.exitPrice ?? undefined, exitAt: pos.exitAt ?? undefined, pnl: pos.pnl ?? undefined };
-      const shouldStopLoss = this.positionManager.shouldStopLoss(posData, currentPrice, config.stopLossPct);
-      const shouldTakeProfit = this.positionManager.shouldTakeProfit(posData, currentPrice, config.takeProfitPct);
+      const posData = {
+        ...pos,
+        asset: pos.asset as any,
+        pair: pos.pair as any,
+        mode: pos.mode as any,
+        status: pos.status as any,
+        exitPrice: pos.exitPrice ?? undefined,
+        exitAt: pos.exitAt ?? undefined,
+        pnl: pos.pnl ?? undefined,
+      };
+      const shouldStopLoss = this.positionManager.shouldStopLoss(
+        posData,
+        currentPrice,
+        config.stopLossPct,
+      );
+      const shouldTakeProfit = this.positionManager.shouldTakeProfit(
+        posData,
+        currentPrice,
+        config.takeProfitPct,
+      );
 
       if (shouldStopLoss || shouldTakeProfit) {
-        const order = await executor.placeMarketOrder(symbol, TradeType.SELL, pos.quantity);
-        const { position: closedPosition, pnl } = this.positionManager.closePosition(posData, order.price);
+        const order = await executor.placeMarketOrder(
+          symbol,
+          TradeType.SELL,
+          pos.quantity,
+        );
+        const { position: closedPosition, pnl } =
+          this.positionManager.closePosition(posData, order.price);
 
         await this.prisma.position.update({
           where: { id: pos.id },
@@ -351,8 +422,12 @@ export class TradingProcessor {
           notifType,
           `${reason} triggered: SELL ${pos.quantity} ${config.asset} @ $${order.price.toFixed(2)} | P&L: $${pnl.toFixed(2)}`,
         );
-        this.gateway.emitToUser(userId, 'trade:executed', { position: closedPosition });
-        this.gateway.emitToUser(userId, 'position:updated', { position: closedPosition });
+        this.gateway.emitToUser(userId, 'trade:executed', {
+          position: closedPosition,
+        });
+        this.gateway.emitToUser(userId, 'position:updated', {
+          position: closedPosition,
+        });
       }
     }
   }
@@ -360,7 +435,9 @@ export class TradingProcessor {
   private buildNewsAggregator(): NewsAggregator {
     const sources = [];
     if (process.env.CRYPTOPANIC_API_KEY) {
-      sources.push(new CryptoPanicFetcher({ authToken: process.env.CRYPTOPANIC_API_KEY }));
+      sources.push(
+        new CryptoPanicFetcher({ authToken: process.env.CRYPTOPANIC_API_KEY }),
+      );
     }
     // Always add at least the aggregator with no sources (returns empty gracefully)
     return new NewsAggregator(sources, { cacheTtlSeconds: 300 });

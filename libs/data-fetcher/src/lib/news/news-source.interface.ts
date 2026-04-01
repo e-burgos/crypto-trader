@@ -22,12 +22,35 @@ export function estimateSentiment(text: string): Sentiment {
   const lower = text.toLowerCase();
 
   const bullish = [
-    'surge', 'rally', 'bullish', 'soar', 'gain', 'up', 'high',
-    'record', 'breakout', 'moon', 'pump', 'adoption', 'institutional',
+    'surge',
+    'rally',
+    'bullish',
+    'soar',
+    'gain',
+    'up',
+    'high',
+    'record',
+    'breakout',
+    'moon',
+    'pump',
+    'adoption',
+    'institutional',
   ];
   const bearish = [
-    'crash', 'bearish', 'plunge', 'drop', 'down', 'low', 'sell-off',
-    'dump', 'hack', 'scam', 'fraud', 'ban', 'regulation', 'fine',
+    'crash',
+    'bearish',
+    'plunge',
+    'drop',
+    'down',
+    'low',
+    'sell-off',
+    'dump',
+    'hack',
+    'scam',
+    'fraud',
+    'ban',
+    'regulation',
+    'fine',
   ];
 
   let score = 0;

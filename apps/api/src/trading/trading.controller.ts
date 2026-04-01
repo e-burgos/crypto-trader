@@ -11,9 +11,16 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { TradingService } from './trading.service';
-import { CreateTradingConfigDto, UpdateTradingConfigDto, StartAgentDto } from './dto/trading-config.dto';
+import {
+  CreateTradingConfigDto,
+  UpdateTradingConfigDto,
+  StartAgentDto,
+} from './dto/trading-config.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CurrentUser, RequestUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  RequestUser,
+} from '../auth/decorators/current-user.decorator';
 
 @Controller('trading')
 @UseGuards(JwtAuthGuard)
@@ -48,10 +55,7 @@ export class TradingController {
 
   @Post('start')
   @HttpCode(HttpStatus.OK)
-  startAgent(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: StartAgentDto,
-  ) {
+  startAgent(@CurrentUser() user: RequestUser, @Body() dto: StartAgentDto) {
     return this.tradingService.startAgent(user.userId, dto);
   }
 

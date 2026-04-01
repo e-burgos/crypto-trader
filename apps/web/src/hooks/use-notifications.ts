@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
 
 export interface Notification {
@@ -11,10 +12,12 @@ export interface Notification {
 }
 
 export function useNotifications() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<Notification[]>({
     queryKey: ['notifications'],
     queryFn: () => api.get('/notifications'),
     refetchInterval: 60_000,
+    enabled: isAuthenticated,
   });
 }
 
@@ -43,4 +46,3 @@ export function useMarkRead() {
     },
   });
 }
-

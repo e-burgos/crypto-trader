@@ -8,7 +8,7 @@ import gsap from 'gsap';
 import { cn } from '../../lib/utils';
 
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
-type Interval = typeof INTERVALS[number];
+type Interval = (typeof INTERVALS)[number];
 
 export function LiveChartPage() {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -41,17 +41,26 @@ export function LiveChartPage() {
 
     const chart = createChart(chartRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: isDark ? 'hsl(222.2, 84%, 4.9%)' : '#ffffff' },
+        background: {
+          type: ColorType.Solid,
+          color: isDark ? 'hsl(222.2, 84%, 4.9%)' : '#ffffff',
+        },
         textColor: isDark ? 'hsl(210, 40%, 80%)' : 'hsl(222.2, 84%, 4.9%)',
       },
       grid: {
-        vertLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-        horzLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+        vertLines: {
+          color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        },
+        horzLines: {
+          color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        },
       },
       width: chartRef.current.clientWidth,
       height: 420,
       crosshair: { mode: 1 },
-      timeScale: { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' },
+      timeScale: {
+        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+      },
     });
 
     chartInstanceRef.current = chart;
@@ -66,17 +75,32 @@ export function LiveChartPage() {
     });
 
     if (candles && candles.length > 0) {
-      // Convert ms timestamps to seconds for lightweight-charts
-      const mapped = candles.map((c) => ({
-        ...c,
-        time: (c.time > 1e12 ? Math.floor(c.time / 1000) : c.time) as import('lightweight-charts').UTCTimestamp,
-      }));
-      candleSeries.setData(mapped);
-      chart.timeScale().fitContent();
+      // Normalize timestamps to UTC seconds, filter invalids, sort ascending
+      const mapped = candles
+        .map((c) => {
+          let t: number =
+            typeof c.time === 'string'
+              ? Math.floor(new Date(c.time).getTime() / 1000)
+              : c.time > 1e12
+                ? Math.floor(c.time / 1000)
+                : c.time;
+          return {
+            ...c,
+            time: t as import('lightweight-charts').UTCTimestamp,
+          };
+        })
+        .filter((c) => (c.time as number) > 0)
+        .sort((a, b) => (a.time as number) - (b.time as number));
+
+      if (mapped.length > 0) {
+        candleSeries.setData(mapped);
+        chart.timeScale().fitContent();
+      }
     }
 
     const handleResize = () => {
-      if (chartRef.current) chart.applyOptions({ width: chartRef.current.clientWidth });
+      if (chartRef.current)
+        chart.applyOptions({ width: chartRef.current.clientWidth });
     };
     window.addEventListener('resize', handleResize);
 
@@ -96,7 +120,10 @@ export function LiveChartPage() {
             {asset}/USDT
             {currentPrice && (
               <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-500">
-                ${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                $
+                {currentPrice.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                })}
               </span>
             )}
           </p>
@@ -111,7 +138,9 @@ export function LiveChartPage() {
                 onClick={() => setAsset(a)}
                 className={cn(
                   'px-4 py-1.5 text-sm font-medium transition-colors',
-                  asset === a ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+                  asset === a
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {a}
@@ -153,4 +182,3 @@ export function LiveChartPage() {
     </div>
   );
 }
-

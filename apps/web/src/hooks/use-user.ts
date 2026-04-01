@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
+import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
 
 export interface UserProfile {
@@ -22,26 +23,35 @@ export interface LLMKeyStatus {
 }
 
 export function useUserProfile() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<UserProfile>({
     queryKey: ['user', 'profile'],
     queryFn: () => api.get('/users/me'),
     staleTime: 300_000,
+    enabled: isAuthenticated,
   });
 }
 
 export function useBinanceKeyStatus() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<KeyStatus>({
     queryKey: ['user', 'binance-status'],
     queryFn: () => api.get('/users/me/binance-keys/status'),
     staleTime: 60_000,
+    enabled: isAuthenticated,
   });
 }
 
 export function useLLMKeys() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<LLMKeyStatus[]>({
     queryKey: ['user', 'llm-keys'],
-    queryFn: () => api.get('/users/me/llm-keys'),
+    queryFn: () =>
+      api
+        .get<{ providers: LLMKeyStatus[] }>('/users/me/llm-keys/status')
+        .then((d) => d.providers),
     staleTime: 60_000,
+    enabled: isAuthenticated,
   });
 }
 
@@ -116,4 +126,3 @@ export function useUpdateProfile() {
       toast.error(err?.message || 'Failed to update profile'),
   });
 }
-

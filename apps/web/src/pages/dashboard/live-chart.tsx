@@ -1,12 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   createChart,
   CandlestickSeries,
   ColorType,
-  IChartApi,
-  ISeriesApi,
-  CandlestickSeriesOptions,
   DeepPartial,
+  CandlestickSeriesOptions,
 } from 'lightweight-charts';
 import { useThemeStore } from '../../store/theme.store';
 import { useOhlcv } from '../../hooks/use-market';
@@ -21,14 +19,21 @@ type Interval = (typeof INTERVALS)[number];
 function chartColors(isDark: boolean) {
   return {
     bg: isDark ? '#0a0f1e' : '#ffffff',
-    text: isDark ? 'rgba(255,255,255,0.7)' : '#1a1a2e',
+    text: isDark ? 'rgba(255,255,255,0.75)' : '#1a1a2e',
     gridLine: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)',
     border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
   };
 }
 
 function normalizeCandles(
-  raw: { time: number | string; open: number; high: number; low: number; close: number; volume: number }[],
+  raw: {
+    time: number | string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }[],
 ) {
   return raw
     .map((c) => {
@@ -38,17 +43,21 @@ function normalizeCandles(
           : c.time > 1e12
             ? Math.floor(c.time / 1000)
             : c.time;
-      return { ...c, time: t } as { time: number; open: number; high: number; low: number; close: number; volume: number };
+      return {
+        time: t as import('lightweight-charts').UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      };
     })
-    .filter((c) => c.time > 0)
-    .sort((a, b) => a.time - b.time);
+    .filter((c) => (c.time as number) > 0)
+    .sort((a, b) => (a.time as number) - (b.time as number));
 }
 
 export function LiveChartPage() {
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartApi = useRef<IChartApi | null>(null);
-  const seriesApi = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
@@ -69,12 +78,17 @@ export function LiveChartPage() {
     { scope: containerRef },
   );
 
-  // ── 1. Create chart once on mount ────────────────────────────────────────
-  useLayoutEffect(() => {
-    if (!chartRef.current) return;
+  // Single effect: create chart + load data together.
+  // Using one effect avoids the React Strict Mode double-invoke bug where
+  // useEffect([candles]) won't re-run after the StrictMode cleanup/remount
+  // cycle because candles hasn't changed reference.
+  useEffect(() => {
+    const container = chartRef.current;
+    if (!container) return;
+
     const colors = chartColors(isDark);
 
-    const chart = createChart(chartRef.current, {
+    const chart = createChart(container, {
       autoSize: true,
       layout: {
         background: { type: ColorType.Solid, color: colors.bg },
@@ -103,46 +117,20 @@ export function LiveChartPage() {
       wickDownColor: '#ef4444',
     } as DeepPartial<CandlestickSeriesOptions>);
 
-    chartApi.current = chart;
-    seriesApi.current = series;
+    if (candles && candles.length > 0) {
+      const mapped = normalizeCandles(candles);
+      if (mapped.length > 0) {
+        series.setData(mapped);
+        chart.timeScale().fitContent();
+      }
+    }
 
     return () => {
       chart.remove();
-      chartApi.current = null;
-      seriesApi.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // only on mount/unmount
-
-  // ── 2. Update theme colors without recreating ────────────────────────────
-  useEffect(() => {
-    if (!chartApi.current) return;
-    const colors = chartColors(isDark);
-    chartApi.current.applyOptions({
-      layout: {
-        background: { type: ColorType.Solid, color: colors.bg },
-        textColor: colors.text,
-      },
-      grid: {
-        vertLines: { color: colors.gridLine },
-        horzLines: { color: colors.gridLine },
-      },
-      timeScale: { borderColor: colors.border },
-      rightPriceScale: { borderColor: colors.border },
-    });
-  }, [isDark]);
-
-  // ── 3. Push new data when candles change ─────────────────────────────────
-  useEffect(() => {
-    if (!seriesApi.current || !candles?.length) return;
-    const mapped = normalizeCandles(candles);
-    if (mapped.length === 0) return;
-    // Cast to satisfy strict UTCTimestamp type
-    seriesApi.current.setData(
-      mapped as unknown as Parameters<typeof seriesApi.current.setData>[0],
-    );
-    chartApi.current?.timeScale().fitContent();
-  }, [candles]);
+  // Recreate chart when theme or data changes — autoSize handles sizing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDark, candles]);
 
   return (
     <div ref={containerRef} className="p-6">

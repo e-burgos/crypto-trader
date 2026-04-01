@@ -4,8 +4,9 @@ import react from '@vitejs/plugin-react';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
 import { nxCopyAssetsPlugin } from '@nx/vite/plugins/nx-copy-assets.plugin';
 
-export default defineConfig(() => ({
+export default defineConfig(({ command }) => ({
   root: import.meta.dirname,
+  base: command === 'build' ? (process.env.VITE_BASE ?? '/') : '/',
   cacheDir: '../../node_modules/.vite/apps/web',
   server: {
     port: 4200,

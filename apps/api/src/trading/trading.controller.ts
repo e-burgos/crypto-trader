@@ -47,7 +47,10 @@ export class TradingController {
   }
 
   @Put('config')
-  @ApiOperation({ summary: 'Crear o actualizar configuración de trading (upsert por asset+pair)' })
+  @ApiOperation({
+    summary:
+      'Crear o actualizar configuración de trading (upsert por asset+pair)',
+  })
   @ApiResponse({ status: 200, description: 'Configuración guardada' })
   upsertConfig(
     @CurrentUser() user: RequestUser,
@@ -73,16 +76,23 @@ export class TradingController {
 
   @Post('start')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Arrancar el agente de trading para un par específico' })
+  @ApiOperation({
+    summary: 'Arrancar el agente de trading para un par específico',
+  })
   @ApiResponse({ status: 200, description: 'Agente iniciado. Devuelve jobId.' })
-  @ApiResponse({ status: 404, description: 'Configuración no encontrada para el par indicado' })
+  @ApiResponse({
+    status: 404,
+    description: 'Configuración no encontrada para el par indicado',
+  })
   startAgent(@CurrentUser() user: RequestUser, @Body() dto: StartAgentDto) {
     return this.tradingService.startAgent(user.userId, dto);
   }
 
   @Post('stop')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Detener el agente de trading para un par específico' })
+  @ApiOperation({
+    summary: 'Detener el agente de trading para un par específico',
+  })
   @ApiResponse({ status: 200, description: 'Agente detenido' })
   stopAgent(
     @CurrentUser() user: RequestUser,
@@ -120,7 +130,9 @@ export class TradingController {
   // ── Trade history ─────────────────────────────────────────────────────────
 
   @Get('history')
-  @ApiOperation({ summary: 'Historial de trades cerrados (paginado, filtrable)' })
+  @ApiOperation({
+    summary: 'Historial de trades cerrados (paginado, filtrable)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
   @ApiQuery({ name: 'asset', required: false, type: String, example: 'BTC' })
@@ -161,4 +173,3 @@ export class TradingController {
     );
   }
 }
-

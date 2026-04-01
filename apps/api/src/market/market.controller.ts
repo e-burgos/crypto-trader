@@ -18,10 +18,22 @@ export class MarketController {
   constructor(private readonly marketService: MarketService) {}
 
   @Get('ohlcv/:asset/:interval')
-  @ApiOperation({ summary: 'Datos OHLCV de Binance para un par e intervalo dado' })
+  @ApiOperation({
+    summary: 'Datos OHLCV de Binance para un par e intervalo dado',
+  })
   @ApiParam({ name: 'asset', enum: ['BTC', 'ETH'], example: 'BTC' })
-  @ApiParam({ name: 'interval', example: '1h', description: 'Intervalo de vela (1m, 5m, 15m, 1h, 4h, 1d)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 200, description: 'Número de velas (máx 1000)' })
+  @ApiParam({
+    name: 'interval',
+    example: '1h',
+    description: 'Intervalo de vela (1m, 5m, 15m, 1h, 4h, 1d)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    example: 200,
+    description: 'Número de velas (máx 1000)',
+  })
   @ApiResponse({ status: 200, description: 'Array de velas OHLCV' })
   getOhlcv(
     @Param('asset') asset: string,
@@ -39,4 +51,3 @@ export class MarketController {
     return this.marketService.getNews(limit ? +limit : 20);
   }
 }
-

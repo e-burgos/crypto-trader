@@ -21,7 +21,9 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('portfolio')
-  @ApiOperation({ summary: 'Resumen del portfolio: P&L total, win rate, trades totales' })
+  @ApiOperation({
+    summary: 'Resumen del portfolio: P&L total, win rate, trades totales',
+  })
   @ApiResponse({ status: 200, description: 'Resumen del portfolio' })
   getPortfolioSummary(@CurrentUser() user: RequestUser) {
     return this.analyticsService.getPortfolioSummary(user.userId);
@@ -56,7 +58,9 @@ export class AnalyticsController {
   }
 
   @Get('summary')
-  @ApiOperation({ summary: 'Métricas avanzadas: win rate, Sharpe ratio, drawdown' })
+  @ApiOperation({
+    summary: 'Métricas avanzadas: win rate, Sharpe ratio, drawdown',
+  })
   @ApiResponse({ status: 200, description: 'Resumen de métricas avanzadas' })
   getSummary(@CurrentUser() user: RequestUser) {
     return this.analyticsService.getSummary(user.userId);

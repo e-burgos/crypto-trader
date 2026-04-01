@@ -36,49 +36,84 @@ export class CreateTradingConfigDto {
   @IsEnum(TradingModeEnum)
   mode!: TradingModeEnum;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 100, example: 70, description: 'Confianza mínima para ejecutar BUY' })
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 100,
+    example: 70,
+    description: 'Confianza mínima para ejecutar BUY',
+  })
   @IsNumber()
   @Min(0)
   @Max(100)
   @IsOptional()
   buyThreshold?: number;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 100, example: 70, description: 'Confianza mínima para ejecutar SELL' })
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 100,
+    example: 70,
+    description: 'Confianza mínima para ejecutar SELL',
+  })
   @IsNumber()
   @Min(0)
   @Max(100)
   @IsOptional()
   sellThreshold?: number;
 
-  @ApiPropertyOptional({ minimum: 0.001, maximum: 0.5, example: 0.03, description: 'Stop-loss como fracción del precio de entrada' })
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 0.5,
+    example: 0.03,
+    description: 'Stop-loss como fracción del precio de entrada',
+  })
   @IsNumber()
   @Min(0.001)
   @Max(0.5)
   @IsOptional()
   stopLossPct?: number;
 
-  @ApiPropertyOptional({ minimum: 0.001, maximum: 1, example: 0.05, description: 'Take-profit como fracción del precio de entrada' })
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.05,
+    description: 'Take-profit como fracción del precio de entrada',
+  })
   @IsNumber()
   @Min(0.001)
   @Max(1)
   @IsOptional()
   takeProfitPct?: number;
 
-  @ApiPropertyOptional({ minimum: 0.01, maximum: 1, example: 0.1, description: 'Fracción máxima del balance a usar por trade' })
+  @ApiPropertyOptional({
+    minimum: 0.01,
+    maximum: 1,
+    example: 0.1,
+    description: 'Fracción máxima del balance a usar por trade',
+  })
   @IsNumber()
   @Min(0.01)
   @Max(1)
   @IsOptional()
   maxTradePct?: number;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 10, example: 3, description: 'Máximo de posiciones abiertas simultáneas' })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 10,
+    example: 3,
+    description: 'Máximo de posiciones abiertas simultáneas',
+  })
   @IsNumber()
   @Min(1)
   @Max(10)
   @IsOptional()
   maxConcurrentPositions?: number;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 1440, example: 60, description: 'Intervalo mínimo entre ciclos en minutos' })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 1440,
+    example: 60,
+    description: 'Intervalo mínimo entre ciclos en minutos',
+  })
   @IsNumber()
   @Min(1)
   @Max(1440)
@@ -141,7 +176,10 @@ export class UpdateTradingConfigDto {
   @IsOptional()
   minIntervalMinutes?: number;
 
-  @ApiPropertyOptional({ example: true, description: 'Activar o desactivar la configuración' })
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Activar o desactivar la configuración',
+  })
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
@@ -156,4 +194,3 @@ export class StartAgentDto {
   @IsEnum(QuoteCurrencyEnum)
   pair!: QuoteCurrencyEnum;
 }
-

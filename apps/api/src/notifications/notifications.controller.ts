@@ -31,7 +31,9 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listar notificaciones del usuario (las no leídas primero)' })
+  @ApiOperation({
+    summary: 'Listar notificaciones del usuario (las no leídas primero)',
+  })
   @ApiQuery({ name: 'take', required: false, type: Number, example: 50 })
   @ApiResponse({ status: 200, description: 'Lista de notificaciones' })
   getAll(@CurrentUser() user: RequestUser, @Query('take') take?: string) {
@@ -40,7 +42,10 @@ export class NotificationsController {
 
   @Get('unread')
   @ApiOperation({ summary: 'Listar solo notificaciones no leídas' })
-  @ApiResponse({ status: 200, description: 'Lista de notificaciones no leídas' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de notificaciones no leídas',
+  })
   getUnread(@CurrentUser() user: RequestUser) {
     return this.notificationsService.getUnread(user.userId);
   }

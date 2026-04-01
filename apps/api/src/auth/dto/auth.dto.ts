@@ -8,11 +8,18 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDto {
-  @ApiProperty({ example: 'trader@example.com', description: 'Email único del usuario' })
+  @ApiProperty({
+    example: 'trader@example.com',
+    description: 'Email único del usuario',
+  })
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ example: 'SecurePass123!', minLength: 8, description: 'Mínimo 8 caracteres' })
+  @ApiProperty({
+    example: 'SecurePass123!',
+    minLength: 8,
+    description: 'Mínimo 8 caracteres',
+  })
   @IsString()
   @MinLength(8)
   password!: string;
@@ -54,7 +61,9 @@ export class UpdateUserStatusDto {
 }
 
 export class BinanceKeyDto {
-  @ApiProperty({ description: 'Binance API Key (permisos de lectura y trading)' })
+  @ApiProperty({
+    description: 'Binance API Key (permisos de lectura y trading)',
+  })
   @IsString()
   apiKey!: string;
 
@@ -72,7 +81,10 @@ export class LLMKeyDto {
   @IsString()
   apiKey!: string;
 
-  @ApiProperty({ example: 'claude-sonnet-4-6', description: 'Modelo seleccionado del proveedor' })
+  @ApiProperty({
+    example: 'claude-sonnet-4-6',
+    description: 'Modelo seleccionado del proveedor',
+  })
   @IsString()
   selectedModel!: string;
 }

@@ -26,9 +26,12 @@ export function setupSwagger(app: INestApplication): void {
 
   // Serve raw OpenAPI JSON spec
   const httpAdapter = app.getHttpAdapter();
-  httpAdapter.get('/api/docs-json', (_req: unknown, res: { json: (d: unknown) => void }) => {
-    res.json(document);
-  });
+  httpAdapter.get(
+    '/api/docs-json',
+    (_req: unknown, res: { json: (d: unknown) => void }) => {
+      res.json(document);
+    },
+  );
 
   // Mount Scalar UI
   app.use(

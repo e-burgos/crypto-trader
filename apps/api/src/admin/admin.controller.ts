@@ -36,7 +36,14 @@ export class AdminController {
   @ApiOperation({ summary: '[ADMIN] Stats globales de la plataforma' })
   @ApiResponse({
     status: 200,
-    schema: { example: { totalUsers: 12, totalTrades: 340, totalPnl: 1250.5, activeAgents: 3 } },
+    schema: {
+      example: {
+        totalUsers: 12,
+        totalTrades: 340,
+        totalPnl: 1250.5,
+        activeAgents: 3,
+      },
+    },
   })
   @ApiResponse({ status: 403, description: 'Acceso denegado' })
   getStats() {
@@ -45,15 +52,22 @@ export class AdminController {
 
   @Post('kill-switch')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '[ADMIN] Detener todos los agentes activos en la plataforma' })
-  @ApiResponse({ status: 200, description: 'Kill-switch ejecutado. Todos los agentes detenidos.' })
+  @ApiOperation({
+    summary: '[ADMIN] Detener todos los agentes activos en la plataforma',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Kill-switch ejecutado. Todos los agentes detenidos.',
+  })
   @ApiResponse({ status: 403, description: 'Acceso denegado' })
   killSwitch(@CurrentUser() user: RequestUser) {
     return this.adminService.killSwitch(user.userId);
   }
 
   @Get('agents/status')
-  @ApiOperation({ summary: '[ADMIN] Estado de todos los agentes de trading activos' })
+  @ApiOperation({
+    summary: '[ADMIN] Estado de todos los agentes de trading activos',
+  })
   @ApiResponse({ status: 200, description: 'Lista de estados de agentes' })
   @ApiResponse({ status: 403, description: 'Acceso denegado' })
   getAgentsStatus() {

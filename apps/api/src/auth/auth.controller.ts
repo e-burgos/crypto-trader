@@ -25,7 +25,10 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Registrar nuevo usuario' })
-  @ApiResponse({ status: 201, description: 'Usuario creado. Devuelve accessToken + refreshToken' })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuario creado. Devuelve accessToken + refreshToken',
+  })
   @ApiResponse({ status: 409, description: 'Email ya registrado' })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
   register(@Body() dto: RegisterDto) {
@@ -35,7 +38,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Iniciar sesión' })
-  @ApiResponse({ status: 200, description: 'Login exitoso. Devuelve accessToken + refreshToken + user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login exitoso. Devuelve accessToken + refreshToken + user',
+  })
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
@@ -45,7 +51,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotar access token usando refresh token' })
   @ApiResponse({ status: 200, description: 'Nuevo par de tokens' })
-  @ApiResponse({ status: 401, description: 'Refresh token inválido o expirado' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token inválido o expirado',
+  })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
   }

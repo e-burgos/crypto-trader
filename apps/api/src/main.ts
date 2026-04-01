@@ -23,9 +23,7 @@ async function bootstrap() {
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,
   );
   if (process.env.NODE_ENV !== 'production') {
-    Logger.log(
-      `📚 API docs available at: http://localhost:${port}/api/docs`,
-    );
+    Logger.log(`📚 API docs available at: http://localhost:${port}/api/docs`);
   }
 }
 

@@ -11,6 +11,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
   UpdateUserDto,
@@ -23,6 +30,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser, RequestUser } from '../auth/decorators/current-user.decorator';
 
+@ApiTags('users')
+@ApiBearerAuth('access-token')
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class UsersController {
@@ -31,11 +40,17 @@ export class UsersController {
   // ── /users/me ────────────────────────────────────────────────────────────
 
   @Get('users/me')
+  @ApiOperation({ summary: 'Obtener perfil del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Datos del perfil' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
   getMe(@CurrentUser() user: RequestUser) {
     return this.usersService.getMe(user.userId);
   }
 
   @Put('users/me')
+  @ApiOperation({ summary: 'Actualizar email o contraseña' })
+  @ApiResponse({ status: 200, description: 'Perfil actualizado' })
+  @ApiResponse({ status: 409, description: 'Email ya en uso' })
   updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateUserDto) {
     return this.usersService.updateMe(user.userId, dto);
   }
@@ -43,17 +58,23 @@ export class UsersController {
   // ── /users/me/binance-keys ────────────────────────────────────────────────
 
   @Post('users/me/binance-keys')
+  @ApiOperation({ summary: 'Guardar credenciales de Binance (encriptadas AES-256-GCM)' })
+  @ApiResponse({ status: 201, description: 'Credenciales guardadas' })
   setBinanceKeys(@CurrentUser() user: RequestUser, @Body() dto: BinanceKeyDto) {
     return this.usersService.setBinanceKeys(user.userId, dto);
   }
 
   @Delete('users/me/binance-keys')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar credenciales de Binance' })
+  @ApiResponse({ status: 204, description: 'Credenciales eliminadas' })
   deleteBinanceKeys(@CurrentUser() user: RequestUser) {
     return this.usersService.deleteBinanceKeys(user.userId);
   }
 
   @Get('users/me/binance-keys/status')
+  @ApiOperation({ summary: 'Verificar si hay credenciales de Binance configuradas' })
+  @ApiResponse({ status: 200, schema: { example: { connected: true } } })
   getBinanceKeyStatus(@CurrentUser() user: RequestUser) {
     return this.usersService.getBinanceKeyStatus(user.userId);
   }
@@ -61,12 +82,17 @@ export class UsersController {
   // ── /users/me/llm-keys ────────────────────────────────────────────────────
 
   @Post('users/me/llm-keys')
+  @ApiOperation({ summary: 'Guardar clave de proveedor LLM (Claude / OpenAI / Groq)' })
+  @ApiResponse({ status: 201, description: 'Clave LLM guardada' })
   setLLMKey(@CurrentUser() user: RequestUser, @Body() dto: LLMKeyDto) {
     return this.usersService.setLLMKey(user.userId, dto);
   }
 
   @Delete('users/me/llm-keys/:provider')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar clave de un proveedor LLM' })
+  @ApiParam({ name: 'provider', enum: ['CLAUDE', 'OPENAI', 'GROQ'] })
+  @ApiResponse({ status: 204, description: 'Clave LLM eliminada' })
   deleteLLMKey(
     @CurrentUser() user: RequestUser,
     @Param('provider') provider: string,
@@ -75,6 +101,15 @@ export class UsersController {
   }
 
   @Get('users/me/llm-keys/status')
+  @ApiOperation({ summary: 'Estado de cada proveedor LLM configurado' })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        providers: [{ provider: 'CLAUDE', connected: true, selectedModel: 'claude-sonnet-4-6' }],
+      },
+    },
+  })
   getLLMKeyStatus(@CurrentUser() user: RequestUser) {
     return this.usersService.getLLMKeyStatus(user.userId);
   }
@@ -84,6 +119,10 @@ export class UsersController {
   @Get('admin/users')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
+  @ApiTags('admin')
+  @ApiOperation({ summary: '[ADMIN] Listar todos los usuarios con su estado' })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado' })
   getAllUsers(@CurrentUser() user: RequestUser) {
     return this.usersService.getAllUsers(user.userId);
   }
@@ -91,6 +130,11 @@ export class UsersController {
   @Patch('admin/users/:id/status')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
+  @ApiTags('admin')
+  @ApiOperation({ summary: '[ADMIN] Activar o desactivar una cuenta de usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Estado actualizado' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado' })
   setUserStatus(
     @CurrentUser() user: RequestUser,
     @Param('id') targetUserId: string,
@@ -99,3 +143,4 @@ export class UsersController {
     return this.usersService.setUserStatus(user.userId, targetUserId, dto.isActive);
   }
 }
+

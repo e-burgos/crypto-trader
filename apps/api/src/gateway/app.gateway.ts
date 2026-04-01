@@ -70,4 +70,8 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitTradeExecuted(userId: string, data: unknown) {
     this.emitToUser(userId, 'trade:executed', data);
   }
+
+  emitToAll(event: string, data: unknown) {
+    this.server.emit(event, data);
+  }
 }

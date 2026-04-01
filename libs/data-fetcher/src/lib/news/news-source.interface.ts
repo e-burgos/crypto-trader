@@ -38,9 +38,9 @@ export function estimateSentiment(text: string): Sentiment {
     if (lower.includes(word)) score--;
   }
 
-  if (score > 0) return 'POSITIVE';
-  if (score < 0) return 'NEGATIVE';
-  return 'NEUTRAL';
+  if (score > 0) return Sentiment.POSITIVE;
+  if (score < 0) return Sentiment.NEGATIVE;
+  return Sentiment.NEUTRAL;
 }
 
 /**

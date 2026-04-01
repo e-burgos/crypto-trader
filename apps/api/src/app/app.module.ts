@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from '../prisma';
@@ -8,9 +9,14 @@ import { GatewayModule } from '../gateway/gateway.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminModule } from '../admin/admin.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { TradingModule } from '../trading/trading.module';
+import { MarketModule } from '../market/market.module';
 
 @Module({
   imports: [
+    BullModule.forRoot({
+      redis: process.env.REDIS_URL || 'redis://localhost:6379',
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -18,6 +24,8 @@ import { AnalyticsModule } from '../analytics/analytics.module';
     NotificationsModule,
     AdminModule,
     AnalyticsModule,
+    TradingModule,
+    MarketModule,
   ],
   controllers: [AppController],
   providers: [AppService],

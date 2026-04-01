@@ -37,4 +37,19 @@ export class AnalyticsController {
       limit ? +limit : 20,
     );
   }
+
+  @Get('summary')
+  getSummary(@CurrentUser() user: RequestUser) {
+    return this.analyticsService.getSummary(user.userId);
+  }
+
+  @Get('pnl-chart')
+  getPnlChart(@CurrentUser() user: RequestUser) {
+    return this.analyticsService.getPnlChart(user.userId);
+  }
+
+  @Get('asset-breakdown')
+  getAssetBreakdown(@CurrentUser() user: RequestUser) {
+    return this.analyticsService.getAssetBreakdown(user.userId);
+  }
 }

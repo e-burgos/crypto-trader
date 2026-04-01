@@ -2,6 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Param,
+  Body,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -32,8 +35,13 @@ export class AdminController {
     return this.adminService.killSwitch(user.userId);
   }
 
+  @Get('agents/status')
+  getAgentsStatus() {
+    return this.adminService.getAllAgentsStatus();
+  }
+
   @Get('audit-log')
-  getAuditLog(@CurrentUser() user: RequestUser) {
-    return this.adminService.getAuditLog(user.userId);
+  getAuditLog() {
+    return this.adminService.getAuditLog();
   }
 }

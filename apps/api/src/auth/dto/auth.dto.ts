@@ -88,3 +88,13 @@ export class LLMKeyDto {
   @IsString()
   selectedModel!: string;
 }
+
+export class NewsApiKeyDto {
+  @ApiProperty({ enum: ['CRYPTOPANIC'], example: 'CRYPTOPANIC' })
+  @IsString()
+  provider!: string;
+
+  @ApiProperty({ description: 'API Key del proveedor de noticias' })
+  @IsString()
+  apiKey!: string;
+}

@@ -126,3 +126,49 @@ export function useUpdateProfile() {
       toast.error(err?.message || 'Failed to update profile'),
   });
 }
+
+export interface NewsApiKeyStatus {
+  provider: string;
+  isActive: boolean;
+}
+
+export function useNewsApiKeys() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<NewsApiKeyStatus[]>({
+    queryKey: ['user', 'news-api-keys'],
+    queryFn: () =>
+      api
+        .get<{ providers: NewsApiKeyStatus[] }>('/users/me/news-api-keys/status')
+        .then((d) => d.providers),
+    staleTime: 60_000,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSetNewsApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { provider: string; apiKey: string }) =>
+      api.post('/users/me/news-api-keys', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'news-api-keys'] });
+      toast.success('News API key saved');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to save key'),
+  });
+}
+
+export function useDeleteNewsApiKey() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: string) =>
+      api.delete(`/users/me/news-api-keys/${provider}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'news-api-keys'] });
+      toast.success('News API key removed');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to remove key'),
+  });
+}

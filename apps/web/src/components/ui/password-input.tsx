@@ -27,11 +27,7 @@ export function PasswordInput({ className, ...props }: PasswordInputProps) {
         tabIndex={-1}
         aria-label={show ? 'Hide password' : 'Show password'}
       >
-        {show ? (
-          <EyeOff className="h-4 w-4" />
-        ) : (
-          <Eye className="h-4 w-4" />
-        )}
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
     </div>
   );

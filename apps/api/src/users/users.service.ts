@@ -10,9 +10,10 @@ import {
   UpdateUserDto,
   BinanceKeyDto,
   LLMKeyDto,
+  NewsApiKeyDto,
 } from '../auth/dto/auth.dto';
 import { encrypt, decrypt } from './utils/encryption.util';
-import { LLMProvider } from '../../generated/prisma/enums';
+import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
 
 @Injectable()
 export class UsersService {
@@ -145,6 +146,34 @@ export class UsersService {
       apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
       selectedModel: cred.selectedModel,
     };
+  }
+
+  // ── News API credentials ───────────────────────────────────────────────────
+
+  async setNewsApiKey(userId: string, dto: NewsApiKeyDto) {
+    const provider = dto.provider as NewsApiProvider;
+    const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
+
+    return this.prisma.newsApiCredential.upsert({
+      where: { userId_provider: { userId, provider } },
+      create: { userId, provider, apiKeyEncrypted, apiKeyIv, isActive: true },
+      update: { apiKeyEncrypted, apiKeyIv, isActive: true },
+      select: { id: true, provider: true, isActive: true },
+    });
+  }
+
+  async deleteNewsApiKey(userId: string, provider: string) {
+    await this.prisma.newsApiCredential.deleteMany({
+      where: { userId, provider: provider as NewsApiProvider },
+    });
+  }
+
+  async getNewsApiKeyStatus(userId: string) {
+    const creds = await this.prisma.newsApiCredential.findMany({
+      where: { userId },
+      select: { provider: true, isActive: true },
+    });
+    return { providers: creds };
   }
 
   // ── Admin ──────────────────────────────────────────────────────────────────

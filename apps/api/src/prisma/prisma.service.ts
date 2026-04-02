@@ -46,6 +46,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get adminAction() {
     return this._client.adminAction;
   }
+  get newsApiCredential() {
+    return this._client.newsApiCredential;
+  }
 
   $transaction(...args: Parameters<PrismaClientInstance['$transaction']>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

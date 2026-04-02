@@ -121,7 +121,7 @@ export class TradingProcessor {
       const indicatorSnapshot = calculateIndicatorSnapshot(candles);
 
       // 6. Fetch news
-      const newsAggregator = this.buildNewsAggregator();
+      const newsAggregator = await this.buildNewsAggregator(userId);
       const newsItems = await newsAggregator.fetchAll(10);
 
       // 7. Load recent trades
@@ -432,9 +432,18 @@ export class TradingProcessor {
     }
   }
 
-  private buildNewsAggregator(): NewsAggregator {
+  private async buildNewsAggregator(userId: string): Promise<NewsAggregator> {
     const sources = [];
-    if (process.env.CRYPTOPANIC_API_KEY) {
+    const newsCred = await this.prisma.newsApiCredential.findFirst({
+      where: { userId, provider: 'CRYPTOPANIC', isActive: true },
+    });
+    if (newsCred) {
+      sources.push(
+        new CryptoPanicFetcher({
+          authToken: decrypt(newsCred.apiKeyEncrypted, newsCred.apiKeyIv),
+        }),
+      );
+    } else if (process.env.CRYPTOPANIC_API_KEY) {
       sources.push(
         new CryptoPanicFetcher({ authToken: process.env.CRYPTOPANIC_API_KEY }),
       );

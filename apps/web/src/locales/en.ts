@@ -165,6 +165,10 @@ const en = {
     remove: 'Remove',
     active: 'Active',
     inactive: 'Inactive',
+    newsApiKeys: 'News API Keys',
+    cryptopanic: 'CryptoPanic',
+    disconnectProvider: 'Disconnect',
+    helpText: 'Get free API key at',
   },
   notifications: {
     title: 'Notifications',
@@ -303,6 +307,8 @@ const en = {
     pnlOpen: 'Profit and Loss — unrealized gain or loss on the open position',
     binanceKeys:
       'Your Binance API keys are encrypted with AES-256 on the server. They are never exposed in the UI.',
+    cryptopanic:
+      'CryptoPanic aggregates real-time crypto news with sentiment filtering. Your API key is encrypted with AES-256 on the server.',
     sandboxMode:
       'SANDBOX simulates trades without real money. LIVE uses your actual Binance balance.',
     buyThreshold:

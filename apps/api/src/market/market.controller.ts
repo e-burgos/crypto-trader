@@ -9,6 +9,10 @@ import {
 } from '@nestjs/swagger';
 import { MarketService } from './market.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import {
+  CurrentUser,
+  RequestUser,
+} from '../auth/decorators/current-user.decorator';
 
 @ApiTags('market')
 @ApiBearerAuth('access-token')
@@ -47,7 +51,10 @@ export class MarketController {
   @ApiOperation({ summary: 'Últimas noticias de crypto agregadas' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
   @ApiResponse({ status: 200, description: 'Lista de artículos de noticias' })
-  getNews(@Query('limit') limit?: string) {
-    return this.marketService.getNews(limit ? +limit : 20);
+  getNews(
+    @CurrentUser() user: RequestUser,
+    @Query('limit') limit?: string,
+  ) {
+    return this.marketService.getNews(user.userId, limit ? +limit : 20);
   }
 }

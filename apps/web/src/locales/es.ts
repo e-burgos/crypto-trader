@@ -166,6 +166,10 @@ const es = {
     remove: 'Eliminar',
     active: 'Activo',
     inactive: 'Inactivo',
+    newsApiKeys: 'Claves API de Noticias',
+    cryptopanic: 'CryptoPanic',
+    disconnectProvider: 'Desconectar',
+    helpText: 'Obtén una clave gratuita en',
   },
   notifications: {
     title: 'Notificaciones',
@@ -306,6 +310,8 @@ const es = {
       'Ganancias y Pérdidas — ganancia o pérdida no realizada de la posición abierta',
     binanceKeys:
       'Tus claves API de Binance están cifradas con AES-256 en el servidor. Nunca se exponen en la UI.',
+    cryptopanic:
+      'CryptoPanic agrega noticias cripto en tiempo real con filtrado por sentimiento. Tu clave API está cifrada con AES-256 en el servidor.',
     sandboxMode:
       'SANDBOX simula trades sin dinero real. EN VIVO usa tu saldo real de Binance.',
     buyThreshold:

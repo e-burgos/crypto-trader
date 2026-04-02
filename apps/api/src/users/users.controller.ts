@@ -23,6 +23,7 @@ import {
   UpdateUserDto,
   BinanceKeyDto,
   LLMKeyDto,
+  NewsApiKeyDto,
   UpdateUserStatusDto,
 } from '../auth/dto/auth.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -127,6 +128,37 @@ export class UsersController {
   })
   getLLMKeyStatus(@CurrentUser() user: RequestUser) {
     return this.usersService.getLLMKeyStatus(user.userId);
+  }
+
+  // ── /users/me/news-api-keys ───────────────────────────────────────────────
+
+  @Post('users/me/news-api-keys')
+  @ApiOperation({ summary: 'Guardar API key de proveedor de noticias (encriptada AES-256-GCM)' })
+  @ApiResponse({ status: 201, description: 'Clave guardada' })
+  setNewsApiKey(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: NewsApiKeyDto,
+  ) {
+    return this.usersService.setNewsApiKey(user.userId, dto);
+  }
+
+  @Delete('users/me/news-api-keys/:provider')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar API key de un proveedor de noticias' })
+  @ApiParam({ name: 'provider', enum: ['CRYPTOPANIC'] })
+  @ApiResponse({ status: 204 })
+  deleteNewsApiKey(
+    @CurrentUser() user: RequestUser,
+    @Param('provider') provider: string,
+  ) {
+    return this.usersService.deleteNewsApiKey(user.userId, provider);
+  }
+
+  @Get('users/me/news-api-keys/status')
+  @ApiOperation({ summary: 'Estado de los proveedores de noticias configurados' })
+  @ApiResponse({ status: 200 })
+  getNewsApiKeyStatus(@CurrentUser() user: RequestUser) {
+    return this.usersService.getNewsApiKeyStatus(user.userId);
   }
 
   // ── /admin/users ──────────────────────────────────────────────────────────

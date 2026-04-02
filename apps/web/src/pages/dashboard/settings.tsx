@@ -16,6 +16,9 @@ import {
   useSetLLMKey,
   useDeleteLLMKey,
   useUpdateProfile,
+  useNewsApiKeys,
+  useSetNewsApiKey,
+  useDeleteNewsApiKey,
 } from '../../hooks/use-user';
 
 const LLM_PROVIDERS = [
@@ -66,6 +69,12 @@ export function SettingsPage() {
     Record<string, { apiKey: string; model: string }>
   >({});
 
+  // News API Keys
+  const { data: newsApiKeys = [] } = useNewsApiKeys();
+  const { mutate: saveNewsApiKey, isPending: savingNewsApi } = useSetNewsApiKey();
+  const { mutate: deleteNewsApiKey } = useDeleteNewsApiKey();
+  const [cryptopanicKey, setCryptopanicKey] = useState('');
+
   useGSAP(
     () => {
       gsap.fromTo(
@@ -79,6 +88,10 @@ export function SettingsPage() {
 
   function getLLMKeyStatus(provider: string) {
     return llmKeys.find((k) => k.provider === provider);
+  }
+
+  function getNewsApiKeyStatus(provider: string) {
+    return newsApiKeys.find((k) => k.provider === provider);
   }
 
   function getLLMForm(provider: string) {
@@ -375,6 +388,90 @@ export function SettingsPage() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* News API Keys */}
+      <div className="settings-section rounded-xl border border-border bg-card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <Key className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold">{t('settings.newsApiKeys')}</h2>
+        </div>
+
+        <div className="rounded-lg border border-border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm">{t('settings.cryptopanic')}</span>
+              <InfoTooltip text={t('tooltips.cryptopanic')} />
+            </div>
+            <span
+              className={cn(
+                'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                getNewsApiKeyStatus('CRYPTOPANIC')?.isActive
+                  ? 'bg-emerald-500/10 text-emerald-500'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {getNewsApiKeyStatus('CRYPTOPANIC')?.isActive ? (
+                <>
+                  <CheckCircle className="h-3 w-3" /> {t('settings.connected')}
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-3 w-3" /> {t('settings.disconnected')}
+                </>
+              )}
+            </span>
+          </div>
+          <div className="mb-3">
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('settings.apiKey')}
+            </label>
+            <PasswordInput
+              value={cryptopanicKey}
+              onChange={(e) => setCryptopanicKey(e.target.value)}
+              placeholder="Your CryptoPanic API Key"
+            />
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            {t('settings.helpText')}{' '}
+            <a
+              href="https://cryptopanic.com/developers/api/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline"
+            >
+              cryptopanic.com/developers/api
+            </a>
+          </p>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={savingNewsApi || !cryptopanicKey}
+              onClick={() =>
+                saveNewsApiKey(
+                  { provider: 'CRYPTOPANIC', apiKey: cryptopanicKey },
+                  { onSuccess: () => setCryptopanicKey('') },
+                )
+              }
+            >
+              {savingNewsApi && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {t('settings.saveKeys')}
+            </Button>
+            {getNewsApiKeyStatus('CRYPTOPANIC')?.isActive && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 text-red-500 hover:text-red-600"
+                onClick={() => deleteNewsApiKey('CRYPTOPANIC')}
+              >
+                <Trash2 className="h-3 w-3" />
+                {t('settings.disconnectProvider')}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

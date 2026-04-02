@@ -3,9 +3,11 @@ import { Shield } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export function AdminLayout() {
   const { user } = useAuthStore();
+  const { t } = useTranslation();
 
   if (!user || user.role !== 'ADMIN') {
     return <Navigate to="/dashboard" replace />;
@@ -15,13 +17,13 @@ export function AdminLayout() {
     <div className="p-6">
       <div className="mb-6 flex items-center gap-2">
         <Shield className="h-5 w-5 text-red-500" />
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
+        <h1 className="text-2xl font-bold">{t('admin.title')}</h1>
       </div>
 
       <div className="mb-6 flex gap-2 border-b border-border pb-4">
         {[
-          { to: '/admin', label: 'Stats & Overview', end: true },
-          { to: '/admin/users', label: 'Users' },
+          { to: '/admin', label: t('admin.tabStats'), end: true },
+          { to: '/admin/users', label: t('admin.tabUsers') },
         ].map(({ to, label, end }) => (
           <NavLink
             key={to}

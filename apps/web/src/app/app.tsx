@@ -78,7 +78,7 @@ export function App() {
               </PublicLayout>
             }
           />
-          <Route path="/help" element={<HelpPage />} />
+          <Route path="/help" element={<PublicLayout><HelpPage /></PublicLayout>} />
           <Route
             path="/onboarding"
             element={

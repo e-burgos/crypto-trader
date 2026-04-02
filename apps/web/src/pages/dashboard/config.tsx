@@ -202,7 +202,7 @@ export function ConfigPage() {
                   <label className="text-sm font-medium">
                     {t('trading.mode')}
                   </label>
-                  <InfoTooltip text="SANDBOX simulates trades without real money. LIVE uses your actual Binance balance." />
+                  <InfoTooltip text={t('tooltips.sandboxMode')} />
                 </div>
                 <div className="flex gap-2">
                   {(['SANDBOX', 'LIVE'] as TradingMode[]).map((m) => (
@@ -236,7 +236,9 @@ export function ConfigPage() {
 
           {/* Thresholds */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">{t('trading.decisionThresholds')}</h2>
+            <h2 className="mb-4 font-semibold">
+              {t('trading.decisionThresholds')}
+            </h2>
             <div className="grid gap-5 sm:grid-cols-2">
               <SliderField
                 label={t('trading.buyThreshold')}
@@ -244,7 +246,7 @@ export function ConfigPage() {
                 min={50}
                 max={95}
                 onChange={(v) => update({ buyThreshold: v })}
-                tooltip="Minimum score the LLM must assign for the agent to place a BUY order"
+                tooltip={t('tooltips.buyThreshold')}
               />
               <SliderField
                 label={t('trading.sellThreshold')}
@@ -252,14 +254,16 @@ export function ConfigPage() {
                 min={50}
                 max={95}
                 onChange={(v) => update({ sellThreshold: v })}
-                tooltip="Minimum score the LLM must assign for the agent to place a SELL order"
+                tooltip={t('tooltips.sellThreshold')}
               />
             </div>
           </div>
 
           {/* Risk Management */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">{t('trading.riskManagement')}</h2>
+            <h2 className="mb-4 font-semibold">
+              {t('trading.riskManagement')}
+            </h2>
             <div className="grid gap-5 sm:grid-cols-2">
               <SliderField
                 label={t('trading.stopLoss')}
@@ -268,7 +272,7 @@ export function ConfigPage() {
                 max={20}
                 step={0.5}
                 onChange={(v) => update({ stopLossPct: v })}
-                tooltip="If the position loses this percentage, the agent will close it automatically to limit losses"
+                tooltip={t('tooltips.stopLoss')}
               />
               <SliderField
                 label={t('trading.takeProfit')}
@@ -277,7 +281,7 @@ export function ConfigPage() {
                 max={50}
                 step={0.5}
                 onChange={(v) => update({ takeProfitPct: v })}
-                tooltip="If the position gains this percentage, the agent will close it automatically to lock in profits"
+                tooltip={t('tooltips.takeProfit')}
               />
               <SliderField
                 label={t('trading.maxTrade')}
@@ -285,7 +289,7 @@ export function ConfigPage() {
                 min={1}
                 max={50}
                 onChange={(v) => update({ maxTradePct: v })}
-                tooltip="Maximum percentage of your available capital to use in a single trade"
+                tooltip={t('tooltips.maxTrade')}
               />
             </div>
           </div>
@@ -299,7 +303,7 @@ export function ConfigPage() {
                   <label className="text-sm font-medium">
                     {t('trading.maxConcurrent')}
                   </label>
-                  <InfoTooltip text="Maximum number of open positions the agent can hold simultaneously" />
+                  <InfoTooltip text={t('tooltips.maxPositions')} />
                 </div>
                 <input
                   type="number"
@@ -317,7 +321,7 @@ export function ConfigPage() {
                   <label className="text-sm font-medium">
                     {t('trading.minInterval')}
                   </label>
-                  <InfoTooltip text="Minimum time (in minutes) between two agent decisions for the same asset" />
+                  <InfoTooltip text={t('tooltips.minInterval')} />
                 </div>
                 <input
                   type="number"

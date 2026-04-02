@@ -2,7 +2,10 @@ import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Bot, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
-import { useAgentDecisions, type AgentDecision } from '../../hooks/use-analytics';
+import {
+  useAgentDecisions,
+  type AgentDecision,
+} from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 
@@ -24,7 +27,9 @@ function ConfidenceBar({ value }: { value: number }) {
           style={{ width: `${value * 100}%` }}
         />
       </div>
-      <span className="text-xs text-muted-foreground">{Math.round(value * 100)}%</span>
+      <span className="text-xs text-muted-foreground">
+        {Math.round(value * 100)}%
+      </span>
     </div>
   );
 }
@@ -37,7 +42,13 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
     <div className="decision-card relative flex gap-4">
       {/* Timeline line */}
       <div className="flex flex-col items-center">
-        <div className={cn('flex h-8 w-8 items-center justify-center rounded-full text-sm', config.bg, config.color)}>
+        <div
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-full text-sm',
+            config.bg,
+            config.color,
+          )}
+        >
           <Icon className="h-4 w-4" />
         </div>
         <div className="mt-1 w-px flex-1 bg-border/60" />
@@ -47,7 +58,9 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
       <div className="mb-4 flex-1 rounded-xl border border-border bg-card p-4">
         <div className="flex items-start justify-between">
           <div>
-            <span className={cn('text-xs font-bold uppercase', config.color)}>{decision.decision}</span>
+            <span className={cn('text-xs font-bold uppercase', config.color)}>
+              {decision.decision}
+            </span>
             <span className="ml-2 text-sm font-semibold">{decision.pair}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -77,22 +90,27 @@ export function AgentLogPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: decisions = [], isLoading } = useAgentDecisions(30);
 
-  useGSAP(() => {
-    gsap.from('.decision-card', {
-      opacity: 0,
-      x: -20,
-      duration: 0.5,
-      stagger: 0.08,
-      ease: 'power2.out',
-    });
-  }, { scope: containerRef, dependencies: [decisions.length] });
+  useGSAP(
+    () => {
+      gsap.from('.decision-card', {
+        opacity: 0,
+        x: -20,
+        duration: 0.5,
+        stagger: 0.08,
+        ease: 'power2.out',
+      });
+    },
+    { scope: containerRef, dependencies: [decisions.length] },
+  );
 
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{t('sidebar.agentLog')}</h1>
-          <p className="text-sm text-muted-foreground">{t('agentLog.subtitle')}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('agentLog.subtitle')}
+          </p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground">
           <Bot className="h-4 w-4 text-primary" />
@@ -117,7 +135,9 @@ export function AgentLogPage() {
           </div>
         ) : (
           <div>
-            {decisions.map((d) => <DecisionCard key={d.id} decision={d} />)}
+            {decisions.map((d) => (
+              <DecisionCard key={d.id} decision={d} />
+            ))}
           </div>
         )}
       </div>

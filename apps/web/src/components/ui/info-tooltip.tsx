@@ -24,7 +24,7 @@ export function InfoTooltip({
       <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground/60 hover:text-muted-foreground transition-colors" />
       <span
         className={cn(
-          'pointer-events-none absolute z-50 w-64 rounded-lg border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-xl',
+          'pointer-events-none absolute z-50 w-64 rounded-lg border border-border bg-card px-3 py-2 text-xs text-card-foreground shadow-xl',
           'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
           translateClass[side],
         )}

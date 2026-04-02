@@ -17,14 +17,37 @@ interface StatCardProps {
   className?: string;
 }
 
-function StatCard({ label, value, sub, positive, icon, className }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  sub,
+  positive,
+  icon,
+  className,
+}: StatCardProps) {
   return (
-    <div className={cn('stat-card rounded-xl border border-border bg-card p-5', className)}>
+    <div
+      className={cn(
+        'stat-card rounded-xl border border-border bg-card p-5',
+        className,
+      )}
+    >
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
-        <div className="rounded-lg bg-muted p-2 text-muted-foreground">{icon}</div>
+        <div className="rounded-lg bg-muted p-2 text-muted-foreground">
+          {icon}
+        </div>
       </div>
-      <div className={cn('text-2xl font-bold', positive === true ? 'text-emerald-500' : positive === false ? 'text-red-500' : '')}>
+      <div
+        className={cn(
+          'text-2xl font-bold',
+          positive === true
+            ? 'text-emerald-500'
+            : positive === false
+              ? 'text-red-500'
+              : '',
+        )}
+      >
         {value}
       </div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
@@ -37,15 +60,18 @@ export function OverviewPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = usePortfolioSummary();
 
-  useGSAP(() => {
-    gsap.from('.stat-card', {
-      opacity: 0,
-      y: 30,
-      duration: 0.5,
-      stagger: 0.1,
-      ease: 'power2.out',
-    });
-  }, { scope: containerRef });
+  useGSAP(
+    () => {
+      gsap.from('.stat-card', {
+        opacity: 0,
+        y: 30,
+        duration: 0.5,
+        stagger: 0.1,
+        ease: 'power2.out',
+      });
+    },
+    { scope: containerRef },
+  );
 
   function fmt(n: number, prefix = '$') {
     return `${prefix}${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -53,8 +79,12 @@ export function OverviewPage() {
 
   return (
     <div ref={containerRef} className="p-6">
-      <h1 className="mb-1 text-2xl font-bold">{t('dashboard.portfolioOverview')}</h1>
-      <p className="mb-6 text-sm text-muted-foreground">{t('dashboard.realtimeSummary')}</p>
+      <h1 className="mb-1 text-2xl font-bold">
+        {t('dashboard.portfolioOverview')}
+      </h1>
+      <p className="mb-6 text-sm text-muted-foreground">
+        {t('dashboard.realtimeSummary')}
+      </p>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -69,9 +99,12 @@ export function OverviewPage() {
             value={fmt(data?.netPnl ?? 0)}
             sub={t('common.afterFees')}
             positive={(data?.netPnl ?? 0) >= 0}
-            icon={data?.netPnl && data.netPnl >= 0
-              ? <TrendingUp className="h-4 w-4" />
-              : <TrendingDown className="h-4 w-4" />
+            icon={
+              data?.netPnl && data.netPnl >= 0 ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )
             }
           />
           <StatCard

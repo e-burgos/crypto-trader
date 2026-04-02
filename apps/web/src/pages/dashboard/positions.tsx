@@ -85,7 +85,7 @@ export function PositionsPage() {
                     <span className="flex items-center justify-end gap-1">
                       {t('common.pnl')}
                       <InfoTooltip
-                        text="Profit and Loss — unrealized gain or loss on the open position"
+                        text={t('tooltips.pnlOpen')}
                         side="left"
                       />
                     </span>

@@ -90,13 +90,13 @@ export function AnalyticsPage() {
           color={
             (portfolio?.netPnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
           }
-          tooltip="Profit and Loss — total realized gains minus fees"
+          tooltip={t('tooltips.pnl')}
         />
         <MetricCard
           label={t('analytics.winRate')}
           value={winRateDisplay}
           sub={t('analytics.winRateSub')}
-          tooltip="Percentage of trades that closed with a profit vs the total number of trades"
+          tooltip={t('tooltips.winRate')}
         />
         <MetricCard
           label={t('analytics.sharpeRatio')}
@@ -104,7 +104,7 @@ export function AnalyticsPage() {
             summary?.sharpeRatio != null ? summary.sharpeRatio.toFixed(2) : '–'
           }
           sub={t('analytics.sharpeRatioSub')}
-          tooltip="Measures return adjusted for risk. > 1 is good, > 2 is excellent"
+          tooltip={t('tooltips.sharpeRatio')}
         />
         <MetricCard
           label={t('analytics.drawdown')}
@@ -119,7 +119,7 @@ export function AnalyticsPage() {
               ? 'text-red-500'
               : undefined
           }
-          tooltip="Maximum drop from the highest portfolio value peak"
+          tooltip={t('tooltips.drawdown')}
         />
         <MetricCard
           label={t('analytics.bestTrade')}
@@ -133,7 +133,7 @@ export function AnalyticsPage() {
               ? 'text-emerald-500'
               : 'text-muted-foreground'
           }
-          tooltip="Highest profit from a single closed trade"
+          tooltip={t('tooltips.bestTrade')}
         />
         <MetricCard
           label={t('analytics.worstTrade')}
@@ -147,7 +147,7 @@ export function AnalyticsPage() {
               ? 'text-red-500'
               : 'text-muted-foreground'
           }
-          tooltip="Largest loss from a single closed trade"
+          tooltip={t('tooltips.worstTrade')}
         />
         <MetricCard
           label={t('analytics.totalTrades')}

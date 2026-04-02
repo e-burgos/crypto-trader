@@ -13,80 +13,6 @@ import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 
-const FAQ_ITEMS = [
-  {
-    q: '¿Qué es CryptoTrader? / What is CryptoTrader?',
-    a: 'CryptoTrader is a platform that uses LLMs (Claude, OpenAI, Groq) to analyze the market and execute trades automatically on your Binance account. The agent reads market data, asks the LLM for a decision, and executes it.',
-  },
-  {
-    q: 'Does the agent manage my real money?',
-    a: 'In LIVE mode: yes, it executes real orders on Binance using your API Key and available balance. In SANDBOX mode: it simulates everything with the same logic but no real money is used. We strongly recommend starting with SANDBOX.',
-  },
-  {
-    q: 'Is it safe to connect my Binance Keys?',
-    a: 'Your API keys are encrypted with AES-256 on the backend server. They are never exposed in the UI or logs. We recommend creating keys with only "Read" + "Spot Trading" permissions — never enable withdrawals.',
-  },
-  {
-    q: 'How do I know if the agent is operating?',
-    a: 'The Agent Log page shows every decision with full reasoning. The Price Ticker shows live prices. The Positions page shows open trades. All data updates in real time via WebSocket.',
-  },
-  {
-    q: 'Can I lose money?',
-    a: 'In LIVE mode: yes. The agent uses configurable Stop Loss and Take Profit to limit losses, but no system is infallible. Always start with SANDBOX until you understand and trust the results.',
-  },
-  {
-    q: 'What LLM providers are supported?',
-    a: 'Currently Claude (Anthropic), OpenAI (GPT-4o), and Groq (LLaMA). You can use any of them — each needs its own API key configured in Settings.',
-  },
-  {
-    q: 'Which crypto pairs are supported?',
-    a: 'Currently BTC/USDT, BTC/USDC, ETH/USDT, and ETH/USDC. More pairs may be added in future versions.',
-  },
-];
-
-const GUIDE_STEPS = [
-  {
-    step: 1,
-    title: 'Register & Complete Onboarding',
-    desc: 'Create your account and follow the onboarding wizard to connect your keys and set your initial configuration.',
-  },
-  {
-    step: 2,
-    title: 'Connect Binance API Keys',
-    desc: 'Go to Settings → Binance API Keys. Create read+spot-trading keys in Binance and paste them here.',
-  },
-  {
-    step: 3,
-    title: 'Add an LLM API Key',
-    desc: 'Go to Settings → LLM Keys. Choose Claude, OpenAI, or Groq and add your API key.',
-  },
-  {
-    step: 4,
-    title: 'Configure the Agent',
-    desc: 'Go to Configuration. Select BTC or ETH, choose SANDBOX mode, set thresholds and risk parameters.',
-  },
-  {
-    step: 5,
-    title: 'Start the Agent',
-    desc: 'In the Configuration page, click "Start Agent" next to your config. The agent will start analyzing immediately.',
-  },
-  {
-    step: 6,
-    title: 'Monitor Performance',
-    desc: 'Watch the Dashboard overview, Live Chart, Agent Log, and Positions pages. The data updates in real time.',
-  },
-  {
-    step: 7,
-    title: 'Review Analytics',
-    desc: 'After running SANDBOX for a while, review Analytics: Win Rate, P&L Chart, Sharpe Ratio, Drawdown.',
-  },
-  {
-    step: 8,
-    title: 'Switch to LIVE (optional)',
-    desc: 'Only when you understand and trust the results: change mode to LIVE in Configuration and restart the agent.',
-  },
-];
-
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -146,6 +72,9 @@ export function HelpPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const faqItems = t('help.faqItems', { returnObjects: true }) as { q: string; a: string }[];
+  const guideSteps = t('help.guideSteps', { returnObjects: true }) as { title: string; desc: string }[];
+
   useGSAP(
     () => {
       gsap.fromTo(
@@ -163,7 +92,7 @@ export function HelpPage() {
         <HelpCircle className="mx-auto mb-3 h-10 w-10 text-primary" />
         <h1 className="text-3xl font-bold">{t('help.title')}</h1>
         <p className="mt-2 text-muted-foreground">
-          Everything you need to know about operating the platform
+          {t('help.subtitle')}
         </p>
       </div>
 
@@ -174,7 +103,7 @@ export function HelpPage() {
           <h2 className="text-xl font-bold">{t('help.faq')}</h2>
         </div>
         <div className="space-y-2">
-          {FAQ_ITEMS.map((item, i) => (
+          {faqItems.map((item, i) => (
             <FaqItem key={i} q={item.q} a={item.a} />
           ))}
         </div>
@@ -187,13 +116,13 @@ export function HelpPage() {
           <h2 className="text-xl font-bold">{t('help.guide')}</h2>
         </div>
         <div className="space-y-3">
-          {GUIDE_STEPS.map(({ step, title, desc }) => (
+          {guideSteps.map(({ title, desc }, i) => (
             <div
-              key={step}
+              key={i}
               className="flex gap-4 rounded-xl border border-border bg-card p-4"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                {step}
+                {i + 1}
               </div>
               <div>
                 <p className="font-semibold text-sm">{title}</p>
@@ -217,7 +146,7 @@ export function HelpPage() {
           {/* Binance */}
           <div className="rounded-xl border border-border bg-card p-5">
             <h3 className="mb-3 font-semibold flex items-center gap-2">
-              Binance API Keys
+              {t('help.binanceTitle')}
               <a
                 href="https://www.binance.com/en/my/settings/api-management"
                 target="_blank"
@@ -230,26 +159,23 @@ export function HelpPage() {
             <ol className="space-y-2 text-sm">
               <li className="flex gap-2">
                 <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
-                Log in to Binance → Account → API Management
+                {t('help.binanceStep1')}
               </li>
               <li className="flex gap-2">
                 <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
-                Click "Create API" → choose "System Generated"
+                {t('help.binanceStep2')}
               </li>
               <li className="flex gap-2">
                 <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
-                Enable permissions: ✅ Read ✅ Spot Trading — ❌ DO NOT enable
-                withdrawals
+                {t('help.binanceStep3')}
               </li>
               <li className="flex gap-2">
                 <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
-                Copy the API Key and Secret → paste in Settings → Binance API
-                Keys
+                {t('help.binanceStep4')}
               </li>
             </ol>
             <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400">
-              ⚠️ Never enable withdrawal permissions. The agent only needs to
-              read and trade.
+              {t('help.binanceWarning')}
             </div>
           </div>
 
@@ -267,12 +193,9 @@ export function HelpPage() {
               </a>
             </h3>
             <ol className="space-y-1 text-sm text-muted-foreground">
-              <li>1. Go to console.anthropic.com → API Keys</li>
-              <li>2. Click "Create Key", copy the value</li>
-              <li>
-                3. In CryptoTrader → Settings → LLM Keys → Claude → paste the
-                key
-              </li>
+              <li>1. {t('help.claudeStep1')}</li>
+              <li>2. {t('help.claudeStep2')}</li>
+              <li>3. {t('help.claudeStep3')}</li>
             </ol>
             <div className="mt-3">
               <CodeBlock>sk-ant-api03-XXXXXXXXXXXXXXXXXXXX</CodeBlock>
@@ -293,12 +216,9 @@ export function HelpPage() {
               </a>
             </h3>
             <ol className="space-y-1 text-sm text-muted-foreground">
-              <li>1. Go to platform.openai.com → API Keys</li>
-              <li>2. Click "Create new secret key", copy the value</li>
-              <li>
-                3. In CryptoTrader → Settings → LLM Keys → OpenAI → paste the
-                key
-              </li>
+              <li>1. {t('help.openaiStep1')}</li>
+              <li>2. {t('help.openaiStep2')}</li>
+              <li>3. {t('help.openaiStep3')}</li>
             </ol>
             <div className="mt-3">
               <CodeBlock>sk-proj-XXXXXXXXXXXXXXXXXXXX</CodeBlock>
@@ -319,11 +239,9 @@ export function HelpPage() {
               </a>
             </h3>
             <ol className="space-y-1 text-sm text-muted-foreground">
-              <li>1. Go to console.groq.com → API Keys</li>
-              <li>2. Click "Create API Key", copy the value</li>
-              <li>
-                3. In CryptoTrader → Settings → LLM Keys → Groq → paste the key
-              </li>
+              <li>1. {t('help.groqStep1')}</li>
+              <li>2. {t('help.groqStep2')}</li>
+              <li>3. {t('help.groqStep3')}</li>
             </ol>
             <div className="mt-3">
               <CodeBlock>gsk_XXXXXXXXXXXXXXXXXXXX</CodeBlock>

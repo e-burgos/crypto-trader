@@ -159,7 +159,7 @@ export function SettingsPage() {
           <div className="flex items-center gap-2">
             <Key className="h-4 w-4 text-primary" />
             <h2 className="font-semibold">{t('settings.binanceKeys')}</h2>
-            <InfoTooltip text="Your Binance API keys are encrypted with AES-256 on the server. They are never exposed in the UI." />
+            <InfoTooltip text={t('tooltips.binanceKeys')} />
           </div>
           <span
             className={cn(

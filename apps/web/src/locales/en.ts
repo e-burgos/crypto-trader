@@ -31,7 +31,8 @@ const en = {
     closedTotal: 'closed total',
     tradingConfigsRunning: 'Trading configs running',
     noTradingData: 'No trading data yet',
-    configureAgent: 'Configure a trading agent to start seeing portfolio stats.',
+    configureAgent:
+      'Configure a trading agent to start seeing portfolio stats.',
   },
   tradeHistory: {
     trades: '{{count}} trades',
@@ -54,7 +55,8 @@ const en = {
     subtitle: 'AI reasoning and decision timeline',
     decisions: '{{count}} decisions',
     noDecisions: 'No agent decisions yet',
-    noDecisionsHint: 'Start a trading agent to see AI reasoning and decisions here.',
+    noDecisionsHint:
+      'Start a trading agent to see AI reasoning and decisions here.',
     waitMinutes: 'Wait: {{count}} min before next action',
   },
   liveChart: {
@@ -66,15 +68,20 @@ const en = {
     positive: 'Positive',
     negative: 'Negative',
     neutral: 'Neutral',
-    apiKeyRequired: 'News requires a CRYPTOPANIC_API_KEY to be configured on the server.',
+    apiKeyRequired:
+      'News requires a CRYPTOPANIC_API_KEY to be configured on the server.',
   },
   admin: {
+    title: 'Admin Panel',
+    tabStats: 'Stats & Overview',
+    tabUsers: 'Users',
     totalUsers: 'Total Users',
     openPositions: 'Open Positions',
     tradesToday: 'Trades Today',
     pnlToday: 'P&L Today',
     killSwitch: 'Emergency Kill Switch',
-    killSwitchDesc: 'Immediately stops all running trading agents across all users. Cannot be undone without manually restarting each agent.',
+    killSwitchDesc:
+      'Immediately stops all running trading agents across all users. Cannot be undone without manually restarting each agent.',
     confirmStopAll: 'CONFIRM STOP ALL',
     killAllAgents: 'Kill All Agents',
     activeAgentsPlatform: 'Active Agents Across Platform',
@@ -167,10 +174,66 @@ const en = {
   },
   help: {
     title: 'Help & Guide',
+    subtitle: 'Everything you need to know about operating the platform',
     faq: 'Frequently Asked Questions',
     guide: 'How to Trade — Step by Step',
     apiKeys: 'API Keys Setup',
     back: 'Back',
+    binanceTitle: 'Binance API Keys',
+    binanceWarning: '⚠️ Never enable withdrawal permissions. The agent only needs to read and trade.',
+    binanceStep1: 'Log in to Binance → Account → API Management',
+    binanceStep2: 'Click "Create API" → choose "System Generated"',
+    binanceStep3: 'Enable permissions: ✅ Read ✅ Spot Trading — ❌ DO NOT enable withdrawals',
+    binanceStep4: 'Copy the API Key and Secret → paste in Settings → Binance API Keys',
+    claudeStep1: 'Go to console.anthropic.com → API Keys',
+    claudeStep2: 'Click "Create Key", copy the value',
+    claudeStep3: 'In CryptoTrader → Settings → LLM Keys → Claude → paste the key',
+    openaiStep1: 'Go to platform.openai.com → API Keys',
+    openaiStep2: 'Click "Create new secret key", copy the value',
+    openaiStep3: 'In CryptoTrader → Settings → LLM Keys → OpenAI → paste the key',
+    groqStep1: 'Go to console.groq.com → API Keys',
+    groqStep2: 'Click "Create API Key", copy the value',
+    groqStep3: 'In CryptoTrader → Settings → LLM Keys → Groq → paste the key',
+    faqItems: [
+      {
+        q: 'What is CryptoTrader?',
+        a: 'CryptoTrader is a platform that uses LLMs (Claude, OpenAI, Groq) to analyze the market and execute trades automatically on your Binance account. The agent reads market data, asks the LLM for a decision, and executes it.'
+      },
+      {
+        q: 'Does the agent manage my real money?',
+        a: 'In LIVE mode: yes, it executes real orders on Binance using your API Key and available balance. In SANDBOX mode: it simulates everything with the same logic but no real money is used. We strongly recommend starting with SANDBOX.'
+      },
+      {
+        q: 'Is it safe to connect my Binance Keys?',
+        a: 'Your API keys are encrypted with AES-256 on the backend server. They are never exposed in the UI or logs. We recommend creating keys with only "Read" + "Spot Trading" permissions — never enable withdrawals.'
+      },
+      {
+        q: 'How do I know if the agent is operating?',
+        a: 'The Agent Log page shows every decision with full reasoning. The Price Ticker shows live prices. The Positions page shows open trades. All data updates in real time via WebSocket.'
+      },
+      {
+        q: 'Can I lose money?',
+        a: 'In LIVE mode: yes. The agent uses configurable Stop Loss and Take Profit to limit losses, but no system is infallible. Always start with SANDBOX until you understand and trust the results.'
+      },
+      {
+        q: 'What LLM providers are supported?',
+        a: 'Currently Claude (Anthropic), OpenAI (GPT-4o), and Groq (LLaMA). You can use any of them — each needs its own API key configured in Settings.'
+      },
+      {
+        q: 'Which crypto pairs are supported?',
+        a: 'Currently BTC/USDT, BTC/USDC, ETH/USDT, and ETH/USDC. More pairs may be added in future versions.'
+      }
+    ],
+    guideSteps: [
+      { title: 'Register & Complete Onboarding', desc: 'Create your account and follow the onboarding wizard to connect your keys and set your initial configuration.' },
+      { title: 'Connect Binance API Keys', desc: 'Go to Settings → Binance API Keys. Create read+spot-trading keys in Binance and paste them here.' },
+      { title: 'Add an LLM API Key', desc: 'Go to Settings → LLM Keys. Choose Claude, OpenAI, or Groq and add your API key.' },
+      { title: 'Configure the Agent', desc: 'Go to Configuration. Select BTC or ETH, choose SANDBOX mode, set thresholds and risk parameters.' },
+      { title: 'Start the Agent', desc: 'In the Configuration page, click "Start Agent" next to your config. The agent will start analyzing immediately.' },
+      { title: 'Monitor Performance', desc: 'Watch the Dashboard overview, Live Chart, Agent Log, and Positions pages. The data updates in real time.' },
+      { title: 'Review Analytics', desc: 'After running SANDBOX for a while, review Analytics: Win Rate, P&L Chart, Sharpe Ratio, Drawdown.' },
+      { title: 'Switch to LIVE (optional)', desc: 'Only when you understand and trust the results: change mode to LIVE in Configuration and restart the agent.' }
+    ]
   },
   common: {
     save: 'Save',
@@ -198,6 +261,28 @@ const en = {
     noPositionsHint: 'No open positions. Start an agent to begin trading.',
     entryPrice: 'Entry Price',
     opened: 'Opened',
+  },
+  tooltips: {
+    pnl: 'Profit and Loss — total realized gains minus fees',
+    winRate: 'Percentage of trades that closed with a profit vs the total number of trades',
+    sharpeRatio: 'Measures return adjusted for risk. > 1 is good, > 2 is excellent',
+    drawdown: 'Maximum drop from the highest portfolio value peak',
+    bestTrade: 'Highest profit from a single closed trade',
+    worstTrade: 'Largest loss from a single closed trade',
+    pnlOpen: 'Profit and Loss — unrealized gain or loss on the open position',
+    binanceKeys: 'Your Binance API keys are encrypted with AES-256 on the server. They are never exposed in the UI.',
+    sandboxMode: 'SANDBOX simulates trades without real money. LIVE uses your actual Binance balance.',
+    buyThreshold: 'Minimum score the LLM must assign for the agent to place a BUY order',
+    sellThreshold: 'Minimum score the LLM must assign for the agent to place a SELL order',
+    stopLoss: 'If the position loses this percentage, the agent will close it automatically to limit losses',
+    takeProfit: 'If the position gains this percentage, the agent will close it automatically to lock in profits',
+    maxTrade: 'Maximum percentage of your available capital to use in a single trade',
+    maxPositions: 'Maximum number of open positions the agent can hold simultaneously',
+    minInterval: 'Minimum time (in minutes) between two agent decisions for the same asset',
+    adminTotalUsers: 'Total registered user accounts',
+    adminOpenPositions: 'Number of currently open trade positions across all users',
+    adminTradesToday: 'Number of trades executed today',
+    adminPnlToday: 'Net profit/loss generated by all agents today',
   },
 };
 

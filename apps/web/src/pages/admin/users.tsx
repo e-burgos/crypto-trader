@@ -91,11 +91,13 @@ export function AdminUsersPage() {
                     >
                       {u.isActive ? (
                         <>
-                          <CheckCircle className="h-3 w-3" /> {t('settings.active')}
+                          <CheckCircle className="h-3 w-3" />{' '}
+                          {t('settings.active')}
                         </>
                       ) : (
                         <>
-                          <XCircle className="h-3 w-3" /> {t('settings.inactive')}
+                          <XCircle className="h-3 w-3" />{' '}
+                          {t('settings.inactive')}
                         </>
                       )}
                     </span>

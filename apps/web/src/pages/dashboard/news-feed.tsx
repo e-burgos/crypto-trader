@@ -77,9 +77,7 @@ export function NewsFeedPage() {
             <Newspaper className="h-5 w-5 text-primary" />
             <h1 className="text-2xl font-bold">{t('sidebar.news')}</h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {t('news.subtitle')}
-          </p>
+          <p className="text-sm text-muted-foreground">{t('news.subtitle')}</p>
         </div>
 
         {/* Sentiment filter */}
@@ -98,7 +96,9 @@ export function NewsFeedPage() {
               >
                 {s === 'ALL'
                   ? t('news.all')
-                  : t(`news.${SENTIMENT_CONFIG[s as NewsItem['sentiment']].label.toLowerCase()}`)}
+                  : t(
+                      `news.${SENTIMENT_CONFIG[s as NewsItem['sentiment']].label.toLowerCase()}`,
+                    )}
               </button>
             ),
           )}

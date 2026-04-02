@@ -83,9 +83,7 @@ export function App() {
             path="/onboarding"
             element={
               <ProtectedRoute>
-                <PublicLayout>
-                  <OnboardingPage />
-                </PublicLayout>
+                <OnboardingPage />
               </ProtectedRoute>
             }
           />

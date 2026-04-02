@@ -1,6 +1,11 @@
 import { useRef } from 'react';
 import { Bell, CheckCheck, Circle } from 'lucide-react';
-import { useNotifications, useMarkAllRead, useMarkRead, useUnreadCount } from '../hooks/use-notifications';
+import {
+  useNotifications,
+  useMarkAllRead,
+  useMarkRead,
+  useUnreadCount,
+} from '../hooks/use-notifications';
 import { cn } from '../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -28,7 +33,10 @@ interface NotificationsDropdownProps {
   onClose: () => void;
 }
 
-export function NotificationsDropdown({ open, onClose }: NotificationsDropdownProps) {
+export function NotificationsDropdown({
+  open,
+  onClose,
+}: NotificationsDropdownProps) {
   const { t } = useTranslation();
   const { data: notifications = [], isLoading } = useNotifications();
   const { mutate: markAllRead } = useMarkAllRead();
@@ -58,7 +66,9 @@ export function NotificationsDropdown({ open, onClose }: NotificationsDropdownPr
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">{t('notifications.title')}</span>
+            <span className="font-semibold text-sm">
+              {t('notifications.title')}
+            </span>
             {unread > 0 && (
               <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white">
                 {unread}
@@ -77,9 +87,14 @@ export function NotificationsDropdown({ open, onClose }: NotificationsDropdownPr
         </div>
 
         {/* List */}
-        <div ref={listRef} className="max-h-96 overflow-y-auto divide-y divide-border">
+        <div
+          ref={listRef}
+          className="max-h-96 overflow-y-auto divide-y divide-border"
+        >
           {isLoading ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">{t('common.loading')}</div>
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {t('common.loading')}
+            </div>
           ) : notifications.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
               {t('notifications.noNotifications')}
@@ -94,12 +109,24 @@ export function NotificationsDropdown({ open, onClose }: NotificationsDropdownPr
                 )}
                 onClick={() => !n.read && markRead(n.id)}
               >
-                <span className={cn('mt-0.5 shrink-0', TYPE_COLORS[n.type] || 'text-muted-foreground')}>
-                  <Circle className={cn('h-2 w-2', !n.read ? 'fill-current' : 'opacity-0')} />
+                <span
+                  className={cn(
+                    'mt-0.5 shrink-0',
+                    TYPE_COLORS[n.type] || 'text-muted-foreground',
+                  )}
+                >
+                  <Circle
+                    className={cn(
+                      'h-2 w-2',
+                      !n.read ? 'fill-current' : 'opacity-0',
+                    )}
+                  />
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm leading-snug">{n.message}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(n.createdAt)}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {timeAgo(n.createdAt)}
+                  </p>
                 </div>
               </div>
             ))

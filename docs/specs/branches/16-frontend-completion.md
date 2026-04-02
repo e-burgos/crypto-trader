@@ -544,7 +544,7 @@ export default {
 
 ```ts
 interface InfoTooltipProps {
-  text: string;       // Explicación simple del término
+  text: string; // Explicación simple del término
   side?: 'top' | 'right' | 'bottom' | 'left'; // default: 'top'
   className?: string;
 }
@@ -554,20 +554,20 @@ interface InfoTooltipProps {
 
 **Dónde usar:**
 
-| Card / Label | Tooltip text |
-|---|---|
-| "Win Rate" | "Porcentaje de trades que cerraron con ganancia vs el total" |
-| "Sharpe Ratio" | "Mide el retorno ajustado por riesgo. > 1 es bueno, > 2 es excelente" |
-| "Drawdown" | "Caída máxima desde el pico más alto de tu portafolio" |
-| "P&L" | "Profit and Loss — ganancia o pérdida total en dólares" |
-| "SANDBOX mode" | "Modo simulado: el agente opera con lógica real pero sin dinero real" |
-| "LIVE mode" | "Modo real: el agente operará con tu dinero en Binance" |
-| "Buy Threshold" | "Puntuación mínima que el LLM debe asignar para que el agente compre" |
-| "Sell Threshold" | "Puntuación mínima que el LLM debe asignar para que el agente venda" |
-| "Stop Loss %" | "Si la posición pierde este porcentaje, el agente la cierra automáticamente" |
-| "Take Profit %" | "Si la posición gana este porcentaje, el agente la cierra automáticamente" |
-| "Max Trade %" | "Porcentaje máximo de tu capital disponible para usar en un solo trade" |
-| "Min Interval (min)" | "Tiempo mínimo entre dos decisiones del agente para el mismo activo" |
+| Card / Label         | Tooltip text                                                                 |
+| -------------------- | ---------------------------------------------------------------------------- |
+| "Win Rate"           | "Porcentaje de trades que cerraron con ganancia vs el total"                 |
+| "Sharpe Ratio"       | "Mide el retorno ajustado por riesgo. > 1 es bueno, > 2 es excelente"        |
+| "Drawdown"           | "Caída máxima desde el pico más alto de tu portafolio"                       |
+| "P&L"                | "Profit and Loss — ganancia o pérdida total en dólares"                      |
+| "SANDBOX mode"       | "Modo simulado: el agente opera con lógica real pero sin dinero real"        |
+| "LIVE mode"          | "Modo real: el agente operará con tu dinero en Binance"                      |
+| "Buy Threshold"      | "Puntuación mínima que el LLM debe asignar para que el agente compre"        |
+| "Sell Threshold"     | "Puntuación mínima que el LLM debe asignar para que el agente venda"         |
+| "Stop Loss %"        | "Si la posición pierde este porcentaje, el agente la cierra automáticamente" |
+| "Take Profit %"      | "Si la posición gana este porcentaje, el agente la cierra automáticamente"   |
+| "Max Trade %"        | "Porcentaje máximo de tu capital disponible para usar en un solo trade"      |
+| "Min Interval (min)" | "Tiempo mínimo entre dos decisiones del agente para el mismo activo"         |
 
 ### 5.3 — Animaciones GSAP + Emil Design
 
@@ -584,6 +584,7 @@ interface InfoTooltipProps {
 7. **Tablas (Trade History, Positions):** Stagger de filas con `0.05s`
 
 **Emil Design constraints:**
+
 - Nunca `scale(0)` — siempre `scale(0.95)` como estado inicial
 - Entradas: más lentas (`0.5-0.7s`), salidas: más rápidas (`0.2-0.3s`)
 - `cubic-bezier(0.22, 1, 0.36, 1)` para entradas naturales
@@ -594,6 +595,7 @@ interface InfoTooltipProps {
 **Estado:** Ya existe `theme-provider.tsx` y `theme.store.ts`.
 
 **Tareas:**
+
 1. Verificar que `theme-provider.tsx` aplica clase `dark` al `<html>` — si no, corregir
 2. Asegurar que TODOS los componentes usen las clases Tailwind semánticas: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `border-border`, `bg-muted`, `text-muted-foreground`
 3. Toggle en navbar: ícono `Sun` / `Moon` de lucide-react + `useThemeStore()`
@@ -610,13 +612,13 @@ interface InfoTooltipProps {
 
 #### Sección A — FAQ (Preguntas Frecuentes)
 
-| Pregunta | Respuesta |
-|---|---|
-| ¿Qué es CryptoTrader? | Es una plataforma que usa LLMs (Claude, OpenAI, Groq) para analizar el mercado y ejecutar trades automáticamente en tu cuenta de Binance. |
-| ¿El agente maneja mi dinero? | En modo LIVE sí: ejecuta órdenes reales en Binance con tu API Key. En modo SANDBOX simula todo sin dinero real. |
+| Pregunta                              | Respuesta                                                                                                                                       |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| ¿Qué es CryptoTrader?                 | Es una plataforma que usa LLMs (Claude, OpenAI, Groq) para analizar el mercado y ejecutar trades automáticamente en tu cuenta de Binance.       |
+| ¿El agente maneja mi dinero?          | En modo LIVE sí: ejecuta órdenes reales en Binance con tu API Key. En modo SANDBOX simula todo sin dinero real.                                 |
 | ¿Es seguro conectar mis Binance Keys? | Las keys se encriptan con AES-256 en el backend. Nunca se exponen en la UI. Recomendamos crear keys con permisos solo de trading (sin retiros). |
-| ¿Cómo sé si el agente está operando? | El Agent Log muestra cada decisión con razonamiento. El Ticker muestra precios en tiempo real. Las Posiciones muestran trades abiertos. |
-| ¿Puedo perder dinero? | En modo LIVE sí. El agente usa Stop Loss y Take Profit para limitar pérdidas, pero ningún sistema es infalible. Empieza con SANDBOX. |
+| ¿Cómo sé si el agente está operando?  | El Agent Log muestra cada decisión con razonamiento. El Ticker muestra precios en tiempo real. Las Posiciones muestran trades abiertos.         |
+| ¿Puedo perder dinero?                 | En modo LIVE sí. El agente usa Stop Loss y Take Profit para limitar pérdidas, pero ningún sistema es infalible. Empieza con SANDBOX.            |
 
 #### Sección B — Guía: Cómo operar paso a paso
 
@@ -631,6 +633,7 @@ interface InfoTooltipProps {
 #### Sección C — Guía: API Keys necesarias
 
 **Binance API Keys:**
+
 - Ir a [binance.com → Gestión de API](https://www.binance.com/es/my/settings/api-management)
 - Crear nueva API Key de tipo "Datos del sistema"
 - Habilitar permisos: "Lectura" + "Trading al contado"
@@ -638,6 +641,7 @@ interface InfoTooltipProps {
 - Copiar `API Key` y `API Secret` → Settings en CryptoTrader
 
 **LLM API Keys:**
+
 - **Claude:** [console.anthropic.com](https://console.anthropic.com) → Keys → Crear key → Pegar en Settings → LLM Keys → Claude
 - **OpenAI:** [platform.openai.com](https://platform.openai.com) → API Keys → Create → Pegar en Settings → LLM Keys → OpenAI
 - **Groq:** [console.groq.com](https://console.groq.com) → API Keys → Create → Pegar en Settings → LLM Keys → Groq

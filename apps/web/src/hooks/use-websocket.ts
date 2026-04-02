@@ -53,17 +53,35 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
       queryClient.invalidateQueries({ queryKey: ['trading', 'positions'] });
     });
 
-    socket.on('price:tick', (data: { symbol: string; price: number; change24h: number }) => {
-      setPrice(data.symbol, { symbol: data.symbol, price: data.price, change24h: data.change24h });
-    });
+    socket.on(
+      'price:tick',
+      (data: { symbol: string; price: number; change24h: number }) => {
+        setPrice(data.symbol, {
+          symbol: data.symbol,
+          price: data.price,
+          change24h: data.change24h,
+        });
+      },
+    );
 
-    socket.on('agent:decision', (data: { userId: string; asset: string; decision: string; confidence: number }) => {
-      queryClient.invalidateQueries({ queryKey: ['trading', 'decisions'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics', 'decisions'] });
-      toast.info(`Agent: ${data.decision} ${data.asset} (${data.confidence}% confidence)`, {
-        duration: 5000,
-      });
-    });
+    socket.on(
+      'agent:decision',
+      (data: {
+        userId: string;
+        asset: string;
+        decision: string;
+        confidence: number;
+      }) => {
+        queryClient.invalidateQueries({ queryKey: ['trading', 'decisions'] });
+        queryClient.invalidateQueries({ queryKey: ['analytics', 'decisions'] });
+        toast.info(
+          `Agent: ${data.decision} ${data.asset} (${data.confidence}% confidence)`,
+          {
+            duration: 5000,
+          },
+        );
+      },
+    );
 
     socket.on('position:updated', () => {
       queryClient.invalidateQueries({ queryKey: ['trading', 'positions'] });
@@ -71,7 +89,9 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
 
     socket.on('agent:killed', () => {
       queryClient.invalidateQueries({ queryKey: ['trading'] });
-      toast.warning('All agents have been stopped by admin', { duration: 8000 });
+      toast.warning('All agents have been stopped by admin', {
+        duration: 8000,
+      });
     });
 
     return () => {
@@ -81,4 +101,3 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
     };
   }, [isAuthenticated, accessToken, queryClient, setPrice]);
 }
-

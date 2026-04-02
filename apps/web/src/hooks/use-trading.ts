@@ -87,7 +87,8 @@ export function useTradingConfigs() {
 export function useUpsertConfig() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: TradingConfigDto) => api.put<TradingConfig>('/trading/config', data),
+    mutationFn: (data: TradingConfigDto) =>
+      api.put<TradingConfig>('/trading/config', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading', 'config'] });
       toast.success('Configuration saved');

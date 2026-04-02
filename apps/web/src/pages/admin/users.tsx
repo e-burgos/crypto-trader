@@ -26,7 +26,9 @@ export function AdminUsersPage() {
   return (
     <div ref={containerRef}>
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{users.length} registered users</p>
+        <p className="text-sm text-muted-foreground">
+          {users.length} registered users
+        </p>
       </div>
 
       {isLoading ? (
@@ -40,16 +42,29 @@ export function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/30">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Joined</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Email
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Role
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                  Joined
+                </th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id} className="user-row border-b border-border/50 hover:bg-muted/20 transition-colors">
+                <tr
+                  key={u.id}
+                  className="user-row border-b border-border/50 hover:bg-muted/20 transition-colors"
+                >
                   <td className="px-4 py-3 font-medium">{u.email}</td>
                   <td className="px-4 py-3">
                     <span
@@ -67,13 +82,19 @@ export function AdminUsersPage() {
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 text-xs font-medium',
-                        u.isActive ? 'text-emerald-500' : 'text-muted-foreground',
+                        u.isActive
+                          ? 'text-emerald-500'
+                          : 'text-muted-foreground',
                       )}
                     >
                       {u.isActive ? (
-                        <><CheckCircle className="h-3 w-3" /> Active</>
+                        <>
+                          <CheckCircle className="h-3 w-3" /> Active
+                        </>
                       ) : (
-                        <><XCircle className="h-3 w-3" /> Inactive</>
+                        <>
+                          <XCircle className="h-3 w-3" /> Inactive
+                        </>
                       )}
                     </span>
                   </td>
@@ -85,10 +106,14 @@ export function AdminUsersPage() {
                       size="sm"
                       variant="ghost"
                       disabled={isPending}
-                      onClick={() => toggleStatus({ id: u.id, isActive: !u.isActive })}
+                      onClick={() =>
+                        toggleStatus({ id: u.id, isActive: !u.isActive })
+                      }
                       className={cn(
                         'text-xs',
-                        u.isActive ? 'text-red-500 hover:text-red-600' : 'text-emerald-500 hover:text-emerald-600',
+                        u.isActive
+                          ? 'text-red-500 hover:text-red-600'
+                          : 'text-emerald-500 hover:text-emerald-600',
                       )}
                     >
                       {isPending ? (

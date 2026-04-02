@@ -1,5 +1,11 @@
 import { useRef, useState } from 'react';
-import { Newspaper, ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import {
+  Newspaper,
+  ExternalLink,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -18,10 +24,28 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const SENTIMENT_CONFIG: Record<NewsItem['sentiment'], { label: string; icon: typeof TrendingUp; color: string; bg: string }> = {
-  POSITIVE: { label: 'Positive', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-  NEGATIVE: { label: 'Negative', icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-500/10' },
-  NEUTRAL: { label: 'Neutral', icon: Minus, color: 'text-muted-foreground', bg: 'bg-muted' },
+const SENTIMENT_CONFIG: Record<
+  NewsItem['sentiment'],
+  { label: string; icon: typeof TrendingUp; color: string; bg: string }
+> = {
+  POSITIVE: {
+    label: 'Positive',
+    icon: TrendingUp,
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-500/10',
+  },
+  NEGATIVE: {
+    label: 'Negative',
+    icon: TrendingDown,
+    color: 'text-red-500',
+    bg: 'bg-red-500/10',
+  },
+  NEUTRAL: {
+    label: 'Neutral',
+    icon: Minus,
+    color: 'text-muted-foreground',
+    bg: 'bg-muted',
+  },
 };
 
 export function NewsFeedPage() {
@@ -30,7 +54,8 @@ export function NewsFeedPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: news = [], isLoading } = useMarketNews(40);
 
-  const filtered = filter === 'ALL' ? news : news.filter((n) => n.sentiment === filter);
+  const filtered =
+    filter === 'ALL' ? news : news.filter((n) => n.sentiment === filter);
 
   useGSAP(
     () => {
@@ -52,25 +77,31 @@ export function NewsFeedPage() {
             <Newspaper className="h-5 w-5 text-primary" />
             <h1 className="text-2xl font-bold">{t('sidebar.news')}</h1>
           </div>
-          <p className="text-sm text-muted-foreground">Latest crypto market news</p>
+          <p className="text-sm text-muted-foreground">
+            Latest crypto market news
+          </p>
         </div>
 
         {/* Sentiment filter */}
         <div className="flex items-center gap-1 rounded-lg border border-border p-1">
-          {(['ALL', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'] as Sentiment[]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                filter === s
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {s === 'ALL' ? 'All' : SENTIMENT_CONFIG[s as NewsItem['sentiment']].label}
-            </button>
-          ))}
+          {(['ALL', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'] as Sentiment[]).map(
+            (s) => (
+              <button
+                key={s}
+                onClick={() => setFilter(s)}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  filter === s
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {s === 'ALL'
+                  ? 'All'
+                  : SENTIMENT_CONFIG[s as NewsItem['sentiment']].label}
+              </button>
+            ),
+          )}
         </div>
       </div>
 
@@ -83,7 +114,12 @@ export function NewsFeedPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-16 text-center">
           <Newspaper className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">{t('common.empty')}</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            {t('common.empty')}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground/60">
+            News requires a CRYPTOPANIC_API_KEY to be configured on the server.
+          </p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

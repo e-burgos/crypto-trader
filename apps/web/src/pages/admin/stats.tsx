@@ -89,7 +89,11 @@ export function AdminStatsPage() {
         />
         <StatCard
           label="P&L Today"
-          value={stats?.profitToday != null ? `$${stats.profitToday.toFixed(2)}` : '–'}
+          value={
+            stats?.profitToday != null
+              ? `$${stats.profitToday.toFixed(2)}`
+              : '–'
+          }
           icon={TrendingUp}
           color={
             stats && (stats.profitToday ?? 0) >= 0

@@ -12,6 +12,7 @@ export default defineConfig({
     baseURL: process.env.BASE_URL || 'http://localhost:4200',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
 
   projects: [
@@ -26,6 +27,7 @@ export default defineConfig({
         storageState: 'e2e/.auth/user.json',
       },
       dependencies: ['setup'],
+      testIgnore: /.*\.unauth\.spec\.ts/,
     },
     {
       name: 'unauthenticated',

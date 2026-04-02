@@ -1,5 +1,13 @@
 import { useRef, useState } from 'react';
-import { HelpCircle, BookOpen, Key, ChevronDown, ChevronRight, ChevronUp, ExternalLink } from 'lucide-react';
+import {
+  HelpCircle,
+  BookOpen,
+  Key,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  ExternalLink,
+} from 'lucide-react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
@@ -87,9 +95,18 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     () => {
       if (!bodyRef.current) return;
       if (open) {
-        gsap.fromTo(bodyRef.current, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: 0.3, ease: 'power2.out' });
+        gsap.fromTo(
+          bodyRef.current,
+          { height: 0, opacity: 0 },
+          { height: 'auto', opacity: 1, duration: 0.3, ease: 'power2.out' },
+        );
       } else {
-        gsap.to(bodyRef.current, { height: 0, opacity: 0, duration: 0.2, ease: 'power2.in' });
+        gsap.to(bodyRef.current, {
+          height: 0,
+          opacity: 0,
+          duration: 0.2,
+          ease: 'power2.in',
+        });
       }
     },
     { dependencies: [open] },
@@ -102,10 +119,16 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left font-medium text-sm hover:bg-muted/30 transition-colors"
       >
         {q}
-        {open ? <ChevronUp className="h-4 w-4 shrink-0 text-primary" /> : <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        {open ? (
+          <ChevronUp className="h-4 w-4 shrink-0 text-primary" />
+        ) : (
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        )}
       </button>
       <div ref={bodyRef} className="overflow-hidden h-0 opacity-0">
-        <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">{a}</p>
+        <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
+          {a}
+        </p>
       </div>
     </div>
   );
@@ -139,7 +162,9 @@ export function HelpPage() {
       <div className="help-section mb-10 text-center">
         <HelpCircle className="mx-auto mb-3 h-10 w-10 text-primary" />
         <h1 className="text-3xl font-bold">{t('help.title')}</h1>
-        <p className="mt-2 text-muted-foreground">Everything you need to know about operating the platform</p>
+        <p className="mt-2 text-muted-foreground">
+          Everything you need to know about operating the platform
+        </p>
       </div>
 
       {/* FAQ */}
@@ -163,13 +188,18 @@ export function HelpPage() {
         </div>
         <div className="space-y-3">
           {GUIDE_STEPS.map(({ step, title, desc }) => (
-            <div key={step} className="flex gap-4 rounded-xl border border-border bg-card p-4">
+            <div
+              key={step}
+              className="flex gap-4 rounded-xl border border-border bg-card p-4"
+            >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                 {step}
               </div>
               <div>
                 <p className="font-semibold text-sm">{title}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{desc}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                  {desc}
+                </p>
               </div>
             </div>
           ))}
@@ -198,13 +228,28 @@ export function HelpPage() {
               </a>
             </h3>
             <ol className="space-y-2 text-sm">
-              <li className="flex gap-2"><ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" /> Log in to Binance → Account → API Management</li>
-              <li className="flex gap-2"><ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" /> Click "Create API" → choose "System Generated"</li>
-              <li className="flex gap-2"><ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" /> Enable permissions: ✅ Read ✅ Spot Trading — ❌ DO NOT enable withdrawals</li>
-              <li className="flex gap-2"><ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" /> Copy the API Key and Secret → paste in Settings → Binance API Keys</li>
+              <li className="flex gap-2">
+                <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
+                Log in to Binance → Account → API Management
+              </li>
+              <li className="flex gap-2">
+                <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
+                Click "Create API" → choose "System Generated"
+              </li>
+              <li className="flex gap-2">
+                <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
+                Enable permissions: ✅ Read ✅ Spot Trading — ❌ DO NOT enable
+                withdrawals
+              </li>
+              <li className="flex gap-2">
+                <ChevronRight className="h-4 w-4 mt-0.5 shrink-0 text-primary" />{' '}
+                Copy the API Key and Secret → paste in Settings → Binance API
+                Keys
+              </li>
             </ol>
             <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400">
-              ⚠️ Never enable withdrawal permissions. The agent only needs to read and trade.
+              ⚠️ Never enable withdrawal permissions. The agent only needs to
+              read and trade.
             </div>
           </div>
 
@@ -212,14 +257,22 @@ export function HelpPage() {
           <div className="rounded-xl border border-border bg-card p-5">
             <h3 className="mb-3 font-semibold flex items-center gap-2">
               Claude (Anthropic)
-              <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <a
+                href="https://console.anthropic.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
                 console.anthropic.com <ExternalLink className="h-3 w-3" />
               </a>
             </h3>
             <ol className="space-y-1 text-sm text-muted-foreground">
               <li>1. Go to console.anthropic.com → API Keys</li>
               <li>2. Click "Create Key", copy the value</li>
-              <li>3. In CryptoTrader → Settings → LLM Keys → Claude → paste the key</li>
+              <li>
+                3. In CryptoTrader → Settings → LLM Keys → Claude → paste the
+                key
+              </li>
             </ol>
             <div className="mt-3">
               <CodeBlock>sk-ant-api03-XXXXXXXXXXXXXXXXXXXX</CodeBlock>
@@ -230,14 +283,22 @@ export function HelpPage() {
           <div className="rounded-xl border border-border bg-card p-5">
             <h3 className="mb-3 font-semibold flex items-center gap-2">
               OpenAI
-              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
                 platform.openai.com <ExternalLink className="h-3 w-3" />
               </a>
             </h3>
             <ol className="space-y-1 text-sm text-muted-foreground">
               <li>1. Go to platform.openai.com → API Keys</li>
               <li>2. Click "Create new secret key", copy the value</li>
-              <li>3. In CryptoTrader → Settings → LLM Keys → OpenAI → paste the key</li>
+              <li>
+                3. In CryptoTrader → Settings → LLM Keys → OpenAI → paste the
+                key
+              </li>
             </ol>
             <div className="mt-3">
               <CodeBlock>sk-proj-XXXXXXXXXXXXXXXXXXXX</CodeBlock>
@@ -248,14 +309,21 @@ export function HelpPage() {
           <div className="rounded-xl border border-border bg-card p-5">
             <h3 className="mb-3 font-semibold flex items-center gap-2">
               Groq
-              <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+              <a
+                href="https://console.groq.com/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
                 console.groq.com <ExternalLink className="h-3 w-3" />
               </a>
             </h3>
             <ol className="space-y-1 text-sm text-muted-foreground">
               <li>1. Go to console.groq.com → API Keys</li>
               <li>2. Click "Create API Key", copy the value</li>
-              <li>3. In CryptoTrader → Settings → LLM Keys → Groq → paste the key</li>
+              <li>
+                3. In CryptoTrader → Settings → LLM Keys → Groq → paste the key
+              </li>
             </ol>
             <div className="mt-3">
               <CodeBlock>gsk_XXXXXXXXXXXXXXXXXXXX</CodeBlock>

@@ -7,7 +7,11 @@ interface InfoTooltipProps {
   className?: string;
 }
 
-export function InfoTooltip({ text, side = 'top', className }: InfoTooltipProps) {
+export function InfoTooltip({
+  text,
+  side = 'top',
+  className,
+}: InfoTooltipProps) {
   const translateClass: Record<string, string> = {
     top: '-translate-x-1/2 left-1/2 bottom-full mb-2',
     bottom: '-translate-x-1/2 left-1/2 top-full mt-2',

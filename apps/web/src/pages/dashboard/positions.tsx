@@ -1,5 +1,11 @@
 import { useRef, useState } from 'react';
-import { Briefcase, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Briefcase,
+  TrendingUp,
+  TrendingDown,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
@@ -38,7 +44,9 @@ export function PositionsPage() {
           <Briefcase className="h-5 w-5 text-primary" />
           <h1 className="text-2xl font-bold">{t('sidebar.positions')}</h1>
         </div>
-        <p className="text-sm text-muted-foreground">Currently open trading positions</p>
+        <p className="text-sm text-muted-foreground">
+          Currently open trading positions
+        </p>
       </div>
 
       {isLoading ? (
@@ -61,22 +69,38 @@ export function PositionsPage() {
             <table className="w-full text-sm">
               <thead className="border-b border-border bg-muted/30">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Asset</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Mode</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Entry Price</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Qty</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Asset
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Mode
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Entry Price
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Qty
+                  </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                     <span className="flex items-center justify-end gap-1">
                       {t('common.pnl')}
-                      <InfoTooltip text="Profit and Loss — unrealized gain or loss on the open position" side="left" />
+                      <InfoTooltip
+                        text="Profit and Loss — unrealized gain or loss on the open position"
+                        side="left"
+                      />
                     </span>
                   </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Opened</th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Opened
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {positions.map((pos) => (
-                  <tr key={pos.id} className="position-row border-b border-border/50 hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={pos.id}
+                    className="position-row border-b border-border/50 hover:bg-muted/20 transition-colors"
+                  >
                     <td className="px-4 py-3 font-semibold">
                       {pos.asset}/{pos.pair}
                     </td>
@@ -93,14 +117,21 @@ export function PositionsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-mono">
-                      ${pos.entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      $
+                      {pos.entryPrice.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono">{pos.quantity.toFixed(6)}</td>
+                    <td className="px-4 py-3 text-right font-mono">
+                      {pos.quantity.toFixed(6)}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <span
                         className={cn(
                           'inline-flex items-center gap-1 font-semibold font-mono',
-                          pos.unrealizedPnl >= 0 ? 'text-emerald-500' : 'text-red-500',
+                          pos.unrealizedPnl >= 0
+                            ? 'text-emerald-500'
+                            : 'text-red-500',
                         )}
                       >
                         {pos.unrealizedPnl >= 0 ? (

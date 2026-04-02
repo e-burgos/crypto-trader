@@ -44,7 +44,15 @@ const DEFAULT_FORM: ConfigForm = {
   minIntervalMinutes: '60',
 };
 
-function SliderField({ label, value, min, max, step = 1, onChange, tooltip }: {
+function SliderField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  onChange,
+  tooltip,
+}: {
   label: string;
   value: string;
   min: number;
@@ -120,7 +128,10 @@ export function ConfigPage() {
   }
 
   function getAgentIsRunning(asset: string, pair: string) {
-    return agentStatuses.find((s) => s.asset === asset && s.pair === pair)?.isRunning ?? false;
+    return (
+      agentStatuses.find((s) => s.asset === asset && s.pair === pair)
+        ?.isRunning ?? false
+    );
   }
 
   return (
@@ -134,7 +145,10 @@ export function ConfigPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Form */}
-        <form onSubmit={handleSubmit} className="config-card lg:col-span-2 space-y-5">
+        <form
+          onSubmit={handleSubmit}
+          className="config-card lg:col-span-2 space-y-5"
+        >
           {/* Market section */}
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 font-semibold">Market</h2>
@@ -185,7 +199,9 @@ export function ConfigPage() {
               </div>
               <div>
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <label className="text-sm font-medium">{t('trading.mode')}</label>
+                  <label className="text-sm font-medium">
+                    {t('trading.mode')}
+                  </label>
                   <InfoTooltip text="SANDBOX simulates trades without real money. LIVE uses your actual Binance balance." />
                 </div>
                 <div className="flex gap-2">
@@ -203,7 +219,9 @@ export function ConfigPage() {
                           : 'border-border hover:border-primary/40',
                       )}
                     >
-                      {m === 'SANDBOX' ? t('trading.sandbox') : t('trading.live')}
+                      {m === 'SANDBOX'
+                        ? t('trading.sandbox')
+                        : t('trading.live')}
                     </button>
                   ))}
                 </div>
@@ -278,7 +296,9 @@ export function ConfigPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <label className="text-sm font-medium">{t('trading.maxConcurrent')}</label>
+                  <label className="text-sm font-medium">
+                    {t('trading.maxConcurrent')}
+                  </label>
                   <InfoTooltip text="Maximum number of open positions the agent can hold simultaneously" />
                 </div>
                 <input
@@ -286,13 +306,17 @@ export function ConfigPage() {
                   min={1}
                   max={10}
                   value={form.maxConcurrentPositions}
-                  onChange={(e) => update({ maxConcurrentPositions: e.target.value })}
+                  onChange={(e) =>
+                    update({ maxConcurrentPositions: e.target.value })
+                  }
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
               <div>
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <label className="text-sm font-medium">{t('trading.minInterval')}</label>
+                  <label className="text-sm font-medium">
+                    {t('trading.minInterval')}
+                  </label>
                   <InfoTooltip text="Minimum time (in minutes) between two agent decisions for the same asset" />
                 </div>
                 <input
@@ -300,15 +324,25 @@ export function ConfigPage() {
                   min={1}
                   max={1440}
                   value={form.minIntervalMinutes}
-                  onChange={(e) => update({ minIntervalMinutes: e.target.value })}
+                  onChange={(e) =>
+                    update({ minIntervalMinutes: e.target.value })
+                  }
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
             </div>
           </div>
 
-          <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full sm:w-auto"
+          >
+            {isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             {t('trading.saveConfig')}
           </Button>
         </form>
@@ -318,13 +352,18 @@ export function ConfigPage() {
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 font-semibold">{t('trading.activeAgents')}</h2>
             {configs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t('trading.noConfigs')}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('trading.noConfigs')}
+              </p>
             ) : (
               <ul className="space-y-3">
                 {configs.map((cfg) => {
                   const isRunning = getAgentIsRunning(cfg.asset, cfg.pair);
                   return (
-                    <li key={cfg.id} className="rounded-lg border border-border p-3">
+                    <li
+                      key={cfg.id}
+                      className="rounded-lg border border-border p-3"
+                    >
                       <div className="mb-2 flex items-center justify-between">
                         <span className="font-medium text-sm">
                           {cfg.asset}/{cfg.pair}
@@ -337,18 +376,23 @@ export function ConfigPage() {
                               : 'bg-muted text-muted-foreground',
                           )}
                         >
-                          {isRunning ? t('common.running') : t('common.stopped')}
+                          {isRunning
+                            ? t('common.running')
+                            : t('common.stopped')}
                         </span>
                       </div>
                       <div className="mb-2 text-xs text-muted-foreground">
-                        {cfg.mode} · SL {cfg.stopLossPct}% · TP {cfg.takeProfitPct}%
+                        {cfg.mode} · SL {cfg.stopLossPct}% · TP{' '}
+                        {cfg.takeProfitPct}%
                       </div>
                       {isRunning ? (
                         <Button
                           size="sm"
                           variant="ghost"
                           className="w-full gap-1.5 text-red-500 hover:text-red-600"
-                          onClick={() => stopAgent({ asset: cfg.asset, pair: cfg.pair })}
+                          onClick={() =>
+                            stopAgent({ asset: cfg.asset, pair: cfg.pair })
+                          }
                         >
                           <Square className="h-3 w-3" />
                           {t('trading.stopAgent')}
@@ -357,7 +401,9 @@ export function ConfigPage() {
                         <Button
                           size="sm"
                           className="w-full gap-1.5"
-                          onClick={() => startAgent({ asset: cfg.asset, pair: cfg.pair })}
+                          onClick={() =>
+                            startAgent({ asset: cfg.asset, pair: cfg.pair })
+                          }
                         >
                           <Play className="h-3 w-3" />
                           {t('trading.startAgent')}
@@ -374,5 +420,3 @@ export function ConfigPage() {
     </div>
   );
 }
-
-

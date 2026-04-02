@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
 export interface OhlcvCandle {
-  time: number;
+  time?: number;
+  openTime?: number;
   open: number;
   high: number;
   low: number;

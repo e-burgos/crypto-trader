@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Moon, Sun, TrendingUp, Bell, HelpCircle, LogOut, LayoutDashboard } from 'lucide-react';
+import {
+  Moon,
+  Sun,
+  TrendingUp,
+  Bell,
+  HelpCircle,
+  LogOut,
+  LayoutDashboard,
+} from 'lucide-react';
 import { Button } from './ui/button';
 import { useThemeStore } from '../store/theme.store';
 import { useAuthStore } from '../store/auth.store';
@@ -91,7 +99,9 @@ export function Navbar() {
           ) : (
             <>
               <Link to="/login">
-                <Button variant="ghost" size="sm">{t('nav.signIn')}</Button>
+                <Button variant="ghost" size="sm">
+                  {t('nav.signIn')}
+                </Button>
               </Link>
               <Link to="/register">
                 <Button size="sm">{t('nav.getStarted')}</Button>
@@ -109,12 +119,20 @@ export function Navbar() {
 
           <LangToggle />
 
-          <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>
     </nav>
   );
 }
-

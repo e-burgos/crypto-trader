@@ -27,7 +27,8 @@ function chartColors(isDark: boolean) {
 
 function normalizeCandles(
   raw: {
-    time: number | string;
+    time?: number | string;
+    openTime?: number;
     open: number;
     high: number;
     low: number;
@@ -37,12 +38,14 @@ function normalizeCandles(
 ) {
   return raw
     .map((c) => {
+      // Backend returns openTime (ms); Binance fallback returns time (s or ms)
+      const rawTime = (c as { openTime?: number }).openTime ?? c.time;
       const t: number =
-        typeof c.time === 'string'
-          ? Math.floor(new Date(c.time).getTime() / 1000)
-          : c.time > 1e12
-            ? Math.floor(c.time / 1000)
-            : c.time;
+        typeof rawTime === 'string'
+          ? Math.floor(new Date(rawTime).getTime() / 1000)
+          : (rawTime as number) > 1e12
+            ? Math.floor((rawTime as number) / 1000)
+            : (rawTime as number);
       return {
         time: t as import('lightweight-charts').UTCTimestamp,
         open: c.open,
@@ -138,7 +141,7 @@ export function LiveChartPage() {
       ro.disconnect();
       chart.remove();
     };
-  // Recreate when theme or data changes — explicit width avoids async resize race.
+    // Recreate when theme or data changes — explicit width avoids async resize race.
   }, [isDark, candles]);
 
   return (
@@ -200,7 +203,10 @@ export function LiveChartPage() {
 
       <div className="rounded-xl border border-border bg-card overflow-hidden relative">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground bg-card/80 backdrop-blur-sm" style={{ height: 420 }}>
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground bg-card/80 backdrop-blur-sm"
+            style={{ height: 420 }}
+          >
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             Loading candles...
           </div>

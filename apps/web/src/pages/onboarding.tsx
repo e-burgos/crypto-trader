@@ -55,8 +55,8 @@ function StepBinance({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-600 dark:text-amber-400">
-        <strong>Tip:</strong> You can skip this step and use Sandbox mode
-        to practice risk-free.
+        <strong>Tip:</strong> You can skip this step and use Sandbox mode to
+        practice risk-free.
       </div>
 
       {!state.skipBinance && (
@@ -283,18 +283,20 @@ export function OnboardingPage() {
       });
 
       // Create initial trading config with safe defaults
-      await api.put('/trading/config', {
-        asset: 'BTC',
-        pair: 'USDT',
-        mode: state.mode,
-        buyThreshold: 70,
-        sellThreshold: 65,
-        stopLossPct: 2,
-        takeProfitPct: 4,
-        maxTradePct: 0.1,
-        maxConcurrentPositions: 3,
-        minIntervalMinutes: 60,
-      }).catch(() => null); // Non-blocking — user can configure later
+      await api
+        .put('/trading/config', {
+          asset: 'BTC',
+          pair: 'USDT',
+          mode: state.mode,
+          buyThreshold: 70,
+          sellThreshold: 65,
+          stopLossPct: 2,
+          takeProfitPct: 4,
+          maxTradePct: 0.1,
+          maxConcurrentPositions: 3,
+          minIntervalMinutes: 60,
+        })
+        .catch(() => null); // Non-blocking — user can configure later
 
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {

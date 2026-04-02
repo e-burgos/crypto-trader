@@ -18,9 +18,25 @@ import {
 } from '../../hooks/use-user';
 
 const LLM_PROVIDERS = [
-  { value: 'CLAUDE', label: 'Anthropic Claude', models: ['claude-opus-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'] },
-  { value: 'OPENAI', label: 'OpenAI', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'] },
-  { value: 'GROQ', label: 'Groq', models: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'] },
+  {
+    value: 'CLAUDE',
+    label: 'Anthropic Claude',
+    models: [
+      'claude-opus-4-5',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-haiku-20240307',
+    ],
+  },
+  {
+    value: 'OPENAI',
+    label: 'OpenAI',
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+  },
+  {
+    value: 'GROQ',
+    label: 'Groq',
+    models: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
+  },
 ];
 
 export function SettingsPage() {
@@ -29,20 +45,25 @@ export function SettingsPage() {
 
   // Profile
   const { data: profile } = useUserProfile();
-  const { mutate: updateProfile, isPending: savingProfile } = useUpdateProfile();
+  const { mutate: updateProfile, isPending: savingProfile } =
+    useUpdateProfile();
   const [profileForm, setProfileForm] = useState({ email: '', password: '' });
 
   // Binance Keys
   const { data: binanceStatus } = useBinanceKeyStatus();
-  const { mutate: saveBinanceKeys, isPending: savingBinance } = useSetBinanceKeys();
-  const { mutate: deleteBinanceKeys, isPending: deletingBinance } = useDeleteBinanceKeys();
+  const { mutate: saveBinanceKeys, isPending: savingBinance } =
+    useSetBinanceKeys();
+  const { mutate: deleteBinanceKeys, isPending: deletingBinance } =
+    useDeleteBinanceKeys();
   const [binanceForm, setBinanceForm] = useState({ apiKey: '', apiSecret: '' });
 
   // LLM Keys
   const { data: llmKeys = [] } = useLLMKeys();
   const { mutate: saveLLMKey, isPending: savingLLM } = useSetLLMKey();
   const { mutate: deleteLLMKey } = useDeleteLLMKey();
-  const [llmForms, setLlmForms] = useState<Record<string, { apiKey: string; model: string }>>({});
+  const [llmForms, setLlmForms] = useState<
+    Record<string, { apiKey: string; model: string }>
+  >({});
 
   useGSAP(
     () => {
@@ -60,14 +81,21 @@ export function SettingsPage() {
   }
 
   function getLLMForm(provider: string) {
-    return llmForms[provider] ?? { apiKey: '', model: LLM_PROVIDERS.find(p => p.value === provider)?.models[0] ?? '' };
+    return (
+      llmForms[provider] ?? {
+        apiKey: '',
+        model: LLM_PROVIDERS.find((p) => p.value === provider)?.models[0] ?? '',
+      }
+    );
   }
 
   return (
     <div ref={containerRef} className="p-6 space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
-        <p className="text-sm text-muted-foreground">Manage your profile and API keys</p>
+        <p className="text-sm text-muted-foreground">
+          Manage your profile and API keys
+        </p>
       </div>
 
       {/* Profile */}
@@ -78,33 +106,45 @@ export function SettingsPage() {
         </div>
         <div className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-sm font-medium">{t('settings.email')}</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('settings.email')}
+            </label>
             <input
               type="email"
               placeholder={profile?.email ?? ''}
               value={profileForm.email}
-              onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((f) => ({ ...f, email: e.target.value }))
+              }
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium">{t('settings.password')}</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('settings.password')}
+            </label>
             <input
               type="password"
               value={profileForm.password}
-              onChange={(e) => setProfileForm((f) => ({ ...f, password: e.target.value }))}
+              onChange={(e) =>
+                setProfileForm((f) => ({ ...f, password: e.target.value }))
+              }
               placeholder="Leave blank to keep current"
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <Button
             size="sm"
-            disabled={savingProfile || (!profileForm.email && !profileForm.password)}
+            disabled={
+              savingProfile || (!profileForm.email && !profileForm.password)
+            }
             onClick={() => {
               const data: { email?: string; password?: string } = {};
               if (profileForm.email) data.email = profileForm.email;
               if (profileForm.password) data.password = profileForm.password;
-              updateProfile(data, { onSuccess: () => setProfileForm({ email: '', password: '' }) });
+              updateProfile(data, {
+                onSuccess: () => setProfileForm({ email: '', password: '' }),
+              });
             }}
           >
             {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -130,30 +170,42 @@ export function SettingsPage() {
             )}
           >
             {binanceStatus?.hasKeys ? (
-              <><CheckCircle className="h-3 w-3" /> {t('settings.connected')}</>
+              <>
+                <CheckCircle className="h-3 w-3" /> {t('settings.connected')}
+              </>
             ) : (
-              <><XCircle className="h-3 w-3" /> {t('settings.disconnected')}</>
+              <>
+                <XCircle className="h-3 w-3" /> {t('settings.disconnected')}
+              </>
             )}
           </span>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-sm font-medium">{t('settings.apiKey')}</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('settings.apiKey')}
+            </label>
             <input
               type="text"
               value={binanceForm.apiKey}
-              onChange={(e) => setBinanceForm((f) => ({ ...f, apiKey: e.target.value }))}
+              onChange={(e) =>
+                setBinanceForm((f) => ({ ...f, apiKey: e.target.value }))
+              }
               placeholder="Your Binance API Key"
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium">{t('settings.apiSecret')}</label>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('settings.apiSecret')}
+            </label>
             <input
               type="password"
               value={binanceForm.apiSecret}
-              onChange={(e) => setBinanceForm((f) => ({ ...f, apiSecret: e.target.value }))}
+              onChange={(e) =>
+                setBinanceForm((f) => ({ ...f, apiSecret: e.target.value }))
+              }
               placeholder="Your Binance API Secret"
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
             />
@@ -173,10 +225,19 @@ export function SettingsPage() {
           <div className="flex gap-2">
             <Button
               size="sm"
-              disabled={savingBinance || !binanceForm.apiKey || !binanceForm.apiSecret}
-              onClick={() => saveBinanceKeys(binanceForm, { onSuccess: () => setBinanceForm({ apiKey: '', apiSecret: '' }) })}
+              disabled={
+                savingBinance || !binanceForm.apiKey || !binanceForm.apiSecret
+              }
+              onClick={() =>
+                saveBinanceKeys(binanceForm, {
+                  onSuccess: () =>
+                    setBinanceForm({ apiKey: '', apiSecret: '' }),
+                })
+              }
             >
-              {savingBinance && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {savingBinance && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               {t('settings.saveKeys')}
             </Button>
             {binanceStatus?.hasKeys && (
@@ -207,7 +268,10 @@ export function SettingsPage() {
             const status = getLLMKeyStatus(provider.value);
             const form = getLLMForm(provider.value);
             return (
-              <div key={provider.value} className="rounded-lg border border-border p-4">
+              <div
+                key={provider.value}
+                className="rounded-lg border border-border p-4"
+              >
                 <div className="mb-3 flex items-center justify-between">
                   <span className="font-medium text-sm">{provider.label}</span>
                   <span
@@ -218,33 +282,55 @@ export function SettingsPage() {
                         : 'bg-muted text-muted-foreground',
                     )}
                   >
-                    {status?.isActive ? t('settings.active') : t('settings.inactive')}
+                    {status?.isActive
+                      ? t('settings.active')
+                      : t('settings.inactive')}
                   </span>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium">API Key</label>
+                    <label className="mb-1 block text-xs font-medium">
+                      API Key
+                    </label>
                     <input
                       type="password"
                       placeholder="sk-..."
                       value={form.apiKey}
                       onChange={(e) =>
-                        setLlmForms((f) => ({ ...f, [provider.value]: { ...f[provider.value] ?? { model: provider.models[0] }, apiKey: e.target.value } }))
+                        setLlmForms((f) => ({
+                          ...f,
+                          [provider.value]: {
+                            ...(f[provider.value] ?? {
+                              model: provider.models[0],
+                            }),
+                            apiKey: e.target.value,
+                          },
+                        }))
                       }
                       className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium">Model</label>
+                    <label className="mb-1 block text-xs font-medium">
+                      Model
+                    </label>
                     <select
                       value={form.model}
                       onChange={(e) =>
-                        setLlmForms((f) => ({ ...f, [provider.value]: { ...f[provider.value] ?? { apiKey: '' }, model: e.target.value } }))
+                        setLlmForms((f) => ({
+                          ...f,
+                          [provider.value]: {
+                            ...(f[provider.value] ?? { apiKey: '' }),
+                            model: e.target.value,
+                          },
+                        }))
                       }
                       className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
                     >
                       {provider.models.map((m) => (
-                        <option key={m} value={m}>{m}</option>
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -255,12 +341,27 @@ export function SettingsPage() {
                     disabled={savingLLM || !form.apiKey}
                     onClick={() =>
                       saveLLMKey(
-                        { provider: provider.value, apiKey: form.apiKey, selectedModel: form.model },
-                        { onSuccess: () => setLlmForms((f) => ({ ...f, [provider.value]: { apiKey: '', model: provider.models[0] } })) },
+                        {
+                          provider: provider.value,
+                          apiKey: form.apiKey,
+                          selectedModel: form.model,
+                        },
+                        {
+                          onSuccess: () =>
+                            setLlmForms((f) => ({
+                              ...f,
+                              [provider.value]: {
+                                apiKey: '',
+                                model: provider.models[0],
+                              },
+                            })),
+                        },
                       )
                     }
                   >
-                    {savingLLM && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                    {savingLLM && (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    )}
                     {t('common.save')}
                   </Button>
                   {status?.isActive && (
@@ -283,4 +384,3 @@ export function SettingsPage() {
     </div>
   );
 }
-

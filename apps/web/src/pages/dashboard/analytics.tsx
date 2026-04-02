@@ -100,7 +100,9 @@ export function AnalyticsPage() {
         />
         <MetricCard
           label={t('analytics.sharpeRatio')}
-          value={summary?.sharpeRatio != null ? summary.sharpeRatio.toFixed(2) : '–'}
+          value={
+            summary?.sharpeRatio != null ? summary.sharpeRatio.toFixed(2) : '–'
+          }
           sub="Risk-adjusted return"
           tooltip="Measures return adjusted for risk. > 1 is good, > 2 is excellent"
         />
@@ -121,14 +123,26 @@ export function AnalyticsPage() {
         />
         <MetricCard
           label={t('analytics.bestTrade')}
-          value={summary?.bestTrade != null ? `$${summary.bestTrade.toFixed(2)}` : '–'}
-          color="text-emerald-500"
+          value={
+            summary?.bestTrade != null
+              ? `$${summary.bestTrade.toFixed(2)}`
+              : 'No data'
+          }
+          color={
+            summary?.bestTrade != null ? 'text-emerald-500' : 'text-muted-foreground'
+          }
           tooltip="Highest profit from a single closed trade"
         />
         <MetricCard
           label={t('analytics.worstTrade')}
-          value={summary?.worstTrade != null ? `$${summary.worstTrade.toFixed(2)}` : '–'}
-          color="text-red-500"
+          value={
+            summary?.worstTrade != null
+              ? `$${summary.worstTrade.toFixed(2)}`
+              : 'No data'
+          }
+          color={
+            summary?.worstTrade != null ? 'text-red-500' : 'text-muted-foreground'
+          }
           tooltip="Largest loss from a single closed trade"
         />
         <MetricCard

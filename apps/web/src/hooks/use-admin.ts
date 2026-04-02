@@ -97,4 +97,3 @@ export function useToggleUserStatus() {
       toast.error(err?.message || 'Failed to update user status'),
   });
 }
-

@@ -25,14 +25,35 @@ export function Sidebar() {
   const isAdmin = user?.role === 'ADMIN';
 
   const NAV_ITEMS = [
-    { to: '/dashboard', label: t('sidebar.overview'), icon: LayoutDashboard, end: true },
+    {
+      to: '/dashboard',
+      label: t('sidebar.overview'),
+      icon: LayoutDashboard,
+      end: true,
+    },
     { to: '/dashboard/chart', label: t('sidebar.liveChart'), icon: BarChart3 },
-    { to: '/dashboard/positions', label: t('sidebar.positions'), icon: Briefcase },
-    { to: '/dashboard/history', label: t('sidebar.tradeHistory'), icon: History },
+    {
+      to: '/dashboard/positions',
+      label: t('sidebar.positions'),
+      icon: Briefcase,
+    },
+    {
+      to: '/dashboard/history',
+      label: t('sidebar.tradeHistory'),
+      icon: History,
+    },
     { to: '/dashboard/agent', label: t('sidebar.agentLog'), icon: Bot },
-    { to: '/dashboard/analytics', label: t('sidebar.analytics'), icon: LineChart },
+    {
+      to: '/dashboard/analytics',
+      label: t('sidebar.analytics'),
+      icon: LineChart,
+    },
     { to: '/dashboard/news', label: t('sidebar.news'), icon: Newspaper },
-    { to: '/dashboard/config', label: t('sidebar.config'), icon: SlidersHorizontal },
+    {
+      to: '/dashboard/config',
+      label: t('sidebar.config'),
+      icon: SlidersHorizontal,
+    },
     { to: '/dashboard/settings', label: t('sidebar.settings'), icon: Settings },
   ];
 
@@ -128,4 +149,3 @@ export function Sidebar() {
     </aside>
   );
 }
-

@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import bcrypt from 'bcrypt';
+import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   UpdateUserDto,
@@ -51,9 +52,7 @@ export class UsersService {
 
   async setBinanceKeys(userId: string, dto: BinanceKeyDto) {
     const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
-    const { encrypted: secretEncrypted, iv: secretIv } = encrypt(
-      dto.apiSecret,
-    );
+    const { encrypted: secretEncrypted, iv: secretIv } = encrypt(dto.apiSecret);
 
     return this.prisma.binanceCredential.upsert({
       where: { userId },
@@ -174,6 +173,80 @@ export class UsersService {
       select: { provider: true, isActive: true },
     });
     return { providers: creds };
+  }
+
+  // ── Connection tests ───────────────────────────────────────────────────────
+
+  async testBinanceConnection(userId: string) {
+    const cred = await this.prisma.binanceCredential.findUnique({
+      where: { userId },
+    });
+    if (!cred) return { connected: false, error: 'No credentials saved' };
+    try {
+      const { BinanceRestClient } = await import('@crypto-trader/data-fetcher');
+      const client = new BinanceRestClient({
+        apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+        apiSecret: decrypt(cred.secretEncrypted, cred.secretIv),
+      });
+      await client.getBalances();
+      return { connected: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
+  }
+
+  async testLLMKey(userId: string, provider: string) {
+    const cred = await this.prisma.lLMCredential.findUnique({
+      where: { userId_provider: { userId, provider: provider as LLMProvider } },
+    });
+    if (!cred) return { connected: false, error: 'No credentials saved' };
+    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+    try {
+      if (provider === 'CLAUDE') {
+        await axios.get('https://api.anthropic.com/v1/models', {
+          headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          timeout: 8000,
+        });
+      } else if (provider === 'OPENAI') {
+        await axios.get('https://api.openai.com/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
+      } else if (provider === 'GROQ') {
+        await axios.get('https://api.groq.com/openai/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
+      } else {
+        return { connected: false, error: 'Unknown provider' };
+      }
+      return { connected: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
+  }
+
+  async testNewsApiKey(userId: string, provider: string) {
+    const cred = await this.prisma.newsApiCredential.findFirst({
+      where: { userId, provider: provider as NewsApiProvider },
+    });
+    if (!cred) return { connected: false, error: 'No credentials saved' };
+    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+    try {
+      if (provider === 'CRYPTOPANIC') {
+        await axios.get('https://cryptopanic.com/api/free/v1/posts/', {
+          params: { auth_token: apiKey, currencies: 'BTC', kind: 'news', public: true },
+          timeout: 8000,
+        });
+        return { connected: true };
+      }
+      return { connected: false, error: 'Unknown provider' };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
   }
 
   // ── Admin ──────────────────────────────────────────────────────────────────

@@ -104,7 +104,7 @@ export class TradingProcessor {
         await this.notificationsService.create(
           userId,
           NotificationType.AGENT_ERROR,
-          'Agent paused: no LLM credentials configured.',
+          JSON.stringify({ key: 'agentNoLLM' }),
         );
         return;
       }
@@ -258,7 +258,7 @@ export class TradingProcessor {
         .create(
           userId,
           NotificationType.AGENT_ERROR,
-          `Agent error: ${message.slice(0, 200)}`,
+          JSON.stringify({ key: 'agentError', message: message.slice(0, 200) }),
         )
         .catch(() => null);
     }
@@ -330,7 +330,13 @@ export class TradingProcessor {
     await this.notificationsService.create(
       userId,
       NotificationType.TRADE_EXECUTED,
-      `BUY ${order.quantity} ${config.asset} @ $${order.price.toFixed(2)} (${mode})`,
+      JSON.stringify({
+        key: 'tradeBuy',
+        qty: order.quantity.toString(),
+        asset: config.asset,
+        price: order.price.toFixed(2),
+        mode,
+      }),
     );
     this.gateway.emitToUser(userId, 'trade:executed', {
       position: savedPosition,
@@ -420,7 +426,13 @@ export class TradingProcessor {
         await this.notificationsService.create(
           userId,
           notifType,
-          `${reason} triggered: SELL ${pos.quantity} ${config.asset} @ $${order.price.toFixed(2)} | P&L: $${pnl.toFixed(2)}`,
+          JSON.stringify({
+            key: shouldStopLoss ? 'stopLoss' : 'takeProfit',
+            qty: pos.quantity.toString(),
+            asset: config.asset,
+            price: order.price.toFixed(2),
+            pnl: pnl.toFixed(2),
+          }),
         );
         this.gateway.emitToUser(userId, 'trade:executed', {
           position: closedPosition,

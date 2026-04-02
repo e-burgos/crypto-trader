@@ -87,6 +87,13 @@ export class UsersController {
     return this.usersService.getBinanceKeyStatus(user.userId);
   }
 
+  @Get('users/me/binance-keys/test')
+  @ApiOperation({ summary: 'Probar conexión con Binance usando las claves guardadas' })
+  @ApiResponse({ status: 200, schema: { example: { connected: true } } })
+  testBinanceConnection(@CurrentUser() user: RequestUser) {
+    return this.usersService.testBinanceConnection(user.userId);
+  }
+
   // ── /users/me/llm-keys ────────────────────────────────────────────────────
 
   @Post('users/me/llm-keys')
@@ -112,33 +119,30 @@ export class UsersController {
 
   @Get('users/me/llm-keys/status')
   @ApiOperation({ summary: 'Estado de cada proveedor LLM configurado' })
-  @ApiResponse({
-    status: 200,
-    schema: {
-      example: {
-        providers: [
-          {
-            provider: 'CLAUDE',
-            connected: true,
-            selectedModel: 'claude-sonnet-4-6',
-          },
-        ],
-      },
-    },
-  })
   getLLMKeyStatus(@CurrentUser() user: RequestUser) {
     return this.usersService.getLLMKeyStatus(user.userId);
+  }
+
+  @Get('users/me/llm-keys/:provider/test')
+  @ApiOperation({ summary: 'Probar conexión con un proveedor LLM' })
+  @ApiParam({ name: 'provider', enum: ['CLAUDE', 'OPENAI', 'GROQ'] })
+  @ApiResponse({ status: 200, schema: { example: { connected: true } } })
+  testLLMKey(
+    @CurrentUser() user: RequestUser,
+    @Param('provider') provider: string,
+  ) {
+    return this.usersService.testLLMKey(user.userId, provider);
   }
 
   // ── /users/me/news-api-keys ───────────────────────────────────────────────
 
   @Post('users/me/news-api-keys')
-  @ApiOperation({ summary: 'Guardar API key de proveedor de noticias (encriptada AES-256-GCM)' })
+  @ApiOperation({
+    summary:
+      'Guardar API key de proveedor de noticias (encriptada AES-256-GCM)',
+  })
   @ApiResponse({ status: 201, description: 'Clave guardada' })
-  setNewsApiKey(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: NewsApiKeyDto,
-  ) {
+  setNewsApiKey(@CurrentUser() user: RequestUser, @Body() dto: NewsApiKeyDto) {
     return this.usersService.setNewsApiKey(user.userId, dto);
   }
 
@@ -155,10 +159,23 @@ export class UsersController {
   }
 
   @Get('users/me/news-api-keys/status')
-  @ApiOperation({ summary: 'Estado de los proveedores de noticias configurados' })
+  @ApiOperation({
+    summary: 'Estado de los proveedores de noticias configurados',
+  })
   @ApiResponse({ status: 200 })
   getNewsApiKeyStatus(@CurrentUser() user: RequestUser) {
     return this.usersService.getNewsApiKeyStatus(user.userId);
+  }
+
+  @Get('users/me/news-api-keys/:provider/test')
+  @ApiOperation({ summary: 'Probar conexión con un proveedor de noticias' })
+  @ApiParam({ name: 'provider', enum: ['CRYPTOPANIC'] })
+  @ApiResponse({ status: 200, schema: { example: { connected: true } } })
+  testNewsApiKey(
+    @CurrentUser() user: RequestUser,
+    @Param('provider') provider: string,
+  ) {
+    return this.usersService.testNewsApiKey(user.userId, provider);
   }
 
   // ── /admin/users ──────────────────────────────────────────────────────────

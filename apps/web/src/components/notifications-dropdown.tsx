@@ -9,7 +9,7 @@ import {
 import { cn } from '../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, TFunction } from 'react-i18next';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -19,6 +19,18 @@ function timeAgo(iso: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function translateMessage(raw: string, t: TFunction): string {
+  try {
+    const parsed = JSON.parse(raw) as { key?: string; [k: string]: unknown };
+    if (parsed?.key) {
+      return t(`notificationMessages.${parsed.key}`, parsed as Record<string, string>) as string;
+    }
+  } catch {
+    // not JSON — show raw (backward compat)
+  }
+  return raw;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -123,7 +135,7 @@ export function NotificationsDropdown({
                   />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-snug">{n.message}</p>
+                  <p className="text-sm leading-snug">{translateMessage(n.message, t)}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {timeAgo(n.createdAt)}
                   </p>

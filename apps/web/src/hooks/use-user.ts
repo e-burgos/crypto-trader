@@ -138,7 +138,9 @@ export function useNewsApiKeys() {
     queryKey: ['user', 'news-api-keys'],
     queryFn: () =>
       api
-        .get<{ providers: NewsApiKeyStatus[] }>('/users/me/news-api-keys/status')
+        .get<{
+          providers: NewsApiKeyStatus[];
+        }>('/users/me/news-api-keys/status')
         .then((d) => d.providers),
     staleTime: 60_000,
     enabled: isAuthenticated,
@@ -170,5 +172,30 @@ export function useDeleteNewsApiKey() {
     },
     onError: (err: { message?: string }) =>
       toast.error(err?.message || 'Failed to remove key'),
+  });
+}
+
+export interface TestResult {
+  connected: boolean;
+  error?: string;
+}
+
+export function useTestBinanceConnection() {
+  return useMutation<TestResult, Error>({
+    mutationFn: () => api.get('/users/me/binance-keys/test'),
+  });
+}
+
+export function useTestLLMKey() {
+  return useMutation<TestResult, Error, string>({
+    mutationFn: (provider: string) =>
+      api.get(`/users/me/llm-keys/${provider}/test`),
+  });
+}
+
+export function useTestNewsApiKey() {
+  return useMutation<TestResult, Error, string>({
+    mutationFn: (provider: string) =>
+      api.get(`/users/me/news-api-keys/${provider}/test`),
   });
 }

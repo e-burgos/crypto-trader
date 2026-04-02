@@ -51,10 +51,7 @@ export class MarketController {
   @ApiOperation({ summary: 'Últimas noticias de crypto agregadas' })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
   @ApiResponse({ status: 200, description: 'Lista de artículos de noticias' })
-  getNews(
-    @CurrentUser() user: RequestUser,
-    @Query('limit') limit?: string,
-  ) {
+  getNews(@CurrentUser() user: RequestUser, @Query('limit') limit?: string) {
     return this.marketService.getNews(user.userId, limit ? +limit : 20);
   }
 }

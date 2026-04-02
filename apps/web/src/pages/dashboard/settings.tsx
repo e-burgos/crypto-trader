@@ -19,6 +19,9 @@ import {
   useNewsApiKeys,
   useSetNewsApiKey,
   useDeleteNewsApiKey,
+  useTestBinanceConnection,
+  useTestLLMKey,
+  useTestNewsApiKey,
 } from '../../hooks/use-user';
 
 const LLM_PROVIDERS = [
@@ -71,9 +74,31 @@ export function SettingsPage() {
 
   // News API Keys
   const { data: newsApiKeys = [] } = useNewsApiKeys();
-  const { mutate: saveNewsApiKey, isPending: savingNewsApi } = useSetNewsApiKey();
+  const { mutate: saveNewsApiKey, isPending: savingNewsApi } =
+    useSetNewsApiKey();
   const { mutate: deleteNewsApiKey } = useDeleteNewsApiKey();
   const [cryptopanicKey, setCryptopanicKey] = useState('');
+
+  // Connection tests
+  const {
+    mutate: testBinance,
+    isPending: testingBinance,
+    data: binanceTestResult,
+    reset: resetBinanceTest,
+  } = useTestBinanceConnection();
+  const {
+    mutate: testLLM,
+    isPending: testingLLM,
+    data: llmTestResult,
+    variables: llmTestProvider,
+    reset: resetLLMTest,
+  } = useTestLLMKey();
+  const {
+    mutate: testNewsKey,
+    isPending: testingNewsKey,
+    data: newsTestResult,
+    reset: resetNewsTest,
+  } = useTestNewsApiKey();
 
   useGSAP(
     () => {
@@ -232,7 +257,7 @@ export function SettingsPage() {
             </a>
             . Do NOT enable withdrawals.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
               disabled={
@@ -240,8 +265,10 @@ export function SettingsPage() {
               }
               onClick={() =>
                 saveBinanceKeys(binanceForm, {
-                  onSuccess: () =>
-                    setBinanceForm({ apiKey: '', apiSecret: '' }),
+                  onSuccess: () => {
+                    setBinanceForm({ apiKey: '', apiSecret: '' });
+                    resetBinanceTest();
+                  },
                 })
               }
             >
@@ -251,16 +278,32 @@ export function SettingsPage() {
               {t('settings.saveKeys')}
             </Button>
             {binanceStatus?.hasKeys && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="gap-1.5 text-red-500 hover:text-red-600"
-                disabled={deletingBinance}
-                onClick={() => deleteBinanceKeys()}
-              >
-                <Trash2 className="h-3 w-3" />
-                {t('settings.disconnectBinance')}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={testingBinance}
+                  onClick={() => testBinance()}
+                >
+                  {testingBinance && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                  {testingBinance ? t('settings.testing') : t('settings.testConnection')}
+                </Button>
+                {binanceTestResult && (
+                  <span className={cn('text-xs font-medium', binanceTestResult.connected ? 'text-emerald-500' : 'text-red-500')}>
+                    {binanceTestResult.connected ? t('settings.testSuccess') : `${t('settings.testFailed')}: ${binanceTestResult.error}`}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 text-red-500 hover:text-red-600"
+                  disabled={deletingBinance}
+                  onClick={() => deleteBinanceKeys()}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {t('settings.disconnectBinance')}
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -344,7 +387,7 @@ export function SettingsPage() {
                     </select>
                   </div>
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button
                     size="sm"
                     disabled={savingLLM || !form.apiKey}
@@ -356,14 +399,16 @@ export function SettingsPage() {
                           selectedModel: form.model,
                         },
                         {
-                          onSuccess: () =>
+                          onSuccess: () => {
                             setLlmForms((f) => ({
                               ...f,
                               [provider.value]: {
                                 apiKey: '',
                                 model: provider.models[0],
                               },
-                            })),
+                            }));
+                            resetLLMTest();
+                          },
                         },
                       )
                     }
@@ -374,15 +419,35 @@ export function SettingsPage() {
                     {t('common.save')}
                   </Button>
                   {status?.isActive && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="gap-1.5 text-red-500 hover:text-red-600"
-                      onClick={() => deleteLLMKey(provider.value)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      {t('settings.remove')}
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={testingLLM}
+                        onClick={() => testLLM(provider.value)}
+                      >
+                        {testingLLM && llmTestProvider === provider.value && (
+                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                        )}
+                        {testingLLM && llmTestProvider === provider.value
+                          ? t('settings.testing')
+                          : t('settings.testConnection')}
+                      </Button>
+                      {llmTestResult && llmTestProvider === provider.value && (
+                        <span className={cn('text-xs font-medium', llmTestResult.connected ? 'text-emerald-500' : 'text-red-500')}>
+                          {llmTestResult.connected ? t('settings.testSuccess') : `${t('settings.testFailed')}: ${llmTestResult.error}`}
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1.5 text-red-500 hover:text-red-600"
+                        onClick={() => deleteLLMKey(provider.value)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {t('settings.remove')}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -401,7 +466,9 @@ export function SettingsPage() {
         <div className="rounded-lg border border-border p-4">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">{t('settings.cryptopanic')}</span>
+              <span className="font-medium text-sm">
+                {t('settings.cryptopanic')}
+              </span>
               <InfoTooltip text={t('tooltips.cryptopanic')} />
             </div>
             <span
@@ -444,14 +511,14 @@ export function SettingsPage() {
               cryptopanic.com/developers/api
             </a>
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               size="sm"
               disabled={savingNewsApi || !cryptopanicKey}
               onClick={() =>
                 saveNewsApiKey(
                   { provider: 'CRYPTOPANIC', apiKey: cryptopanicKey },
-                  { onSuccess: () => setCryptopanicKey('') },
+                  { onSuccess: () => { setCryptopanicKey(''); resetNewsTest(); } },
                 )
               }
             >
@@ -461,15 +528,31 @@ export function SettingsPage() {
               {t('settings.saveKeys')}
             </Button>
             {getNewsApiKeyStatus('CRYPTOPANIC')?.isActive && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="gap-1.5 text-red-500 hover:text-red-600"
-                onClick={() => deleteNewsApiKey('CRYPTOPANIC')}
-              >
-                <Trash2 className="h-3 w-3" />
-                {t('settings.disconnectProvider')}
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={testingNewsKey}
+                  onClick={() => testNewsKey('CRYPTOPANIC')}
+                >
+                  {testingNewsKey && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                  {testingNewsKey ? t('settings.testing') : t('settings.testConnection')}
+                </Button>
+                {newsTestResult && (
+                  <span className={cn('text-xs font-medium', newsTestResult.connected ? 'text-emerald-500' : 'text-red-500')}>
+                    {newsTestResult.connected ? t('settings.testSuccess') : `${t('settings.testFailed')}: ${newsTestResult.error}`}
+                  </span>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 text-red-500 hover:text-red-600"
+                  onClick={() => deleteNewsApiKey('CRYPTOPANIC')}
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {t('settings.disconnectProvider')}
+                </Button>
+              </>
             )}
           </div>
         </div>

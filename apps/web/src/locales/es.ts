@@ -334,6 +334,19 @@ const es = {
     adminTradesToday: 'Número de trades ejecutados hoy',
     adminPnlToday: 'G/P neta generada por todos los agentes hoy',
   },
+  notificationMessages: {
+    agentNoLLM: 'Agente pausado: no hay credenciales LLM configuradas',
+    agentError: 'Error del agente: {{message}}',
+    tradeBuy: 'COMPRA {{qty}} {{asset}} @ ${{price}} ({{mode}})',
+    stopLoss: 'Stop-loss activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
+    takeProfit: 'Take-profit activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
+  },
+  settings: {
+    testConnection: 'Probar',
+    testSuccess: 'Conectado ✔',
+    testFailed: 'Fallo de conexión',
+    testing: 'Probando…',
+  },
 };
 
 export default es;

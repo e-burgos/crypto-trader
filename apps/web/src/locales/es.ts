@@ -181,60 +181,89 @@ const es = {
     apiKeys: 'Configuración de Claves API',
     back: 'Volver',
     binanceTitle: 'Claves API de Binance',
-    binanceWarning: '⚠️ Nunca habilites permisos de retiro. El agente solo necesita leer y operar.',
+    binanceWarning:
+      '⚠️ Nunca habilites permisos de retiro. El agente solo necesita leer y operar.',
     binanceStep1: 'Inicia sesión en Binance → Cuenta → Gestión de API',
     binanceStep2: 'Haz clic en "Crear API" → elige "Generado por el sistema"',
-    binanceStep3: 'Habilita permisos: ✅ Lectura ✅ Trading Spot — ❌ NO habilites retiros',
-    binanceStep4: 'Copia la API Key y Secret → pégalos en Ajustes → Claves API de Binance',
+    binanceStep3:
+      'Habilita permisos: ✅ Lectura ✅ Trading Spot — ❌ NO habilites retiros',
+    binanceStep4:
+      'Copia la API Key y Secret → pégalos en Ajustes → Claves API de Binance',
     claudeStep1: 'Ve a console.anthropic.com → API Keys',
     claudeStep2: 'Haz clic en "Create Key", copia el valor',
-    claudeStep3: 'En CryptoTrader → Ajustes → Claves LLM → Claude → pega la clave',
+    claudeStep3:
+      'En CryptoTrader → Ajustes → Claves LLM → Claude → pega la clave',
     openaiStep1: 'Ve a platform.openai.com → API Keys',
     openaiStep2: 'Haz clic en "Create new secret key", copia el valor',
-    openaiStep3: 'En CryptoTrader → Ajustes → Claves LLM → OpenAI → pega la clave',
+    openaiStep3:
+      'En CryptoTrader → Ajustes → Claves LLM → OpenAI → pega la clave',
     groqStep1: 'Ve a console.groq.com → API Keys',
     groqStep2: 'Haz clic en "Create API Key", copia el valor',
     groqStep3: 'En CryptoTrader → Ajustes → Claves LLM → Groq → pega la clave',
     faqItems: [
       {
         q: '¿Qué es CryptoTrader?',
-        a: 'CryptoTrader es una plataforma que usa LLMs (Claude, OpenAI, Groq) para analizar el mercado y ejecutar operaciones automáticamente en tu cuenta de Binance. El agente lee datos del mercado, consulta al LLM para tomar una decisión y la ejecuta.'
+        a: 'CryptoTrader es una plataforma que usa LLMs (Claude, OpenAI, Groq) para analizar el mercado y ejecutar operaciones automáticamente en tu cuenta de Binance. El agente lee datos del mercado, consulta al LLM para tomar una decisión y la ejecuta.',
       },
       {
         q: '¿El agente maneja mi dinero real?',
-        a: 'En modo EN VIVO: sí, ejecuta órdenes reales en Binance usando tu API Key y el saldo disponible. En modo SANDBOX: simula todo con la misma lógica pero sin dinero real. Recomendamos empezar siempre con SANDBOX.'
+        a: 'En modo EN VIVO: sí, ejecuta órdenes reales en Binance usando tu API Key y el saldo disponible. En modo SANDBOX: simula todo con la misma lógica pero sin dinero real. Recomendamos empezar siempre con SANDBOX.',
       },
       {
         q: '¿Es seguro conectar mis claves de Binance?',
-        a: 'Tus claves API se cifran con AES-256 en el servidor backend. Nunca se exponen en la UI ni en los logs. Recomendamos crear claves solo con permisos de "Lectura" + "Trading Spot" — nunca habilites retiros.'
+        a: 'Tus claves API se cifran con AES-256 en el servidor backend. Nunca se exponen en la UI ni en los logs. Recomendamos crear claves solo con permisos de "Lectura" + "Trading Spot" — nunca habilites retiros.',
       },
       {
         q: '¿Cómo sé si el agente está operando?',
-        a: 'La página de Registro del Agente muestra cada decisión con todo el razonamiento. El Ticker de Precios muestra precios en vivo. La página de Posiciones muestra los trades abiertos. Todos los datos se actualizan en tiempo real vía WebSocket.'
+        a: 'La página de Registro del Agente muestra cada decisión con todo el razonamiento. El Ticker de Precios muestra precios en vivo. La página de Posiciones muestra los trades abiertos. Todos los datos se actualizan en tiempo real vía WebSocket.',
       },
       {
         q: '¿Puedo perder dinero?',
-        a: 'En modo EN VIVO: sí. El agente usa Stop Loss y Take Profit configurables para limitar pérdidas, pero ningún sistema es infalible. Empieza siempre con SANDBOX hasta que entiendas y confíes en los resultados.'
+        a: 'En modo EN VIVO: sí. El agente usa Stop Loss y Take Profit configurables para limitar pérdidas, pero ningún sistema es infalible. Empieza siempre con SANDBOX hasta que entiendas y confíes en los resultados.',
       },
       {
         q: '¿Qué proveedores de LLM están soportados?',
-        a: 'Actualmente Claude (Anthropic), OpenAI (GPT-4o) y Groq (LLaMA). Puedes usar cualquiera de ellos — cada uno necesita su propia clave API configurada en Ajustes.'
+        a: 'Actualmente Claude (Anthropic), OpenAI (GPT-4o) y Groq (LLaMA). Puedes usar cualquiera de ellos — cada uno necesita su propia clave API configurada en Ajustes.',
       },
       {
         q: '¿Qué pares de criptomonedas están soportados?',
-        a: 'Actualmente BTC/USDT, BTC/USDC, ETH/USDT y ETH/USDC. Se podrían añadir más pares en versiones futuras.'
-      }
+        a: 'Actualmente BTC/USDT, BTC/USDC, ETH/USDT y ETH/USDC. Se podrían añadir más pares en versiones futuras.',
+      },
     ],
     guideSteps: [
-      { title: 'Registrarse y completar el onboarding', desc: 'Crea tu cuenta y sigue el asistente de configuración para conectar tus claves y establecer la configuración inicial.' },
-      { title: 'Conectar las claves API de Binance', desc: 'Ve a Ajustes → Claves API de Binance. Crea claves de lectura+trading spot en Binance y pégalas aquí.' },
-      { title: 'Añadir una clave API de LLM', desc: 'Ve a Ajustes → Claves LLM. Elige Claude, OpenAI o Groq y añade tu clave API.' },
-      { title: 'Configurar el agente', desc: 'Ve a Configuración. Selecciona BTC o ETH, elige el modo SANDBOX y ajusta los umbrales y parámetros de riesgo.' },
-      { title: 'Iniciar el agente', desc: 'En la página de Configuración, haz clic en "Iniciar Agente" junto a tu configuración. El agente comenzará a analizar inmediatamente.' },
-      { title: 'Monitorizar el rendimiento', desc: 'Observa el resumen del Dashboard, el Gráfico en Vivo, el Registro del Agente y las Posiciones. Los datos se actualizan en tiempo real.' },
-      { title: 'Revisar análisis', desc: 'Tras ejecutar SANDBOX un tiempo, revisa Análisis: Tasa de Éxito, Gráfico G/P, Ratio de Sharpe, Drawdown.' },
-      { title: 'Cambiar a EN VIVO (opcional)', desc: 'Solo cuando entiendas y confíes en los resultados: cambia el modo a EN VIVO en Configuración y reinicia el agente.' }
-    ]
+      {
+        title: 'Registrarse y completar el onboarding',
+        desc: 'Crea tu cuenta y sigue el asistente de configuración para conectar tus claves y establecer la configuración inicial.',
+      },
+      {
+        title: 'Conectar las claves API de Binance',
+        desc: 'Ve a Ajustes → Claves API de Binance. Crea claves de lectura+trading spot en Binance y pégalas aquí.',
+      },
+      {
+        title: 'Añadir una clave API de LLM',
+        desc: 'Ve a Ajustes → Claves LLM. Elige Claude, OpenAI o Groq y añade tu clave API.',
+      },
+      {
+        title: 'Configurar el agente',
+        desc: 'Ve a Configuración. Selecciona BTC o ETH, elige el modo SANDBOX y ajusta los umbrales y parámetros de riesgo.',
+      },
+      {
+        title: 'Iniciar el agente',
+        desc: 'En la página de Configuración, haz clic en "Iniciar Agente" junto a tu configuración. El agente comenzará a analizar inmediatamente.',
+      },
+      {
+        title: 'Monitorizar el rendimiento',
+        desc: 'Observa el resumen del Dashboard, el Gráfico en Vivo, el Registro del Agente y las Posiciones. Los datos se actualizan en tiempo real.',
+      },
+      {
+        title: 'Revisar análisis',
+        desc: 'Tras ejecutar SANDBOX un tiempo, revisa Análisis: Tasa de Éxito, Gráfico G/P, Ratio de Sharpe, Drawdown.',
+      },
+      {
+        title: 'Cambiar a EN VIVO (opcional)',
+        desc: 'Solo cuando entiendas y confíes en los resultados: cambia el modo a EN VIVO en Configuración y reinicia el agente.',
+      },
+    ],
   },
   common: {
     save: 'Guardar',
@@ -266,23 +295,36 @@ const es = {
   },
   tooltips: {
     pnl: 'Ganancias y Pérdidas — ganancias realizadas totales menos comisiones',
-    winRate: 'Porcentaje de trades que cerraron con beneficio respecto al total de trades',
-    sharpeRatio: 'Mide el retorno ajustado al riesgo. > 1 es bueno, > 2 es excelente',
+    winRate:
+      'Porcentaje de trades que cerraron con beneficio respecto al total de trades',
+    sharpeRatio:
+      'Mide el retorno ajustado al riesgo. > 1 es bueno, > 2 es excelente',
     drawdown: 'Caída máxima desde el valor máximo del portafolio',
     bestTrade: 'Mayor ganancia de un solo trade cerrado',
     worstTrade: 'Mayor pérdida de un solo trade cerrado',
-    pnlOpen: 'Ganancias y Pérdidas — ganancia o pérdida no realizada de la posición abierta',
-    binanceKeys: 'Tus claves API de Binance están cifradas con AES-256 en el servidor. Nunca se exponen en la UI.',
-    sandboxMode: 'SANDBOX simula trades sin dinero real. EN VIVO usa tu saldo real de Binance.',
-    buyThreshold: 'Puntuación mínima que el LLM debe asignar para que el agente coloque una orden de COMPRA',
-    sellThreshold: 'Puntuación mínima que el LLM debe asignar para que el agente coloque una orden de VENTA',
-    stopLoss: 'Si la posición pierde este porcentaje, el agente la cerrará automáticamente para limitar pérdidas',
-    takeProfit: 'Si la posición gana este porcentaje, el agente la cerrará automáticamente para asegurar ganancias',
-    maxTrade: 'Porcentaje máximo de tu capital disponible a usar en un solo trade',
-    maxPositions: 'Número máximo de posiciones abiertas que el agente puede mantener simultáneamente',
-    minInterval: 'Tiempo mínimo (en minutos) entre dos decisiones del agente para el mismo activo',
+    pnlOpen:
+      'Ganancias y Pérdidas — ganancia o pérdida no realizada de la posición abierta',
+    binanceKeys:
+      'Tus claves API de Binance están cifradas con AES-256 en el servidor. Nunca se exponen en la UI.',
+    sandboxMode:
+      'SANDBOX simula trades sin dinero real. EN VIVO usa tu saldo real de Binance.',
+    buyThreshold:
+      'Puntuación mínima que el LLM debe asignar para que el agente coloque una orden de COMPRA',
+    sellThreshold:
+      'Puntuación mínima que el LLM debe asignar para que el agente coloque una orden de VENTA',
+    stopLoss:
+      'Si la posición pierde este porcentaje, el agente la cerrará automáticamente para limitar pérdidas',
+    takeProfit:
+      'Si la posición gana este porcentaje, el agente la cerrará automáticamente para asegurar ganancias',
+    maxTrade:
+      'Porcentaje máximo de tu capital disponible a usar en un solo trade',
+    maxPositions:
+      'Número máximo de posiciones abiertas que el agente puede mantener simultáneamente',
+    minInterval:
+      'Tiempo mínimo (en minutos) entre dos decisiones del agente para el mismo activo',
     adminTotalUsers: 'Total de cuentas de usuario registradas',
-    adminOpenPositions: 'Número de posiciones de trading abiertas actualmente en todos los usuarios',
+    adminOpenPositions:
+      'Número de posiciones de trading abiertas actualmente en todos los usuarios',
     adminTradesToday: 'Número de trades ejecutados hoy',
     adminPnlToday: 'G/P neta generada por todos los agentes hoy',
   },

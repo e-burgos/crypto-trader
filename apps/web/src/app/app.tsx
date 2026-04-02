@@ -78,7 +78,14 @@ export function App() {
               </PublicLayout>
             }
           />
-          <Route path="/help" element={<PublicLayout><HelpPage /></PublicLayout>} />
+          <Route
+            path="/help"
+            element={
+              <PublicLayout>
+                <HelpPage />
+              </PublicLayout>
+            }
+          />
           <Route
             path="/onboarding"
             element={
@@ -109,12 +116,14 @@ export function App() {
             path="/admin"
             element={
               <ProtectedRoute>
-                <AdminLayout />
+                <DashboardLayout />
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminStatsPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="" element={<AdminLayout />}>
+              <Route index element={<AdminStatsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+            </Route>
           </Route>
         </Routes>
       </ThemeProvider>

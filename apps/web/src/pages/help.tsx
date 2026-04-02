@@ -72,8 +72,14 @@ export function HelpPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const faqItems = t('help.faqItems', { returnObjects: true }) as { q: string; a: string }[];
-  const guideSteps = t('help.guideSteps', { returnObjects: true }) as { title: string; desc: string }[];
+  const faqItems = t('help.faqItems', { returnObjects: true }) as {
+    q: string;
+    a: string;
+  }[];
+  const guideSteps = t('help.guideSteps', { returnObjects: true }) as {
+    title: string;
+    desc: string;
+  }[];
 
   useGSAP(
     () => {
@@ -91,9 +97,7 @@ export function HelpPage() {
       <div className="help-section mb-10 text-center">
         <HelpCircle className="mx-auto mb-3 h-10 w-10 text-primary" />
         <h1 className="text-3xl font-bold">{t('help.title')}</h1>
-        <p className="mt-2 text-muted-foreground">
-          {t('help.subtitle')}
-        </p>
+        <p className="mt-2 text-muted-foreground">{t('help.subtitle')}</p>
       </div>
 
       {/* FAQ */}

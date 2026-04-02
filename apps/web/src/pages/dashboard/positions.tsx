@@ -84,10 +84,7 @@ export function PositionsPage() {
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                     <span className="flex items-center justify-end gap-1">
                       {t('common.pnl')}
-                      <InfoTooltip
-                        text={t('tooltips.pnlOpen')}
-                        side="left"
-                      />
+                      <InfoTooltip text={t('tooltips.pnlOpen')} side="left" />
                     </span>
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">

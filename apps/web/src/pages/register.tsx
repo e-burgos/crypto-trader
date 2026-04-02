@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TrendingUp, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { PasswordInput } from '../components/ui/password-input';
 import { useAuthStore } from '../store/auth.store';
 
 export function RegisterPage() {
@@ -83,14 +84,12 @@ export function RegisterPage() {
               >
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
                 placeholder="Min. 8 characters"
               />
             </div>
@@ -102,14 +101,12 @@ export function RegisterPage() {
               >
                 Confirm Password
               </label>
-              <input
+              <PasswordInput
                 id="confirm"
-                type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
                 autoComplete="new-password"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
                 placeholder="••••••••"
               />
             </div>

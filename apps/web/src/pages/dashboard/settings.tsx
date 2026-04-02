@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Key, User, Trash2, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { InfoTooltip } from '../../components/ui/info-tooltip';
+import { PasswordInput } from '../../components/ui/password-input';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
@@ -123,14 +124,12 @@ export function SettingsPage() {
             <label className="mb-1.5 block text-sm font-medium">
               {t('settings.password')}
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={profileForm.password}
               onChange={(e) =>
                 setProfileForm((f) => ({ ...f, password: e.target.value }))
               }
               placeholder="Leave blank to keep current"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <Button
@@ -200,14 +199,12 @@ export function SettingsPage() {
             <label className="mb-1.5 block text-sm font-medium">
               {t('settings.apiSecret')}
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={binanceForm.apiSecret}
               onChange={(e) =>
                 setBinanceForm((f) => ({ ...f, apiSecret: e.target.value }))
               }
               placeholder="Your Binance API Secret"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <p className="text-xs text-muted-foreground">
@@ -292,8 +289,7 @@ export function SettingsPage() {
                     <label className="mb-1 block text-xs font-medium">
                       API Key
                     </label>
-                    <input
-                      type="password"
+                    <PasswordInput
                       placeholder="sk-..."
                       value={form.apiKey}
                       onChange={(e) =>
@@ -307,7 +303,7 @@ export function SettingsPage() {
                           },
                         }))
                       }
-                      className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                      className="px-2 py-1.5"
                     />
                   </div>
                   <div>

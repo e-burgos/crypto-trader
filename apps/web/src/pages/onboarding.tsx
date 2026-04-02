@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { PasswordInput } from '../components/ui/password-input';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
 
@@ -77,11 +78,9 @@ function StepBinance({
             <label className="mb-1.5 block text-sm font-medium">
               Binance API Secret
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={state.binanceApiSecret}
               onChange={(e) => onChange({ binanceApiSecret: e.target.value })}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Your Binance API secret"
             />
           </div>
@@ -163,12 +162,10 @@ function StepLLM({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium">API Key</label>
-        <input
-          type="password"
+        <PasswordInput
           value={state.llmApiKey}
           onChange={(e) => onChange({ llmApiKey: e.target.value })}
           required
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
           placeholder={`Your ${provider.label} API key`}
         />
       </div>

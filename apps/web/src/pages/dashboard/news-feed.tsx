@@ -78,7 +78,7 @@ export function NewsFeedPage() {
             <h1 className="text-2xl font-bold">{t('sidebar.news')}</h1>
           </div>
           <p className="text-sm text-muted-foreground">
-            Latest crypto market news
+            {t('news.subtitle')}
           </p>
         </div>
 
@@ -97,8 +97,8 @@ export function NewsFeedPage() {
                 )}
               >
                 {s === 'ALL'
-                  ? 'All'
-                  : SENTIMENT_CONFIG[s as NewsItem['sentiment']].label}
+                  ? t('news.all')
+                  : t(`news.${SENTIMENT_CONFIG[s as NewsItem['sentiment']].label.toLowerCase()}`)}
               </button>
             ),
           )}
@@ -118,7 +118,7 @@ export function NewsFeedPage() {
             {t('common.empty')}
           </p>
           <p className="mt-1 text-xs text-muted-foreground/60">
-            News requires a CRYPTOPANIC_API_KEY to be configured on the server.
+            {t('news.apiKeyRequired')}
           </p>
         </div>
       ) : (

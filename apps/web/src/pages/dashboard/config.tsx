@@ -139,7 +139,7 @@ export function ConfigPage() {
       <div className="config-card mb-6">
         <h1 className="text-2xl font-bold">{t('sidebar.config')}</h1>
         <p className="text-sm text-muted-foreground">
-          Configure your AI trading agent parameters
+          {t('trading.configSubtitle')}
         </p>
       </div>
 
@@ -151,7 +151,7 @@ export function ConfigPage() {
         >
           {/* Market section */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">Market</h2>
+            <h2 className="mb-4 font-semibold">{t('trading.market')}</h2>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
@@ -227,7 +227,7 @@ export function ConfigPage() {
                 </div>
                 {form.mode === 'LIVE' && (
                   <p className="mt-1.5 text-xs text-red-500">
-                    ⚠️ Real funds will be used
+                    {t('trading.realFundsWarning')}
                   </p>
                 )}
               </div>
@@ -236,7 +236,7 @@ export function ConfigPage() {
 
           {/* Thresholds */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">Decision Thresholds</h2>
+            <h2 className="mb-4 font-semibold">{t('trading.decisionThresholds')}</h2>
             <div className="grid gap-5 sm:grid-cols-2">
               <SliderField
                 label={t('trading.buyThreshold')}
@@ -259,7 +259,7 @@ export function ConfigPage() {
 
           {/* Risk Management */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">Risk Management</h2>
+            <h2 className="mb-4 font-semibold">{t('trading.riskManagement')}</h2>
             <div className="grid gap-5 sm:grid-cols-2">
               <SliderField
                 label={t('trading.stopLoss')}
@@ -292,7 +292,7 @@ export function ConfigPage() {
 
           {/* Timing */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">Timing</h2>
+            <h2 className="mb-4 font-semibold">{t('trading.timing')}</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <div className="mb-1.5 flex items-center gap-1.5">

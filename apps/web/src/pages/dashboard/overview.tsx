@@ -4,6 +4,7 @@ import { useGSAP } from '@gsap/react';
 import { TrendingUp, TrendingDown, Activity, Cpu } from 'lucide-react';
 import { usePortfolioSummary } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 gsap.registerPlugin(useGSAP);
 
@@ -32,6 +33,7 @@ function StatCard({ label, value, sub, positive, icon, className }: StatCardProp
 }
 
 export function OverviewPage() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = usePortfolioSummary();
 
@@ -51,8 +53,8 @@ export function OverviewPage() {
 
   return (
     <div ref={containerRef} className="p-6">
-      <h1 className="mb-1 text-2xl font-bold">Portfolio Overview</h1>
-      <p className="mb-6 text-sm text-muted-foreground">Real-time performance summary</p>
+      <h1 className="mb-1 text-2xl font-bold">{t('dashboard.portfolioOverview')}</h1>
+      <p className="mb-6 text-sm text-muted-foreground">{t('dashboard.realtimeSummary')}</p>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -63,9 +65,9 @@ export function OverviewPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            label="Net P&L"
+            label={t('analytics.netPnl')}
             value={fmt(data?.netPnl ?? 0)}
-            sub="After fees"
+            sub={t('common.afterFees')}
             positive={(data?.netPnl ?? 0) >= 0}
             icon={data?.netPnl && data.netPnl >= 0
               ? <TrendingUp className="h-4 w-4" />
@@ -73,22 +75,22 @@ export function OverviewPage() {
             }
           />
           <StatCard
-            label="Realized P&L"
+            label={t('dashboard.realizedPnl')}
             value={fmt(data?.realizedPnl ?? 0)}
-            sub="Closed positions"
+            sub={t('dashboard.closedPositions')}
             positive={(data?.realizedPnl ?? 0) >= 0}
             icon={<Activity className="h-4 w-4" />}
           />
           <StatCard
-            label="Open Positions"
+            label={t('dashboard.openPositions')}
             value={data?.openPositions ?? 0}
-            sub={`${data?.closedPositions ?? 0} closed total`}
+            sub={`${data?.closedPositions ?? 0} ${t('dashboard.closedTotal')}`}
             icon={<Activity className="h-4 w-4" />}
           />
           <StatCard
-            label="Active Agents"
+            label={t('trading.activeAgents')}
             value={data?.activeConfigs ?? 0}
-            sub="Trading configs running"
+            sub={t('dashboard.tradingConfigsRunning')}
             icon={<Cpu className="h-4 w-4" />}
           />
         </div>
@@ -98,9 +100,9 @@ export function OverviewPage() {
       {!isLoading && !data && (
         <div className="mt-8 rounded-xl border border-dashed border-border p-12 text-center">
           <Activity className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-          <h3 className="font-semibold">No trading data yet</h3>
+          <h3 className="font-semibold">{t('dashboard.noTradingData')}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure a trading agent to start seeing portfolio stats.
+            {t('dashboard.configureAgent')}
           </p>
         </div>
       )}

@@ -94,7 +94,7 @@ export function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Manage your profile and API keys
+          {t('settings.subtitle')}
         </p>
       </div>
 

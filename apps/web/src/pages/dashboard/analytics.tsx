@@ -77,7 +77,7 @@ export function AnalyticsPage() {
       <div>
         <h1 className="text-2xl font-bold">{t('analytics.title')}</h1>
         <p className="text-sm text-muted-foreground">
-          Performance metrics and statistics
+          {t('analytics.subtitle')}
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export function AnalyticsPage() {
         <MetricCard
           label={t('analytics.winRate')}
           value={winRateDisplay}
-          sub="Profitable trades vs total"
+          sub={t('analytics.winRateSub')}
           tooltip="Percentage of trades that closed with a profit vs the total number of trades"
         />
         <MetricCard
@@ -103,7 +103,7 @@ export function AnalyticsPage() {
           value={
             summary?.sharpeRatio != null ? summary.sharpeRatio.toFixed(2) : '–'
           }
-          sub="Risk-adjusted return"
+          sub={t('analytics.sharpeRatioSub')}
           tooltip="Measures return adjusted for risk. > 1 is good, > 2 is excellent"
         />
         <MetricCard
@@ -113,7 +113,7 @@ export function AnalyticsPage() {
               ? `${(summary.currentDrawdown * 100).toFixed(1)}%`
               : '–'
           }
-          sub="From peak portfolio value"
+          sub={t('analytics.drawdownSub')}
           color={
             summary?.currentDrawdown != null && summary.currentDrawdown > 0.1
               ? 'text-red-500'
@@ -126,10 +126,12 @@ export function AnalyticsPage() {
           value={
             summary?.bestTrade != null
               ? `$${summary.bestTrade.toFixed(2)}`
-              : 'No data'
+              : t('common.noData')
           }
           color={
-            summary?.bestTrade != null ? 'text-emerald-500' : 'text-muted-foreground'
+            summary?.bestTrade != null
+              ? 'text-emerald-500'
+              : 'text-muted-foreground'
           }
           tooltip="Highest profit from a single closed trade"
         />
@@ -138,22 +140,24 @@ export function AnalyticsPage() {
           value={
             summary?.worstTrade != null
               ? `$${summary.worstTrade.toFixed(2)}`
-              : 'No data'
+              : t('common.noData')
           }
           color={
-            summary?.worstTrade != null ? 'text-red-500' : 'text-muted-foreground'
+            summary?.worstTrade != null
+              ? 'text-red-500'
+              : 'text-muted-foreground'
           }
           tooltip="Largest loss from a single closed trade"
         />
         <MetricCard
           label={t('analytics.totalTrades')}
           value={(portfolio?.closedPositions ?? 0).toString()}
-          sub={`${portfolio?.openPositions ?? 0} open`}
+          sub={`${portfolio?.openPositions ?? 0} ${t('analytics.open')}`}
         />
         <MetricCard
           label={t('analytics.activeConfigs')}
           value={(portfolio?.activeConfigs ?? 0).toString()}
-          sub="Running trading agents"
+          sub={t('analytics.runningAgentsSub')}
         />
       </div>
 
@@ -165,7 +169,7 @@ export function AnalyticsPage() {
         </p>
         {pnlChart.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-            No P&L data yet
+            {t('analytics.noPnlData')}
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>

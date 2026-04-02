@@ -45,7 +45,7 @@ export function PositionsPage() {
           <h1 className="text-2xl font-bold">{t('sidebar.positions')}</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Currently open trading positions
+          {t('positions.subtitle')}
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export function PositionsPage() {
           <Briefcase className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
           <p className="font-medium">{t('common.empty')}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            No open positions. Start an agent to begin trading.
+            {t('positions.noPositionsHint')}
           </p>
         </div>
       ) : (
@@ -70,16 +70,16 @@ export function PositionsPage() {
               <thead className="border-b border-border bg-muted/30">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Asset
+                    {t('trading.asset')}
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Mode
+                    {t('trading.mode')}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Entry Price
+                    {t('positions.entryPrice')}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Qty
+                    {t('tradeHistory.qty')}
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                     <span className="flex items-center justify-end gap-1">
@@ -91,7 +91,7 @@ export function PositionsPage() {
                     </span>
                   </th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Opened
+                    {t('positions.opened')}
                   </th>
                 </tr>
               </thead>

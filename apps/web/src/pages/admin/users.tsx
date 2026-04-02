@@ -5,8 +5,10 @@ import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useAdminUsers, useToggleUserStatus } from '../../hooks/use-admin';
+import { useTranslation } from 'react-i18next';
 
 export function AdminUsersPage() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: users = [], isLoading } = useAdminUsers();
   const { mutate: toggleStatus, isPending } = useToggleUserStatus();
@@ -27,7 +29,7 @@ export function AdminUsersPage() {
     <div ref={containerRef}>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {users.length} registered users
+          {t('admin.registeredUsers', { count: users.length })}
         </p>
       </div>
 
@@ -46,16 +48,16 @@ export function AdminUsersPage() {
                   Email
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Role
+                  {t('common.status')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                  Status
+                  {t('common.role')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                   Joined
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -89,11 +91,11 @@ export function AdminUsersPage() {
                     >
                       {u.isActive ? (
                         <>
-                          <CheckCircle className="h-3 w-3" /> Active
+                          <CheckCircle className="h-3 w-3" /> {t('settings.active')}
                         </>
                       ) : (
                         <>
-                          <XCircle className="h-3 w-3" /> Inactive
+                          <XCircle className="h-3 w-3" /> {t('settings.inactive')}
                         </>
                       )}
                     </span>
@@ -119,9 +121,9 @@ export function AdminUsersPage() {
                       {isPending ? (
                         <Loader2 className="h-3 w-3 animate-spin" />
                       ) : u.isActive ? (
-                        'Deactivate'
+                        t('admin.deactivate')
                       ) : (
-                        'Activate'
+                        t('admin.activate')
                       )}
                     </Button>
                   </td>

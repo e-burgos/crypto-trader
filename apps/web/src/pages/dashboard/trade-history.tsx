@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Filter } from 'lucide-react';
 import { useTradeHistory, type Trade } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 type FilterType = 'ALL' | 'BUY' | 'SELL' | 'LIVE' | 'PAPER';
 
@@ -31,6 +32,7 @@ function TradeRow({ trade }: { trade: Trade }) {
 }
 
 export function TradeHistoryPage() {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterType>('ALL');
   const { data: trades = [], isLoading } = useTradeHistory(100);
 
@@ -44,19 +46,19 @@ export function TradeHistoryPage() {
   });
 
   const FILTERS: { value: FilterType; label: string }[] = [
-    { value: 'ALL', label: 'All' },
-    { value: 'BUY', label: 'Buys' },
-    { value: 'SELL', label: 'Sells' },
-    { value: 'LIVE', label: 'Live' },
-    { value: 'PAPER', label: 'Paper' },
+    { value: 'ALL', label: t('tradeHistory.all') },
+    { value: 'BUY', label: t('tradeHistory.buys') },
+    { value: 'SELL', label: t('tradeHistory.sells') },
+    { value: 'LIVE', label: t('tradeHistory.live') },
+    { value: 'PAPER', label: t('tradeHistory.paper') },
   ];
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Trade History</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} trades</p>
+          <h1 className="text-2xl font-bold">{t('sidebar.tradeHistory')}</h1>
+          <p className="text-sm text-muted-foreground">{t('tradeHistory.trades', { count: filtered.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -81,8 +83,8 @@ export function TradeHistoryPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-muted/50">
-              {['Type', 'Pair', 'Price', 'Qty', 'Fee', 'Time', 'Mode'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              {[t('tradeHistory.type'), t('tradeHistory.pair'), t('tradeHistory.price'), t('tradeHistory.qty'), t('tradeHistory.fee'), t('tradeHistory.time'), t('tradeHistory.mode')].map((h, i) => (
+                <th key={i} className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   {h}
                 </th>
               ))}
@@ -90,9 +92,9 @@ export function TradeHistoryPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">Loading trades...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">{t('tradeHistory.loading')}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No trades yet. Start a trading agent to see history.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">{t('tradeHistory.noTrades')}</td></tr>
             ) : (
               filtered.map((t) => <TradeRow key={t.id} trade={t} />)
             )}

@@ -12,6 +12,7 @@ import { useMarketStore } from '../../store/market.store';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
 type Interval = (typeof INTERVALS)[number];
@@ -59,6 +60,7 @@ function normalizeCandles(
 }
 
 export function LiveChartPage() {
+  const { t } = useTranslation();
   const chartRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -148,7 +150,7 @@ export function LiveChartPage() {
     <div ref={containerRef} className="p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3 justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Live Chart</h1>
+          <h1 className="text-2xl font-bold">{t('sidebar.liveChart')}</h1>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             {asset}/USDT
             {currentPrice && (
@@ -208,7 +210,7 @@ export function LiveChartPage() {
             style={{ height: 420 }}
           >
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            Loading candles...
+            {t('liveChart.loading')}
           </div>
         )}
         <div ref={chartRef} className="w-full" />

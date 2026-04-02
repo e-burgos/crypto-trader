@@ -4,6 +4,7 @@ import { useGSAP } from '@gsap/react';
 import { Bot, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
 import { useAgentDecisions, type AgentDecision } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 gsap.registerPlugin(useGSAP);
 
@@ -63,7 +64,7 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
 
         {decision.waitMinutes && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Wait: {decision.waitMinutes} min before next action
+            {t('agentLog.waitMinutes', { count: decision.waitMinutes })}
           </p>
         )}
       </div>
@@ -72,6 +73,7 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
 }
 
 export function AgentLogPage() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: decisions = [], isLoading } = useAgentDecisions(30);
 
@@ -89,12 +91,12 @@ export function AgentLogPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Agent Log</h1>
-          <p className="text-sm text-muted-foreground">AI reasoning and decision timeline</p>
+          <h1 className="text-2xl font-bold">{t('sidebar.agentLog')}</h1>
+          <p className="text-sm text-muted-foreground">{t('agentLog.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground">
           <Bot className="h-4 w-4 text-primary" />
-          {decisions.length} decisions
+          {t('agentLog.decisions', { count: decisions.length })}
         </div>
       </div>
 
@@ -108,9 +110,9 @@ export function AgentLogPage() {
         ) : decisions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-12 text-center">
             <Bot className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-            <h3 className="font-semibold">No agent decisions yet</h3>
+            <h3 className="font-semibold">{t('agentLog.noDecisions')}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Start a trading agent to see AI reasoning and decisions here.
+              {t('agentLog.noDecisionsHint')}
             </p>
           </div>
         ) : (

@@ -19,6 +19,7 @@ import {
   useAdminAgentsStatus,
   useKillSwitch,
 } from '../../hooks/use-admin';
+import { useTranslation } from 'react-i18next';
 
 function StatCard({
   label,
@@ -46,6 +47,7 @@ function StatCard({
 }
 
 export function AdminStatsPage() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: stats, isLoading } = useAdminStats();
   const { data: auditLog = [] } = useAuditLog();
@@ -69,26 +71,26 @@ export function AdminStatsPage() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatCard
-          label="Total Users"
+          label={t('admin.totalUsers')}
           value={stats?.totalUsers ?? '–'}
           icon={Users}
           tooltip="Total registered user accounts"
         />
         <StatCard
-          label="Open Positions"
+          label={t('admin.openPositions')}
           value={stats?.openPositions ?? '–'}
           icon={Activity}
           color="text-emerald-500"
           tooltip="Number of currently open trade positions across all users"
         />
         <StatCard
-          label="Trades Today"
+          label={t('admin.tradesToday')}
           value={stats?.tradesToday ?? '–'}
           icon={BarChart3}
           tooltip="Number of trades executed today"
         />
         <StatCard
-          label="P&L Today"
+          label={t('admin.pnlToday')}
           value={
             stats?.profitToday != null
               ? `$${stats.profitToday.toFixed(2)}`
@@ -110,11 +112,10 @@ export function AdminStatsPage() {
           <div>
             <h3 className="font-semibold text-red-500 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Emergency Kill Switch
+              {t('admin.killSwitch')}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Immediately stops all running trading agents across all users.
-              Cannot be undone without manually restarting each agent.
+              {t('admin.killSwitchDesc')}
             </p>
           </div>
           {confirmKill ? (
@@ -125,7 +126,7 @@ export function AdminStatsPage() {
                 className="text-muted-foreground"
                 onClick={() => setConfirmKill(false)}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 size="sm"
@@ -137,7 +138,7 @@ export function AdminStatsPage() {
                 }}
               >
                 {killing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                CONFIRM STOP ALL
+                {t('admin.confirmStopAll')}
               </Button>
             </div>
           ) : (
@@ -148,7 +149,7 @@ export function AdminStatsPage() {
               onClick={() => setConfirmKill(true)}
             >
               <AlertTriangle className="h-4 w-4" />
-              Kill All Agents
+              {t('admin.killAllAgents')}
             </Button>
           )}
         </div>
@@ -157,7 +158,7 @@ export function AdminStatsPage() {
       {/* Active Agents */}
       {agentStatuses.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="mb-4 font-semibold">Active Agents Across Platform</h3>
+          <h3 className="mb-4 font-semibold">{t('admin.activeAgentsPlatform')}</h3>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {agentStatuses.map((s, i) => (
               <div
@@ -178,7 +179,7 @@ export function AdminStatsPage() {
                     s.isRunning ? 'text-emerald-500' : 'text-muted-foreground',
                   )}
                 >
-                  {s.isRunning ? '● Running' : '○ Stopped'}
+                  {s.isRunning ? t('admin.agentRunning') : t('admin.agentStopped')}
                 </span>
               </div>
             ))}
@@ -190,14 +191,14 @@ export function AdminStatsPage() {
       <div className="rounded-xl border border-border bg-card p-5">
         <h3 className="mb-4 font-semibold flex items-center gap-2">
           <Clock className="h-4 w-4 text-primary" />
-          Audit Log
+          {t('admin.auditLog')}
           <span className="text-xs text-muted-foreground font-normal">
-            (last 50 actions)
+            {t('admin.auditLogNote')}
           </span>
         </h3>
         <div className="max-h-64 overflow-y-auto space-y-1">
           {auditLog.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No audit entries</p>
+            <p className="text-sm text-muted-foreground">{t('admin.noAuditEntries')}</p>
           ) : (
             auditLog.slice(0, 50).map((entry) => (
               <div

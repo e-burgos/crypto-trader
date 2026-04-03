@@ -17,6 +17,7 @@ const es = {
     settings: 'Ajustes',
     positions: 'Posiciones',
     news: 'Noticias',
+    chat: 'KRYPTO IA',
     admin: 'Admin',
     help: 'Ayuda y Guía',
   },
@@ -46,12 +47,22 @@ const es = {
     pair: 'Par',
     price: 'Precio',
     qty: 'Cant.',
+    total: 'Total',
     fee: 'Comisión',
     time: 'Hora',
     mode: 'Modo',
+    detail: 'Ver Detalle',
     loading: 'Cargando trades...',
     noTrades:
       'Sin trades aún. Inicia un agente de trading para ver el historial.',
+    modal: {
+      title: 'Detalle del Trade',
+      asset: 'Activo',
+      executedAt: 'Ejecutado El',
+      feeNote: '0.1% del total',
+      feeExplain:
+        'Comisión de ${{fee}} = 0.1% del valor del trade ${{total}}. Esta es la tarifa estándar de Binance (taker).',
+    },
   },
   agentLog: {
     subtitle: 'Razonamiento e historial de decisiones de la IA',
@@ -152,10 +163,12 @@ const es = {
     agentStarted: 'Agente iniciado',
     agentStopped: 'Agente detenido',
     orderExecution: 'Ejecución de Órdenes',
-    orderExecutionSub: 'Configura el precio al que se generan las órdenes de compra respecto al precio de mercado',
+    orderExecutionSub:
+      'Configura el precio al que se generan las órdenes de compra respecto al precio de mercado',
     orderPriceOffset: 'Offset de Precio',
     offsetNegative: '-% (Favorable)',
-    offsetNegativeDesc: 'Compra por debajo del mercado — mejor precio en simulación',
+    offsetNegativeDesc:
+      'Compra por debajo del mercado — mejor precio en simulación',
     offsetZero: 'Mercado',
     offsetZeroDesc: 'Ejecuta al precio de mercado actual',
     offsetPositive: '+% (Agresivo)',
@@ -408,11 +421,13 @@ const es = {
     adminPnlToday: 'G/P neta generada por todos los agentes hoy',
   },
   config: {
-    showGuide: 'Guía de Configuración',
-    hideGuide: 'Ocultar Guía',
+    tabForm: 'Configuración',
+    tabGuide: 'Guía',
+    tabExplain: 'Conceptos',
     guide: {
       flowTitle: 'Cómo toma decisiones el Agente',
-      presetsTitle: 'Presets de estrategia — haz clic para auto-rellenar el formulario',
+      presetsTitle:
+        'Presets de estrategia — haz clic para auto-rellenar el formulario',
       paramTitle: 'Referencia de Parámetros',
       sourceMarket: 'Datos de Mercado',
       sourceNews: 'Noticias y Sentimiento',
@@ -431,31 +446,143 @@ const es = {
       outcomeHoldSub: 'Aguardar minInterval min',
       preset: {
         conservative: 'Conservador',
-        conservativeDesc: 'Bajo riesgo, umbrales altos, posiciones pequeñas. Ideal para nuevos usuarios.',
+        conservativeDesc:
+          'Bajo riesgo, umbrales altos, posiciones pequeñas. Ideal para nuevos usuarios.',
         balanced: 'Equilibrado',
-        balancedDesc: 'Punto de partida recomendado. Buen balance riesgo/recompensa.',
+        balancedDesc:
+          'Punto de partida recomendado. Buen balance riesgo/recompensa.',
         aggressive: 'Agresivo',
-        aggressiveDesc: 'Mayor riesgo, umbrales más bajos, posiciones grandes. Solo para usuarios con experiencia.',
+        aggressiveDesc:
+          'Mayor riesgo, umbrales más bajos, posiciones grandes. Solo para usuarios con experiencia.',
       },
       cardThresholds: 'Umbrales de Decisión',
-      cardThresholdsDesc: 'Controla el puntaje mínimo de confianza que debe retornar el LLM para que el agente actúe.',
-      cardThresholdsTip: 'Valores más altos = menos trades, más seguros. Empieza en 70%+.',
+      cardThresholdsDesc:
+        'Controla el puntaje mínimo de confianza que debe retornar el LLM para que el agente actúe.',
+      cardThresholdsTip:
+        'Valores más altos = menos trades, más seguros. Empieza en 70%+.',
       cardRisk: 'Stop Loss / Take Profit',
-      cardRiskDesc: 'Reglas de salida automática que protegen tu capital en cada posición abierta.',
+      cardRiskDesc:
+        'Reglas de salida automática que protegen tu capital en cada posición abierta.',
       slExample: 'Si BTC cae 3% desde la entrada → venta automática',
-      tpExample: 'Si BTC sube 5% desde la entrada → venta automática con ganancia',
+      tpExample:
+        'Si BTC sube 5% desde la entrada → venta automática con ganancia',
       cardRiskTip: 'TP debería ser siempre mayor que SL (ej: SL=3%, TP=5%).',
       cardCapital: 'Capital por Trade',
-      cardCapitalDesc: 'Máximo % de tu balance que el agente puede usar en una sola orden.',
+      cardCapitalDesc:
+        'Máximo % de tu balance que el agente puede usar en una sola orden.',
       capitalExample1: 'Balance: $10.000 · maxTrade: 10%',
       capitalExample2: '→ Tamaño máximo de orden: $1.000 por trade',
       cardCapitalTip: 'Empieza con 5–10%. Nunca superes 25% por trade.',
       cardTiming: 'Tiempos de Ciclo',
-      cardTimingDesc: 'Con qué frecuencia el agente evalua el mercado y cuántas posiciones puede tener.',
+      cardTimingDesc:
+        'Con qué frecuencia el agente evalua el mercado y cuántas posiciones puede tener.',
       timingExample1: 'minInterval: 60 min',
-      timingExample2: '→ El agente evaluú el mercado como máximo una vez por hora',
-      cardTimingTip: 'Intervalos más largos = menos ruido. 60–120 min es un buen valor inicial.',
+      timingExample2:
+        '→ El agente evaluú el mercado como máximo una vez por hora',
+      cardTimingTip:
+        'Intervalos más largos = menos ruido. 60–120 min es un buen valor inicial.',
     },
+    explain: {
+      title: 'Conceptos de Configuración',
+      subtitle:
+        'Entendé qué hace cada parámetro antes de configurar el agente.',
+      examplePrefix: 'Ejemplo con',
+      profilesTitle: 'Por perfil de riesgo',
+      profile: 'Perfil',
+      executes: 'SE EJECUTA ✅',
+      buyLabel: 'Compra',
+      sellLabel: 'Venta',
+      maxPositionsLabel: 'Máx. Posiciones',
+      // Umbral
+      thresholdTitle: 'Umbrales de Decisión',
+      thresholdDesc:
+        'Al final de cada ciclo de análisis, el LLM retorna un puntaje de confianza del 0 al 100. El umbral es el mínimo que debe alcanzar ese puntaje para que el agente ejecute realmente la operación. Si el puntaje queda por debajo, la decisión se loguea como HOLD y se espera el próximo ciclo.',
+      thresholdTip:
+        'Valores más altos = menos trades, más seguros. Empézar en 70% para BUY y 65% para SELL.',
+      // Stop Loss / Take Profit
+      slTitle: 'Stop Loss y Take Profit',
+      slDesc:
+        'Reglas de salida automática aplicadas a cada posición abierta. El Stop Loss vende cuando el precio cae X% desde tu entrada (limita pérdidas). El Take Profit vende cuando el precio sube X% desde tu entrada (asegura ganancias). Ambos se activan sin ninguna acción manual.',
+      entryPrice: 'Precio de entrada',
+      slTrigger: 'Stop Loss se activa en',
+      result: 'Resultado',
+      autoSell: 'VENTA AUTOMÁTICA 🔴',
+      slTip:
+        'Manté el Take Profit ≥ 1.5× el Stop Loss (ej: SL = 3%, TP = 5%). Esto asegura una relación riesgo/recompensa positiva a lo largo del tiempo.',
+      // Capital
+      capitalTitle: 'Capital por Trade',
+      capitalDesc:
+        'El máximo porcentaje de tu balance disponible que el agente puede usar en una sola orden de compra. Esto evita que el agente ponga todo tu capital en una sola posición y limita tu exposición por operación.',
+      balance: 'Balance disponible',
+      maxOrder: 'Tamaño máximo de orden',
+      capitalTip:
+        'Empézar con 5–10%. Nunca asignes más del 20–25% por trade, incluso con alta confianza.',
+      // Intervalo
+      intervalTitle: 'Intervalo de Análisis',
+      intervalDesc:
+        'El número mínimo de minutos entre ciclos de análisis del mercado. El agente no opera más seguido que este valor base. El sistema adaptativo puede extender el intervalo según la volatilidad, pero nunca lo acortará por debajo de este mínimo.',
+      intervalComparison: 'Intervalo vs. frecuencia',
+      freq30: '48 ciclos/día',
+      freq60: '24 ciclos/día',
+      freq120: '12 ciclos/día',
+      costHigh: 'Alto costo / ruido',
+      costMed: 'Equilibrado ✅',
+      costLow: 'Bajo costo / estable',
+      intervalTip:
+        '60–120 min es ideal para la mayoría de estrategias. Intervalos cortos aumentan el costo de la API del LLM y exponen al agente al micro-ruido del mercado.',
+      // Offset
+      offsetTitle: 'Offset de Precio de Orden',
+      offsetDesc:
+        'Un ajuste porcentual aplicado al precio de mercado actual cuando se colocan órdenes límite de compra. Un offset negativo coloca la orden por debajo del mercado (mejor precio, puede tardar en ejecutarse). Uno positivo la coloca por encima (se ejecuta antes, ligero sobreprecio). En cero se ejecuta al precio de mercado.',
+      offsetNegNote: 'precio mejor • puede esperar',
+      offsetZeroNote: 'precio de mercado',
+      offsetPosNote: 'se ejecuta rápido',
+      offsetTip:
+        'Usá –0.5% a –1% para entrar a precios ligeramente mejores. Usá 0% si preferís ejecución inmediata.',
+    },
+  },
+  chat: {
+    title: 'KRYPTO',
+    subtitle: 'Tu agente de trading interno con IA',
+    newSession: 'Nueva sesión',
+    newSessionDesc:
+      'Elegí el proveedor de IA y el modelo para esta conversación.',
+    sessions: 'Conversaciones',
+    messages: 'mensajes',
+    noSessions: 'Aún no hay conversaciones.',
+    startFirst: 'Iniciar primer chat',
+    deleteSession: 'Eliminar sesión',
+    deleteConfirm: '¿Eliminar esta conversación? No se puede deshacer.',
+    openChat: 'Chat IA KRYPTO',
+    openFullscreen: 'Abrir pantalla completa',
+    welcomeTitle: 'Hola, soy KRYPTO',
+    welcomeDesc:
+      'Tu agente de trading interno. Recuerdo mis decisiones pasadas y puedo ayudarte con la plataforma, mercados, operaciones y blockchain.',
+    inputPlaceholder: 'Preguntale algo a KRYPTO...',
+    stopStream: 'Detener generación',
+    typing: 'KRYPTO está pensando...',
+    noCredentials: 'No hay proveedores de IA configurados.',
+    goToSettings: 'Ir a Ajustes → pestaña IA',
+    selectProvider: 'Seleccionar IA...',
+    loadingProviders: 'Cargando proveedores de IA...',
+    startSession: 'Iniciar sesión',
+    creating: 'Creando...',
+    capabilities: {
+      help: 'Ayuda de plataforma',
+      trade: 'Asistente de operaciones',
+      market: 'Análisis de mercado',
+      blockchain: 'Guía de blockchain',
+    },
+    capabilityMessages: {
+      help: 'Dame un resumen de todas las funciones de la plataforma y cómo usarlas.',
+      trade: 'Ayudame a crear una nueva operación paso a paso.',
+      market:
+        'Analizá el mercado actual y dime si es momento de COMPRAR, VENDER o mantener posición.',
+      blockchain:
+        'Explicame los conceptos fundamentales de blockchain y DeFi que necesito conocer.',
+    },
+    copied: '¡Copiado!',
+    copy: 'Copiar mensaje',
   },
   notificationMessages: {
     agentNoLLM: 'Agente pausado: no hay credenciales LLM configuradas',

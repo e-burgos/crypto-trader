@@ -124,12 +124,13 @@ export function AnalyticsPage() {
         <MetricCard
           label={t('analytics.bestTrade')}
           value={
-            summary?.bestTrade != null
-              ? `$${summary.bestTrade.toFixed(2)}`
+            summary?.bestTrade?.pnl != null
+              ? `$${summary.bestTrade.pnl.toFixed(2)}`
               : t('common.noData')
           }
+          sub={summary?.bestTrade?.asset}
           color={
-            summary?.bestTrade != null
+            summary?.bestTrade?.pnl != null
               ? 'text-emerald-500'
               : 'text-muted-foreground'
           }
@@ -138,12 +139,13 @@ export function AnalyticsPage() {
         <MetricCard
           label={t('analytics.worstTrade')}
           value={
-            summary?.worstTrade != null
-              ? `$${summary.worstTrade.toFixed(2)}`
+            summary?.worstTrade?.pnl != null
+              ? `$${summary.worstTrade.pnl.toFixed(2)}`
               : t('common.noData')
           }
+          sub={summary?.worstTrade?.asset}
           color={
-            summary?.worstTrade != null
+            summary?.worstTrade?.pnl != null
               ? 'text-red-500'
               : 'text-muted-foreground'
           }

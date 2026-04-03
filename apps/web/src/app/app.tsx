@@ -21,6 +21,8 @@ import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';
 import { PositionsPage } from '../pages/dashboard/positions';
 import { NewsFeedPage } from '../pages/dashboard/news-feed';
+import { ChatPage } from '../pages/dashboard/chat';
+import { ChatWidget } from '../components/chat/chat-widget';
 import { AdminLayout } from '../pages/admin/index';
 import { AdminStatsPage } from '../pages/admin/stats';
 import { AdminUsersPage } from '../pages/admin/users';
@@ -54,6 +56,7 @@ export function App() {
       <ThemeProvider>
         <WebSocketInit />
         <Toaster richColors position="top-right" />
+        <ChatWidget />
         <Routes>
           <Route
             path="/"
@@ -111,6 +114,7 @@ export function App() {
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="market" element={<MarketPage />} />
             <Route path="news" element={<NewsFeedPage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route path="config" element={<ConfigPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

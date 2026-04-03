@@ -111,23 +111,53 @@ export class TradingController {
   // ── Positions ─────────────────────────────────────────────────────────────
 
   @Get('positions')
-  @ApiOperation({ summary: 'Posiciones abiertas del usuario (paginado)' })
+  @ApiOperation({
+    summary: 'Posiciones del usuario (paginado, filtrable por status)',
+  })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
-  @ApiResponse({ status: 200, description: 'Lista de posiciones abiertas' })
-  getOpenPositions(
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['OPEN', 'CLOSED'],
+    description: 'Filtrar por estado. Omitir para obtener todas.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de posiciones' })
+  getPositions(
     @CurrentUser() user: RequestUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('status') status?: string,
   ) {
-    return this.tradingService.getOpenPositions(
+    return this.tradingService.getPositions(
       user.userId,
       page ? +page : 1,
       limit ? +limit : 20,
+      status,
     );
   }
 
   // ── Trade history ─────────────────────────────────────────────────────────
+
+  @Post('positions/:id/close')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({ name: 'id', description: 'Position ID' })
+  @ApiOperation({ summary: 'Cerrar manualmente una posición abierta' })
+  @ApiResponse({
+    status: 200,
+    description: 'Posición cerrada. Devuelve exitPrice y pnl.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Posición ya cerrada o par no soportado',
+  })
+  @ApiResponse({ status: 404, description: 'Posición no encontrada' })
+  closePosition(
+    @CurrentUser() user: RequestUser,
+    @Param('id') positionId: string,
+  ) {
+    return this.tradingService.closePositionManually(user.userId, positionId);
+  }
 
   @Get('history')
   @ApiOperation({

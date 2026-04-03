@@ -8,11 +8,26 @@ import {
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppGateway } from '../gateway/app.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   CreateTradingConfigDto,
   UpdateTradingConfigDto,
   StartAgentDto,
 } from './dto/trading-config.dto';
+import { BinanceRestClient } from '@crypto-trader/data-fetcher';
+import {
+  SandboxOrderExecutor,
+  LiveOrderExecutor,
+  PositionManager,
+} from '@crypto-trader/trading-engine';
+import {
+  TradingMode,
+  TradeType,
+  NotificationType,
+} from '@crypto-trader/shared';
+import { SUPPORTED_PAIRS } from '@crypto-trader/shared';
+import { decrypt } from '../users/utils/encryption.util';
 
 const DEFAULTS = {
   buyThreshold: 70,
@@ -29,10 +44,13 @@ export const TRADING_QUEUE = 'trading-agent';
 @Injectable()
 export class TradingService implements OnModuleInit {
   private readonly logger = new Logger(TradingService.name);
+  private readonly positionManager = new PositionManager();
 
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(TRADING_QUEUE) private readonly tradingQueue: Queue,
+    private readonly gateway: AppGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -320,11 +338,13 @@ export class TradingService implements OnModuleInit {
 
   // ── Positions ─────────────────────────────────────────────────────────────
 
-  async getOpenPositions(userId: string, page = 1, limit = 20) {
+  async getPositions(userId: string, page = 1, limit = 20, status?: string) {
     const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = { userId };
+    if (status) where.status = status;
     const [positions, total] = await Promise.all([
       this.prisma.position.findMany({
-        where: { userId, status: 'OPEN' },
+        where,
         orderBy: { entryAt: 'desc' },
         skip,
         take: limit,
@@ -334,13 +354,16 @@ export class TradingService implements OnModuleInit {
           pair: true,
           mode: true,
           entryPrice: true,
+          exitPrice: true,
           quantity: true,
           entryAt: true,
+          exitAt: true,
           fees: true,
           status: true,
+          pnl: true,
         },
       }),
-      this.prisma.position.count({ where: { userId, status: 'OPEN' } }),
+      this.prisma.position.count({ where }),
     ]);
     return { positions, total, page, limit };
   }
@@ -406,6 +429,152 @@ export class TradingService implements OnModuleInit {
       this.prisma.agentDecision.count({ where: { userId } }),
     ]);
     return { decisions, total, page, limit };
+  }
+
+  // ── Manual close ──────────────────────────────────────────────────────────
+
+  async closePositionManually(userId: string, positionId: string) {
+    const position = await this.prisma.position.findFirst({
+      where: { id: positionId, userId },
+    });
+    if (!position) throw new NotFoundException('Position not found');
+    if (position.status !== 'OPEN')
+      throw new BadRequestException('Position is already closed');
+
+    const pair = SUPPORTED_PAIRS.find(
+      (p) => p.asset === position.asset && p.quote === position.pair,
+    );
+    if (!pair)
+      throw new BadRequestException(
+        `Unsupported pair: ${position.asset}/${position.pair}`,
+      );
+    const symbol = pair.symbol;
+    const mode = position.mode as TradingMode;
+
+    let executor: SandboxOrderExecutor | LiveOrderExecutor;
+    let exitPrice: number;
+
+    if (mode === TradingMode.LIVE) {
+      const binanceCreds = await this.prisma.binanceCredential.findUnique({
+        where: { userId },
+      });
+      if (!binanceCreds)
+        throw new BadRequestException('No Binance credentials configured');
+      const apiKey = decrypt(
+        binanceCreds.apiKeyEncrypted,
+        binanceCreds.apiKeyIv,
+      );
+      const apiSecret = decrypt(
+        binanceCreds.secretEncrypted,
+        binanceCreds.secretIv,
+      );
+      executor = new LiveOrderExecutor(
+        new BinanceRestClient({ apiKey, apiSecret }),
+      );
+      const order = await executor.placeMarketOrder(
+        symbol,
+        TradeType.SELL,
+        position.quantity,
+      );
+      exitPrice = order.price;
+    } else {
+      // SANDBOX: fetch live market price without placing a real order.
+      // A fresh SandboxOrderExecutor has no base-asset balance so a SELL
+      // would throw "Insufficient BTC balance". For paper trading we just
+      // need the current price to calculate P&L.
+      const publicClient = new BinanceRestClient({});
+      const livePrice = await publicClient
+        .getTickerPrice(symbol)
+        .catch(() => null);
+      if (!livePrice)
+        throw new BadRequestException(
+          'Could not fetch current price from Binance. Try again.',
+        );
+      exitPrice = livePrice;
+    }
+
+    const posData = {
+      ...position,
+      asset: position.asset as any,
+      pair: position.pair as any,
+      mode: position.mode as any,
+      status: position.status as any,
+      exitPrice: position.exitPrice ?? undefined,
+      exitAt: position.exitAt ?? undefined,
+      pnl: position.pnl ?? undefined,
+    };
+    const { position: closed, pnl } = this.positionManager.closePosition(
+      posData,
+      exitPrice,
+    );
+
+    await this.prisma.position.update({
+      where: { id: positionId },
+      data: {
+        exitPrice: closed.exitPrice,
+        exitAt: closed.exitAt,
+        status: 'CLOSED',
+        pnl: closed.pnl,
+        fees: closed.fees,
+      },
+    });
+
+    const fee = exitPrice * position.quantity * 0.001;
+    await this.prisma.trade.create({
+      data: {
+        userId,
+        positionId,
+        type: TradeType.SELL,
+        price: exitPrice,
+        quantity: position.quantity,
+        fee,
+        mode,
+      },
+    });
+
+    if (mode === TradingMode.SANDBOX) {
+      const proceeds = exitPrice * position.quantity;
+      await this.prisma.sandboxWallet.upsert({
+        where: {
+          userId_currency: { userId, currency: position.pair as any },
+        },
+        create: {
+          userId,
+          currency: position.pair as any,
+          balance: 10_000 + proceeds - fee,
+        },
+        update: { balance: { increment: proceeds - fee } },
+      });
+      const updatedWallet = await this.prisma.sandboxWallet.findUnique({
+        where: { userId_currency: { userId, currency: position.pair as any } },
+      });
+      this.gateway.emitToUser(userId, 'wallet:updated', {
+        currency: position.pair,
+        balance: updatedWallet?.balance,
+      });
+    }
+
+    await this.notificationsService.create(
+      userId,
+      NotificationType.TRADE_EXECUTED,
+      JSON.stringify({
+        key: 'manualClose',
+        qty: position.quantity.toString(),
+        asset: position.asset,
+        price: exitPrice.toFixed(2),
+        pnl: pnl.toFixed(2),
+      }),
+    );
+
+    this.gateway.emitToUser(userId, 'position:closed', { positionId });
+    this.gateway.emitToUser(userId, 'trade:executed', { position: closed });
+
+    return {
+      positionId,
+      exitPrice,
+      pnl,
+      status: 'CLOSED',
+    };
   }
 
   // ── Wallet ────────────────────────────────────────────────────────────────

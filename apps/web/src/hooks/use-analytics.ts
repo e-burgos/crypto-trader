@@ -32,11 +32,19 @@ export interface AgentDecision {
   createdAt: string;
 }
 
+export interface TradeInfo {
+  pnl: number | null;
+  asset: string;
+  executedAt: string | null;
+}
+
 export interface AnalyticsSummary {
   winRate: number;
   totalPnl: number;
-  bestTrade: number;
-  worstTrade: number;
+  totalTrades: number;
+  avgPnl: number;
+  bestTrade: TradeInfo | null;
+  worstTrade: TradeInfo | null;
   sharpeRatio: number;
   currentDrawdown: number;
 }

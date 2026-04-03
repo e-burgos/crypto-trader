@@ -11,6 +11,7 @@ import { AdminModule } from '../admin/admin.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { TradingModule } from '../trading/trading.module';
 import { MarketModule } from '../market/market.module';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MarketModule } from '../market/market.module';
     AnalyticsModule,
     TradingModule,
     MarketModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

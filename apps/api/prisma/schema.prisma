@@ -68,6 +68,12 @@ enum LLMProvider {
   GROQ
 }
 
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
 enum NewsApiProvider {
   CRYPTOPANIC
   NEWSDATA
@@ -94,6 +100,7 @@ model User {
   notifications     Notification[]
   adminActions      AdminAction[]      @relation("AdminActions")
   targetedActions   AdminAction[]      @relation("TargetedActions")
+  chatSessions       ChatSession[]
   sandboxWallets    SandboxWallet[]
 
   @@map("users")
@@ -157,6 +164,7 @@ model TradingConfig {
   maxTradePct            Float         @default(0.05)
   maxConcurrentPositions Int           @default(2)
   minIntervalMinutes     Int           @default(5)
+  orderPriceOffsetPct    Float         @default(0)
   mode                   TradingMode   @default(SANDBOX)
   isRunning              Boolean       @default(false)
   createdAt              DateTime      @default(now())
@@ -289,4 +297,34 @@ model SandboxWallet {
 
   @@unique([userId, currency])
   @@map("sandbox_wallets")
+}
+
+model ChatSession {
+  id        String      @id @default(cuid())
+  userId    String
+  title     String      @default("New Chat")
+  provider  LLMProvider
+  model     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId, createdAt])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      ChatRole
+  content   String
+  createdAt DateTime @default(now())
+  metadata  Json?
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
 }

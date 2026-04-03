@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import {
@@ -8,7 +8,16 @@ import {
   Activity,
   RefreshCw,
   AlertCircle,
+  Wifi,
+  WifiOff,
+  ArrowUp,
+  ArrowDown,
+  Info,
 } from 'lucide-react';
+import {
+  IndicatorInfoModal,
+  type IndicatorKey,
+} from '../../components/market/indicator-info-modal';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -17,6 +26,7 @@ import {
   MARKET_SYMBOLS,
   type OverallSignal,
 } from '../../hooks/use-market';
+import { useBinanceTicker } from '../../hooks/use-binance-ticker';
 
 gsap.registerPlugin(useGSAP);
 
@@ -137,8 +147,236 @@ function SRLevels({
   );
 }
 
+// ── Live Ticker Panel ──────────────────────────────────────────────────────────
+
+function LiveTickerPanel({ symbol }: { symbol: string }) {
+  const { t } = useTranslation();
+  const { ticker, connected } = useBinanceTicker(symbol);
+  const priceRef = useRef<HTMLDivElement>(null);
+  const prevPrice = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!ticker || !priceRef.current) return;
+    if (prevPrice.current !== null && prevPrice.current !== ticker.lastPrice) {
+      const up = ticker.lastPrice > prevPrice.current;
+      gsap.fromTo(
+        priceRef.current,
+        {
+          backgroundColor: up
+            ? 'rgba(52,211,153,0.2)'
+            : 'rgba(248,113,113,0.2)',
+        },
+        { backgroundColor: 'transparent', duration: 0.7, ease: 'power2.out' },
+      );
+    }
+    prevPrice.current = ticker.lastPrice;
+  }, [ticker?.lastPrice]);
+
+  const isUp = (ticker?.priceChangePct ?? 0) >= 0;
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/20">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <Activity className="h-3.5 w-3.5" />
+          {t('market.liveData', { defaultValue: 'Live Market Data' })}
+        </div>
+        <div className="flex items-center gap-1.5 text-xs">
+          {connected ? (
+            <span className="flex items-center gap-1 text-emerald-400">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <Wifi className="h-3 w-3" />
+              {t('market.liveConnected', { defaultValue: 'LIVE' })}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-amber-400">
+              <WifiOff className="h-3 w-3" />
+              {t('market.connecting', { defaultValue: 'Connecting…' })}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {!ticker ? (
+        <div className="grid grid-cols-2 gap-px sm:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse bg-muted/30" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+          {/* Last price */}
+          <div
+            ref={priceRef}
+            className="bg-card px-4 py-3 transition-colors col-span-2 sm:col-span-1"
+          >
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.lastPrice', { defaultValue: 'Last Price' })}
+            </div>
+            <div className="text-xl font-bold font-mono">
+              $
+              {ticker.lastPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
+            <div
+              className={cn(
+                'flex items-center gap-1 text-sm font-semibold mt-0.5',
+                isUp ? 'text-emerald-400' : 'text-red-400',
+              )}
+            >
+              {isUp ? (
+                <ArrowUp className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDown className="h-3.5 w-3.5" />
+              )}
+              {isUp ? '+' : ''}
+              {ticker.priceChangePct.toFixed(2)}%
+              <span className="font-mono text-xs opacity-80">
+                ({isUp ? '+' : ''}
+                {ticker.priceChange.toFixed(2)})
+              </span>
+            </div>
+          </div>
+
+          {/* 24h High */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.high24h', { defaultValue: '24h High' })}
+            </div>
+            <div className="text-base font-bold font-mono text-emerald-400">
+              $
+              {ticker.highPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </div>
+          </div>
+
+          {/* 24h Low */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.low24h', { defaultValue: '24h Low' })}
+            </div>
+            <div className="text-base font-bold font-mono text-red-400">
+              $
+              {ticker.lowPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </div>
+          </div>
+
+          {/* Volume */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.volume24h', { defaultValue: '24h Volume' })}
+            </div>
+            <div className="text-base font-bold font-mono">
+              {ticker.volume.toLocaleString('en-US', {
+                maximumFractionDigits: 2,
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5 font-mono">
+              ${(ticker.quoteVolume / 1_000_000).toFixed(2)}M
+            </div>
+          </div>
+
+          {/* Bid */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.bestBid', { defaultValue: 'Best Bid' })}
+            </div>
+            <div className="text-base font-bold font-mono text-emerald-400">
+              $
+              {ticker.bidPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground font-mono">
+              {ticker.bidQty.toFixed(5)}
+            </div>
+          </div>
+
+          {/* Ask */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.bestAsk', { defaultValue: 'Best Ask' })}
+            </div>
+            <div className="text-base font-bold font-mono text-red-400">
+              $
+              {ticker.askPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground font-mono">
+              {ticker.askQty.toFixed(5)}
+            </div>
+          </div>
+
+          {/* Spread */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.spread', { defaultValue: 'Spread' })}
+            </div>
+            <div className="text-base font-bold font-mono text-amber-400">
+              ${(ticker.askPrice - ticker.bidPrice).toFixed(2)}
+            </div>
+            <div className="text-xs text-muted-foreground font-mono">
+              {(
+                ((ticker.askPrice - ticker.bidPrice) / ticker.lastPrice) *
+                100
+              ).toFixed(4)}
+              %
+            </div>
+          </div>
+
+          {/* Trades */}
+          <div className="bg-card px-4 py-3">
+            <div className="text-xs text-muted-foreground mb-1">
+              {t('market.trades24h', { defaultValue: '24h Trades' })}
+            </div>
+            <div className="text-base font-bold font-mono">
+              {ticker.trades.toLocaleString('en-US')}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {t('market.avg', { defaultValue: 'Avg' })} $
+              {ticker.weightedAvgPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoButton({
+  indicatorKey,
+  onOpen,
+}: {
+  indicatorKey: IndicatorKey;
+  onOpen: (k: IndicatorKey) => void;
+}) {
+  return (
+    <button
+      onClick={() => onOpen(indicatorKey)}
+      className="ml-auto shrink-0 rounded-md p-1 text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors"
+      aria-label={`Información sobre ${indicatorKey}`}
+    >
+      <Info className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
 function SnapshotPanel({ symbol }: { symbol: string }) {
   const { t } = useTranslation();
+  const [infoModal, setInfoModal] = useState<IndicatorKey | null>(null);
+  const { ticker } = useBinanceTicker(symbol);
   const { data, isLoading, error, dataUpdatedAt, refetch, isFetching } =
     useMarketSnapshot(symbol);
 
@@ -167,7 +405,7 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
 
   return (
     <div className="market-panel space-y-4">
-      {/* Price header */}
+      {/* Price header — uses live WebSocket price when available */}
       <div
         className={cn(
           'rounded-xl border p-5 flex items-center justify-between',
@@ -180,18 +418,20 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
           </div>
           <div className="text-3xl font-bold font-mono">
             $
-            {data.currentPrice.toLocaleString('en-US', {
+            {(ticker?.lastPrice ?? data.currentPrice).toLocaleString('en-US', {
               minimumFractionDigits: 2,
             })}
           </div>
           <div
             className={cn(
               'mt-1 text-sm font-medium',
-              data.change24h >= 0 ? 'text-emerald-500' : 'text-red-500',
+              (ticker?.priceChangePct ?? data.change24h) >= 0
+                ? 'text-emerald-500'
+                : 'text-red-500',
             )}
           >
-            {data.change24h >= 0 ? '+' : ''}
-            {data.change24h.toFixed(2)}% (24h)
+            {(ticker?.priceChangePct ?? data.change24h) >= 0 ? '+' : ''}
+            {(ticker?.priceChangePct ?? data.change24h).toFixed(2)}% (24h)
           </div>
         </div>
         <div className="text-right">
@@ -223,9 +463,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
       <div className="grid gap-4 md:grid-cols-2">
         {/* RSI */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            RSI (14)
-          </h3>
+          <div className="flex items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              RSI (14)
+            </h3>
+            <InfoButton indicatorKey="rsi" onOpen={setInfoModal} />
+          </div>
           <div className="mb-3">
             <div className="flex items-end gap-2">
               <span className="text-2xl font-bold font-mono">
@@ -269,9 +512,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
 
         {/* MACD */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            MACD (12,26,9)
-          </h3>
+          <div className="flex items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              MACD (12,26,9)
+            </h3>
+            <InfoButton indicatorKey="macd" onOpen={setInfoModal} />
+          </div>
           <div className="space-y-0">
             <IndicatorRow
               label="MACD"
@@ -300,9 +546,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
 
         {/* EMA Cross */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {t('market.emaTrend')}
-          </h3>
+          <div className="flex items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {t('market.emaTrend')}
+            </h3>
+            <InfoButton indicatorKey="ema" onOpen={setInfoModal} />
+          </div>
           <div className="mb-2 flex items-center gap-2">
             <span
               className={cn(
@@ -355,9 +604,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
 
         {/* Bollinger Bands */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {t('market.bollinger')}
-          </h3>
+          <div className="flex items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {t('market.bollinger')}
+            </h3>
+            <InfoButton indicatorKey="bollinger" onOpen={setInfoModal} />
+          </div>
           <div className="mb-2 flex items-center gap-2">
             <span
               className={cn(
@@ -427,9 +679,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Volume */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {t('market.volume')}
-          </h3>
+          <div className="flex items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {t('market.volume')}
+            </h3>
+            <InfoButton indicatorKey="volume" onOpen={setInfoModal} />
+          </div>
           <div className="mb-2 flex items-center gap-2">
             <span
               className={cn(
@@ -461,9 +716,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
 
         {/* Support / Resistance */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {t('market.supportResistance')}
-          </h3>
+          <div className="flex items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {t('market.supportResistance')}
+            </h3>
+            <InfoButton indicatorKey="supportResistance" onOpen={setInfoModal} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <SRLevels
               levels={data.supportResistance.resistance}
@@ -515,6 +773,14 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
           {t('market.refresh')}
         </button>
       </div>
+
+      {/* Indicator info modal */}
+      {infoModal && (
+        <IndicatorInfoModal
+          indicatorKey={infoModal}
+          onClose={() => setInfoModal(null)}
+        />
+      )}
     </div>
   );
 }
@@ -573,7 +839,10 @@ export function MarketPage() {
         ))}
       </div>
 
-      {/* Snapshot panel */}
+      {/* Live real-time ticker */}
+      <LiveTickerPanel symbol={selectedSymbol} />
+
+      {/* Indicators snapshot (60s refresh) */}
       <SnapshotPanel symbol={selectedSymbol} />
     </div>
   );

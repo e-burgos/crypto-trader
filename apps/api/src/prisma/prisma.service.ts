@@ -52,6 +52,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get sandboxWallet() {
     return this._client.sandboxWallet;
   }
+  get chatSession() {
+    return this._client.chatSession;
+  }
+  get chatMessage() {
+    return this._client.chatMessage;
+  }
 
   $transaction(...args: Parameters<PrismaClientInstance['$transaction']>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

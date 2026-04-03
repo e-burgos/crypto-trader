@@ -5,14 +5,24 @@ import {
   ColorType,
   DeepPartial,
   CandlestickSeriesOptions,
+  ISeriesApi,
 } from 'lightweight-charts';
 import { useThemeStore } from '../../store/theme.store';
 import { useOhlcv } from '../../hooks/use-market';
-import { useMarketStore } from '../../store/market.store';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useBinanceTicker } from '../../hooks/use-binance-ticker';
+import { useBinanceKlineStream } from '../../hooks/use-binance-kline';
+import {
+  TrendingUp,
+  TrendingDown,
+  ArrowUp,
+  ArrowDown,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
 
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
 type Interval = (typeof INTERVALS)[number];
@@ -39,7 +49,6 @@ function normalizeCandles(
 ) {
   return raw
     .map((c) => {
-      // Backend returns openTime (ms); Binance fallback returns time (s or ms)
       const rawTime = (c as { openTime?: number }).openTime ?? c.time;
       const t: number =
         typeof rawTime === 'string'
@@ -59,6 +68,155 @@ function normalizeCandles(
     .sort((a, b) => (a.time as number) - (b.time as number));
 }
 
+// ── Live stats bar ────────────────────────────────────────────────────────────
+function LiveStatsBar({ symbol }: { symbol: string }) {
+  const { t } = useTranslation();
+  const { ticker, connected } = useBinanceTicker(symbol);
+  const priceRef = useRef<HTMLSpanElement>(null);
+  const prevPrice = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!ticker || !priceRef.current) return;
+    if (prevPrice.current !== null && prevPrice.current !== ticker.lastPrice) {
+      const up = ticker.lastPrice > prevPrice.current;
+      gsap.fromTo(
+        priceRef.current,
+        { color: up ? '#10b981' : '#ef4444' },
+        { color: '', duration: 1.2, ease: 'power2.out' },
+      );
+    }
+    prevPrice.current = ticker.lastPrice;
+  }, [ticker?.lastPrice]);
+
+  const isUp = (ticker?.priceChangePct ?? 0) >= 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
+      {/* Connection indicator */}
+      <div className="flex items-center gap-1.5 text-xs">
+        {connected ? (
+          <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <Wifi className="h-3 w-3" />
+            LIVE
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-amber-400">
+            <WifiOff className="h-3 w-3 animate-pulse" />
+            {t('market.connecting', { defaultValue: 'Connecting…' })}
+          </span>
+        )}
+      </div>
+
+      {ticker ? (
+        <>
+          {/* Price */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">
+              {t('market.lastPrice', { defaultValue: 'Price' })}
+            </span>
+            <span ref={priceRef} className="font-mono font-bold text-base">
+              $
+              {ticker.lastPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+            <span
+              className={cn(
+                'flex items-center gap-0.5 text-xs font-semibold',
+                isUp ? 'text-emerald-400' : 'text-red-400',
+              )}
+            >
+              {isUp ? (
+                <ArrowUp className="h-3 w-3" />
+              ) : (
+                <ArrowDown className="h-3 w-3" />
+              )}
+              {isUp ? '+' : ''}
+              {ticker.priceChangePct.toFixed(2)}%
+            </span>
+          </div>
+
+          {/* High */}
+          <div className="flex items-center gap-1 text-xs">
+            <TrendingUp className="h-3 w-3 text-emerald-400" />
+            <span className="text-muted-foreground">
+              {t('market.high24h', { defaultValue: 'H' })}
+            </span>
+            <span className="font-mono text-emerald-400">
+              $
+              {ticker.highPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+          </div>
+
+          {/* Low */}
+          <div className="flex items-center gap-1 text-xs">
+            <TrendingDown className="h-3 w-3 text-red-400" />
+            <span className="text-muted-foreground">
+              {t('market.low24h', { defaultValue: 'L' })}
+            </span>
+            <span className="font-mono text-red-400">
+              $
+              {ticker.lowPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+          </div>
+
+          {/* Volume */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-muted-foreground">
+              {t('market.volume24h', { defaultValue: 'Vol' })}
+            </span>
+            <span className="font-mono">
+              {ticker.volume.toLocaleString('en-US', {
+                maximumFractionDigits: 2,
+              })}
+            </span>
+            <span className="text-muted-foreground font-mono">
+              (${(ticker.quoteVolume / 1_000_000).toFixed(1)}M)
+            </span>
+          </div>
+
+          {/* Bid / Ask */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-muted-foreground">
+              {t('market.bestBid', { defaultValue: 'Bid' })}
+            </span>
+            <span className="font-mono text-emerald-400">
+              $
+              {ticker.bidPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-muted-foreground">
+              {t('market.bestAsk', { defaultValue: 'Ask' })}
+            </span>
+            <span className="font-mono text-red-400">
+              $
+              {ticker.askPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+          </div>
+        </>
+      ) : (
+        <div className="flex gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-4 w-24 animate-pulse rounded bg-muted" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function LiveChartPage() {
   const { t } = useTranslation();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -69,8 +227,22 @@ export function LiveChartPage() {
   const [asset, setAsset] = useState<'BTC' | 'ETH'>('BTC');
   const [interval, setInterval] = useState<Interval>('1h');
   const { data: candles, isLoading } = useOhlcv(asset, interval, 200);
-  const prices = useMarketStore((s) => s.prices);
-  const currentPrice = prices[`${asset}USDT`]?.price;
+  const symbol = `${asset}USDT`;
+  const { ticker } = useBinanceTicker(symbol);
+  const { kline } = useBinanceKlineStream(symbol, interval);
+  const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+
+  // Push live kline updates directly onto the chart series
+  useEffect(() => {
+    if (!kline || !seriesRef.current) return;
+    seriesRef.current.update({
+      time: kline.time as import('lightweight-charts').UTCTimestamp,
+      open: kline.open,
+      high: kline.high,
+      low: kline.low,
+      close: kline.close,
+    });
+  }, [kline]);
 
   useGSAP(
     () => {
@@ -124,6 +296,7 @@ export function LiveChartPage() {
       wickUpColor: '#10b981',
       wickDownColor: '#ef4444',
     } as DeepPartial<CandlestickSeriesOptions>);
+    seriesRef.current = series;
 
     if (candles && candles.length > 0) {
       const mapped = normalizeCandles(candles);
@@ -153,10 +326,10 @@ export function LiveChartPage() {
           <h1 className="text-2xl font-bold">{t('sidebar.liveChart')}</h1>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             {asset}/USDT
-            {currentPrice && (
+            {ticker && (
               <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-500">
                 $
-                {currentPrice.toLocaleString('en-US', {
+                {ticker.lastPrice.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                 })}
               </span>
@@ -201,6 +374,11 @@ export function LiveChartPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Live stats strip */}
+      <div className="mb-3">
+        <LiveStatsBar symbol={symbol} />
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden relative">

@@ -18,6 +18,7 @@ export interface TradingConfig {
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;
+  orderPriceOffsetPct: number;
   isActive: boolean;
   createdAt: string;
 }
@@ -33,6 +34,7 @@ export interface TradingConfigDto {
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;
+  orderPriceOffsetPct: number;
 }
 
 export interface AgentStatus {
@@ -48,10 +50,13 @@ export interface TradingPosition {
   pair: string;
   mode: TradingMode;
   entryPrice: number;
+  exitPrice: number | null;
   quantity: number;
   entryAt: string;
+  exitAt: string | null;
   fees: number;
-  status: string;
+  status: 'OPEN' | 'CLOSED';
+  pnl: number | null;
 }
 
 export interface TradingHistoryItem {
@@ -135,17 +140,49 @@ export function useAgentStatus() {
   });
 }
 
-export function useOpenPositions(page = 1, limit = 20) {
+export function usePositions(page = 1, limit = 20, status?: 'OPEN' | 'CLOSED') {
   return useQuery<{
     positions: TradingPosition[];
     total: number;
     page: number;
     limit: number;
   }>({
-    queryKey: ['trading', 'positions', page, limit],
-    queryFn: () => api.get(`/trading/positions?page=${page}&limit=${limit}`),
+    queryKey: ['trading', 'positions', page, limit, status],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (status) params.set('status', status);
+      return api.get(`/trading/positions?${params.toString()}`);
+    },
     refetchInterval: 15_000,
   });
+}
+
+export function useClosePosition() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (positionId: string) =>
+      api.post<{
+        positionId: string;
+        exitPrice: number;
+        pnl: number;
+        status: string;
+      }>(`/trading/positions/${positionId}/close`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trading', 'positions'] });
+      qc.invalidateQueries({ queryKey: ['trading', 'sandbox-wallet'] });
+      toast.success('Position closed successfully');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Failed to close position'),
+  });
+}
+
+/** @deprecated use usePositions */
+export function useOpenPositions(page = 1, limit = 20) {
+  return usePositions(page, limit, 'OPEN');
 }
 
 export function useTradingHistory(page = 1, limit = 50) {

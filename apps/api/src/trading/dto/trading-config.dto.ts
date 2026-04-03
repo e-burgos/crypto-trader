@@ -90,9 +90,16 @@ export class CreateTradingConfigDto {
     example: 0.1,
     description: 'Fracción máxima del balance a usar por trade',
   })
-  @IsNumber({}, { message: 'Porcentaje máximo por trade debe ser un número válido' })
-  @Min(0.01, { message: 'Porcentaje máximo por trade debe ser al menos $constraint1' })
-  @Max(1, { message: 'Porcentaje máximo por trade no puede superar $constraint1 (100%)' })
+  @IsNumber(
+    {},
+    { message: 'Porcentaje máximo por trade debe ser un número válido' },
+  )
+  @Min(0.01, {
+    message: 'Porcentaje máximo por trade debe ser al menos $constraint1',
+  })
+  @Max(1, {
+    message: 'Porcentaje máximo por trade no puede superar $constraint1 (100%)',
+  })
   @IsOptional()
   maxTradePct?: number;
 
@@ -102,9 +109,16 @@ export class CreateTradingConfigDto {
     example: 3,
     description: 'Máximo de posiciones abiertas simultáneas',
   })
-  @IsNumber({}, { message: 'Máximo de posiciones concurrentes debe ser un número válido' })
-  @Min(1, { message: 'Máximo de posiciones concurrentes debe ser al menos $constraint1' })
-  @Max(10, { message: 'Máximo de posiciones concurrentes no puede superar $constraint1' })
+  @IsNumber(
+    {},
+    { message: 'Máximo de posiciones concurrentes debe ser un número válido' },
+  )
+  @Min(1, {
+    message: 'Máximo de posiciones concurrentes debe ser al menos $constraint1',
+  })
+  @Max(10, {
+    message: 'Máximo de posiciones concurrentes no puede superar $constraint1',
+  })
   @IsOptional()
   maxConcurrentPositions?: number;
 
@@ -116,9 +130,26 @@ export class CreateTradingConfigDto {
   })
   @IsNumber({}, { message: 'Intervalo mínimo debe ser un número válido' })
   @Min(1, { message: 'Intervalo mínimo debe ser al menos $constraint1 minuto' })
-  @Max(1440, { message: 'Intervalo mínimo no puede superar $constraint1 minutos (24hs)' })
+  @Max(1440, {
+    message: 'Intervalo mínimo no puede superar $constraint1 minutos (24hs)',
+  })
   @IsOptional()
   minIntervalMinutes?: number;
+
+  @ApiPropertyOptional({
+    minimum: -0.05,
+    maximum: 0.05,
+    example: 0,
+    description:
+      'Offset de precio relativo al mercado para la ejecución de órdenes. ' +
+      'Negativo = intenta comprar por debajo del precio de mercado (simulación). ' +
+      'Positivo = ejecuta por encima del precio de mercado.',
+  })
+  @IsNumber({}, { message: 'Offset de precio debe ser un número válido' })
+  @Min(-0.05, { message: 'Offset de precio no puede ser menor a -5%' })
+  @Max(0.05, { message: 'Offset de precio no puede superar +5%' })
+  @IsOptional()
+  orderPriceOffsetPct?: number;
 }
 
 export class UpdateTradingConfigDto {
@@ -156,25 +187,48 @@ export class UpdateTradingConfigDto {
   takeProfitPct?: number;
 
   @ApiPropertyOptional({ minimum: 0.01, maximum: 1, example: 0.1 })
-  @IsNumber({}, { message: 'Porcentaje máximo por trade debe ser un número válido' })
-  @Min(0.01, { message: 'Porcentaje máximo por trade debe ser al menos $constraint1' })
-  @Max(1, { message: 'Porcentaje máximo por trade no puede superar $constraint1 (100%)' })
+  @IsNumber(
+    {},
+    { message: 'Porcentaje máximo por trade debe ser un número válido' },
+  )
+  @Min(0.01, {
+    message: 'Porcentaje máximo por trade debe ser al menos $constraint1',
+  })
+  @Max(1, {
+    message: 'Porcentaje máximo por trade no puede superar $constraint1 (100%)',
+  })
   @IsOptional()
   maxTradePct?: number;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 10, example: 3 })
-  @IsNumber({}, { message: 'Máximo de posiciones concurrentes debe ser un número válido' })
-  @Min(1, { message: 'Máximo de posiciones concurrentes debe ser al menos $constraint1' })
-  @Max(10, { message: 'Máximo de posiciones concurrentes no puede superar $constraint1' })
+  @IsNumber(
+    {},
+    { message: 'Máximo de posiciones concurrentes debe ser un número válido' },
+  )
+  @Min(1, {
+    message: 'Máximo de posiciones concurrentes debe ser al menos $constraint1',
+  })
+  @Max(10, {
+    message: 'Máximo de posiciones concurrentes no puede superar $constraint1',
+  })
   @IsOptional()
   maxConcurrentPositions?: number;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 1440, example: 60 })
   @IsNumber({}, { message: 'Intervalo mínimo debe ser un número válido' })
   @Min(1, { message: 'Intervalo mínimo debe ser al menos $constraint1 minuto' })
-  @Max(1440, { message: 'Intervalo mínimo no puede superar $constraint1 minutos (24hs)' })
+  @Max(1440, {
+    message: 'Intervalo mínimo no puede superar $constraint1 minutos (24hs)',
+  })
   @IsOptional()
   minIntervalMinutes?: number;
+
+  @ApiPropertyOptional({ minimum: -0.05, maximum: 0.05, example: 0 })
+  @IsNumber({}, { message: 'Offset de precio debe ser un número válido' })
+  @Min(-0.05, { message: 'Offset de precio no puede ser menor a -5%' })
+  @Max(0.05, { message: 'Offset de precio no puede superar +5%' })
+  @IsOptional()
+  orderPriceOffsetPct?: number;
 
   @ApiPropertyOptional({
     example: true,

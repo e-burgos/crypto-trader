@@ -13,6 +13,7 @@ import {
   Newspaper,
   Shield,
   HelpCircle,
+  Activity,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
@@ -47,6 +48,11 @@ export function Sidebar() {
       to: '/dashboard/analytics',
       label: t('sidebar.analytics'),
       icon: LineChart,
+    },
+    {
+      to: '/dashboard/market',
+      label: t('sidebar.market'),
+      icon: Activity,
     },
     { to: '/dashboard/news', label: t('sidebar.news'), icon: Newspaper },
     {

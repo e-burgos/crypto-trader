@@ -54,4 +54,35 @@ export class MarketController {
   getNews(@CurrentUser() user: RequestUser, @Query('limit') limit?: string) {
     return this.marketService.getNews(user.userId, limit ? +limit : 20);
   }
+
+  @Get('news-sources/status')
+  @ApiOperation({
+    summary: 'Estado de conectividad de todas las fuentes de noticias',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Fuentes gratuitas siempre activas + fuentes opcionales con clave API',
+  })
+  getNewsSourcesStatus(@CurrentUser() user: RequestUser) {
+    return this.marketService.getNewsSourcesStatus(user.userId);
+  }
+
+  @Get('snapshot/:symbol')
+  @ApiOperation({
+    summary:
+      'Snapshot de indicadores técnicos para un par (BTCUSDT, ETHUSDT, etc.)',
+  })
+  @ApiParam({
+    name: 'symbol',
+    example: 'BTCUSDT',
+    description: 'Símbolo del par: BTCUSDT, BTCUSDC, ETHUSDT, ETHUSDC',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Precio actual + snapshot de indicadores técnicos',
+  })
+  getSnapshot(@Param('symbol') symbol: string) {
+    return this.marketService.getSnapshot(symbol);
+  }
 }

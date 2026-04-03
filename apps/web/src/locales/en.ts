@@ -12,6 +12,7 @@ const en = {
     tradeHistory: 'Trade History',
     agentLog: 'Agent Log',
     analytics: 'Analytics',
+    market: 'Market Analysis',
     config: 'Configuration',
     settings: 'Settings',
     positions: 'Positions',
@@ -58,6 +59,34 @@ const en = {
     noDecisionsHint:
       'Start a trading agent to see AI reasoning and decisions here.',
     waitMinutes: 'Wait: {{count}} min before next action',
+    justification: 'Justification',
+  },
+  market: {
+    title: 'Market Analysis',
+    subtitle:
+      'Real-time technical indicators and trading signals for listed assets',
+    autoRefresh: 'Auto-refresh · 60s',
+    currentPrice: 'Current Price',
+    score: 'Score',
+    updated: 'Updated',
+    signal: 'Signal',
+    histogram: 'Histogram',
+    emaTrend: 'EMA Cross & Trend',
+    bollinger: 'Bollinger Bands',
+    upper: 'Upper Band',
+    middle: 'Middle (SMA20)',
+    lower: 'Lower Band',
+    bandwidth: 'Bandwidth',
+    volume: 'Volume',
+    vsAvg: 'vs avg',
+    current: 'Current',
+    average: 'Average',
+    supportResistance: 'Support / Resistance',
+    support: 'Support',
+    resistance: 'Resistance',
+    signalReasons: 'Signal Drivers',
+    refresh: 'Refresh now',
+    loadError: 'Failed to load market data. Check your connection.',
   },
   liveChart: {
     loading: 'Loading candles...',
@@ -69,7 +98,7 @@ const en = {
     negative: 'Negative',
     neutral: 'Neutral',
     apiKeyRequired:
-      'News requires a CRYPTOPANIC_API_KEY to be configured on the server.',
+      'Loading news from free sources: CoinGecko, CoinDesk, CoinTelegraph, Reddit.',
   },
   admin: {
     title: 'Admin Panel',
@@ -148,6 +177,10 @@ const en = {
   settings: {
     title: 'Settings',
     subtitle: 'Manage your profile and API keys',
+    tabProfile: 'Profile',
+    tabExchange: 'Exchange',
+    tabAiModels: 'AI Models',
+    tabNews: 'News',
     profile: 'Profile',
     email: 'Email',
     password: 'New Password',
@@ -165,10 +198,23 @@ const en = {
     remove: 'Remove',
     active: 'Active',
     inactive: 'Inactive',
-    newsApiKeys: 'News API Keys',
-    cryptopanic: 'CryptoPanic',
+    newsSources: 'News Sources',
+    freeSource: 'Free · No API key required',
+    reachable: 'Reachable',
+    unreachable: 'Unreachable',
+    checkAll: 'Check Connectivity',
+    checking: 'Checking…',
+    noKeyNeeded: 'All news sources are free and require no API key.',
+    optionalSource: 'Optional · Free API key required',
+    notConfigured: 'Not configured',
+    getApiKeyAt: 'Get your free API key at',
+    saveKey: 'Save',
+    removeKey: 'Remove',
     disconnectProvider: 'Disconnect',
-    helpText: 'Get free API key at',
+    testConnection: 'Test',
+    testSuccess: 'Connected ✔',
+    testFailed: 'Connection failed',
+    testing: 'Testing…',
   },
   notifications: {
     title: 'Notifications',
@@ -294,6 +340,7 @@ const en = {
     noPositionsHint: 'No open positions. Start an agent to begin trading.',
     entryPrice: 'Entry Price',
     opened: 'Opened',
+    openStatus: 'Open',
   },
   tooltips: {
     pnl: 'Profit and Loss — total realized gains minus fees',
@@ -307,8 +354,22 @@ const en = {
     pnlOpen: 'Profit and Loss — unrealized gain or loss on the open position',
     binanceKeys:
       'Your Binance API keys are encrypted with AES-256 on the server. They are never exposed in the UI.',
-    cryptopanic:
-      'CryptoPanic aggregates real-time crypto news with sentiment filtering. Your API key is encrypted with AES-256 on the server.',
+    coingecko:
+      'Free crypto news from the CoinGecko public API. No registration required.',
+    coindesk:
+      'CoinDesk is one of the most recognized crypto news outlets. Fetched via public RSS feed.',
+    cointelegraph:
+      'CoinTelegraph covers crypto and blockchain news worldwide. Fetched via public RSS feed.',
+    reddit:
+      'Top posts from r/CryptoCurrency and r/Bitcoin subreddits. Fetched via Reddit public JSON API.',
+    bitcoinmagazine:
+      'Bitcoin Magazine — in-depth Bitcoin news and analysis. Public RSS feed.',
+    theblock:
+      'The Block — institutional crypto and DeFi research. Public RSS feed.',
+    beincrypto:
+      'BeinCrypto — market news, DeFi, and Web3 analysis. Public RSS feed.',
+    newsdata:
+      'NewsData.io — REST API with up to 200 free requests/day. Requires a free API key.',
     sandboxMode:
       'SANDBOX simulates trades without real money. LIVE uses your actual Binance balance.',
     buyThreshold:
@@ -335,14 +396,10 @@ const en = {
     agentNoLLM: 'Agent paused: no LLM credentials configured',
     agentError: 'Agent error: {{message}}',
     tradeBuy: 'BUY {{qty}} {{asset}} @ ${{price}} ({{mode}})',
-    stopLoss: 'Stop-loss triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
-    takeProfit: 'Take-profit triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
-  },
-  settings: {
-    testConnection: 'Test',
-    testSuccess: 'Connected ✔',
-    testFailed: 'Connection failed',
-    testing: 'Testing…',
+    stopLoss:
+      'Stop-loss triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
+    takeProfit:
+      'Take-profit triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
   },
 };
 

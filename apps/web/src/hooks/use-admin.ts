@@ -77,10 +77,10 @@ export function useKillSwitch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin'] });
       qc.invalidateQueries({ queryKey: ['trading'] });
-      toast.success('Kill switch activated — all trading stopped');
+      toast.success('Kill switch activado — todo el trading detenido');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Kill switch failed'),
+      toast.error(err?.message || 'Error al activar el kill switch'),
   });
 }
 
@@ -91,9 +91,9 @@ export function useToggleUserStatus() {
       api.patch(`/admin/users/${id}/status`, { isActive }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
-      toast.success('User status updated');
+      toast.success('Estado del usuario actualizado');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to update user status'),
+      toast.error(err?.message || 'Error al actualizar el estado del usuario'),
   });
 }

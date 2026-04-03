@@ -1,8 +1,9 @@
 import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { TrendingUp, TrendingDown, Activity, Cpu } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, Cpu, Wallet } from 'lucide-react';
 import { usePortfolioSummary } from '../../hooks/use-analytics';
+import { useSandboxWallet } from '../../hooks/use-trading';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 
@@ -59,6 +60,7 @@ export function OverviewPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = usePortfolioSummary();
+  const { data: wallets, isLoading: walletsLoading } = useSandboxWallet();
 
   useGSAP(
     () => {
@@ -139,6 +141,91 @@ export function OverviewPage() {
           </p>
         </div>
       )}
+
+      {/* Sandbox Wallet Balances */}
+      <div className="mt-8">
+        <div className="mb-3 flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold">Sandbox Wallet</h2>
+          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+            Paper Trading
+          </span>
+        </div>
+
+        {walletsLoading ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[0, 1].map((i) => (
+              <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(wallets ?? []).map((w) => {
+              const pct = Math.min((w.balance / 10_000) * 100, 100);
+              const low = pct < 25;
+              const mid = pct >= 25 && pct < 60;
+              return (
+                <div
+                  key={w.currency}
+                  className="stat-card rounded-xl border border-border bg-card p-5"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      {w.currency} disponible
+                    </span>
+                    <div className="rounded-lg bg-muted p-2 text-muted-foreground">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div
+                    className={cn(
+                      'text-2xl font-bold',
+                      low
+                        ? 'text-red-500'
+                        : mid
+                          ? 'text-amber-500'
+                          : 'text-emerald-500',
+                    )}
+                  >
+                    {w.balance.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{' '}
+                    <span className="text-base font-normal text-muted-foreground">
+                      {w.currency}
+                    </span>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                    <div
+                      className={cn(
+                        'h-1.5 rounded-full transition-all',
+                        low
+                          ? 'bg-red-500'
+                          : mid
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500',
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                    <span>{pct.toFixed(1)}% del capital inicial</span>
+                    {w.updatedAt && (
+                      <span>
+                        {new Date(w.updatedAt).toLocaleTimeString('es-AR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

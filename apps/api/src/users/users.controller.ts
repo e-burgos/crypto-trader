@@ -88,7 +88,9 @@ export class UsersController {
   }
 
   @Get('users/me/binance-keys/test')
-  @ApiOperation({ summary: 'Probar conexión con Binance usando las claves guardadas' })
+  @ApiOperation({
+    summary: 'Probar conexión con Binance usando las claves guardadas',
+  })
   @ApiResponse({ status: 200, schema: { example: { connected: true } } })
   testBinanceConnection(@CurrentUser() user: RequestUser) {
     return this.usersService.testBinanceConnection(user.userId);

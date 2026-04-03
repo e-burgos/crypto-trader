@@ -67,7 +67,7 @@ export function AnalyticsPage() {
   );
 
   const winRateDisplay = summary
-    ? `${(summary.winRate * 100).toFixed(1)}%`
+    ? `${summary.winRate.toFixed(1)}%`
     : portfolio
       ? `–`
       : '–';
@@ -110,7 +110,7 @@ export function AnalyticsPage() {
           label={t('analytics.drawdown')}
           value={
             summary?.currentDrawdown != null
-              ? `${(summary.currentDrawdown * 100).toFixed(1)}%`
+              ? `${summary.currentDrawdown.toFixed(1)}%`
               : '–'
           }
           sub={t('analytics.drawdownSub')}

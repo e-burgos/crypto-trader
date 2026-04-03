@@ -28,8 +28,18 @@ async function refreshToken(): Promise<string | null> {
       body: JSON.stringify({ refreshToken: rt }),
     });
     if (!res.ok) return null;
-    const data: { accessToken: string } = await res.json();
+    const data: { accessToken: string; refreshToken?: string } =
+      await res.json();
     localStorage.setItem('accessToken', data.accessToken);
+    // Persist rotated refresh token (issued on every refresh call)
+    if (data.refreshToken)
+      localStorage.setItem('refreshToken', data.refreshToken);
+    // Keep Zustand store in sync so components reading accessToken stay current
+    import('./api').then(() =>
+      import('../store/auth.store').then(({ useAuthStore }) =>
+        useAuthStore.setState({ accessToken: data.accessToken }),
+      ),
+    );
     return data.accessToken;
   } catch {
     return null;
@@ -73,15 +83,20 @@ async function request<T>(
         .catch(() => null);
     });
     throw {
-      message: 'Session expired. Please log in again.',
+      message: 'Sesión expirada. Por favor iniciá sesión de nuevo.',
       statusCode: 401,
     } as ApiError;
   }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ message: 'Request failed' }));
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Error en la solicitud' }));
+    const errorMessage = Array.isArray(err.message)
+      ? err.message.join('\n')
+      : err.message || 'Error en la solicitud';
     throw {
-      message: err.message || 'Request failed',
+      message: errorMessage,
       statusCode: res.status,
     } as ApiError;
   }

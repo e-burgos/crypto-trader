@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, CheckCheck, Circle } from 'lucide-react';
 import {
   useNotifications,
@@ -25,7 +26,10 @@ function translateMessage(raw: string, t: TFunction): string {
   try {
     const parsed = JSON.parse(raw) as { key?: string; [k: string]: unknown };
     if (parsed?.key) {
-      return t(`notificationMessages.${parsed.key}`, parsed as Record<string, string>) as string;
+      return t(
+        `notificationMessages.${parsed.key}`,
+        parsed as Record<string, string>,
+      ) as string;
     }
   } catch {
     // not JSON — show raw (backward compat)
@@ -70,10 +74,11 @@ export function NotificationsDropdown({
 
   if (!open) return null;
 
-  return (
+  // Rendered via portal so it escapes any parent stacking context (e.g. nav z-50)
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
-      <div className="absolute right-0 top-10 z-50 w-80 rounded-xl border border-border bg-card shadow-2xl">
+      <div className="fixed inset-0 z-[9998]" onClick={onClose} />
+      <div className="fixed top-16 right-4 z-[9999] w-80 rounded-xl border border-border bg-card shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
@@ -135,7 +140,9 @@ export function NotificationsDropdown({
                   />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-snug">{translateMessage(n.message, t)}</p>
+                  <p className="text-sm leading-snug">
+                    {translateMessage(n.message, t)}
+                  </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {timeAgo(n.createdAt)}
                   </p>
@@ -145,6 +152,7 @@ export function NotificationsDropdown({
           )}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

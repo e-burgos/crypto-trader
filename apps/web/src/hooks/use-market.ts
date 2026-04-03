@@ -68,3 +68,129 @@ export function useMarketNews(limit = 30) {
     refetchInterval: 300_000,
   });
 }
+
+export const MARKET_SYMBOLS = [
+  { symbol: 'BTCUSDT', label: 'BTC / USDT', asset: 'BTC' },
+  { symbol: 'ETHUSDT', label: 'ETH / USDT', asset: 'ETH' },
+  { symbol: 'BTCUSDC', label: 'BTC / USDC', asset: 'BTC' },
+  { symbol: 'ETHUSDC', label: 'ETH / USDC', asset: 'ETH' },
+] as const;
+
+export interface RSIResult {
+  value: number;
+  signal: 'OVERBOUGHT' | 'NEUTRAL' | 'OVERSOLD';
+}
+
+export interface MACDResult {
+  macd: number;
+  signal: number;
+  histogram: number;
+  crossover: 'BULLISH' | 'BEARISH' | 'NONE';
+}
+
+export interface BollingerResult {
+  upper: number;
+  middle: number;
+  lower: number;
+  bandwidth: number;
+  position: 'ABOVE' | 'INSIDE' | 'BELOW';
+}
+
+export interface EMAResult {
+  ema9: number;
+  ema21: number;
+  ema50: number;
+  ema200: number;
+  trend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+}
+
+export interface VolumeResult {
+  current: number;
+  average: number;
+  ratio: number;
+  signal: 'HIGH' | 'NORMAL' | 'LOW';
+}
+
+export interface SupportResistance {
+  support: number[];
+  resistance: number[];
+}
+
+export interface MarketSnapshot {
+  symbol: string;
+  currentPrice: number;
+  change24h: number;
+  rsi: RSIResult;
+  macd: MACDResult;
+  bollingerBands: BollingerResult;
+  emaCross: EMAResult;
+  volume: VolumeResult;
+  supportResistance: SupportResistance;
+  timestamp: number;
+}
+
+export type OverallSignal = 'BUY' | 'SELL' | 'NEUTRAL';
+
+export function deriveOverallSignal(snapshot: MarketSnapshot): {
+  signal: OverallSignal;
+  score: number;
+  reasons: string[];
+} {
+  let score = 0;
+  const reasons: string[] = [];
+
+  if (snapshot.rsi.signal === 'OVERSOLD') {
+    score += 2;
+    reasons.push('RSI oversold');
+  } else if (snapshot.rsi.signal === 'OVERBOUGHT') {
+    score -= 2;
+    reasons.push('RSI overbought');
+  }
+
+  if (snapshot.macd.crossover === 'BULLISH') {
+    score += 2;
+    reasons.push('MACD bullish crossover');
+  } else if (snapshot.macd.crossover === 'BEARISH') {
+    score -= 2;
+    reasons.push('MACD bearish crossover');
+  } else if (snapshot.macd.histogram > 0) {
+    score += 1;
+  } else if (snapshot.macd.histogram < 0) {
+    score -= 1;
+  }
+
+  if (snapshot.emaCross.trend === 'BULLISH') {
+    score += 2;
+    reasons.push('EMA bullish trend');
+  } else if (snapshot.emaCross.trend === 'BEARISH') {
+    score -= 2;
+    reasons.push('EMA bearish trend');
+  }
+
+  if (snapshot.bollingerBands.position === 'BELOW') {
+    score += 1;
+    reasons.push('Price below lower Bollinger band');
+  } else if (snapshot.bollingerBands.position === 'ABOVE') {
+    score -= 1;
+    reasons.push('Price above upper Bollinger band');
+  }
+
+  if (snapshot.volume.signal === 'HIGH') {
+    score += score > 0 ? 1 : -1;
+    reasons.push('High volume confirms signal');
+  }
+
+  const signal: OverallSignal =
+    score >= 3 ? 'BUY' : score <= -3 ? 'SELL' : 'NEUTRAL';
+
+  return { signal, score, reasons };
+}
+
+export function useMarketSnapshot(symbol: string) {
+  return useQuery<MarketSnapshot>({
+    queryKey: ['market', 'snapshot', symbol],
+    queryFn: () => api.get(`/market/snapshot/${symbol}`),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+}

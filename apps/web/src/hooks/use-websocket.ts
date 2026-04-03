@@ -45,7 +45,7 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
 
     socket.on('trade:executed', () => {
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
-      toast.success('Trade executed');
+      toast.success('Trade ejecutado');
     });
 
     socket.on('position:closed', () => {
@@ -75,7 +75,7 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
         queryClient.invalidateQueries({ queryKey: ['trading', 'decisions'] });
         queryClient.invalidateQueries({ queryKey: ['analytics', 'decisions'] });
         toast.info(
-          `Agent: ${data.decision} ${data.asset} (${data.confidence}% confidence)`,
+          `Agente: ${data.decision} ${data.asset} (${data.confidence}% confianza)`,
           {
             duration: 5000,
           },
@@ -87,11 +87,20 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
       queryClient.invalidateQueries({ queryKey: ['trading', 'positions'] });
     });
 
+    socket.on('wallet:updated', () => {
+      queryClient.invalidateQueries({
+        queryKey: ['trading', 'sandbox-wallet'],
+      });
+    });
+
     socket.on('agent:killed', () => {
       queryClient.invalidateQueries({ queryKey: ['trading'] });
-      toast.warning('All agents have been stopped by admin', {
-        duration: 8000,
-      });
+      toast.warning(
+        'Todos los agentes han sido detenidos por el administrador',
+        {
+          duration: 8000,
+        },
+      );
     });
 
     return () => {

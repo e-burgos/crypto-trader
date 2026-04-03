@@ -118,8 +118,8 @@ export function ConfigPage() {
       mode: form.mode,
       buyThreshold: parseFloat(form.buyThreshold),
       sellThreshold: parseFloat(form.sellThreshold),
-      stopLossPct: parseFloat(form.stopLossPct),
-      takeProfitPct: parseFloat(form.takeProfitPct),
+      stopLossPct: parseFloat(form.stopLossPct) / 100,
+      takeProfitPct: parseFloat(form.takeProfitPct) / 100,
       maxTradePct: parseFloat(form.maxTradePct) / 100,
       maxConcurrentPositions: parseInt(form.maxConcurrentPositions),
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
@@ -386,8 +386,8 @@ export function ConfigPage() {
                         </span>
                       </div>
                       <div className="mb-2 text-xs text-muted-foreground">
-                        {cfg.mode} · SL {cfg.stopLossPct}% · TP{' '}
-                        {cfg.takeProfitPct}%
+                        {cfg.mode} · SL {(cfg.stopLossPct * 100).toFixed(1)}% ·
+                        TP {(cfg.takeProfitPct * 100).toFixed(1)}%
                       </div>
                       {isRunning ? (
                         <Button

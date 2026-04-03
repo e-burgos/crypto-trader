@@ -33,7 +33,7 @@ export function useMarkAllRead() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['notifications'] });
     },
-    onError: () => toast.error('Failed to mark notifications as read'),
+    onError: () => toast.error('Error al marcar las notificaciones como leídas'),
   });
 }
 

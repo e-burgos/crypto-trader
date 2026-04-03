@@ -16,6 +16,7 @@ import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { TradeHistoryPage } from '../pages/dashboard/trade-history';
 import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { AnalyticsPage } from '../pages/dashboard/analytics';
+import { MarketPage } from '../pages/dashboard/market';
 import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';
 import { PositionsPage } from '../pages/dashboard/positions';
@@ -108,6 +109,7 @@ export function App() {
             <Route path="history" element={<TradeHistoryPage />} />
             <Route path="agent" element={<AgentLogPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="market" element={<MarketPage />} />
             <Route path="news" element={<NewsFeedPage />} />
             <Route path="config" element={<ConfigPage />} />
             <Route path="settings" element={<SettingsPage />} />

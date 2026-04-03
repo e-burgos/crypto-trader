@@ -62,10 +62,10 @@ export function useSetBinanceKeys() {
       api.post('/users/me/binance-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'binance-status'] });
-      toast.success('Binance API keys saved');
+      toast.success('Claves API de Binance guardadas');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to save keys'),
+      toast.error(err?.message || 'Error al guardar las claves'),
   });
 }
 
@@ -75,10 +75,10 @@ export function useDeleteBinanceKeys() {
     mutationFn: () => api.delete('/users/me/binance-keys'),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'binance-status'] });
-      toast.success('Binance keys removed');
+      toast.success('Claves de Binance eliminadas');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to remove keys'),
+      toast.error(err?.message || 'Error al eliminar las claves'),
   });
 }
 
@@ -92,10 +92,10 @@ export function useSetLLMKey() {
     }) => api.post('/users/me/llm-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
-      toast.success('LLM API key saved');
+      toast.success('Clave API de LLM guardada');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to save key'),
+      toast.error(err?.message || 'Error al guardar la clave'),
   });
 }
 
@@ -106,10 +106,10 @@ export function useDeleteLLMKey() {
       api.delete(`/users/me/llm-keys/${provider}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
-      toast.success('LLM key removed');
+      toast.success('Clave LLM eliminada');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to remove key'),
+      toast.error(err?.message || 'Error al eliminar la clave'),
   });
 }
 
@@ -120,10 +120,10 @@ export function useUpdateProfile() {
       api.put('/users/me', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'profile'] });
-      toast.success('Profile updated');
+      toast.success('Perfil actualizado');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to update profile'),
+      toast.error(err?.message || 'Error al actualizar el perfil'),
   });
 }
 
@@ -154,10 +154,10 @@ export function useSetNewsApiKey() {
       api.post('/users/me/news-api-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'news-api-keys'] });
-      toast.success('News API key saved');
+      toast.success('Clave API de noticias guardada');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to save key'),
+      toast.error(err?.message || 'Error al guardar la clave'),
   });
 }
 
@@ -168,10 +168,10 @@ export function useDeleteNewsApiKey() {
       api.delete(`/users/me/news-api-keys/${provider}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'news-api-keys'] });
-      toast.success('News API key removed');
+      toast.success('Clave API de noticias eliminada');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Failed to remove key'),
+      toast.error(err?.message || 'Error al eliminar la clave'),
   });
 }
 
@@ -197,5 +197,27 @@ export function useTestNewsApiKey() {
   return useMutation<TestResult, Error, string>({
     mutationFn: (provider: string) =>
       api.get(`/users/me/news-api-keys/${provider}/test`),
+  });
+}
+
+export interface NewsSourceStatus {
+  id: string;
+  label: string;
+  description: string;
+  requiresApiKey: boolean;
+  isActive: boolean;
+  isConfigured: boolean;
+  isReachable: boolean;
+  signupUrl?: string;
+  error?: string;
+}
+
+export function useNewsSourcesStatus() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<NewsSourceStatus[]>({
+    queryKey: ['market', 'news-sources-status'],
+    queryFn: () => api.get<NewsSourceStatus[]>('/market/news-sources/status'),
+    staleTime: 60_000,
+    enabled: isAuthenticated,
   });
 }

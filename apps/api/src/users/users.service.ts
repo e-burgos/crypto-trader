@@ -235,11 +235,17 @@ export class UsersService {
     if (!cred) return { connected: false, error: 'No credentials saved' };
     const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
     try {
-      if (provider === 'CRYPTOPANIC') {
-        await axios.get('https://cryptopanic.com/api/free/v1/posts/', {
-          params: { auth_token: apiKey, currencies: 'BTC', kind: 'news', public: true },
+      if (provider === 'NEWSDATA') {
+        const { data } = await axios.get('https://newsdata.io/api/1/news', {
+          params: { apikey: apiKey, language: 'en', q: 'bitcoin', size: 1 },
           timeout: 8000,
         });
+        if (data.status === 'error') {
+          return {
+            connected: false,
+            error: data.results?.message ?? 'API error',
+          };
+        }
         return { connected: true };
       }
       return { connected: false, error: 'Unknown provider' };

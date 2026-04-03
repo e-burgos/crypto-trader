@@ -1,7 +1,14 @@
 import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Bot, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
+import {
+  Bot,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
+  MessageSquare,
+} from 'lucide-react';
 import {
   useAgentDecisions,
   type AgentDecision,
@@ -35,6 +42,7 @@ function ConfidenceBar({ value }: { value: number }) {
 }
 
 function DecisionCard({ decision }: { decision: AgentDecision }) {
+  const { t } = useTranslation();
   const config = DECISION_CONFIG[decision.decision] || DECISION_CONFIG.HOLD;
   const Icon = config.icon;
 
@@ -69,17 +77,28 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
           </div>
         </div>
 
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3">
-          {decision.reasoning}
-        </p>
-
-        <ConfidenceBar value={decision.confidence} />
+        {/* Justificación */}
+        {decision.reasoning && (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+            <div className="mb-1 flex items-center gap-1.5">
+              <MessageSquare className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('agentLog.justification')}
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed text-foreground/80">
+              {decision.reasoning}
+            </p>
+          </div>
+        )}
 
         {decision.waitMinutes && (
           <p className="mt-2 text-xs text-muted-foreground">
             {t('agentLog.waitMinutes', { count: decision.waitMinutes })}
           </p>
         )}
+
+        <ConfidenceBar value={decision.confidence} />
       </div>
     </div>
   );

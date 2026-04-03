@@ -1,11 +1,5 @@
 import { useRef, useState } from 'react';
-import {
-  Briefcase,
-  TrendingUp,
-  TrendingDown,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
@@ -21,7 +15,7 @@ export function PositionsPage() {
   const [page, setPage] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = useOpenPositions(page, PAGE_SIZE);
-  const positions = data?.data ?? [];
+  const positions = data?.positions ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -123,24 +117,12 @@ export function PositionsPage() {
                       {pos.quantity.toFixed(6)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 font-semibold font-mono',
-                          pos.unrealizedPnl >= 0
-                            ? 'text-emerald-500'
-                            : 'text-red-500',
-                        )}
-                      >
-                        {pos.unrealizedPnl >= 0 ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
-                        )}
-                        ${pos.unrealizedPnl.toFixed(2)}
+                      <span className="text-muted-foreground text-xs italic">
+                        {t('positions.openStatus')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground">
-                      {new Date(pos.openedAt).toLocaleDateString()}
+                      {new Date(pos.entryAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

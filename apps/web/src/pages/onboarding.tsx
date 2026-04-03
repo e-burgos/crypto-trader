@@ -41,7 +41,7 @@ const LLM_PROVIDERS: { value: LLMProvider; label: string; models: string[] }[] =
     {
       value: 'GROQ',
       label: 'Groq',
-      models: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
+      models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
     },
   ];
 
@@ -287,8 +287,8 @@ export function OnboardingPage() {
           mode: state.mode,
           buyThreshold: 70,
           sellThreshold: 65,
-          stopLossPct: 2,
-          takeProfitPct: 4,
+          stopLossPct: 0.02,
+          takeProfitPct: 0.04,
           maxTradePct: 0.1,
           maxConcurrentPositions: 3,
           minIntervalMinutes: 60,

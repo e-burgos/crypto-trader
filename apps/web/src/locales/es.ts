@@ -12,6 +12,7 @@ const es = {
     tradeHistory: 'Historial',
     agentLog: 'Registro del Agente',
     analytics: 'Análisis',
+    market: 'Análisis de Mercado',
     config: 'Configuración',
     settings: 'Ajustes',
     positions: 'Posiciones',
@@ -59,6 +60,34 @@ const es = {
     noDecisionsHint:
       'Inicia un agente de trading para ver el razonamiento y las decisiones de la IA aquí.',
     waitMinutes: 'Esperar: {{count}} min antes de la próxima acción',
+    justification: 'Justificación',
+  },
+  market: {
+    title: 'Análisis de Mercado',
+    subtitle:
+      'Indicadores técnicos en tiempo real y señales de trading para los activos listados',
+    autoRefresh: 'Auto-actualización · 60s',
+    currentPrice: 'Precio Actual',
+    score: 'Puntaje',
+    updated: 'Actualizado',
+    signal: 'Señal',
+    histogram: 'Histograma',
+    emaTrend: 'Cruce EMA y Tendencia',
+    bollinger: 'Bandas de Bollinger',
+    upper: 'Banda Superior',
+    middle: 'Media (SMA20)',
+    lower: 'Banda Inferior',
+    bandwidth: 'Ancho de Banda',
+    volume: 'Volumen',
+    vsAvg: 'vs promedio',
+    current: 'Actual',
+    average: 'Promedio',
+    supportResistance: 'Soporte / Resistencia',
+    support: 'Soporte',
+    resistance: 'Resistencia',
+    signalReasons: 'Factores de la Señal',
+    refresh: 'Actualizar ahora',
+    loadError: 'Error al cargar datos de mercado. Verifica tu conexión.',
   },
   liveChart: {
     loading: 'Cargando velas...',
@@ -70,7 +99,7 @@ const es = {
     negative: 'Negativo',
     neutral: 'Neutral',
     apiKeyRequired:
-      'Las noticias requieren que se configure CRYPTOPANIC_API_KEY en el servidor.',
+      'Cargando noticias de fuentes gratuitas: CoinGecko, CoinDesk, CoinTelegraph, Reddit.',
   },
   admin: {
     title: 'Panel de Administración',
@@ -149,6 +178,10 @@ const es = {
   settings: {
     title: 'Ajustes',
     subtitle: 'Administra tu perfil y claves API',
+    tabProfile: 'Perfil',
+    tabExchange: 'Exchange',
+    tabAiModels: 'Modelos IA',
+    tabNews: 'Noticias',
     profile: 'Perfil',
     email: 'Correo electrónico',
     password: 'Nueva Contraseña',
@@ -166,10 +199,24 @@ const es = {
     remove: 'Eliminar',
     active: 'Activo',
     inactive: 'Inactivo',
-    newsApiKeys: 'Claves API de Noticias',
-    cryptopanic: 'CryptoPanic',
+    newsSources: 'Fuentes de Noticias',
+    freeSource: 'Gratis · Sin clave API requerida',
+    reachable: 'Alcanzable',
+    unreachable: 'No alcanzable',
+    checkAll: 'Verificar Conectividad',
+    checking: 'Verificando…',
+    noKeyNeeded:
+      'Todas las fuentes de noticias son gratuitas y no requieren clave API.',
+    optionalSource: 'Opcional · Requiere clave API gratuita',
+    notConfigured: 'No configurado',
+    getApiKeyAt: 'Obtén tu clave API gratuita en',
+    saveKey: 'Guardar',
+    removeKey: 'Eliminar',
     disconnectProvider: 'Desconectar',
-    helpText: 'Obtén una clave gratuita en',
+    testConnection: 'Probar',
+    testSuccess: 'Conectado ✔',
+    testFailed: 'Fallo de conexión',
+    testing: 'Probando…',
   },
   notifications: {
     title: 'Notificaciones',
@@ -296,6 +343,7 @@ const es = {
       'Sin posiciones abiertas. Inicia un agente para comenzar a operar.',
     entryPrice: 'Precio de Entrada',
     opened: 'Apertura',
+    openStatus: 'Abierta',
   },
   tooltips: {
     pnl: 'Ganancias y Pérdidas — ganancias realizadas totales menos comisiones',
@@ -310,8 +358,22 @@ const es = {
       'Ganancias y Pérdidas — ganancia o pérdida no realizada de la posición abierta',
     binanceKeys:
       'Tus claves API de Binance están cifradas con AES-256 en el servidor. Nunca se exponen en la UI.',
-    cryptopanic:
-      'CryptoPanic agrega noticias cripto en tiempo real con filtrado por sentimiento. Tu clave API está cifrada con AES-256 en el servidor.',
+    coingecko:
+      'Noticias cripto gratuitas de la API pública de CoinGecko. Sin registro requerido.',
+    coindesk:
+      'CoinDesk es uno de los medios de noticias cripto más reconocidos. Obtenido vía RSS público.',
+    cointelegraph:
+      'CoinTelegraph cubre noticias cripto y blockchain a nivel mundial. Obtenido vía RSS público.',
+    reddit:
+      'Los posts más populares de r/CryptoCurrency y r/Bitcoin. Obtenido vía API JSON pública de Reddit.',
+    bitcoinmagazine:
+      'Bitcoin Magazine — noticias y análisis en profundidad sobre Bitcoin. RSS público.',
+    theblock:
+      'The Block — investigación institucional sobre cripto y DeFi. RSS público.',
+    beincrypto:
+      'BeinCrypto — noticias de mercado, DeFi y análisis Web3. RSS público.',
+    newsdata:
+      'NewsData.io — API REST con hasta 200 solicitudes gratuitas al día. Requiere clave API gratuita.',
     sandboxMode:
       'SANDBOX simula trades sin dinero real. EN VIVO usa tu saldo real de Binance.',
     buyThreshold:
@@ -338,14 +400,10 @@ const es = {
     agentNoLLM: 'Agente pausado: no hay credenciales LLM configuradas',
     agentError: 'Error del agente: {{message}}',
     tradeBuy: 'COMPRA {{qty}} {{asset}} @ ${{price}} ({{mode}})',
-    stopLoss: 'Stop-loss activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
-    takeProfit: 'Take-profit activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
-  },
-  settings: {
-    testConnection: 'Probar',
-    testSuccess: 'Conectado ✔',
-    testFailed: 'Fallo de conexión',
-    testing: 'Probando…',
+    stopLoss:
+      'Stop-loss activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
+    takeProfit:
+      'Take-profit activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
   },
 };
 

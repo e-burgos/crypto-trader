@@ -172,4 +172,13 @@ export class TradingController {
       limit ? +limit : 20,
     );
   }
+
+  // ── Wallet ────────────────────────────────────────────────────────────────
+
+  @Get('wallet')
+  @ApiOperation({ summary: 'Balance del sandbox wallet del usuario' })
+  @ApiResponse({ status: 200, description: 'Balances por moneda estable' })
+  getWallet(@CurrentUser() user: RequestUser) {
+    return this.tradingService.getSandboxWallet(user.userId);
+  }
 }

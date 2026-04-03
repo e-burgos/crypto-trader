@@ -27,6 +27,11 @@ export function buildAnalysisPrompt(input: LLMAnalysisInput): {
   system: string;
   user: string;
 } {
+  const sandboxNote =
+    input.userConfig.mode === 'SANDBOX'
+      ? `\nSANDBOX MODE: This is a paper trading simulation with no real funds at risk. Prioritize TAKING POSITIONS to test the system end-to-end. Lean toward BUY when RSI < 60 and no strong bearish divergence. HOLD only when RSI > 70 or there is clear bearish breakdown.`
+      : '';
+
   const system = `You are a professional crypto trading analyst. Analyze the provided market data and return a JSON decision.
 
 RULES:
@@ -35,7 +40,7 @@ RULES:
 - confidence is a float between 0.0 and 1.0
 - reasoning is a brief explanation (max 200 chars)
 - suggestedWaitMinutes is how long to wait before next analysis (1-60)
-
+${sandboxNote}
 FORMAT:
 {
   "decision": "BUY" | "SELL" | "HOLD",

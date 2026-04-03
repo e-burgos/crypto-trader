@@ -8,11 +8,11 @@ setup('authenticate', async ({ page }) => {
 
   await page
     .getByLabel(/email/i)
-    .fill(process.env.E2E_USER_EMAIL || 'test@example.com');
+    .fill(process.env.E2E_USER_EMAIL || 'trader@cryptotrader.dev');
   await page
     .getByLabel(/password/i)
-    .fill(process.env.E2E_USER_PASSWORD || 'Password123!');
-  await page.getByRole('button', { name: /sign in|login/i }).click();
+    .fill(process.env.E2E_USER_PASSWORD || 'trader123');
+  await page.getByRole('main').getByRole('button', { name: /sign in/i }).click();
 
   // Wait for redirect to dashboard
   await page.waitForURL('**/dashboard**', { timeout: 10_000 });

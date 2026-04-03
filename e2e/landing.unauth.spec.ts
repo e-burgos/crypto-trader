@@ -5,7 +5,7 @@ test.describe('Landing Page', () => {
     await page.goto('/');
     await expect(page.locator('h1')).toBeVisible();
     await expect(
-      page.getByRole('link', { name: /get started|start trading/i }),
+      page.getByRole('link', { name: /get started|start trading/i }).first(),
     ).toBeVisible();
   });
 
@@ -23,12 +23,12 @@ test.describe('Landing Page', () => {
 
   test('price ticker is visible', async ({ page }) => {
     await page.goto('/');
-    // Ticker scrolls btc/eth prices
+    // Ticker bar is the border-b div wrapping the animate-ticker
     await expect(
       page
-        .locator('[data-testid="price-ticker"], .price-ticker, header')
+        .locator('[class*="animate-ticker"], [class*="border-b border-border"]')
         .first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 5_000 });
   });
 });
 

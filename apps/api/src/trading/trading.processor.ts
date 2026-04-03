@@ -9,7 +9,9 @@ import { TRADING_QUEUE } from './trading.service';
 
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import {
-  CryptoPanicFetcher,
+  CoinGeckoNewsFetcher,
+  RssFetcher,
+  RedditFetcher,
   NewsAggregator,
 } from '@crypto-trader/data-fetcher';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
@@ -104,7 +106,7 @@ export class TradingProcessor {
         await this.notificationsService.create(
           userId,
           NotificationType.AGENT_ERROR,
-          'Agent paused: no LLM credentials configured.',
+          JSON.stringify({ key: 'agentNoLLM' }),
         );
         return;
       }
@@ -226,7 +228,10 @@ export class TradingProcessor {
       );
       const delay = waitMinutes * 60 * 1000;
 
-      // Re-queue only if still running
+      // Re-queue only if still running.
+      // NOTE: We intentionally omit jobId here. Using the same static jobId while
+      // the current job is still active causes Bull to return the existing active job
+      // instead of creating a new delayed one, silently stopping the agent.
       const currentConfig = await this.prisma.tradingConfig.findUnique({
         where: { id: configId },
         select: { isRunning: true },
@@ -235,11 +240,7 @@ export class TradingProcessor {
         await job.queue.add(
           'run-cycle',
           { userId, configId },
-          {
-            jobId: `agent-${userId}-${configId}`,
-            delay,
-            removeOnComplete: true,
-          },
+          { delay, removeOnComplete: true },
         );
         this.logger.log(
           `Next cycle for config ${configId} in ${waitMinutes}min`,
@@ -258,7 +259,7 @@ export class TradingProcessor {
         .create(
           userId,
           NotificationType.AGENT_ERROR,
-          `Agent error: ${message.slice(0, 200)}`,
+          JSON.stringify({ key: 'agentError', message: message.slice(0, 200) }),
         )
         .catch(() => null);
     }
@@ -273,18 +274,95 @@ export class TradingProcessor {
     apiSecret?: string,
   ) {
     const openCount = await this.prisma.position.count({
-      where: { userId, status: 'OPEN', asset: config.asset },
+      where: { userId, status: 'OPEN', asset: config.asset, mode: config.mode },
     });
     if (openCount >= config.maxConcurrentPositions) {
       this.logger.log(`Max positions reached for user ${userId}`);
       return;
     }
 
-    const executor =
-      mode === TradingMode.SANDBOX
-        ? new SandboxOrderExecutor()
-        : new LiveOrderExecutor(new BinanceRestClient({ apiKey, apiSecret }));
+    // ── SANDBOX: use persisted DB balance ────────────────────────────────────
+    if (mode === TradingMode.SANDBOX) {
+      const publicClient = new BinanceRestClient({});
+      const livePrice = await publicClient.getTickerPrice(symbol);
 
+      // Upsert wallet row (first-time init at 10,000)
+      const wallet = await this.prisma.sandboxWallet.upsert({
+        where: { userId_currency: { userId, currency: config.pair as any } },
+        create: { userId, currency: config.pair as any, balance: 10_000 },
+        update: {},
+      });
+
+      const quantity = calculateTradeQuantity(
+        wallet.balance,
+        livePrice,
+        config.maxTradePct,
+      );
+      if (quantity <= 0) return;
+
+      const cost = livePrice * quantity;
+      const fee = cost * 0.001;
+      const total = cost + fee;
+      if (wallet.balance < total) return;
+
+      // Deduct from wallet
+      await this.prisma.sandboxWallet.update({
+        where: { userId_currency: { userId, currency: config.pair as any } },
+        data: { balance: wallet.balance - total },
+      });
+
+      const positionData = this.positionManager.openPosition({
+        userId,
+        configId: config.id,
+        asset: config.asset,
+        pair: config.pair,
+        mode,
+        entryPrice: livePrice,
+        quantity,
+      });
+
+      const savedPosition = await this.prisma.position.create({
+        data: positionData as any,
+      });
+
+      await this.prisma.trade.create({
+        data: {
+          userId,
+          positionId: savedPosition.id,
+          type: TradeType.BUY,
+          price: livePrice,
+          quantity,
+          fee,
+          mode,
+          binanceOrderId: `sandbox-${Date.now()}`,
+        },
+      });
+
+      await this.notificationsService.create(
+        userId,
+        NotificationType.TRADE_EXECUTED,
+        JSON.stringify({
+          key: 'tradeBuy',
+          qty: quantity.toString(),
+          asset: config.asset,
+          price: livePrice.toFixed(2),
+          mode,
+        }),
+      );
+      this.gateway.emitToUser(userId, 'trade:executed', {
+        position: savedPosition,
+      });
+      this.gateway.emitToUser(userId, 'wallet:updated', {
+        currency: config.pair,
+        balance: wallet.balance - total,
+      });
+      return;
+    }
+
+    // ── LIVE ─────────────────────────────────────────────────────────────────
+    const executor = new LiveOrderExecutor(
+      new BinanceRestClient({ apiKey, apiSecret }),
+    );
     const currentPrice = await executor.getPrice(symbol);
     const quoteBalance = await executor.getBalance(config.pair);
     const quantity = calculateTradeQuantity(
@@ -330,7 +408,13 @@ export class TradingProcessor {
     await this.notificationsService.create(
       userId,
       NotificationType.TRADE_EXECUTED,
-      `BUY ${order.quantity} ${config.asset} @ $${order.price.toFixed(2)} (${mode})`,
+      JSON.stringify({
+        key: 'tradeBuy',
+        qty: order.quantity.toString(),
+        asset: config.asset,
+        price: order.price.toFixed(2),
+        mode,
+      }),
     );
     this.gateway.emitToUser(userId, 'trade:executed', {
       position: savedPosition,
@@ -354,6 +438,17 @@ export class TradingProcessor {
       mode === TradingMode.SANDBOX
         ? new SandboxOrderExecutor()
         : new LiveOrderExecutor(new BinanceRestClient({ apiKey, apiSecret }));
+
+    // For SANDBOX: inject real market price from Binance public API (no auth needed)
+    if (mode === TradingMode.SANDBOX) {
+      const publicClient = new BinanceRestClient({});
+      const livePrice = await publicClient
+        .getTickerPrice(symbol)
+        .catch(() => null);
+      if (livePrice)
+        (executor as SandboxOrderExecutor).setPrice(symbol, livePrice);
+    }
+
     const currentPrice = await executor.getPrice(symbol).catch(() => null);
     if (!currentPrice) return;
 
@@ -412,6 +507,28 @@ export class TradingProcessor {
           },
         });
 
+        // ── For SANDBOX: credit proceeds back to wallet ─────────────────────
+        if (mode === TradingMode.SANDBOX) {
+          const proceeds = order.price * order.quantity;
+          const fee = proceeds * 0.001;
+          await this.prisma.sandboxWallet.upsert({
+            where: { userId_currency: { userId, currency: pos.pair as any } },
+            create: {
+              userId,
+              currency: pos.pair as any,
+              balance: 10_000 + proceeds - fee,
+            },
+            update: { balance: { increment: proceeds - fee } },
+          });
+          const updatedWallet = await this.prisma.sandboxWallet.findUnique({
+            where: { userId_currency: { userId, currency: pos.pair as any } },
+          });
+          this.gateway.emitToUser(userId, 'wallet:updated', {
+            currency: pos.pair,
+            balance: updatedWallet?.balance,
+          });
+        }
+
         const reason = shouldStopLoss ? 'Stop-loss' : 'Take-profit';
         const notifType = shouldStopLoss
           ? NotificationType.STOP_LOSS_TRIGGERED
@@ -420,7 +537,13 @@ export class TradingProcessor {
         await this.notificationsService.create(
           userId,
           notifType,
-          `${reason} triggered: SELL ${pos.quantity} ${config.asset} @ $${order.price.toFixed(2)} | P&L: $${pnl.toFixed(2)}`,
+          JSON.stringify({
+            key: shouldStopLoss ? 'stopLoss' : 'takeProfit',
+            qty: pos.quantity.toString(),
+            asset: config.asset,
+            price: order.price.toFixed(2),
+            pnl: pnl.toFixed(2),
+          }),
         );
         this.gateway.emitToUser(userId, 'trade:executed', {
           position: closedPosition,
@@ -433,13 +556,9 @@ export class TradingProcessor {
   }
 
   private buildNewsAggregator(): NewsAggregator {
-    const sources = [];
-    if (process.env.CRYPTOPANIC_API_KEY) {
-      sources.push(
-        new CryptoPanicFetcher({ authToken: process.env.CRYPTOPANIC_API_KEY }),
-      );
-    }
-    // Always add at least the aggregator with no sources (returns empty gracefully)
-    return new NewsAggregator(sources, { cacheTtlSeconds: 300 });
+    return new NewsAggregator(
+      [new CoinGeckoNewsFetcher(), new RssFetcher(), new RedditFetcher()],
+      { cacheTtlSeconds: 300 },
+    );
   }
 }

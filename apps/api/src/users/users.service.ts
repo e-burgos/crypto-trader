@@ -5,14 +5,16 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import bcrypt from 'bcrypt';
+import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   UpdateUserDto,
   BinanceKeyDto,
   LLMKeyDto,
+  NewsApiKeyDto,
 } from '../auth/dto/auth.dto';
 import { encrypt, decrypt } from './utils/encryption.util';
-import { LLMProvider } from '../../generated/prisma/enums';
+import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
 
 @Injectable()
 export class UsersService {
@@ -50,9 +52,7 @@ export class UsersService {
 
   async setBinanceKeys(userId: string, dto: BinanceKeyDto) {
     const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
-    const { encrypted: secretEncrypted, iv: secretIv } = encrypt(
-      dto.apiSecret,
-    );
+    const { encrypted: secretEncrypted, iv: secretIv } = encrypt(dto.apiSecret);
 
     return this.prisma.binanceCredential.upsert({
       where: { userId },
@@ -145,6 +145,114 @@ export class UsersService {
       apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
       selectedModel: cred.selectedModel,
     };
+  }
+
+  // ── News API credentials ───────────────────────────────────────────────────
+
+  async setNewsApiKey(userId: string, dto: NewsApiKeyDto) {
+    const provider = dto.provider as NewsApiProvider;
+    const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
+
+    return this.prisma.newsApiCredential.upsert({
+      where: { userId_provider: { userId, provider } },
+      create: { userId, provider, apiKeyEncrypted, apiKeyIv, isActive: true },
+      update: { apiKeyEncrypted, apiKeyIv, isActive: true },
+      select: { id: true, provider: true, isActive: true },
+    });
+  }
+
+  async deleteNewsApiKey(userId: string, provider: string) {
+    await this.prisma.newsApiCredential.deleteMany({
+      where: { userId, provider: provider as NewsApiProvider },
+    });
+  }
+
+  async getNewsApiKeyStatus(userId: string) {
+    const creds = await this.prisma.newsApiCredential.findMany({
+      where: { userId },
+      select: { provider: true, isActive: true },
+    });
+    return { providers: creds };
+  }
+
+  // ── Connection tests ───────────────────────────────────────────────────────
+
+  async testBinanceConnection(userId: string) {
+    const cred = await this.prisma.binanceCredential.findUnique({
+      where: { userId },
+    });
+    if (!cred) return { connected: false, error: 'No credentials saved' };
+    try {
+      const { BinanceRestClient } = await import('@crypto-trader/data-fetcher');
+      const client = new BinanceRestClient({
+        apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+        apiSecret: decrypt(cred.secretEncrypted, cred.secretIv),
+      });
+      await client.getBalances();
+      return { connected: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
+  }
+
+  async testLLMKey(userId: string, provider: string) {
+    const cred = await this.prisma.lLMCredential.findUnique({
+      where: { userId_provider: { userId, provider: provider as LLMProvider } },
+    });
+    if (!cred) return { connected: false, error: 'No credentials saved' };
+    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+    try {
+      if (provider === 'CLAUDE') {
+        await axios.get('https://api.anthropic.com/v1/models', {
+          headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          timeout: 8000,
+        });
+      } else if (provider === 'OPENAI') {
+        await axios.get('https://api.openai.com/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
+      } else if (provider === 'GROQ') {
+        await axios.get('https://api.groq.com/openai/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
+      } else {
+        return { connected: false, error: 'Unknown provider' };
+      }
+      return { connected: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
+  }
+
+  async testNewsApiKey(userId: string, provider: string) {
+    const cred = await this.prisma.newsApiCredential.findFirst({
+      where: { userId, provider: provider as NewsApiProvider },
+    });
+    if (!cred) return { connected: false, error: 'No credentials saved' };
+    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+    try {
+      if (provider === 'NEWSDATA') {
+        const { data } = await axios.get('https://newsdata.io/api/1/news', {
+          params: { apikey: apiKey, language: 'en', q: 'bitcoin', size: 1 },
+          timeout: 8000,
+        });
+        if (data.status === 'error') {
+          return {
+            connected: false,
+            error: data.results?.message ?? 'API error',
+          };
+        }
+        return { connected: true };
+      }
+      return { connected: false, error: 'Unknown provider' };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
   }
 
   // ── Admin ──────────────────────────────────────────────────────────────────

@@ -1,9 +1,20 @@
 import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Bot, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
-import { useAgentDecisions, type AgentDecision } from '../../hooks/use-analytics';
+import {
+  Bot,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
+  MessageSquare,
+} from 'lucide-react';
+import {
+  useAgentDecisions,
+  type AgentDecision,
+} from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 gsap.registerPlugin(useGSAP);
 
@@ -23,12 +34,15 @@ function ConfidenceBar({ value }: { value: number }) {
           style={{ width: `${value * 100}%` }}
         />
       </div>
-      <span className="text-xs text-muted-foreground">{Math.round(value * 100)}%</span>
+      <span className="text-xs text-muted-foreground">
+        {Math.round(value * 100)}%
+      </span>
     </div>
   );
 }
 
 function DecisionCard({ decision }: { decision: AgentDecision }) {
+  const { t } = useTranslation();
   const config = DECISION_CONFIG[decision.decision] || DECISION_CONFIG.HOLD;
   const Icon = config.icon;
 
@@ -36,7 +50,13 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
     <div className="decision-card relative flex gap-4">
       {/* Timeline line */}
       <div className="flex flex-col items-center">
-        <div className={cn('flex h-8 w-8 items-center justify-center rounded-full text-sm', config.bg, config.color)}>
+        <div
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-full text-sm',
+            config.bg,
+            config.color,
+          )}
+        >
           <Icon className="h-4 w-4" />
         </div>
         <div className="mt-1 w-px flex-1 bg-border/60" />
@@ -46,7 +66,9 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
       <div className="mb-4 flex-1 rounded-xl border border-border bg-card p-4">
         <div className="flex items-start justify-between">
           <div>
-            <span className={cn('text-xs font-bold uppercase', config.color)}>{decision.decision}</span>
+            <span className={cn('text-xs font-bold uppercase', config.color)}>
+              {decision.decision}
+            </span>
             <span className="ml-2 text-sm font-semibold">{decision.pair}</span>
           </div>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -55,46 +77,63 @@ function DecisionCard({ decision }: { decision: AgentDecision }) {
           </div>
         </div>
 
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed line-clamp-3">
-          {decision.reasoning}
-        </p>
-
-        <ConfidenceBar value={decision.confidence} />
+        {/* Justificación */}
+        {decision.reasoning && (
+          <div className="mt-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+            <div className="mb-1 flex items-center gap-1.5">
+              <MessageSquare className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t('agentLog.justification')}
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed text-foreground/80">
+              {decision.reasoning}
+            </p>
+          </div>
+        )}
 
         {decision.waitMinutes && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Wait: {decision.waitMinutes} min before next action
+            {t('agentLog.waitMinutes', { count: decision.waitMinutes })}
           </p>
         )}
+
+        <ConfidenceBar value={decision.confidence} />
       </div>
     </div>
   );
 }
 
 export function AgentLogPage() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: decisions = [], isLoading } = useAgentDecisions(30);
 
-  useGSAP(() => {
-    gsap.from('.decision-card', {
-      opacity: 0,
-      x: -20,
-      duration: 0.5,
-      stagger: 0.08,
-      ease: 'power2.out',
-    });
-  }, { scope: containerRef, dependencies: [decisions.length] });
+  useGSAP(
+    () => {
+      gsap.from('.decision-card', {
+        opacity: 0,
+        x: -20,
+        duration: 0.5,
+        stagger: 0.08,
+        ease: 'power2.out',
+      });
+    },
+    { scope: containerRef, dependencies: [decisions.length] },
+  );
 
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Agent Log</h1>
-          <p className="text-sm text-muted-foreground">AI reasoning and decision timeline</p>
+          <h1 className="text-2xl font-bold">{t('sidebar.agentLog')}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t('agentLog.subtitle')}
+          </p>
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground">
           <Bot className="h-4 w-4 text-primary" />
-          {decisions.length} decisions
+          {t('agentLog.decisions', { count: decisions.length })}
         </div>
       </div>
 
@@ -108,14 +147,16 @@ export function AgentLogPage() {
         ) : decisions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-12 text-center">
             <Bot className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-            <h3 className="font-semibold">No agent decisions yet</h3>
+            <h3 className="font-semibold">{t('agentLog.noDecisions')}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Start a trading agent to see AI reasoning and decisions here.
+              {t('agentLog.noDecisionsHint')}
             </p>
           </div>
         ) : (
           <div>
-            {decisions.map((d) => <DecisionCard key={d.id} decision={d} />)}
+            {decisions.map((d) => (
+              <DecisionCard key={d.id} decision={d} />
+            ))}
           </div>
         )}
       </div>

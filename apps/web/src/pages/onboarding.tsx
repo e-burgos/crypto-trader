@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { PasswordInput } from '../components/ui/password-input';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
 
 // ── Step Types ────────────────────────────────────────────────────────────────
-type TradingMode = 'LIVE' | 'PAPER';
+type TradingMode = 'LIVE' | 'SANDBOX';
 type LLMProvider = 'CLAUDE' | 'OPENAI' | 'GROQ';
 
 interface OnboardingState {
@@ -40,7 +41,7 @@ const LLM_PROVIDERS: { value: LLMProvider; label: string; models: string[] }[] =
     {
       value: 'GROQ',
       label: 'Groq',
-      models: ['llama-3.1-70b-versatile', 'mixtral-8x7b-32768'],
+      models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
     },
   ];
 
@@ -55,8 +56,8 @@ function StepBinance({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-600 dark:text-amber-400">
-        <strong>Tip:</strong> You can skip this step and use Paper Trading mode
-        to practice risk-free.
+        <strong>Tip:</strong> You can skip this step and use Sandbox mode to
+        practice risk-free.
       </div>
 
       {!state.skipBinance && (
@@ -77,11 +78,9 @@ function StepBinance({
             <label className="mb-1.5 block text-sm font-medium">
               Binance API Secret
             </label>
-            <input
-              type="password"
+            <PasswordInput
               value={state.binanceApiSecret}
               onChange={(e) => onChange({ binanceApiSecret: e.target.value })}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Your Binance API secret"
             />
           </div>
@@ -103,7 +102,7 @@ function StepBinance({
             state.skipBinance ? 'border-primary bg-primary' : 'border-border',
           )}
         />
-        Skip for now — use Paper Trading
+        Skip for now — use Sandbox Trading
       </button>
     </div>
   );
@@ -163,12 +162,10 @@ function StepLLM({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium">API Key</label>
-        <input
-          type="password"
+        <PasswordInput
           value={state.llmApiKey}
           onChange={(e) => onChange({ llmApiKey: e.target.value })}
           required
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
           placeholder={`Your ${provider.label} API key`}
         />
       </div>
@@ -186,7 +183,7 @@ function StepMode({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        {(['PAPER', 'LIVE'] as TradingMode[]).map((mode) => (
+        {(['SANDBOX', 'LIVE'] as TradingMode[]).map((mode) => (
           <button
             key={mode}
             type="button"
@@ -199,14 +196,14 @@ function StepMode({
             )}
           >
             <div className="mb-1 font-semibold">
-              {mode === 'PAPER' ? 'Paper Trading' : 'Live Trading'}
+              {mode === 'SANDBOX' ? 'Sandbox Trading' : 'Live Trading'}
             </div>
             <div className="text-xs text-muted-foreground">
-              {mode === 'PAPER'
-                ? 'Simulate trades risk-free. Perfect for learning and testing strategies.'
+              {mode === 'SANDBOX'
+                ? 'Simulate trades risk-free. The agent uses real logic but no real money.'
                 : 'Trade with real funds. Requires Binance API keys.'}
             </div>
-            {mode === 'PAPER' && (
+            {mode === 'SANDBOX' && (
               <div className="mt-2 text-xs font-medium text-emerald-500">
                 Recommended for beginners
               </div>
@@ -217,7 +214,7 @@ function StepMode({
 
       <div>
         <label className="mb-1.5 block text-sm font-medium">
-          Initial Capital (USDT) {state.mode === 'PAPER' ? '— simulated' : ''}
+          Initial Capital (USDT) {state.mode === 'SANDBOX' ? '— simulated' : ''}
         </label>
         <input
           type="number"
@@ -246,7 +243,7 @@ export function OnboardingPage() {
     llmProvider: 'CLAUDE',
     llmApiKey: '',
     llmModel: 'claude-3-5-sonnet-20241022',
-    mode: 'PAPER',
+    mode: 'SANDBOX',
     initialCapital: '1000',
   });
 
@@ -281,6 +278,22 @@ export function OnboardingPage() {
         apiKey: state.llmApiKey,
         selectedModel: state.llmModel,
       });
+
+      // Create initial trading config with safe defaults
+      await api
+        .put('/trading/config', {
+          asset: 'BTC',
+          pair: 'USDT',
+          mode: state.mode,
+          buyThreshold: 70,
+          sellThreshold: 65,
+          stopLossPct: 0.02,
+          takeProfitPct: 0.04,
+          maxTradePct: 0.1,
+          maxConcurrentPositions: 3,
+          minIntervalMinutes: 60,
+        })
+        .catch(() => null); // Non-blocking — user can configure later
 
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {

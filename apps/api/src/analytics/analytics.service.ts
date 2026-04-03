@@ -27,9 +27,10 @@ export class AnalyticsService {
       }),
     ]);
 
-    const realizedPnl = closedPositions
-      .filter((p) => p.mode === 'LIVE')
-      .reduce((acc, p) => acc + (p.pnl ?? 0), 0);
+    const realizedPnl = closedPositions.reduce(
+      (acc, p) => acc + (p.pnl ?? 0),
+      0,
+    );
 
     const totalFees = closedPositions.reduce(
       (acc, p) => acc + (p.fees ?? 0),
@@ -84,7 +85,7 @@ export class AnalyticsService {
 
   async getSummary(userId: string) {
     const closedPositions = await this.prisma.position.findMany({
-      where: { userId, status: 'CLOSED', mode: 'LIVE' },
+      where: { userId, status: 'CLOSED' },
       select: { pnl: true, asset: true, exitAt: true, entryAt: true },
     });
 

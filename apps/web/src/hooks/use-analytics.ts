@@ -17,7 +17,7 @@ export interface Trade {
   quantity: number;
   fee: number;
   executedAt: string;
-  mode: 'LIVE' | 'PAPER';
+  mode: 'LIVE' | 'PAPER' | 'SANDBOX';
   position?: { asset: string; pair: string };
 }
 
@@ -30,6 +30,26 @@ export interface AgentDecision {
   reasoning: string;
   waitMinutes?: number;
   createdAt: string;
+}
+
+export interface AnalyticsSummary {
+  winRate: number;
+  totalPnl: number;
+  bestTrade: number;
+  worstTrade: number;
+  sharpeRatio: number;
+  currentDrawdown: number;
+}
+
+export interface PnlChartPoint {
+  date: string;
+  pnl: number;
+}
+
+export interface AssetBreakdown {
+  asset: string;
+  totalPnl: number;
+  tradeCount: number;
 }
 
 export function usePortfolioSummary() {
@@ -53,5 +73,29 @@ export function useAgentDecisions(limit = 20) {
     queryKey: ['analytics', 'decisions', limit],
     queryFn: () => api.get(`/analytics/decisions?limit=${limit}`),
     refetchInterval: 60_000,
+  });
+}
+
+export function useAnalyticsSummary() {
+  return useQuery<AnalyticsSummary>({
+    queryKey: ['analytics', 'summary'],
+    queryFn: () => api.get('/analytics/summary'),
+    refetchInterval: 60_000,
+  });
+}
+
+export function usePnlChart() {
+  return useQuery<PnlChartPoint[]>({
+    queryKey: ['analytics', 'pnl-chart'],
+    queryFn: () => api.get('/analytics/pnl-chart'),
+    refetchInterval: 120_000,
+  });
+}
+
+export function useAssetBreakdown() {
+  return useQuery<AssetBreakdown[]>({
+    queryKey: ['analytics', 'asset-breakdown'],
+    queryFn: () => api.get('/analytics/asset-breakdown'),
+    refetchInterval: 120_000,
   });
 }

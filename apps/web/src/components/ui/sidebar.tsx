@@ -9,23 +9,59 @@ import {
   TrendingUp,
   LineChart,
   SlidersHorizontal,
+  Briefcase,
+  Newspaper,
+  Shield,
+  HelpCircle,
+  Activity,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from './button';
-
-const NAV_ITEMS = [
-  { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
-  { to: '/dashboard/chart', label: 'Live Chart', icon: BarChart3 },
-  { to: '/dashboard/history', label: 'Trade History', icon: History },
-  { to: '/dashboard/agent', label: 'Agent Log', icon: Bot },
-  { to: '/dashboard/analytics', label: 'Analytics', icon: LineChart },
-  { to: '/dashboard/config', label: 'Config', icon: SlidersHorizontal },
-  { to: '/dashboard/settings', label: 'Settings', icon: Settings },
-];
+import { useTranslation } from 'react-i18next';
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const { logout, user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
+
+  const NAV_ITEMS = [
+    {
+      to: '/dashboard',
+      label: t('sidebar.overview'),
+      icon: LayoutDashboard,
+      end: true,
+    },
+    { to: '/dashboard/chart', label: t('sidebar.liveChart'), icon: BarChart3 },
+    {
+      to: '/dashboard/positions',
+      label: t('sidebar.positions'),
+      icon: Briefcase,
+    },
+    {
+      to: '/dashboard/history',
+      label: t('sidebar.tradeHistory'),
+      icon: History,
+    },
+    { to: '/dashboard/agent', label: t('sidebar.agentLog'), icon: Bot },
+    {
+      to: '/dashboard/analytics',
+      label: t('sidebar.analytics'),
+      icon: LineChart,
+    },
+    {
+      to: '/dashboard/market',
+      label: t('sidebar.market'),
+      icon: Activity,
+    },
+    { to: '/dashboard/news', label: t('sidebar.news'), icon: Newspaper },
+    {
+      to: '/dashboard/config',
+      label: t('sidebar.config'),
+      icon: SlidersHorizontal,
+    },
+    { to: '/dashboard/settings', label: t('sidebar.settings'), icon: Settings },
+  ];
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-card">
@@ -58,6 +94,47 @@ export function Sidebar() {
             </li>
           ))}
         </ul>
+
+        {/* Admin section */}
+        {isAdmin && (
+          <div className="mt-4">
+            <div className="mb-1 px-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/50">
+              {t('sidebar.admin')}
+            </div>
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-red-500/10 text-red-500'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                )
+              }
+            >
+              <Shield className="h-4 w-4" />
+              {t('sidebar.admin')}
+            </NavLink>
+          </div>
+        )}
+
+        {/* Help link */}
+        <div className="mt-4">
+          <NavLink
+            to="/help"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              )
+            }
+          >
+            <HelpCircle className="h-4 w-4" />
+            {t('sidebar.help')}
+          </NavLink>
+        </div>
       </nav>
 
       {/* Footer */}
@@ -72,7 +149,7 @@ export function Sidebar() {
           onClick={logout}
         >
           <LogOut className="h-4 w-4" />
-          Sign Out
+          {t('nav.signOut')}
         </Button>
       </div>
     </aside>

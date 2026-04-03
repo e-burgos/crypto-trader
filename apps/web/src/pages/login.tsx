@@ -2,6 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { TrendingUp, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { PasswordInput } from '../components/ui/password-input';
 import { useAuthStore } from '../store/auth.store';
 
 export function LoginPage() {
@@ -11,7 +12,9 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname ||
+    '/dashboard';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -33,7 +36,9 @@ export function LoginPage() {
             <TrendingUp className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-2xl font-bold">Welcome back</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to your CryptoTrader account</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in to your CryptoTrader account
+          </p>
         </div>
 
         {/* Card */}
@@ -46,7 +51,10 @@ export function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+              <label
+                htmlFor="email"
+                className="mb-1.5 block text-sm font-medium"
+              >
                 Email
               </label>
               <input
@@ -62,30 +70,38 @@ export function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-1.5 block text-sm font-medium">
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-sm font-medium"
+              >
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
                 placeholder="••••••••"
               />
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign In'}
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Sign In'
+              )}
             </Button>
           </form>
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
-          <Link to="/register" className="font-medium text-primary hover:underline">
+          <Link
+            to="/register"
+            className="font-medium text-primary hover:underline"
+          >
             Create one
           </Link>
         </p>

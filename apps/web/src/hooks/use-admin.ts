@@ -20,6 +20,23 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  configCount?: number;
+}
+
+export interface AdminAgentStatus {
+  userId: string;
+  asset: string;
+  pair: string;
+  isRunning: boolean;
+  mode: string;
+}
+
 export function useAdminStats() {
   return useQuery<AdminStats>({
     queryKey: ['admin', 'stats'],
@@ -37,16 +54,46 @@ export function useAuditLog() {
   });
 }
 
+export function useAdminUsers() {
+  return useQuery<AdminUser[]>({
+    queryKey: ['admin', 'users'],
+    queryFn: () => api.get('/admin/users'),
+    staleTime: 60_000,
+  });
+}
+
+export function useAdminAgentsStatus() {
+  return useQuery<AdminAgentStatus[]>({
+    queryKey: ['admin', 'agents-status'],
+    queryFn: () => api.get('/admin/agents/status'),
+    refetchInterval: 15_000,
+  });
+}
+
 export function useKillSwitch() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.post('/admin/kill-switch', {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin'] });
-      qc.invalidateQueries({ queryKey: ['trading-configs'] });
-      toast.success('Kill switch activated — all trading stopped');
+      qc.invalidateQueries({ queryKey: ['trading'] });
+      toast.success('Kill switch activado — todo el trading detenido');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Kill switch failed'),
+      toast.error(err?.message || 'Error al activar el kill switch'),
+  });
+}
+
+export function useToggleUserStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api.patch(`/admin/users/${id}/status`, { isActive }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      toast.success('Estado del usuario actualizado');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al actualizar el estado del usuario'),
   });
 }

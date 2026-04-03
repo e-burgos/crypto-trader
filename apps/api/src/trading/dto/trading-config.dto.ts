@@ -119,6 +119,21 @@ export class CreateTradingConfigDto {
   @Max(1440, { message: 'Intervalo mínimo no puede superar $constraint1 minutos (24hs)' })
   @IsOptional()
   minIntervalMinutes?: number;
+
+  @ApiPropertyOptional({
+    minimum: -0.05,
+    maximum: 0.05,
+    example: 0,
+    description:
+      'Offset de precio relativo al mercado para la ejecución de órdenes. ' +
+      'Negativo = intenta comprar por debajo del precio de mercado (simulación). ' +
+      'Positivo = ejecuta por encima del precio de mercado.',
+  })
+  @IsNumber({}, { message: 'Offset de precio debe ser un número válido' })
+  @Min(-0.05, { message: 'Offset de precio no puede ser menor a -5%' })
+  @Max(0.05, { message: 'Offset de precio no puede superar +5%' })
+  @IsOptional()
+  orderPriceOffsetPct?: number;
 }
 
 export class UpdateTradingConfigDto {
@@ -175,6 +190,13 @@ export class UpdateTradingConfigDto {
   @Max(1440, { message: 'Intervalo mínimo no puede superar $constraint1 minutos (24hs)' })
   @IsOptional()
   minIntervalMinutes?: number;
+
+  @ApiPropertyOptional({ minimum: -0.05, maximum: 0.05, example: 0 })
+  @IsNumber({}, { message: 'Offset de precio debe ser un número válido' })
+  @Min(-0.05, { message: 'Offset de precio no puede ser menor a -5%' })
+  @Max(0.05, { message: 'Offset de precio no puede superar +5%' })
+  @IsOptional()
+  orderPriceOffsetPct?: number;
 
   @ApiPropertyOptional({
     example: true,

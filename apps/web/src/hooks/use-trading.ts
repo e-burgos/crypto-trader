@@ -18,6 +18,7 @@ export interface TradingConfig {
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;
+  orderPriceOffsetPct: number;
   isActive: boolean;
   createdAt: string;
 }
@@ -33,6 +34,7 @@ export interface TradingConfigDto {
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;
+  orderPriceOffsetPct: number;
 }
 
 export interface AgentStatus {

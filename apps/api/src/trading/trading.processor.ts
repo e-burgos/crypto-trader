@@ -284,7 +284,10 @@ export class TradingProcessor {
     // ── SANDBOX: use persisted DB balance ────────────────────────────────────
     if (mode === TradingMode.SANDBOX) {
       const publicClient = new BinanceRestClient({});
-      const livePrice = await publicClient.getTickerPrice(symbol);
+      const marketPrice = await publicClient.getTickerPrice(symbol);
+      // Apply order price offset (e.g., -0.01 = simulate buying 1% below market)
+      const offsetPct: number = config.orderPriceOffsetPct ?? 0;
+      const livePrice = marketPrice * (1 + offsetPct);
 
       // Upsert wallet row (first-time init at 10,000)
       const wallet = await this.prisma.sandboxWallet.upsert({
@@ -364,10 +367,13 @@ export class TradingProcessor {
       new BinanceRestClient({ apiKey, apiSecret }),
     );
     const currentPrice = await executor.getPrice(symbol);
+    // Apply offset to the reference price used for quantity calculation
+    const liveOffsetPct: number = config.orderPriceOffsetPct ?? 0;
+    const referencePrice = currentPrice * (1 + liveOffsetPct);
     const quoteBalance = await executor.getBalance(config.pair);
     const quantity = calculateTradeQuantity(
       quoteBalance.free,
-      currentPrice,
+      referencePrice,
       config.maxTradePct,
     );
     if (quantity <= 0) return;

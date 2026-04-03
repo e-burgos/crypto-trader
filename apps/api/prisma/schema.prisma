@@ -157,6 +157,7 @@ model TradingConfig {
   maxTradePct            Float         @default(0.05)
   maxConcurrentPositions Int           @default(2)
   minIntervalMinutes     Int           @default(5)
+  orderPriceOffsetPct    Float         @default(0)
   mode                   TradingMode   @default(SANDBOX)
   isRunning              Boolean       @default(false)
   createdAt              DateTime      @default(now())

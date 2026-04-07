@@ -6,14 +6,9 @@ import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
+import { MarketService } from '../market/market.service';
 
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
-import {
-  CoinGeckoNewsFetcher,
-  RssFetcher,
-  RedditFetcher,
-  NewsAggregator,
-} from '@crypto-trader/data-fetcher';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
 import { LLMAnalyzer, createLLMProvider } from '@crypto-trader/analysis';
 import {
@@ -28,6 +23,7 @@ import {
   TradingMode,
   TradeType,
   NotificationType,
+  NewsItem,
 } from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
@@ -47,6 +43,7 @@ export class TradingProcessor {
     private readonly gateway: AppGateway,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
+    private readonly marketService: MarketService,
   ) {}
 
   @Process('run-cycle')
@@ -122,9 +119,66 @@ export class TradingProcessor {
       // 5. Build indicator snapshot
       const indicatorSnapshot = calculateIndicatorSnapshot(candles);
 
-      // 6. Fetch news
-      const newsAggregator = this.buildNewsAggregator();
-      const newsItems = await newsAggregator.fetchAll(10);
+      // 6. Load news analysis from DB (AI if within 12h, else keyword-based)
+      //    Respects botEnabled: if disabled, bot runs without news context
+      const AI_VALID_MS = 12 * 60 * 60 * 1000;
+      const newsConfig = await this.marketService.getNewsConfig(userId);
+      const dbAnalysis = newsConfig.botEnabled
+        ? await this.marketService.getLatestAnalysis(userId)
+        : null;
+
+      let newsItems: Array<{
+        id: string;
+        source: string;
+        headline: string;
+        sentiment: string;
+        summary?: string | null;
+        author?: string | null;
+        publishedAt: Date | string;
+      }> = [];
+
+      if (dbAnalysis) {
+        const hasRecentAI =
+          dbAnalysis.aiAnalyzedAt &&
+          Date.now() - new Date(dbAnalysis.aiAnalyzedAt).getTime() <
+            AI_VALID_MS;
+
+        if (hasRecentAI && dbAnalysis.aiHeadlines) {
+          // Merge AI overrides into headlines
+          const aiMap = new Map(
+            (
+              dbAnalysis.aiHeadlines as Array<{
+                id: string;
+                sentiment: string;
+                reasoning: string;
+              }>
+            ).map((a) => [a.id, a]),
+          );
+          newsItems = (
+            dbAnalysis.headlines as Array<{
+              id: string;
+              source: string;
+              headline: string;
+              sentiment: string;
+              summary?: string | null;
+              author?: string | null;
+              publishedAt: string;
+            }>
+          ).map((h) => ({
+            ...h,
+            sentiment: aiMap.get(h.id)?.sentiment ?? h.sentiment,
+          }));
+        } else {
+          // Use keyword-based headlines from DB
+          newsItems = dbAnalysis.headlines as typeof newsItems;
+        }
+      } else if (newsConfig.botEnabled) {
+        // No DB analysis yet but bot is enabled — run one now
+        const freshAnalysis =
+          await this.marketService.runKeywordAnalysis(userId);
+        newsItems = freshAnalysis.headlines as typeof newsItems;
+      }
+      // else: botEnabled = false → newsItems stays empty []
 
       // 7. Load recent trades
       const recentDbTrades = await this.prisma.trade.findMany({
@@ -158,7 +212,7 @@ export class TradingProcessor {
         pair: config.pair as any,
         indicatorSnapshot,
         recentCandles: candles.slice(-20),
-        newsItems,
+        newsItems: newsItems as unknown as NewsItem[],
         recentTrades,
         userConfig: {
           id: config.id,
@@ -187,7 +241,13 @@ export class TradingProcessor {
           confidence: decision.confidence,
           reasoning: decision.reasoning,
           indicators: indicatorSnapshot as any,
-          newsHeadlines: newsItems.slice(0, 5).map((n) => n.headline) as any,
+          newsHeadlines: newsItems.slice(0, 5).map((n) => ({
+            headline: n.headline,
+            sentiment: n.sentiment,
+            summary: n.summary ?? null,
+            author: n.author ?? null,
+            source: n.source,
+          })) as any,
           waitMinutes: decision.suggestedWaitMinutes,
         },
       });
@@ -561,10 +621,8 @@ export class TradingProcessor {
     }
   }
 
-  private buildNewsAggregator(): NewsAggregator {
-    return new NewsAggregator(
-      [new CoinGeckoNewsFetcher(), new RssFetcher(), new RedditFetcher()],
-      { cacheTtlSeconds: 300 },
-    );
+  private buildNewsAggregator_unused() {
+    // Kept for reference — bot now reads from DB via MarketService
+    return null;
   }
 }

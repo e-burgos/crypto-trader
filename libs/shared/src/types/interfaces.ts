@@ -109,6 +109,8 @@ export interface NewsItem {
   source: string;
   headline: string;
   url: string;
+  summary?: string;
+  author?: string;
   sentiment: Sentiment;
   publishedAt: Date;
   cachedAt: Date;

@@ -207,7 +207,7 @@ export function LLMSelector({ onCreated, inline }: LLMSelectorProps) {
 export function NewSessionModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 sm:px-0">
       <div className="relative w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
         <button
           onClick={onClose}

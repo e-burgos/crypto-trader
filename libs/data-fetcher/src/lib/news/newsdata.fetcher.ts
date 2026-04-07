@@ -39,16 +39,18 @@ export class NewsDataFetcher implements NewsSource {
         link: string;
         pubDate: string;
         description: string | null;
+        creator?: string[];
       }) => {
         const url = item.link || '';
+        const snippet = item.description?.trim() || '';
         return {
           id: newsItemId(this.name, url),
           source: this.name,
           headline: item.title || '',
           url,
-          sentiment: estimateSentiment(
-            `${item.title || ''} ${item.description || ''}`,
-          ),
+          summary: snippet || undefined,
+          author: item.creator?.[0]?.trim() || undefined,
+          sentiment: estimateSentiment(`${item.title || ''} ${snippet}`),
           publishedAt: item.pubDate ? new Date(item.pubDate) : new Date(),
           cachedAt: new Date(),
         } satisfies NewsItem;

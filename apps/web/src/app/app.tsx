@@ -22,6 +22,7 @@ import { SettingsPage } from '../pages/dashboard/settings';
 import { PositionsPage } from '../pages/dashboard/positions';
 import { NewsFeedPage } from '../pages/dashboard/news-feed';
 import { ChatPage } from '../pages/dashboard/chat';
+import { BotAnalysisPage } from '../pages/dashboard/bot-analysis';
 import { ChatWidget } from '../components/chat/chat-widget';
 import { AdminLayout } from '../pages/admin/index';
 import { AdminStatsPage } from '../pages/admin/stats';
@@ -113,6 +114,7 @@ export function App() {
             <Route path="agent" element={<AgentLogPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="market" element={<MarketPage />} />
+            <Route path="bot-analysis" element={<BotAnalysisPage />} />
             <Route path="news" element={<NewsFeedPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="config" element={<ConfigPage />} />

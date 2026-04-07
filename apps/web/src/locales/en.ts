@@ -5,6 +5,8 @@ const en = {
     getStarted: 'Get Started',
     signOut: 'Sign Out',
     help: 'Help',
+    lightMode: 'Light mode',
+    darkMode: 'Dark mode',
   },
   sidebar: {
     overview: 'Overview',
@@ -13,6 +15,7 @@ const en = {
     agentLog: 'Agent Log',
     analytics: 'Analytics',
     market: 'Market Analysis',
+    botAnalysis: 'Bot Analysis',
     config: 'Configuration',
     settings: 'Settings',
     positions: 'Positions',
@@ -246,9 +249,20 @@ const en = {
   help: {
     title: 'Help & Guide',
     subtitle: 'Everything you need to know about operating the platform',
+    gettingStarted: 'Getting Started',
+    platformBehavior: 'Platform Behavior',
+    agentGroup: 'Agent & Configuration',
+    integrations: 'Integrations',
+    agentFlow: 'How the Agent Decides',
+    agentPresets: 'Strategy Presets',
+    agentParams: 'Parameter Reference',
     faq: 'Frequently Asked Questions',
     guide: 'How to Trade — Step by Step',
     apiKeys: 'API Keys Setup',
+    behaviors: 'Behaviors & Important Warnings',
+    stopAllTitle: 'Stopping agents does not close open positions',
+    stopAllDesc:
+      'When you stop all your agents (or an admin triggers the kill-switch), the running agents are halted and their scheduled jobs are cancelled. However, any open positions remain open in the exchange — they are NOT automatically closed. In LIVE mode this means your positions have no active stop-loss or take-profit monitoring until you restart the agent. You will receive a real-time alert if you have uncovered open positions. Close them manually from the Positions page if needed.',
     back: 'Back',
     binanceTitle: 'Binance API Keys',
     binanceWarning:
@@ -298,6 +312,10 @@ const en = {
       {
         q: 'Which crypto pairs are supported?',
         a: 'Currently BTC/USDT, BTC/USDC, ETH/USDT, and ETH/USDC. More pairs may be added in future versions.',
+      },
+      {
+        q: 'What happens to my open positions if I stop all agents?',
+        a: 'Open positions are NOT automatically closed. The agent stops monitoring them, so in LIVE mode they have no active stop-loss or take-profit. You will receive a real-time warning notification listing how many positions are left uncovered. Close them manually from the Positions page.',
       },
     ],
     guideSteps: [
@@ -419,6 +437,10 @@ const en = {
     tabForm: 'Configuration',
     tabGuide: 'Guide',
     tabExplain: 'Concepts',
+    docsCallout:
+      'Want to understand each parameter before configuring? Check the documentation →',
+    docsCalloutGuide: 'View Agent Guide',
+    docsCalloutConcepts: 'View Concepts',
     guide: {
       flowTitle: 'How the Agent Makes Decisions',
       presetsTitle: 'Strategy Presets — click to auto-fill the form',
@@ -582,6 +604,167 @@ const en = {
       'Stop-loss triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
     takeProfit:
       'Take-profit triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
+  },
+  auth: {
+    loginTitle: 'Welcome back',
+    loginSubtitle: 'Sign in to your CryptoTrader account',
+    loginButton: 'Sign In',
+    noAccount: "Don't have an account?",
+    createOne: 'Create one',
+    registerTitle: 'Create your account',
+    registerSubtitle: 'Start trading with AI in minutes',
+    registerButton: 'Create Account',
+    alreadyHaveAccount: 'Already have an account?',
+    signIn: 'Sign in',
+    email: 'Email',
+    password: 'Password',
+    newPassword: 'New Password',
+    confirmPassword: 'Confirm Password',
+    passwordsNoMatch: 'Passwords do not match',
+    passwordTooShort: 'Password must be at least 8 characters',
+    minCharsPlaceholder: 'Min. 8 characters',
+  },
+  onboarding: {
+    steps: ['Connect Exchange', 'AI Provider', 'Trading Mode'],
+    stepOf: 'Step {{step}} of {{total}}',
+    encryptionNote:
+      'All API keys are encrypted with AES-256-GCM before storage.',
+    binanceTip: 'Tip',
+    binanceTipText:
+      'You can skip this step and use Sandbox mode to practice risk-free.',
+    binanceApiKey: 'Binance API Key',
+    binanceApiKeyPlaceholder: 'Your Binance API key',
+    binanceApiSecret: 'Binance API Secret',
+    binanceApiSecretPlaceholder: 'Your Binance API secret',
+    binanceHelpText:
+      'Create a read+trade (no withdrawal) API key in your Binance account settings.',
+    binanceHelpLinkText: 'Open Binance API Management →',
+    skipBinance: 'Skip for now — use Sandbox Trading',
+    aiProviderSubtitle:
+      'Choose the AI provider that will power your trading agent.',
+    apiKey: 'API Key',
+    apiKeyPlaceholder: 'Your {{provider}} API key',
+    apiKeyHelp: 'Get your API key at',
+    apiKeyHelpClaude: 'Get your API key at',
+    apiKeyHelpOpenAI: 'Get your API key at',
+    apiKeyHelpGroq: 'Get your API key at',
+    sandboxTitle: 'Sandbox Trading',
+    sandboxDesc:
+      'Simulate trades risk-free. The agent uses real logic but no real money.',
+    sandboxRecommended: 'Recommended for beginners',
+    liveTitle: 'Live Trading',
+    liveDesc: 'Trade with real funds. Requires Binance API keys.',
+    liveRequiresBinance: '⚠️ Requires Binance API keys (Step 1)',
+    initialCapitalSandbox: 'Initial Capital (USDT) — simulated',
+    initialCapitalNote:
+      'Reference value for your simulated portfolio. Not wired to the backend yet.',
+    continue: 'Continue',
+    back: 'Back',
+    startTrading: 'Start Trading',
+    setupFailed: 'Setup failed. Please try again.',
+  },
+  landing: {
+    badge: 'Autonomous Crypto Trading · AI-Powered',
+    headline1: 'Your Agent.',
+    headline2: 'Invests',
+    headline3: 'for you.',
+    sub: 'An AI agent analyzes the market 24/7, manages your risk and executes trades on your behalf. No effort. No emotions.',
+    startFree: 'Start for free',
+    badge1: 'Paper Trading included',
+    badge2: 'Integrated risk management',
+    badge3: 'Claude · GPT · Groq',
+    stat1Value: '4',
+    stat1Label: 'Trading Pairs',
+    stat2Value: '3',
+    stat2Label: 'AI Providers',
+    stat3Value: '24/7',
+    stat3Label: 'Active Monitoring',
+    stat4Value: '10+',
+    stat4Label: 'Analysis Signals',
+    howEyebrow: 'How it works',
+    howTitle: 'Your agent works while you live',
+    step1Title: 'Scans the Market',
+    step1Desc:
+      'Monitors BTC and ETH pairs in real time. Analyzes volume, trends and technical signals like RSI, MACD and Bollinger Bands.',
+    step2Title: 'Analyzes with AI',
+    step2Desc:
+      'Processes signals with Claude, GPT or Groq. Evaluates context, risk and trading opportunities with deep reasoning.',
+    step3Title: 'Executes & Protects',
+    step3Desc:
+      'Operates with automatic stop-loss, take-profit and position sizing. Kill-switch available to stop everything at any time.',
+    featEyebrow: 'Complete platform',
+    featTitle: 'Everything you need to trade smarter',
+    featSub:
+      'From technical analysis to automatic execution. A platform built by traders, for traders.',
+    featCoreBadge: 'Core',
+    featFreeBadge: 'Free',
+    feat1Title: 'Autonomous Agent',
+    feat1Desc:
+      'Operates 24/7 on your behalf. You set the strategy; the agent executes with discipline, without emotions or interruptions.',
+    feat2Title: 'Technical Analysis',
+    feat2Desc:
+      'RSI, MACD, Bollinger Bands, EMA and ATR in real time. Every indicator feeds the agent decisions.',
+    feat3Title: 'Risk Management',
+    feat3Desc:
+      'Automatic stop-loss, take-profit and position sizing. Kill-switch to stop all activity with one click.',
+    feat4Title: 'Paper Trading',
+    feat4Desc:
+      'Test strategies risk-free in simulated mode. Understand the market before going live.',
+    feat5Title: 'News Intelligence',
+    feat5Desc:
+      'The agent consumes real-time crypto news to enrich decisions with fundamental market context.',
+    feat6Title: 'Live Charts',
+    feat6Desc:
+      'Advanced charts with overlaid indicators. Visualize agent operations in real time over price.',
+    aiEyebrow: 'Artificial intelligence',
+    aiTitle: 'The brain behind the agent',
+    aiSub:
+      'Choose your preferred AI provider. The agent adapts to each market.',
+    claude: 'Anthropic Claude',
+    claudeModel: 'claude-3-5-sonnet · claude-opus-4',
+    claudeDesc:
+      'Deep reasoning and extended context. The preferred choice for nuanced risk analysis and long-term strategies.',
+    claudeTag: 'Reasoning',
+    openai: 'OpenAI GPT',
+    openaiModel: 'gpt-4o · gpt-4-turbo',
+    openaiDesc:
+      'Industry standard. Versatility, speed and proven reliability in high-volume production environments.',
+    openaiTag: 'Versatility',
+    groq: 'Groq',
+    groqModel: 'llama3-70b · mixtral-8x7b',
+    groqDesc:
+      'Ultra-fast inference with specialized hardware. Ideal for high-frequency analysis and minimum latency decisions.',
+    groqTag: 'Speed',
+    riskEyebrow: 'Your capital protected',
+    riskTitle: 'Designed to protect first',
+    risk1Title: 'Automatic Stop-Loss',
+    risk1Desc: 'Closes positions before losses exceed your tolerance.',
+    risk2Title: 'Smart Take-Profit',
+    risk2Desc: 'Automatically secures gains when the target is reached.',
+    risk3Title: 'Global Kill-Switch',
+    risk3Desc: 'Stops all agent activity with a single click at any time.',
+    risk4Title: 'Position Sizing',
+    risk4Desc:
+      'Risk per trade is automatically calculated per your configuration.',
+    ctaEyebrow: 'Start today',
+    ctaTitle1: 'Ready for your portfolio',
+    ctaTitle2: 'to work on its own?',
+    ctaSub:
+      'Create your account, set your strategy and activate your agent in minutes. No prior trading experience required.',
+    ctaStart: 'Create free account',
+    ctaGitHub: 'View on GitHub',
+    ctaDisclaimer:
+      'Paper Trading available. No credit card. Educational purposes only.',
+    footerTagline: 'Powered by AI',
+    footerBy: 'Developed by',
+    footerDisclaimer:
+      'Educational purposes only. Crypto trading involves risk of loss.',
+    footerPlatformTitle: 'Platform',
+    footerResourcesTitle: 'Links',
+    footerHelp: 'Help & Guide',
+    footerSignUp: 'Create Account',
+    footerLogin: 'Sign In',
+    footerAITitle: 'AI Models',
   },
 };
 

@@ -12,10 +12,8 @@ import {
   ArrowRight,
   X,
   Eye,
-  GraduationCap,
-  CheckCircle2,
-  XCircle,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
 import { Button } from '../../components/ui/button';
 import { InfoTooltip } from '../../components/ui/info-tooltip';
@@ -34,6 +32,13 @@ import {
   type TradingAsset,
   type TradingPair,
 } from '../../hooks/use-trading';
+import { DecisionFlowDiagram } from '../../components/agent/decision-flow-diagram';
+import {
+  StrategyPresets,
+  PRESETS,
+} from '../../components/agent/strategy-presets';
+import { ParameterCards } from '../../components/agent/parameter-cards';
+import { ExplainPanel } from '../../components/agent/explain-panel';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,44 +55,6 @@ interface ConfigForm {
   minIntervalMinutes: string;
   orderPriceOffsetPct: string;
 }
-
-// ── Strategy Presets ──────────────────────────────────────────────────────────
-
-const PRESETS: Record<
-  'conservative' | 'balanced' | 'aggressive',
-  Omit<ConfigForm, 'asset' | 'pair' | 'mode'>
-> = {
-  conservative: {
-    buyThreshold: '85',
-    sellThreshold: '80',
-    stopLossPct: '2',
-    takeProfitPct: '3',
-    maxTradePct: '5',
-    maxConcurrentPositions: '1',
-    minIntervalMinutes: '120',
-    orderPriceOffsetPct: '-1',
-  },
-  balanced: {
-    buyThreshold: '72',
-    sellThreshold: '68',
-    stopLossPct: '3',
-    takeProfitPct: '5',
-    maxTradePct: '10',
-    maxConcurrentPositions: '3',
-    minIntervalMinutes: '60',
-    orderPriceOffsetPct: '0',
-  },
-  aggressive: {
-    buyThreshold: '60',
-    sellThreshold: '55',
-    stopLossPct: '5',
-    takeProfitPct: '10',
-    maxTradePct: '20',
-    maxConcurrentPositions: '5',
-    minIntervalMinutes: '30',
-    orderPriceOffsetPct: '1',
-  },
-};
 
 const DEFAULT_FORM: ConfigForm = {
   asset: 'BTC',
@@ -1218,9 +1185,6 @@ function AgentDetailModal({
 export function ConfigPage() {
   const { t } = useTranslation();
   const [form, setForm] = useState<ConfigForm>(DEFAULT_FORM);
-  const [activeTab, setActiveTab] = useState<'form' | 'guide' | 'explain'>(
-    'form',
-  );
   const [selectedConfig, setSelectedConfig] = useState<TradingConfig | null>(
     null,
   );
@@ -1285,384 +1249,342 @@ export function ConfigPage() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="config-card flex gap-1 rounded-xl border border-border bg-card p-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab('form')}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
-            activeTab === 'form'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
-          <Settings2 className="h-4 w-4" />
-          {t('config.tabForm')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('guide')}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
-            activeTab === 'guide'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
-          <BookOpen className="h-4 w-4" />
-          {t('config.tabGuide')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('explain')}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all',
-            activeTab === 'explain'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
-          <GraduationCap className="h-4 w-4" />
-          {t('config.tabExplain')}
-        </button>
+      {/* Docs callout */}
+      <div className="config-card flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
+        <BookOpen className="h-5 w-5 shrink-0 text-primary" />
+        <p className="flex-1 text-sm text-muted-foreground">
+          {t('config.docsCallout')}
+        </p>
+        <div className="flex gap-2">
+          <Link
+            to="/help#agent-flow"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
+          >
+            {t('config.docsCalloutGuide')}
+          </Link>
+          <Link
+            to="/help#config-concepts-thresholds"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            {t('config.docsCalloutConcepts')}
+          </Link>
+        </div>
       </div>
 
-      {/* Guide tab */}
-      {activeTab === 'guide' && (
-        <GuidePanel
-          onApplyPreset={(key) => {
-            applyPreset(key);
-            setActiveTab('form');
-          }}
-        />
-      )}
+      {/* Strategy Presets */}
+      <div className="config-card rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-3 text-sm font-bold">
+          {t('config.guide.presetsTitle')}
+        </h2>
+        <StrategyPresets onApply={applyPreset} />
+      </div>
 
-      {/* Explain tab */}
-      {activeTab === 'explain' && <ExplainPanel />}
-
-      {/* Form tab */}
-      {activeTab === 'form' && (
-        <>
-          {/* Strategy Presets */}
-          <div className="config-card rounded-2xl border border-border bg-card p-5">
-            <h2 className="mb-3 text-sm font-bold">
-              {t('config.guide.presetsTitle')}
-            </h2>
-            <StrategyPresets onApply={applyPreset} />
-          </div>
-
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="config-card lg:col-span-2 space-y-5"
-            >
-              {/* Market */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-4 font-semibold">{t('trading.market')}</h2>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      {t('trading.asset')}
-                    </label>
-                    <div className="flex gap-2">
-                      {(['BTC', 'ETH'] as TradingAsset[]).map((a) => (
-                        <button
-                          key={a}
-                          type="button"
-                          onClick={() => update({ asset: a })}
-                          className={cn(
-                            'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
-                            form.asset === a
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border hover:border-primary/40',
-                          )}
-                        >
-                          {a}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      {t('trading.pair')}
-                    </label>
-                    <div className="flex gap-2">
-                      {(['USDT', 'USDC'] as TradingPair[]).map((p) => (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => update({ pair: p })}
-                          className={cn(
-                            'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
-                            form.pair === p
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-border hover:border-primary/40',
-                          )}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <label className="text-sm font-medium">
-                        {t('trading.mode')}
-                      </label>
-                      <InfoTooltip text={t('tooltips.sandboxMode')} />
-                    </div>
-                    <div className="flex gap-2">
-                      {(['SANDBOX', 'LIVE'] as TradingMode[]).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => update({ mode: m })}
-                          className={cn(
-                            'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
-                            form.mode === m
-                              ? m === 'LIVE'
-                                ? 'border-red-500 bg-red-500/10 text-red-500'
-                                : 'border-primary bg-primary/10 text-primary'
-                              : 'border-border hover:border-primary/40',
-                          )}
-                        >
-                          {m === 'SANDBOX'
-                            ? t('trading.sandbox')
-                            : t('trading.live')}
-                        </button>
-                      ))}
-                    </div>
-                    {form.mode === 'LIVE' && (
-                      <p className="mt-1.5 text-xs text-red-500">
-                        {t('trading.realFundsWarning')}
-                      </p>
-                    )}
-                  </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Form */}
+        <form
+          onSubmit={handleSubmit}
+          className="config-card lg:col-span-2 space-y-5"
+        >
+          {/* Market */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-semibold">{t('trading.market')}</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  {t('trading.asset')}
+                </label>
+                <div className="flex gap-2">
+                  {(['BTC', 'ETH'] as TradingAsset[]).map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => update({ asset: a })}
+                      className={cn(
+                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
+                        form.asset === a
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border hover:border-primary/40',
+                      )}
+                    >
+                      {a}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Decision Thresholds */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-4 font-semibold">
-                  {t('trading.decisionThresholds')}
-                </h2>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <SliderField
-                    label={t('trading.buyThreshold')}
-                    value={form.buyThreshold}
-                    min={50}
-                    max={95}
-                    onChange={(v) => update({ buyThreshold: v })}
-                    tooltip={t('tooltips.buyThreshold')}
-                  />
-                  <SliderField
-                    label={t('trading.sellThreshold')}
-                    value={form.sellThreshold}
-                    min={50}
-                    max={95}
-                    onChange={(v) => update({ sellThreshold: v })}
-                    tooltip={t('tooltips.sellThreshold')}
-                  />
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  {t('trading.pair')}
+                </label>
+                <div className="flex gap-2">
+                  {(['USDT', 'USDC'] as TradingPair[]).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => update({ pair: p })}
+                      className={cn(
+                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
+                        form.pair === p
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border hover:border-primary/40',
+                      )}
+                    >
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {/* Risk Management */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-4 font-semibold">
-                  {t('trading.riskManagement')}
-                </h2>
-                <div className="grid gap-5 sm:grid-cols-2">
-                  <SliderField
-                    label={t('trading.stopLoss')}
-                    value={form.stopLossPct}
-                    min={0.5}
-                    max={20}
-                    step={0.5}
-                    onChange={(v) => update({ stopLossPct: v })}
-                    tooltip={t('tooltips.stopLoss')}
-                  />
-                  <SliderField
-                    label={t('trading.takeProfit')}
-                    value={form.takeProfitPct}
-                    min={0.5}
-                    max={50}
-                    step={0.5}
-                    onChange={(v) => update({ takeProfitPct: v })}
-                    tooltip={t('tooltips.takeProfit')}
-                  />
-                  <SliderField
-                    label={t('trading.maxTrade')}
-                    value={form.maxTradePct}
-                    min={1}
-                    max={50}
-                    onChange={(v) => update({ maxTradePct: v })}
-                    tooltip={t('tooltips.maxTrade')}
-                  />
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <label className="text-sm font-medium">
+                    {t('trading.mode')}
+                  </label>
+                  <InfoTooltip text={t('tooltips.sandboxMode')} />
                 </div>
-              </div>
-
-              {/* Order Execution Price */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-1 font-semibold">
-                  {t('trading.orderExecution')}
-                </h2>
-                <p className="mb-4 text-xs text-muted-foreground">
-                  {t('trading.orderExecutionSub')}
-                </p>
-                <SliderField
-                  label={t('trading.orderPriceOffset')}
-                  value={form.orderPriceOffsetPct}
-                  min={-5}
-                  max={5}
-                  step={0.5}
-                  signed={true}
-                  onChange={(v) => update({ orderPriceOffsetPct: v })}
-                  tooltip={t('tooltips.orderPriceOffset')}
-                />
-                <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
-                  <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 text-center">
-                    <div className="font-bold text-emerald-400">
-                      {t('trading.offsetNegative')}
-                    </div>
-                    <div className="mt-0.5 text-muted-foreground">
-                      {t('trading.offsetNegativeDesc')}
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-border bg-muted/20 p-2 text-center">
-                    <div className="font-bold text-muted-foreground">
-                      0% ({t('trading.offsetZero')})
-                    </div>
-                    <div className="mt-0.5 text-muted-foreground">
-                      {t('trading.offsetZeroDesc')}
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-center">
-                    <div className="font-bold text-amber-400">
-                      {t('trading.offsetPositive')}
-                    </div>
-                    <div className="mt-0.5 text-muted-foreground">
-                      {t('trading.offsetPositiveDesc')}
-                    </div>
-                  </div>
+                <div className="flex gap-2">
+                  {(['SANDBOX', 'LIVE'] as TradingMode[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => update({ mode: m })}
+                      className={cn(
+                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
+                        form.mode === m
+                          ? m === 'LIVE'
+                            ? 'border-red-500 bg-red-500/10 text-red-500'
+                            : 'border-primary bg-primary/10 text-primary'
+                          : 'border-border hover:border-primary/40',
+                      )}
+                    >
+                      {m === 'SANDBOX'
+                        ? t('trading.sandbox')
+                        : t('trading.live')}
+                    </button>
+                  ))}
                 </div>
-              </div>
-
-              {/* Timing */}
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-4 font-semibold">{t('trading.timing')}</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <label className="text-sm font-medium">
-                        {t('trading.maxConcurrent')}
-                      </label>
-                      <InfoTooltip text={t('tooltips.maxPositions')} />
-                    </div>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={form.maxConcurrentPositions}
-                      onChange={(e) =>
-                        update({ maxConcurrentPositions: e.target.value })
-                      }
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                  </div>
-                  <div>
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <label className="text-sm font-medium">
-                        {t('trading.minInterval')}
-                      </label>
-                      <InfoTooltip text={t('tooltips.minInterval')} />
-                    </div>
-                    <input
-                      type="number"
-                      min={1}
-                      max={1440}
-                      value={form.minIntervalMinutes}
-                      onChange={(e) =>
-                        update({ minIntervalMinutes: e.target.value })
-                      }
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="w-full sm:w-auto"
-              >
-                {isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                {t('trading.saveConfig')}
-              </Button>
-            </form>
-
-            {/* Active Agents */}
-            <div className="config-card space-y-4">
-              <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-4 font-semibold">
-                  {t('trading.activeAgents')}
-                </h2>
-                {configs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {t('trading.noConfigs')}
+                {form.mode === 'LIVE' && (
+                  <p className="mt-1.5 text-xs text-red-500">
+                    {t('trading.realFundsWarning')}
                   </p>
-                ) : (
-                  <ul className="space-y-3">
-                    {configs.map((cfg) => {
-                      const isRunning = getAgentIsRunning(cfg.asset, cfg.pair);
-                      return (
-                        <li key={cfg.id}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedConfig(cfg)}
-                            className="group w-full rounded-lg border border-border p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/30"
-                          >
-                            <div className="mb-1.5 flex items-center justify-between">
-                              <span className="text-sm font-semibold">
-                                {cfg.asset}/{cfg.pair}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={cn(
-                                    'rounded-full px-2 py-0.5 text-xs font-semibold',
-                                    isRunning
-                                      ? 'bg-emerald-500/10 text-emerald-500'
-                                      : 'bg-muted text-muted-foreground',
-                                  )}
-                                >
-                                  {isRunning
-                                    ? t('common.running')
-                                    : t('common.stopped')}
-                                </span>
-                                <Eye className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {cfg.mode} · SL{' '}
-                              {(cfg.stopLossPct * 100).toFixed(1)}% · TP{' '}
-                              {(cfg.takeProfitPct * 100).toFixed(1)}%
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
                 )}
               </div>
             </div>
           </div>
-        </>
-      )}
+
+          {/* Decision Thresholds */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-semibold">
+              {t('trading.decisionThresholds')}
+            </h2>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <SliderField
+                label={t('trading.buyThreshold')}
+                value={form.buyThreshold}
+                min={50}
+                max={95}
+                onChange={(v) => update({ buyThreshold: v })}
+                tooltip={t('tooltips.buyThreshold')}
+              />
+              <SliderField
+                label={t('trading.sellThreshold')}
+                value={form.sellThreshold}
+                min={50}
+                max={95}
+                onChange={(v) => update({ sellThreshold: v })}
+                tooltip={t('tooltips.sellThreshold')}
+              />
+            </div>
+          </div>
+
+          {/* Risk Management */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-semibold">
+              {t('trading.riskManagement')}
+            </h2>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <SliderField
+                label={t('trading.stopLoss')}
+                value={form.stopLossPct}
+                min={0.5}
+                max={20}
+                step={0.5}
+                onChange={(v) => update({ stopLossPct: v })}
+                tooltip={t('tooltips.stopLoss')}
+              />
+              <SliderField
+                label={t('trading.takeProfit')}
+                value={form.takeProfitPct}
+                min={0.5}
+                max={50}
+                step={0.5}
+                onChange={(v) => update({ takeProfitPct: v })}
+                tooltip={t('tooltips.takeProfit')}
+              />
+              <SliderField
+                label={t('trading.maxTrade')}
+                value={form.maxTradePct}
+                min={1}
+                max={50}
+                onChange={(v) => update({ maxTradePct: v })}
+                tooltip={t('tooltips.maxTrade')}
+              />
+            </div>
+          </div>
+
+          {/* Order Execution Price */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-1 font-semibold">
+              {t('trading.orderExecution')}
+            </h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              {t('trading.orderExecutionSub')}
+            </p>
+            <SliderField
+              label={t('trading.orderPriceOffset')}
+              value={form.orderPriceOffsetPct}
+              min={-5}
+              max={5}
+              step={0.5}
+              signed={true}
+              onChange={(v) => update({ orderPriceOffsetPct: v })}
+              tooltip={t('tooltips.orderPriceOffset')}
+            />
+            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+              <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 text-center">
+                <div className="font-bold text-emerald-400">
+                  {t('trading.offsetNegative')}
+                </div>
+                <div className="mt-0.5 text-muted-foreground">
+                  {t('trading.offsetNegativeDesc')}
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-muted/20 p-2 text-center">
+                <div className="font-bold text-muted-foreground">
+                  0% ({t('trading.offsetZero')})
+                </div>
+                <div className="mt-0.5 text-muted-foreground">
+                  {t('trading.offsetZeroDesc')}
+                </div>
+              </div>
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-center">
+                <div className="font-bold text-amber-400">
+                  {t('trading.offsetPositive')}
+                </div>
+                <div className="mt-0.5 text-muted-foreground">
+                  {t('trading.offsetPositiveDesc')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Timing */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-semibold">{t('trading.timing')}</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <label className="text-sm font-medium">
+                    {t('trading.maxConcurrent')}
+                  </label>
+                  <InfoTooltip text={t('tooltips.maxPositions')} />
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={form.maxConcurrentPositions}
+                  onChange={(e) =>
+                    update({ maxConcurrentPositions: e.target.value })
+                  }
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <div>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <label className="text-sm font-medium">
+                    {t('trading.minInterval')}
+                  </label>
+                  <InfoTooltip text={t('tooltips.minInterval')} />
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={form.minIntervalMinutes}
+                  onChange={(e) =>
+                    update({ minIntervalMinutes: e.target.value })
+                  }
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={isPending}
+            className="w-full sm:w-auto"
+          >
+            {isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {t('trading.saveConfig')}
+          </Button>
+        </form>
+
+        {/* Active Agents */}
+        <div className="config-card space-y-4">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <h2 className="mb-4 font-semibold">{t('trading.activeAgents')}</h2>
+            {configs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t('trading.noConfigs')}
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {configs.map((cfg) => {
+                  const isRunning = getAgentIsRunning(cfg.asset, cfg.pair);
+                  return (
+                    <li key={cfg.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedConfig(cfg)}
+                        className="group w-full rounded-lg border border-border p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/30"
+                      >
+                        <div className="mb-1.5 flex items-center justify-between">
+                          <span className="text-sm font-semibold">
+                            {cfg.asset}/{cfg.pair}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-xs font-semibold',
+                                isRunning
+                                  ? 'bg-emerald-500/10 text-emerald-500'
+                                  : 'bg-muted text-muted-foreground',
+                              )}
+                            >
+                              {isRunning
+                                ? t('common.running')
+                                : t('common.stopped')}
+                            </span>
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {cfg.mode} · SL {(cfg.stopLossPct * 100).toFixed(1)}%
+                          · TP {(cfg.takeProfitPct * 100).toFixed(1)}%
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Agent Detail Modal */}
       {selectedConfig && (

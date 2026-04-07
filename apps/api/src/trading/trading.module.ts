@@ -7,6 +7,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { GatewayModule } from '../gateway/gateway.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
+import { MarketModule } from '../market/market.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UsersModule } from '../users/users.module';
     GatewayModule,
     NotificationsModule,
     UsersModule,
+    MarketModule,
   ],
   controllers: [TradingController],
   providers: [TradingService, TradingProcessor],

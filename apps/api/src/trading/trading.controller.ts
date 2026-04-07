@@ -101,6 +101,20 @@ export class TradingController {
     return this.tradingService.stopAgent(user.userId, body.asset, body.pair);
   }
 
+  @Post('stop-all')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Detener todos los agentes del usuario',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Todos los agentes detenidos. Las posiciones abiertas quedan sin cobertura — se emite evento WebSocket agent:all-stopped.',
+  })
+  stopAllAgents(@CurrentUser() user: RequestUser) {
+    return this.tradingService.stopAllAgentsForUser(user.userId);
+  }
+
   @Get('status')
   @ApiOperation({ summary: 'Estado actual de todos los agentes del usuario' })
   @ApiResponse({ status: 200, description: 'Lista de estados de agentes' })

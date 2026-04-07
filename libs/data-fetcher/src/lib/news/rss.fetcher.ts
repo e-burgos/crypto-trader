@@ -1,6 +1,10 @@
 import RssParser from 'rss-parser';
 import { NewsItem } from '@crypto-trader/shared';
-import { NewsSource, estimateSentiment, newsItemId } from './news-source.interface';
+import {
+  NewsSource,
+  estimateSentiment,
+  newsItemId,
+} from './news-source.interface';
 
 export interface RssFetcherConfig {
   feeds?: Array<{ name: string; url: string }>;
@@ -32,17 +36,16 @@ export class RssFetcher implements NewsSource {
 
         for (const item of items) {
           const url = item.link || '';
+          const snippet = item.contentSnippet?.trim() || '';
           allItems.push({
             id: newsItemId(`rss:${feed.name}`, url),
             source: `rss:${feed.name}`,
             headline: item.title || '',
             url,
-            sentiment: estimateSentiment(
-              `${item.title || ''} ${item.contentSnippet || ''}`,
-            ),
-            publishedAt: item.pubDate
-              ? new Date(item.pubDate)
-              : new Date(),
+            summary: snippet || undefined,
+            author: (item as { creator?: string }).creator?.trim() || undefined,
+            sentiment: estimateSentiment(`${item.title || ''} ${snippet}`),
+            publishedAt: item.pubDate ? new Date(item.pubDate) : new Date(),
             cachedAt: new Date(),
           });
         }

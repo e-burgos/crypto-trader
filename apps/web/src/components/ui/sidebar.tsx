@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Activity,
   BotMessageSquare,
+  Brain,
   ChevronLeft,
   ChevronRight,
   X,
@@ -101,6 +102,11 @@ function NavContent({
       items: [
         { to: '/dashboard/market', label: t('sidebar.market'), icon: Activity },
         {
+          to: '/dashboard/bot-analysis',
+          label: t('sidebar.botAnalysis'),
+          icon: Brain,
+        },
+        {
           to: '/dashboard/analytics',
           label: t('sidebar.analytics'),
           icon: LineChart,
@@ -150,12 +156,12 @@ function NavContent({
   const linkClass = (isActive: boolean, admin?: boolean) =>
     cn(
       'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
-      'transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+      'transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
       collapsed && 'justify-center px-0',
       isActive
         ? admin
-          ? 'bg-red-500/10 text-red-400'
-          : 'bg-primary/10 text-primary'
+          ? 'bg-red-500/10 text-red-400 shadow-[inset_0_0_0_1px_hsl(0_84%_60%/0.15)]'
+          : 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.2)]'
         : admin
           ? 'text-muted-foreground hover:bg-red-500/5 hover:text-red-400'
           : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -165,15 +171,18 @@ function NavContent({
     <>
       {/* ── Nav ─────────────────────────────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto custom-scrollbar py-3">
-        <div className={cn('space-y-4', collapsed ? 'px-2' : 'px-3')}>
+        <div className={cn('space-y-5', collapsed ? 'px-2' : 'px-3')}>
           {GROUPS.map((group) => (
             <div key={group.label}>
               {!collapsed ? (
-                <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-                  {group.label}
-                </p>
+                <div className="mb-2 flex items-center gap-2 px-3">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                    {group.label}
+                  </span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border/40 to-transparent" />
+                </div>
               ) : (
-                <div className="my-1 mx-1 h-px bg-border/50" />
+                <div className="my-1 mx-1 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
               )}
               <ul className="space-y-0.5">
                 {group.items.map(({ to, label, icon: Icon, end, admin }) => (
@@ -188,16 +197,19 @@ function NavContent({
                         {({ isActive }) => (
                           <>
                             {isActive && (
-                              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-primary" />
+                              <>
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]" />
+                                <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/5 to-transparent" />
+                              </>
                             )}
                             <span
                               className={cn(
-                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors',
+                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-200',
                                 isActive
                                   ? admin
-                                    ? 'bg-red-500/10'
-                                    : 'bg-primary/10'
-                                  : '',
+                                    ? 'bg-red-500/15 shadow-[0_0_10px_hsl(0_84%_60%/0.25)]'
+                                    : 'bg-primary/15 shadow-[0_0_10px_hsl(var(--primary)/0.3)]'
+                                  : 'group-hover:bg-muted/60',
                               )}
                             >
                               <Icon className="h-4 w-4" />
@@ -218,32 +230,36 @@ function NavContent({
       </nav>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
-      <div
-        className={cn(
-          'shrink-0 border-t border-border',
-          collapsed ? 'p-2' : 'p-3',
-        )}
-      >
+      <div className={cn('shrink-0', collapsed ? 'p-2' : 'px-3 pb-3 pt-0')}>
+        {/* Gradient separator */}
+        <div className="mb-3 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+
         {!collapsed && user?.email && (
-          <div className="mb-2 flex items-center gap-2 rounded-lg px-2 py-1.5">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary uppercase">
+          <div className="mb-2 flex items-center gap-2.5 rounded-xl bg-muted/30 px-3 py-2.5 ring-1 ring-border/50">
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary uppercase ring-2 ring-primary/20">
               {user.email[0]}
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
             </div>
-            <span className="truncate text-xs text-muted-foreground">
-              {user.email}
-            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-foreground">
+                {user.email}
+              </p>
+              <p className="text-[10px] text-muted-foreground/60 capitalize">
+                {user.role?.toLowerCase() ?? 'user'}
+              </p>
+            </div>
           </div>
         )}
         <NavTooltip label={t('nav.signOut')} show={collapsed}>
           <button
             onClick={logout}
             className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
-              'text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400',
+              'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium',
+              'text-muted-foreground transition-all duration-150 hover:bg-red-500/10 hover:text-red-400',
               collapsed && 'justify-center px-0',
             )}
           >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors group-hover:bg-red-500/10">
               <LogOut className="h-4 w-4" />
             </span>
             {!collapsed && <span className="truncate">{t('nav.signOut')}</span>}

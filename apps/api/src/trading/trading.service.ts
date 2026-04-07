@@ -257,7 +257,25 @@ export class TradingService implements OnModuleInit {
         .map((j) => j.remove()),
     );
 
-    return { stopped: runningConfigs.length };
+    // Warn user about open positions that are now unmonitored
+    const openPositions = await this.prisma.position.findMany({
+      where: { userId, status: 'OPEN' },
+      select: { mode: true },
+    });
+
+    const hasLivePositions = openPositions.some((p) => p.mode === 'LIVE');
+
+    this.gateway.emitToUser(userId, 'agent:all-stopped', {
+      stopped: runningConfigs.length,
+      openPositions: openPositions.length,
+      hasLivePositions,
+    });
+
+    return {
+      stopped: runningConfigs.length,
+      openPositions: openPositions.length,
+      hasLivePositions,
+    };
   }
 
   async stopAllAgents() {

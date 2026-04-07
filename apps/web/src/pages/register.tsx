@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { PasswordInput } from '../components/ui/password-input';
@@ -7,6 +8,7 @@ import { useAuthStore } from '../store/auth.store';
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { register, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,11 +21,11 @@ export function RegisterPage() {
     setLocalError('');
 
     if (password !== confirm) {
-      setLocalError('Passwords do not match');
+      setLocalError(t('auth.passwordsNoMatch'));
       return;
     }
     if (password.length < 8) {
-      setLocalError('Password must be at least 8 characters');
+      setLocalError(t('auth.passwordTooShort'));
       return;
     }
 
@@ -44,9 +46,9 @@ export function RegisterPage() {
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
             <TrendingUp className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold">Create your account</h1>
+          <h1 className="text-2xl font-bold">{t('auth.registerTitle')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Start trading with AI in minutes
+            {t('auth.registerSubtitle')}
           </p>
         </div>
 
@@ -63,7 +65,7 @@ export function RegisterPage() {
                 htmlFor="email"
                 className="mb-1.5 block text-sm font-medium"
               >
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="email"
@@ -82,7 +84,7 @@ export function RegisterPage() {
                 htmlFor="password"
                 className="mb-1.5 block text-sm font-medium"
               >
-                Password
+                {t('auth.password')}
               </label>
               <PasswordInput
                 id="password"
@@ -90,7 +92,7 @@ export function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="new-password"
-                placeholder="Min. 8 characters"
+                placeholder={t('auth.minCharsPlaceholder')}
               />
             </div>
 
@@ -99,7 +101,7 @@ export function RegisterPage() {
                 htmlFor="confirm"
                 className="mb-1.5 block text-sm font-medium"
               >
-                Confirm Password
+                {t('auth.confirmPassword')}
               </label>
               <PasswordInput
                 id="confirm"
@@ -115,19 +117,19 @@ export function RegisterPage() {
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Create Account'
+                t('auth.registerButton')
               )}
             </Button>
           </form>
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          {t('auth.alreadyHaveAccount')}{' '}
           <Link
             to="/login"
             className="font-medium text-primary hover:underline"
           >
-            Sign in
+            {t('auth.signIn')}
           </Link>
         </p>
       </div>

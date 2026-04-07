@@ -102,6 +102,8 @@ model User {
   targetedActions   AdminAction[]      @relation("TargetedActions")
   chatSessions       ChatSession[]
   sandboxWallets    SandboxWallet[]
+  newsConfig        NewsConfig?
+  newsAnalyses      NewsAnalysis[]
 
   @@map("users")
 }
@@ -252,6 +254,57 @@ model NewsItem {
 
   @@index([publishedAt])
   @@map("news_items")
+}
+
+/// User-level news fetching preferences
+model NewsConfig {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  intervalMinutes Int      @default(30)
+  newsCount       Int      @default(40)
+  enabledSources  String[] @default([])
+  onlySummary     Boolean  @default(true)
+  /// Whether the trading bot should include news analysis in its decisions
+  botEnabled      Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("news_configs")
+}
+
+/// Persisted news sentiment analysis (keyword-based + optional AI layer)
+model NewsAnalysis {
+  id               String    @id @default(cuid())
+  userId           String
+  analyzedAt       DateTime  @default(now())
+  newsCount        Int
+  positiveCount    Int
+  negativeCount    Int
+  neutralCount     Int
+  score            Int
+  overallSentiment String
+  summary          String
+  /// JSON array of {id,source,headline,sentiment,summary?,author?,publishedAt}
+  headlines        Json
+
+  // AI layer (null until user triggers AI analysis)
+  aiAnalyzedAt       DateTime?
+  aiProvider         String?
+  aiModel            String?
+  aiPositiveCount    Int?
+  aiNegativeCount    Int?
+  aiNeutralCount     Int?
+  aiScore            Int?
+  aiOverallSentiment String?
+  aiSummary          String?
+  /// JSON array of {id,sentiment,reasoning}
+  aiHeadlines        Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, analyzedAt])
+  @@map("news_analyses")
 }
 
 model Notification {

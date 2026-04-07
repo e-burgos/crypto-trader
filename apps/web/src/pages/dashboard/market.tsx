@@ -13,6 +13,13 @@ import {
   ArrowUp,
   ArrowDown,
   Info,
+  ShoppingCart,
+  ShieldAlert,
+  Target,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Zap,
 } from 'lucide-react';
 import {
   IndicatorInfoModal,
@@ -23,8 +30,10 @@ import { cn } from '../../lib/utils';
 import {
   useMarketSnapshot,
   deriveOverallSignal,
+  deriveOpportunity,
   MARKET_SYMBOLS,
   type OverallSignal,
+  type OpportunityAnalysis,
 } from '../../hooks/use-market';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
 
@@ -47,6 +56,12 @@ const SIGNAL_CONFIG: Record<
     color: 'text-red-500',
     bg: 'bg-red-500/10 border-red-500/30',
     icon: TrendingDown,
+  },
+  HOLD: {
+    label: 'HOLD',
+    color: 'text-sky-400',
+    bg: 'bg-sky-500/10 border-sky-500/30',
+    icon: Minus,
   },
   NEUTRAL: {
     label: 'NEUTRAL',
@@ -373,6 +388,275 @@ function InfoButton({
   );
 }
 
+// ── Opportunity Panel ─────────────────────────────────────────────────────────
+
+function OpportunityPanel({ opp }: { opp: OpportunityAnalysis }) {
+  const actionConfig = {
+    BUY: {
+      label: 'COMPRAR AHORA',
+      sublabel: 'Oportunidad de entrada detectada',
+      icon: ShoppingCart,
+      color: 'text-emerald-400',
+      bg: 'from-emerald-500/15 to-emerald-500/5',
+      border: 'border-emerald-500/30',
+      ring: 'shadow-[0_0_24px_hsl(142_71%_45%/0.15)]',
+      barColor: 'bg-emerald-500',
+    },
+    SELL: {
+      label: 'VENDER AHORA',
+      sublabel: 'Presión bajista detectada',
+      icon: TrendingDown,
+      color: 'text-red-400',
+      bg: 'from-red-500/15 to-red-500/5',
+      border: 'border-red-500/30',
+      ring: 'shadow-[0_0_24px_hsl(0_84%_60%/0.15)]',
+      barColor: 'bg-red-500',
+    },
+    WAIT: {
+      label: 'ESPERAR SEÑAL',
+      sublabel: 'Sin confluencia suficiente',
+      icon: Clock,
+      color: 'text-amber-400',
+      bg: 'from-amber-500/10 to-amber-500/5',
+      border: 'border-amber-500/20',
+      ring: '',
+      barColor: 'bg-amber-500',
+    },
+  }[opp.action];
+
+  const ActionIcon = actionConfig.icon;
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border bg-gradient-to-br p-5 space-y-4',
+        actionConfig.bg,
+        actionConfig.border,
+        actionConfig.ring,
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div
+            className={cn(
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+              opp.action === 'BUY'
+                ? 'bg-emerald-500/20'
+                : opp.action === 'SELL'
+                  ? 'bg-red-500/20'
+                  : 'bg-amber-500/15',
+            )}
+          >
+            <ActionIcon className={cn('h-6 w-6', actionConfig.color)} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  'text-lg font-bold tracking-wide',
+                  actionConfig.color,
+                )}
+              >
+                {actionConfig.label}
+              </span>
+              {/* Confidence badge — always visible */}
+              <span
+                className={cn(
+                  'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold',
+                  opp.action === 'BUY'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : opp.action === 'SELL'
+                      ? 'bg-red-500/20 text-red-400'
+                      : opp.scoreBias >= 0
+                        ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-orange-500/15 text-orange-400',
+                )}
+              >
+                <Zap className="h-3 w-3" />
+                {opp.action !== 'WAIT'
+                  ? `${opp.confidence}% confirmado`
+                  : opp.scoreBias > 0
+                    ? `${opp.confidence}% alcista`
+                    : opp.scoreBias < 0
+                      ? `${opp.confidence}% bajista`
+                      : `${opp.confidence}% señal`}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {opp.summary}
+            </p>
+          </div>
+        </div>
+
+        {/* Confidence bar */}
+        <div className="shrink-0 text-right hidden sm:block">
+          <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">
+            {opp.action !== 'WAIT'
+              ? 'Confianza'
+              : opp.scoreBias >= 0
+                ? 'Señal alcista'
+                : 'Señal bajista'}
+          </p>
+          <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn(
+                'h-full rounded-full transition-all',
+                actionConfig.barColor,
+              )}
+              style={{ width: `${opp.confidence}%` }}
+            />
+          </div>
+          <p className={cn('text-sm font-bold mt-1', actionConfig.color)}>
+            {opp.confidence}%
+          </p>
+        </div>
+      </div>
+
+      {/* Price levels */}
+      {opp.action !== 'WAIT' && (
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-xl bg-background/40 border border-border/40 px-3 py-2.5 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+              Entrada
+            </p>
+            <p className="text-sm font-bold font-mono">
+              $
+              {opp.entryPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </p>
+            <p className="text-[10px] text-muted-foreground">precio actual</p>
+          </div>
+          <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2.5 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-red-400/70 mb-1">
+              Stop Loss
+            </p>
+            <p className="text-sm font-bold font-mono text-red-400">
+              $
+              {opp.stopLoss.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </p>
+            <p className="text-[10px] text-red-400/60">
+              -
+              {(
+                (Math.abs(opp.entryPrice - opp.stopLoss) / opp.entryPrice) *
+                100
+              ).toFixed(1)}
+              %
+            </p>
+          </div>
+          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2.5 text-center">
+            <p className="text-[10px] uppercase tracking-wider text-emerald-400/70 mb-1">
+              Take Profit
+            </p>
+            <p className="text-sm font-bold font-mono text-emerald-400">
+              $
+              {opp.takeProfit.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+              })}
+            </p>
+            <p className="text-[10px] text-emerald-400/60">
+              +
+              {(
+                (Math.abs(opp.takeProfit - opp.entryPrice) / opp.entryPrice) *
+                100
+              ).toFixed(1)}
+              %
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* R/R ratio */}
+      {opp.action !== 'WAIT' && opp.riskReward > 0 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Target className="h-3.5 w-3.5 shrink-0" />
+          <span>Riesgo/Beneficio:</span>
+          <span
+            className={cn(
+              'font-bold',
+              opp.riskReward >= 1.5 ? 'text-emerald-400' : 'text-amber-400',
+            )}
+          >
+            1:{opp.riskReward}
+          </span>
+          {opp.riskReward < 1.5 && (
+            <span className="text-amber-400/70">
+              (mínimo recomendado 1:1.5)
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Indicator checks */}
+      <div>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
+          Checklist de indicadores
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {opp.checks.map((check) => (
+            <div
+              key={check.label}
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs',
+                check.ok
+                  ? 'bg-emerald-500/8 border border-emerald-500/15'
+                  : 'bg-red-500/8 border border-red-500/15',
+              )}
+            >
+              {check.ok ? (
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+              ) : (
+                <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />
+              )}
+              <span className="font-semibold text-muted-foreground w-14 shrink-0">
+                {check.label}
+              </span>
+              <span
+                className={cn(
+                  'truncate',
+                  check.ok ? 'text-foreground/80' : 'text-muted-foreground/60',
+                )}
+              >
+                {check.value}
+              </span>
+              {check.weight === 'strong' && (
+                <span className="ml-auto shrink-0 text-[9px] font-bold text-primary/60 uppercase">
+                  fuerte
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Warnings */}
+      {opp.warnings.length > 0 && (
+        <div className="space-y-1">
+          {opp.warnings.map((w, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-2 rounded-lg bg-amber-500/8 border border-amber-500/15 px-3 py-1.5"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-400 mt-0.5" />
+              <span className="text-xs text-amber-300/80">{w}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      <p className="text-[10px] text-muted-foreground/50 leading-relaxed">
+        * Análisis técnico automático. No constituye asesoría financiera. El bot
+        puede o no ejecutar esta señal dependiendo de su configuración de
+        umbrales.
+      </p>
+    </div>
+  );
+}
+
 function SnapshotPanel({ symbol }: { symbol: string }) {
   const { t } = useTranslation();
   const [infoModal, setInfoModal] = useState<IndicatorKey | null>(null);
@@ -402,9 +686,13 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
   const { signal, score, reasons } = deriveOverallSignal(data);
   const signalCfg = SIGNAL_CONFIG[signal];
   const SignalIcon = signalCfg.icon;
+  const livePrice = ticker?.lastPrice ?? data.currentPrice;
+  const opportunity = deriveOpportunity(data, livePrice);
 
   return (
     <div className="market-panel space-y-4">
+      {/* ── Opportunity Panel (top, most visible) ── */}
+      <OpportunityPanel opp={opportunity} />
       {/* Price header — uses live WebSocket price when available */}
       <div
         className={cn(
@@ -413,8 +701,11 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
         )}
       >
         <div>
-          <div className="text-xs font-semibold uppercase text-muted-foreground mb-1">
-            {t('market.currentPrice')}
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs font-semibold uppercase text-muted-foreground">
+              {t('market.currentPrice')}
+            </span>
+            <InfoButton indicatorKey="price" onOpen={setInfoModal} />
           </div>
           <div className="text-3xl font-bold font-mono">
             $
@@ -720,7 +1011,10 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               {t('market.supportResistance')}
             </h3>
-            <InfoButton indicatorKey="supportResistance" onOpen={setInfoModal} />
+            <InfoButton
+              indicatorKey="supportResistance"
+              onOpen={setInfoModal}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <SRLevels
@@ -742,9 +1036,12 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
       {/* Signal summary */}
       {reasons.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {t('market.signalReasons')}
-          </h3>
+          <div className="flex items-center mb-2">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {t('market.signalReasons')}
+            </h3>
+            <InfoButton indicatorKey="signalReasons" onOpen={setInfoModal} />
+          </div>
           <div className="flex flex-wrap gap-2">
             {reasons.map((r) => (
               <span

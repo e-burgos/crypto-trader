@@ -12,7 +12,8 @@ async function main() {
   const prisma = new PrismaClient({ adapter });
 
   try {
-    // Create admin user
+    // ── Admin users ──────────────────────────────────────────────────────────
+
     const adminPassword = await bcrypt.hash('admin123', BCRYPT_SALT_ROUNDS);
     const admin = await prisma.user.upsert({
       where: { email: 'admin@cryptotrader.dev' },
@@ -24,9 +25,27 @@ async function main() {
         isActive: true,
       },
     });
-    console.log(`Admin user created: ${admin.email} (${admin.id})`);
+    console.log(`Admin user: ${admin.email} / admin123`);
 
-    // Create test trader
+    // Short-alias admin for quick testing
+    const adminShortPassword = await bcrypt.hash(
+      'Admin1234!',
+      BCRYPT_SALT_ROUNDS,
+    );
+    const adminShort = await prisma.user.upsert({
+      where: { email: 'admin@crypto.com' },
+      update: {},
+      create: {
+        email: 'admin@crypto.com',
+        passwordHash: adminShortPassword,
+        role: 'ADMIN',
+        isActive: true,
+      },
+    });
+    console.log(`Admin user: ${adminShort.email} / Admin1234!`);
+
+    // ── Trader users ─────────────────────────────────────────────────────────
+
     const traderPassword = await bcrypt.hash('trader123', BCRYPT_SALT_ROUNDS);
     const trader = await prisma.user.upsert({
       where: { email: 'trader@cryptotrader.dev' },
@@ -38,36 +57,62 @@ async function main() {
         isActive: true,
       },
     });
-    console.log(`Trader user created: ${trader.email} (${trader.id})`);
+    console.log(`Trader user: ${trader.email} / trader123`);
 
-    // Create sandbox trading config for trader
-    await prisma.tradingConfig.upsert({
-      where: {
-        userId_asset_pair: {
-          userId: trader.id,
-          asset: 'BTC',
-          pair: 'USDT',
-        },
-      },
+    // Short-alias trader for quick testing
+    const traderShortPassword = await bcrypt.hash(
+      'Trader1234!',
+      BCRYPT_SALT_ROUNDS,
+    );
+    const traderShort = await prisma.user.upsert({
+      where: { email: 'trader@crypto.com' },
       update: {},
       create: {
-        userId: trader.id,
-        asset: 'BTC',
-        pair: 'USDT',
-        buyThreshold: 70,
-        sellThreshold: 70,
-        stopLossPct: 0.03,
-        takeProfitPct: 0.05,
-        maxTradePct: 0.05,
-        maxConcurrentPositions: 2,
-        minIntervalMinutes: 15,
-        mode: 'SANDBOX',
-        isRunning: false,
+        email: 'trader@crypto.com',
+        passwordHash: traderShortPassword,
+        role: 'TRADER',
+        isActive: true,
       },
     });
-    console.log('Sandbox trading config created for trader (BTC/USDT)');
+    console.log(`Trader user: ${traderShort.email} / Trader1234!`);
 
-    console.log('\nSeed completed successfully!');
+    // ── Trading configs (for all trader users) ────────────────────────────────
+
+    for (const t of [trader, traderShort]) {
+      await prisma.tradingConfig.upsert({
+        where: {
+          userId_asset_pair: {
+            userId: t.id,
+            asset: 'BTC',
+            pair: 'USDT',
+          },
+        },
+        update: {},
+        create: {
+          userId: t.id,
+          asset: 'BTC',
+          pair: 'USDT',
+          buyThreshold: 70,
+          sellThreshold: 70,
+          stopLossPct: 0.03,
+          takeProfitPct: 0.05,
+          maxTradePct: 0.05,
+          maxConcurrentPositions: 2,
+          minIntervalMinutes: 15,
+          mode: 'SANDBOX',
+          isRunning: false,
+        },
+      });
+      console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
+    }
+
+    console.log('\n✅ Seed completado!');
+    console.log('─────────────────────────────────────────');
+    console.log('  admin@crypto.com        / Admin1234!  (ADMIN)');
+    console.log('  admin@cryptotrader.dev  / admin123    (ADMIN)');
+    console.log('  trader@crypto.com       / Trader1234! (TRADER)');
+    console.log('  trader@cryptotrader.dev / trader123   (TRADER)');
+    console.log('─────────────────────────────────────────');
   } finally {
     await prisma.$disconnect();
   }

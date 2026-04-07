@@ -5,6 +5,8 @@ const es = {
     getStarted: 'Comenzar',
     signOut: 'Cerrar sesión',
     help: 'Ayuda',
+    lightMode: 'Modo claro',
+    darkMode: 'Modo oscuro',
   },
   sidebar: {
     overview: 'Resumen',
@@ -13,6 +15,7 @@ const es = {
     agentLog: 'Registro del Agente',
     analytics: 'Análisis',
     market: 'Análisis de Mercado',
+    botAnalysis: 'Análisis del Bot',
     config: 'Configuración',
     settings: 'Ajustes',
     positions: 'Posiciones',
@@ -249,9 +252,20 @@ const es = {
   help: {
     title: 'Ayuda y Guía',
     subtitle: 'Todo lo que necesitas saber para operar en la plataforma',
+    gettingStarted: 'Primeros Pasos',
+    platformBehavior: 'Comportamiento de la Plataforma',
+    agentGroup: 'Agente y Configuración',
+    integrations: 'Integraciones',
+    agentFlow: 'Cómo decide el Agente',
+    agentPresets: 'Presets de Estrategia',
+    agentParams: 'Referencia de Parámetros',
     faq: 'Preguntas Frecuentes',
     guide: 'Cómo Operar — Paso a Paso',
     apiKeys: 'Configuración de Claves API',
+    behaviors: 'Comportamientos y Avisos Importantes',
+    stopAllTitle: 'Detener los agentes no cierra las posiciones abiertas',
+    stopAllDesc:
+      'Cuando detienes todos tus agentes (o un administrador activa el kill-switch), los agentes se detienen y sus trabajos programados se cancelan. Sin embargo, las posiciones abiertas permanecen abiertas en el exchange — NO se cierran automáticamente. En modo EN VIVO, esto significa que tus posiciones quedan sin stop-loss ni take-profit activos hasta que reinicies el agente. Recibirás una alerta en tiempo real si tienes posiciones sin cobertura. Ciérralas manualmente desde la página de Posiciones si es necesario.',
     back: 'Volver',
     binanceTitle: 'Claves API de Binance',
     binanceWarning:
@@ -301,6 +315,10 @@ const es = {
       {
         q: '¿Qué pares de criptomonedas están soportados?',
         a: 'Actualmente BTC/USDT, BTC/USDC, ETH/USDT y ETH/USDC. Se podrían añadir más pares en versiones futuras.',
+      },
+      {
+        q: '¿Qué pasa con mis posiciones si detengo todos los agentes?',
+        a: 'Las posiciones abiertas NO se cierran automáticamente. El agente deja de monitorearlas, por lo que en modo EN VIVO quedan sin stop-loss ni take-profit activos. Recibirás una notificación de alerta en tiempo real indicando cuántas posiciones quedaron sin cobertura. Ciérralas manualmente desde la página de Posiciones.',
       },
     ],
     guideSteps: [
@@ -424,6 +442,10 @@ const es = {
     tabForm: 'Configuración',
     tabGuide: 'Guía',
     tabExplain: 'Conceptos',
+    docsCallout:
+      '¿Querés entender cada parámetro antes de configurar? Consultá la documentación →',
+    docsCalloutGuide: 'Ver Guía del Agente',
+    docsCalloutConcepts: 'Ver Conceptos',
     guide: {
       flowTitle: 'Cómo toma decisiones el Agente',
       presetsTitle:
@@ -592,6 +614,169 @@ const es = {
       'Stop-loss activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
     takeProfit:
       'Take-profit activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
+  },
+  auth: {
+    loginTitle: 'Bienvenido de vuelta',
+    loginSubtitle: 'Inicia sesión en tu cuenta de CryptoTrader',
+    loginButton: 'Iniciar Sesión',
+    noAccount: '¿No tienes cuenta?',
+    createOne: 'Crear una',
+    registerTitle: 'Crea tu cuenta',
+    registerSubtitle: 'Empieza a operar con IA en minutos',
+    registerButton: 'Crear Cuenta',
+    alreadyHaveAccount: '¿Ya tienes cuenta?',
+    signIn: 'Iniciar sesión',
+    email: 'Correo electrónico',
+    password: 'Contraseña',
+    newPassword: 'Nueva Contraseña',
+    confirmPassword: 'Confirmar Contraseña',
+    passwordsNoMatch: 'Las contraseñas no coinciden',
+    passwordTooShort: 'La contraseña debe tener al menos 8 caracteres',
+    minCharsPlaceholder: 'Mínimo 8 caracteres',
+  },
+  onboarding: {
+    steps: ['Conectar Exchange', 'Proveedor IA', 'Modo de Trading'],
+    stepOf: 'Paso {{step}} de {{total}}',
+    encryptionNote:
+      'Todas las claves API se cifran con AES-256-GCM antes de almacenarse.',
+    binanceTip: 'Consejo',
+    binanceTipText:
+      'Puedes omitir este paso y usar el modo Sandbox para practicar sin riesgo.',
+    binanceApiKey: 'API Key de Binance',
+    binanceApiKeyPlaceholder: 'Tu API Key de Binance',
+    binanceApiSecret: 'Secreto API de Binance',
+    binanceApiSecretPlaceholder: 'Tu API Secret de Binance',
+    binanceHelpText:
+      'Crea una API Key de lectura+trading (sin retiros) en la configuración de tu cuenta Binance.',
+    binanceHelpLinkText: 'Abrir gestión de API de Binance →',
+    skipBinance: 'Omitir por ahora — usar Trading Sandbox',
+    aiProviderSubtitle:
+      'Elige el proveedor de IA que impulsará tu agente de trading.',
+    apiKey: 'Clave API',
+    apiKeyPlaceholder: 'Tu clave API de {{provider}}',
+    apiKeyHelp: 'Obtén tu clave API en',
+    apiKeyHelpClaude: 'Obtén tu clave API en',
+    apiKeyHelpOpenAI: 'Obtén tu clave API en',
+    apiKeyHelpGroq: 'Obtén tu clave API en',
+    sandboxTitle: 'Trading Sandbox',
+    sandboxDesc:
+      'Simula trades sin riesgo. El agente usa la lógica real pero sin dinero real.',
+    sandboxRecommended: 'Recomendado para principiantes',
+    liveTitle: 'Trading En Vivo',
+    liveDesc: 'Opera con fondos reales. Requiere claves API de Binance.',
+    liveRequiresBinance: '⚠️ Requiere claves API de Binance (Paso 1)',
+    initialCapitalSandbox: 'Capital Inicial (USDT) — simulado',
+    initialCapitalNote: 'Valor de referencia para tu portafolio simulado.',
+    continue: 'Continuar',
+    back: 'Atrás',
+    startTrading: 'Comenzar a Operar',
+    setupFailed: 'Configuración fallida. Por favor, inténtalo de nuevo.',
+  },
+  landing: {
+    badge: 'Trading Autónomo en Crypto · Potenciado por IA',
+    headline1: 'Tu Agente.',
+    headline2: 'Invierte',
+    headline3: 'por ti.',
+    sub: 'Un agente de IA analiza el mercado 24/7, gestiona tu riesgo y ejecuta operaciones en tu nombre. Sin esfuerzo. Sin emociones.',
+    startFree: 'Empezar gratis',
+    badge1: 'Paper Trading incluido',
+    badge2: 'Gestión de riesgo integrada',
+    badge3: 'Claude · GPT · Groq',
+    stat1Value: '4',
+    stat1Label: 'Pares de Trading',
+    stat2Value: '3',
+    stat2Label: 'Proveedores IA',
+    stat3Value: '24/7',
+    stat3Label: 'Monitoreo activo',
+    stat4Value: '10+',
+    stat4Label: 'Señales de Análisis',
+    howEyebrow: 'Cómo funciona',
+    howTitle: 'Tu agente trabaja mientras tú vives',
+    step1Title: 'Escanea el Mercado',
+    step1Desc:
+      'Monitorea pares BTC y ETH en tiempo real. Analiza volumen, tendencias y señales técnicas como RSI, MACD y Bollinger Bands.',
+    step2Title: 'Analiza con IA',
+    step2Desc:
+      'Procesa señales con Claude, GPT o Groq. Evalúa contexto, riesgo y oportunidades de trading con razonamiento profundo.',
+    step3Title: 'Ejecuta y Protege',
+    step3Desc:
+      'Opera con stop-loss, take-profit y sizing automático. Kill-switch disponible para detener todo en cualquier momento.',
+    featEyebrow: 'Plataforma completa',
+    featTitle: 'Todo lo que necesitas para operar mejor',
+    featSub:
+      'Desde análisis técnico hasta ejecución automática. Una plataforma construida por traders, para traders.',
+    featCoreBadge: 'Core',
+    featFreeBadge: 'Gratis',
+    feat1Title: 'Agente Autónomo',
+    feat1Desc:
+      'Opera 24/7 en tu nombre. Configurás la estrategia; el agente ejecuta con disciplina, sin emociones y sin interrupciones.',
+    feat2Title: 'Análisis Técnico',
+    feat2Desc:
+      'RSI, MACD, Bollinger Bands, EMA y ATR en tiempo real. Cada indicador alimenta las decisiones del agente.',
+    feat3Title: 'Gestión de Riesgo',
+    feat3Desc:
+      'Stop-loss, take-profit y position sizing automáticos. Kill-switch para detener toda actividad con un click.',
+    feat4Title: 'Paper Trading',
+    feat4Desc:
+      'Probá estrategias sin riesgo en modo simulado. Entendé el mercado antes de operar con capital real.',
+    feat5Title: 'News Intelligence',
+    feat5Desc:
+      'El agente consume noticias crypto en tiempo real para enriquecer sus decisiones con contexto fundamental del mercado.',
+    feat6Title: 'Charts en Vivo',
+    feat6Desc:
+      'Gráficos avanzados con indicadores superpuestos. Visualizá las operaciones del agente en tiempo real sobre el precio.',
+    aiEyebrow: 'Inteligencia artificial',
+    aiTitle: 'El cerebro detrás del agente',
+    aiSub:
+      'Elegís el provedor de IA que preferís. El agente se adapta a cada mercado.',
+    claude: 'Anthropic Claude',
+    claudeModel: 'claude-3-5-sonnet · claude-opus-4',
+    claudeDesc:
+      'Razonamiento profundo y contexto extenso. La opción preferida para análisis matizados de riesgo y estrategias de largo plazo.',
+    claudeTag: 'Razonamiento',
+    openai: 'OpenAI GPT',
+    openaiModel: 'gpt-4o · gpt-4-turbo',
+    openaiDesc:
+      'El estándar de la industria. Versatilidad, velocidad y confiabilidad probada en entornos de producción de alto volumen.',
+    openaiTag: 'Versatilidad',
+    groq: 'Groq',
+    groqModel: 'llama3-70b · mixtral-8x7b',
+    groqDesc:
+      'Inferencia ultrarrápida con hardware especializado. Ideal para análisis de alta frecuencia y decisiones de latencia mínima.',
+    groqTag: 'Velocidad',
+    riskEyebrow: 'Tu capital protegido',
+    riskTitle: 'Diseñado para proteger primero',
+    risk1Title: 'Stop-Loss automático',
+    risk1Desc:
+      'Cierra posiciones antes de que las pérdidas sobrepasen tu tolerancia.',
+    risk2Title: 'Take-Profit inteligente',
+    risk2Desc:
+      'Asegura ganancias automáticamente cuando se alcanza el objetivo.',
+    risk3Title: 'Kill-Switch global',
+    risk3Desc:
+      'Detiene toda actividad del agente con un solo click en cualquier momento.',
+    risk4Title: 'Position Sizing',
+    risk4Desc:
+      'El riesgo por operación se calcula automáticamente según tu configuración.',
+    ctaEyebrow: 'Comenzá hoy mismo',
+    ctaTitle1: '¿Listo para que tu portafolio',
+    ctaTitle2: 'trabaje solo?',
+    ctaSub:
+      'Creá tu cuenta, configurá tu estrategia y activá tu agente en minutos. No se necesita experiencia previa en trading.',
+    ctaStart: 'Crear cuenta gratis',
+    ctaGitHub: 'Ver en GitHub',
+    ctaDisclaimer:
+      'Paper Trading disponible. Sin tarjeta de crédito. Solo fines educativos.',
+    footerTagline: 'Potenciado por IA',
+    footerBy: 'Desarrollado por',
+    footerDisclaimer:
+      'Solo fines educativos. El trading de criptomonedas implica riesgo de pérdida.',
+    footerPlatformTitle: 'Plataforma',
+    footerResourcesTitle: 'Links',
+    footerHelp: 'Ayuda y Guía',
+    footerSignUp: 'Crear cuenta',
+    footerLogin: 'Iniciar sesión',
+    footerAITitle: 'Modelos de IA',
   },
 };
 

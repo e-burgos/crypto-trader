@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { NewsItem } from '@crypto-trader/shared';
-import { NewsSource, estimateSentiment, newsItemId } from './news-source.interface';
+import {
+  NewsSource,
+  estimateSentiment,
+  newsItemId,
+} from './news-source.interface';
 
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 
@@ -21,16 +25,18 @@ export class CoinGeckoNewsFetcher implements NewsSource {
         url: string;
         updated_at: number;
         description: string;
+        author?: string;
       }) => {
         const url = item.url || '';
+        const snippet = item.description?.trim() || '';
         return {
           id: newsItemId(this.name, url),
           source: this.name,
           headline: item.title || '',
           url,
-          sentiment: estimateSentiment(
-            `${item.title || ''} ${item.description || ''}`,
-          ),
+          summary: snippet || undefined,
+          author: item.author?.trim() || undefined,
+          sentiment: estimateSentiment(`${item.title || ''} ${snippet}`),
           publishedAt: new Date(item.updated_at * 1000),
           cachedAt: new Date(),
         } satisfies NewsItem;

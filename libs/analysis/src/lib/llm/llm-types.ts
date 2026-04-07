@@ -58,9 +58,15 @@ FORMAT:
   const indicators = input.indicatorSnapshot;
 
   const newsSnippets = input.newsItems
-    .slice(0, 5)
-    .map((n) => `[${n.sentiment}] ${n.headline}`)
-    .join('\n');
+    .slice(0, 10)
+    .map((n) => {
+      const parts = [`[${n.sentiment}][${n.source ?? ''}] ${n.headline}`];
+      if ((n as any).summary)
+        parts.push(`  → ${String((n as any).summary).slice(0, 200)}`);
+      if ((n as any).author) parts.push(`  Autor: ${(n as any).author}`);
+      return parts.join('\n');
+    })
+    .join('\n\n');
 
   const recentTradesSummary = input.recentTrades
     .slice(0, 3)

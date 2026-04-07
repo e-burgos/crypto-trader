@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { PasswordInput } from '../components/ui/password-input';
@@ -8,6 +9,7 @@ import { useAuthStore } from '../store/auth.store';
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { login, isLoading, error, clearError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,9 +37,9 @@ export function LoginPage() {
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
             <TrendingUp className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold">Welcome back</h1>
+          <h1 className="text-2xl font-bold">{t('auth.loginTitle')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in to your CryptoTrader account
+            {t('auth.loginSubtitle')}
           </p>
         </div>
 
@@ -55,7 +57,7 @@ export function LoginPage() {
                 htmlFor="email"
                 className="mb-1.5 block text-sm font-medium"
               >
-                Email
+                {t('auth.email')}
               </label>
               <input
                 id="email"
@@ -74,7 +76,7 @@ export function LoginPage() {
                 htmlFor="password"
                 className="mb-1.5 block text-sm font-medium"
               >
-                Password
+                {t('auth.password')}
               </label>
               <PasswordInput
                 id="password"
@@ -90,19 +92,19 @@ export function LoginPage() {
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                'Sign In'
+                t('auth.loginButton')
               )}
             </Button>
           </form>
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
+          {t('auth.noAccount')}{' '}
           <Link
             to="/register"
             className="font-medium text-primary hover:underline"
           >
-            Create one
+            {t('auth.createOne')}
           </Link>
         </p>
       </div>

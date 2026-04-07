@@ -103,6 +103,30 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
       );
     });
 
+    socket.on(
+      'agent:all-stopped',
+      (data: {
+        stopped: number;
+        openPositions: number;
+        hasLivePositions: boolean;
+      }) => {
+        queryClient.invalidateQueries({ queryKey: ['trading'] });
+        if (data.openPositions > 0) {
+          const liveWarning = data.hasLivePositions
+            ? ' Las posiciones LIVE están sin stop-loss activo.'
+            : '';
+          toast.warning(
+            `${data.stopped} agente${data.stopped !== 1 ? 's' : ''} detenido${data.stopped !== 1 ? 's' : ''}. ${data.openPositions} posición${data.openPositions !== 1 ? 'es' : ''} abierta${data.openPositions !== 1 ? 's' : ''} sin cobertura.${liveWarning}`,
+            { duration: 10000 },
+          );
+        } else {
+          toast.success(
+            `${data.stopped} agente${data.stopped !== 1 ? 's' : ''} detenido${data.stopped !== 1 ? 's' : ''} correctamente.`,
+          );
+        }
+      },
+    );
+
     return () => {
       socket?.disconnect();
       socket = null;

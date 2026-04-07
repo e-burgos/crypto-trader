@@ -98,7 +98,7 @@ export function ChatWidget() {
         ref={fabRef}
         onClick={toggle}
         className={cn(
-          'fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-2xl',
+          'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl',
           'bg-gradient-to-br from-primary to-primary/70 text-primary-foreground',
           'shadow-[0_4px_24px_hsl(var(--primary)/0.45)]',
           'transition-all duration-200 hover:scale-105 hover:shadow-[0_4px_32px_hsl(var(--primary)/0.6)]',
@@ -126,13 +126,15 @@ export function ChatWidget() {
         <div
           ref={overlayRef}
           className={cn(
-            'fixed bottom-24 right-6 z-50 flex w-[390px] flex-col overflow-hidden',
+            'fixed z-50 flex flex-col',
+            // Mobile: full screen with margins
+            'inset-x-2 top-16 bottom-20',
+            // Desktop: floating panel bottom-right
+            'sm:inset-x-auto sm:top-auto sm:bottom-24 sm:right-6 sm:w-[420px] sm:h-[70%]',
             'rounded-2xl',
-            // Gradient border via box-shadow + ring
             'shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_hsl(var(--primary)/0.25)]',
             'bg-[hsl(222_84%_5.5%)]',
           )}
-          style={{ height: '540px' }}
         >
           {/* Top accent line */}
           <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
@@ -263,21 +265,28 @@ function WelcomeState({
   return (
     <div
       ref={containerRef}
-      className="flex flex-1 flex-col items-center justify-center gap-4 p-5 text-center overflow-hidden"
+      className="flex flex-1 flex-col items-center gap-5 px-6 py-6 text-center overflow-y-auto scroll-smooth"
+      style={{
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'hsl(var(--primary)/0.3) transparent',
+      }}
     >
+      {/* Spacer para centrar verticalmente cuando no hay overflow */}
+      <div className="flex-1 min-h-4" />
+
       {/* Logo glow */}
-      <div className="welcome-el relative flex h-16 w-16 items-center justify-center">
-        <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
-        <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_24px_hsl(var(--primary)/0.4)]">
-          <BotMessageSquare className="h-8 w-8 text-primary" />
+      <div className="welcome-el relative flex h-20 w-20 items-center justify-center">
+        <div className="absolute inset-0 rounded-3xl bg-primary/25 blur-2xl animate-pulse" />
+        <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/15 ring-1 ring-primary/40 shadow-[0_0_32px_hsl(var(--primary)/0.45)]">
+          <BotMessageSquare className="h-10 w-10 text-primary" />
         </div>
       </div>
 
-      <div className="welcome-el">
-        <h3 className="text-base font-bold tracking-wide">
+      <div className="welcome-el space-y-1.5">
+        <h3 className="text-lg font-bold tracking-wide">
           {t('chat.welcomeTitle', { defaultValue: "Hi, I'm KRYPTO" })}
         </h3>
-        <p className="mt-1 text-xs text-muted-foreground/70 leading-relaxed max-w-[260px]">
+        <p className="text-sm text-muted-foreground/70 leading-relaxed max-w-[300px] mx-auto">
           {t('chat.welcomeDesc', {
             defaultValue:
               'Your internal trading agent. Ask me anything about the platform, markets, or blockchain.',
@@ -295,14 +304,17 @@ function WelcomeState({
       <button
         onClick={onNewSession}
         className={cn(
-          'welcome-el rounded-xl px-5 py-2.5 text-sm font-semibold',
+          'welcome-el w-full rounded-xl px-5 py-3 text-sm font-semibold',
           'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground',
-          'shadow-[0_0_16px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_24px_hsl(var(--primary)/0.6)]',
-          'transition-all duration-200 hover:scale-[1.03] active:scale-95',
+          'shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_28px_hsl(var(--primary)/0.6)]',
+          'transition-all duration-200 hover:scale-[1.02] active:scale-95',
         )}
       >
         {t('chat.newSession', { defaultValue: 'Start new chat' })}
       </button>
+
+      {/* Spacer inferior para centrado vertical cuando no hay overflow */}
+      <div className="flex-1 min-h-4" />
     </div>
   );
 }

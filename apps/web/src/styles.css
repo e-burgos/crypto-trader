@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 210 18% 98%;
     --foreground: 222.2 84% 4.9%;
     --primary: 173 80% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
+    --secondary: 210 36% 94%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
+    --muted: 210 36% 94%;
     --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 173 80% 40%;
     --accent-foreground: 222.2 47.4% 11.2%;
-    --border: 214.3 31.8% 91.4%;
+    --border: 214.3 24% 87%;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 218 32% 5.5%;
+    --foreground: 210 40% 95%;
     --primary: 173 80% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 218 24% 12%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 218 24% 12%;
+    --muted-foreground: 215 18% 58%;
     --accent: 173 80% 40%;
     --accent-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --card: 222.2 84% 6%;
+    --border: 218 18% 16%;
+    --card: 218 28% 8%;
     --card-foreground: 210 40% 98%;
   }
 
@@ -44,11 +44,29 @@
     scroll-behavior: smooth;
   }
 
+  /* ── App Background ── Light mode: subtle teal grid */
   body {
-    @apply bg-background text-foreground;
+    color: hsl(var(--foreground));
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
+    background-color: hsl(var(--background));
+    background-image:
+      linear-gradient(hsl(173 80% 40% / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(173 80% 40% / 0.04) 1px, transparent 1px);
+    background-size: 52px 52px;
+    background-attachment: fixed;
+  }
+
+  /* Dark mode: richer grid + ambient corner glows */
+  .dark body {
+    background-image:
+      linear-gradient(hsl(173 80% 40% / 0.055) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(173 80% 40% / 0.055) 1px, transparent 1px),
+      radial-gradient(ellipse 75% 55% at 92% 0%, hsl(173 80% 40% / 0.13) 0%, transparent 65%),
+      radial-gradient(ellipse 55% 45% at 4% 100%, hsl(173 80% 40% / 0.09) 0%, transparent 65%);
+    background-size: 52px 52px, 52px 52px, 100% 100%, 100% 100%;
+    background-attachment: fixed;
   }
 }
 
@@ -117,7 +135,78 @@
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--border)) transparent;
 }
+/* ── Landing: floating card ─────────────────────────────────────── */
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
 
+.landing-float {
+  animation: landing-float 5s ease-in-out infinite;
+}
+
+/* ── Landing: status indicator blink ───────────────────────────── */
+@keyframes landing-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.landing-status-blink {
+  animation: landing-status-pulse 2s ease-in-out infinite;
+}
+
+/* ── Onboarding: rotating conic border glow ─────────────────────── */
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes onboarding-border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+.onboarding-glow-border {
+  background: conic-gradient(
+    from var(--border-angle),
+    hsl(var(--border)) 0%,
+    hsl(var(--primary) / 0) 55%,
+    hsl(var(--primary) / 0.7) 72%,
+    hsl(var(--primary)) 78%,
+    hsl(var(--primary) / 0.7) 84%,
+    hsl(var(--primary) / 0) 95%,
+    hsl(var(--border)) 100%
+  );
+  animation: onboarding-border-spin 5s linear infinite;
+  padding: 1px;
+  border-radius: calc(var(--radius) + 3px);
+}
+
+/* ── Landing: process connector dot travel ──────────────────────── */
+@keyframes proc-dot-travel {
+  0% {
+    left: 0%;
+  }
+  100% {
+    left: calc(100% - 12px);
+  }
+}
+
+.proc-dot {
+  animation: proc-dot-travel 3s ease-in-out 1.5s infinite alternate;
+}
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }

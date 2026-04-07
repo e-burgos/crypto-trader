@@ -9,9 +9,11 @@ import {
 } from '@crypto-trader/data-fetcher';
 import { CandleInterval } from '@crypto-trader/shared';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
+import { createLLMProvider } from '@crypto-trader/analysis';
 import { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
 import { NewsApiProvider } from '../../generated/prisma/enums';
+import { LLMProvider } from '@crypto-trader/shared';
 
 const VALID_ASSETS = ['BTC', 'ETH'];
 const VALID_INTERVALS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -106,32 +108,58 @@ export class MarketService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOhlcv(asset: string, interval: string, limit = 200) {
-    const assetUpper = asset.toUpperCase();
-    const intervalClean = interval.toLowerCase();
+  // ── News Config ────────────────────────────────────────────────────────────
 
-    if (!VALID_ASSETS.includes(assetUpper)) {
-      throw new Error(`Invalid asset: ${asset}. Must be BTC or ETH`);
-    }
-    if (!VALID_INTERVALS.includes(intervalClean)) {
-      throw new Error(
-        `Invalid interval: ${interval}. Must be one of ${VALID_INTERVALS.join(', ')}`,
-      );
-    }
-
-    const symbol = `${assetUpper}USDT`;
-    return this.binance.getKlines(
-      symbol,
-      intervalClean as CandleInterval,
-      Math.min(limit, 500),
-    );
+  async getNewsConfig(userId: string) {
+    const cfg = await this.prisma.newsConfig.findUnique({ where: { userId } });
+    if (cfg) return cfg;
+    return this.prisma.newsConfig.create({
+      data: {
+        userId,
+        intervalMinutes: 30,
+        newsCount: 40,
+        enabledSources: [],
+        onlySummary: true,
+        botEnabled: true,
+      },
+    });
   }
 
-  async getNews(userId: string, limit = 20) {
-    const freeSources = FREE_NEWS_SOURCES.map((s) => s.factory());
+  async updateNewsConfig(
+    userId: string,
+    data: {
+      intervalMinutes?: number;
+      newsCount?: number;
+      enabledSources?: string[];
+      onlySummary?: boolean;
+      botEnabled?: boolean;
+    },
+  ) {
+    return this.prisma.newsConfig.upsert({
+      where: { userId },
+      create: {
+        userId,
+        intervalMinutes: data.intervalMinutes ?? 30,
+        newsCount: data.newsCount ?? 40,
+        enabledSources: data.enabledSources ?? [],
+        onlySummary: data.onlySummary ?? true,
+        botEnabled: data.botEnabled ?? true,
+      },
+      update: data,
+    });
+  }
+
+  // ── Internal: build sources & fetch news ──────────────────────────────────
+
+  private async buildNewsSources(userId: string, enabledSources: string[]) {
+    const all = enabledSources.length === 0;
+    const freeSources = FREE_NEWS_SOURCES.filter(
+      (s) => all || enabledSources.includes(s.id),
+    ).map((s) => s.factory());
 
     const optionalSources = await Promise.all(
       OPTIONAL_NEWS_SOURCES.map(async (s) => {
+        if (!all && !enabledSources.includes(s.id)) return null;
         const cred = await this.prisma.newsApiCredential.findFirst({
           where: { userId, provider: s.provider, isActive: true },
         });
@@ -141,14 +169,185 @@ export class MarketService {
       }),
     );
 
-    const sources = [
-      ...freeSources,
-      ...optionalSources.filter(Boolean),
-    ] as ReturnType<(typeof FREE_NEWS_SOURCES)[number]['factory']>[];
-
-    const aggregator = new NewsAggregator(sources, { cacheTtlSeconds: 300 });
-    return aggregator.fetchAll(Math.min(limit, 100));
+    return [...freeSources, ...optionalSources.filter(Boolean)] as ReturnType<
+      (typeof FREE_NEWS_SOURCES)[number]['factory']
+    >[];
   }
+
+  // ── News fetch (raw) ───────────────────────────────────────────────────────
+
+  async getNews(userId: string, limit?: number) {
+    const cfg = await this.getNewsConfig(userId);
+    const count = limit ?? cfg.newsCount;
+    const sources = await this.buildNewsSources(userId, cfg.enabledSources);
+    const aggregator = new NewsAggregator(sources, { cacheTtlSeconds: 300 });
+    const items = await aggregator.fetchAll(Math.min(count, 100));
+    return cfg.onlySummary ? items.filter((n) => !!n.summary) : items;
+  }
+
+  // ── Keyword sentiment analysis → persists to DB ───────────────────────────
+
+  async runKeywordAnalysis(userId: string) {
+    const cfg = await this.getNewsConfig(userId);
+    const sources = await this.buildNewsSources(userId, cfg.enabledSources);
+    const aggregator = new NewsAggregator(sources, { cacheTtlSeconds: 300 });
+    const raw = await aggregator.fetchAll(Math.min(cfg.newsCount, 100));
+    const items = cfg.onlySummary ? raw.filter((n) => !!n.summary) : raw;
+
+    const positive = items.filter((n) => n.sentiment === 'POSITIVE').length;
+    const negative = items.filter((n) => n.sentiment === 'NEGATIVE').length;
+    const neutral = items.filter((n) => n.sentiment === 'NEUTRAL').length;
+    const total = items.length;
+    const score =
+      total > 0 ? Math.round(((positive - negative) / total) * 100) : 0;
+    const overallSentiment =
+      score > 20 ? 'BULLISH' : score < -20 ? 'BEARISH' : 'NEUTRAL';
+    const summary = `${positive} positivas, ${negative} negativas, ${neutral} neutrales — score ${score > 0 ? '+' : ''}${score} sobre ${total} noticias. Sentimiento general: ${overallSentiment}. Análisis keyword-based sobre titulares y resúmenes.`;
+
+    const headlines = items.map((n) => ({
+      id: n.id,
+      source: n.source,
+      headline: n.headline,
+      sentiment: n.sentiment as string,
+      summary: n.summary ?? null,
+      author: n.author ?? null,
+      publishedAt: n.publishedAt,
+    }));
+
+    // Delete old record and create new (one active record per user)
+    await this.prisma.newsAnalysis.deleteMany({ where: { userId } });
+    return this.prisma.newsAnalysis.create({
+      data: {
+        userId,
+        newsCount: total,
+        positiveCount: positive,
+        negativeCount: negative,
+        neutralCount: neutral,
+        score,
+        overallSentiment,
+        summary,
+        headlines: headlines as any,
+      },
+    });
+  }
+
+  // ── Get latest persisted analysis ─────────────────────────────────────────
+
+  async getLatestAnalysis(userId: string) {
+    return this.prisma.newsAnalysis.findFirst({
+      where: { userId },
+      orderBy: { analyzedAt: 'desc' },
+    });
+  }
+
+  // ── AI Sentiment Analysis → updates latest DB record ──────────────────────
+
+  async analyzeSentiment(userId: string, provider: string, model?: string) {
+    // Ensure a keyword analysis exists; create one if not
+    let analysis = await this.getLatestAnalysis(userId);
+    if (!analysis) {
+      analysis = await this.runKeywordAnalysis(userId);
+    }
+
+    const cfg = await this.getNewsConfig(userId);
+    const headlines = (
+      analysis.headlines as Array<{
+        id: string;
+        headline: string;
+        summary?: string | null;
+        source?: string;
+        author?: string | null;
+      }>
+    ).slice(0, cfg.newsCount);
+
+    const cred = await this.prisma.lLMCredential.findUnique({
+      where: { userId_provider: { userId, provider: provider as LLMProvider } },
+    });
+    if (!cred)
+      throw new Error(`No LLM credential found for provider: ${provider}`);
+
+    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+    const usedModel = model || cred.selectedModel || undefined;
+    const llm = createLLMProvider(provider as LLMProvider, apiKey, usedModel);
+
+    const system = `You are a financial news sentiment classifier for cryptocurrency markets.
+Analyze each news item and classify its sentiment toward crypto markets.
+Always respond with valid JSON only — no markdown, no extra text.
+
+Rules:
+- POSITIVE: bullish news, price increases, institutional adoption, positive regulatory news, new highs, partnerships
+- NEGATIVE: crashes, hacks, scams, bans, heavy regulation, price drops, security issues, bankruptcies
+- NEUTRAL: price tracking, routine updates, educational content, mixed signals
+- reasoning: one sentence max (under 100 chars)`;
+
+    const numbered = headlines
+      .map((h, i) => {
+        const lines = [`${i + 1}. [${h.source ?? ''}] ${h.headline}`];
+        if (h.summary) lines.push(`   Summary: ${h.summary.slice(0, 200)}`);
+        if (h.author) lines.push(`   Author: ${h.author}`);
+        return lines.join('\n');
+      })
+      .join('\n\n');
+
+    const user = `Classify the sentiment of each news item. Return a JSON array:
+[{"index": 1, "sentiment": "POSITIVE"|"NEGATIVE"|"NEUTRAL", "reasoning": "string"}, ...]
+
+News items:
+${numbered}`;
+
+    let parsed: { index: number; sentiment: string; reasoning: string }[] = [];
+    try {
+      const raw = await llm.complete(system, user);
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      throw new Error(
+        `Failed to parse LLM sentiment response: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    const validSentiments = new Set(['POSITIVE', 'NEGATIVE', 'NEUTRAL']);
+    const aiHeadlines = headlines.map((h, i) => {
+      const result = parsed.find((p) => p.index === i + 1);
+      const sentiment =
+        result && validSentiments.has(result.sentiment.toUpperCase())
+          ? (result.sentiment.toUpperCase() as
+              | 'POSITIVE'
+              | 'NEGATIVE'
+              | 'NEUTRAL')
+          : 'NEUTRAL';
+      return { id: h.id, sentiment, reasoning: result?.reasoning ?? '' };
+    });
+
+    const aiPos = aiHeadlines.filter((h) => h.sentiment === 'POSITIVE').length;
+    const aiNeg = aiHeadlines.filter((h) => h.sentiment === 'NEGATIVE').length;
+    const aiNeu = aiHeadlines.filter((h) => h.sentiment === 'NEUTRAL').length;
+    const aiTotal = aiHeadlines.length;
+    const aiScore =
+      aiTotal > 0 ? Math.round(((aiPos - aiNeg) / aiTotal) * 100) : 0;
+    const aiOverall =
+      aiScore > 20 ? 'BULLISH' : aiScore < -20 ? 'BEARISH' : 'NEUTRAL';
+    const aiSummary = `IA (${provider}${usedModel ? ' / ' + usedModel : ''}): ${aiPos} positivas, ${aiNeg} negativas, ${aiNeu} neutrales — score ${aiScore > 0 ? '+' : ''}${aiScore} sobre ${aiTotal} noticias. Sentimiento: ${aiOverall}.`;
+
+    // Update the existing record with AI results
+    return this.prisma.newsAnalysis.update({
+      where: { id: analysis.id },
+      data: {
+        aiAnalyzedAt: new Date(),
+        aiProvider: provider,
+        aiModel: usedModel ?? null,
+        aiPositiveCount: aiPos,
+        aiNegativeCount: aiNeg,
+        aiNeutralCount: aiNeu,
+        aiScore,
+        aiOverallSentiment: aiOverall,
+        aiSummary,
+        aiHeadlines: aiHeadlines as any,
+      },
+    });
+  }
+
+  // ── News Sources status ───────────────────────────────────────────────────
 
   async getNewsSourcesStatus(userId: string) {
     const freeResults = await Promise.allSettled(
@@ -213,6 +412,29 @@ export class MarketService {
     );
 
     return [...freeStatuses, ...optionalStatuses];
+  }
+
+  // ── OHLCV & Snapshot ──────────────────────────────────────────────────────
+
+  async getOhlcv(asset: string, interval: string, limit = 200) {
+    const assetUpper = asset.toUpperCase();
+    const intervalClean = interval.toLowerCase();
+
+    if (!VALID_ASSETS.includes(assetUpper)) {
+      throw new Error(`Invalid asset: ${asset}. Must be BTC or ETH`);
+    }
+    if (!VALID_INTERVALS.includes(intervalClean)) {
+      throw new Error(
+        `Invalid interval: ${interval}. Must be one of ${VALID_INTERVALS.join(', ')}`,
+      );
+    }
+
+    const symbol = `${assetUpper}USDT`;
+    return this.binance.getKlines(
+      symbol,
+      intervalClean as CandleInterval,
+      Math.min(limit, 500),
+    );
   }
 
   async getSnapshot(symbol: string) {

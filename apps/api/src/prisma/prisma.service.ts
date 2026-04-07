@@ -58,6 +58,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get chatMessage() {
     return this._client.chatMessage;
   }
+  get newsConfig() {
+    return this._client.newsConfig;
+  }
+  get newsAnalysis() {
+    return this._client.newsAnalysis;
+  }
 
   $transaction(...args: Parameters<PrismaClientInstance['$transaction']>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

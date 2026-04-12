@@ -2,12 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 
-export type TradingMode = 'SANDBOX' | 'LIVE';
+export type TradingMode = 'SANDBOX' | 'LIVE' | 'TESTNET';
 export type TradingAsset = 'BTC' | 'ETH';
 export type TradingPair = 'USDT' | 'USDC';
+export type IntervalMode = 'AGENT' | 'CUSTOM';
 
 export interface TradingConfig {
   id: string;
+  name: string;
   asset: TradingAsset;
   pair: TradingPair;
   mode: TradingMode;
@@ -15,15 +17,19 @@ export interface TradingConfig {
   sellThreshold: number;
   stopLossPct: number;
   takeProfitPct: number;
+  minProfitPct: number;
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;
+  intervalMode: IntervalMode;
   orderPriceOffsetPct: number;
   isActive: boolean;
+  isRunning: boolean;
   createdAt: string;
 }
 
 export interface TradingConfigDto {
+  name?: string;
   asset: TradingAsset;
   pair: TradingPair;
   mode: TradingMode;
@@ -31,9 +37,11 @@ export interface TradingConfigDto {
   sellThreshold: number;
   stopLossPct: number;
   takeProfitPct: number;
+  minProfitPct: number;
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;
+  intervalMode: IntervalMode;
   orderPriceOffsetPct: number;
 }
 
@@ -57,6 +65,25 @@ export interface TradingPosition {
   fees: number;
   status: 'OPEN' | 'CLOSED';
   pnl: number | null;
+  config?: {
+    stopLossPct: number;
+    takeProfitPct: number;
+    maxTradePct: number;
+    buyThreshold: number;
+    sellThreshold: number;
+    minIntervalMinutes: number;
+    orderPriceOffsetPct: number;
+    maxConcurrentPositions: number;
+  };
+  trades?: {
+    id: string;
+    type: 'BUY' | 'SELL';
+    price: number;
+    quantity: number;
+    fee: number;
+    executedAt: string;
+    binanceOrderId?: string | null;
+  }[];
 }
 
 export interface TradingHistoryItem {
@@ -79,6 +106,8 @@ export interface TradingDecision {
   confidence: number;
   reasoning: string;
   waitMinutes?: number;
+  configId?: string;
+  configName?: string;
   createdAt: string;
 }
 
@@ -90,25 +119,58 @@ export function useTradingConfigs() {
   });
 }
 
-export function useUpsertConfig() {
+export function useCreateConfig() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: TradingConfigDto) =>
-      api.put<TradingConfig>('/trading/config', data),
+      api.post<TradingConfig>('/trading/config', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading', 'config'] });
-      toast.success('Configuración guardada');
+      toast.success('Configuración creada');
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al guardar la configuración'),
+      toast.error(err?.message || 'Error al crear la configuración'),
+  });
+}
+
+export function useUpdateConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<TradingConfigDto>;
+    }) => api.put<TradingConfig>(`/trading/config/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trading', 'config'] });
+      toast.success('Configuración actualizada');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al actualizar la configuración'),
+  });
+}
+
+export function useDeleteConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (configId: string) =>
+      api.delete<{ deleted: boolean }>(`/trading/config/${configId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trading', 'config'] });
+      qc.invalidateQueries({ queryKey: ['trading', 'status'] });
+      toast.success('Configuración eliminada');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al eliminar la configuración'),
   });
 }
 
 export function useStartAgent() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { asset: string; pair: string }) =>
-      api.post('/trading/start', data),
+    mutationFn: (configId: string) => api.post('/trading/start', { configId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading'] });
       toast.success('Agente iniciado');
@@ -121,8 +183,7 @@ export function useStartAgent() {
 export function useStopAgent() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { asset: string; pair: string }) =>
-      api.post('/trading/stop', data),
+    mutationFn: (configId: string) => api.post('/trading/stop', { configId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading'] });
       toast.success('Agente detenido');
@@ -212,5 +273,22 @@ export function useSandboxWallet() {
     queryKey: ['trading', 'sandbox-wallet'],
     queryFn: () => api.get('/trading/wallet'),
     refetchInterval: 30_000,
+  });
+}
+
+export interface BinanceBalanceEntry {
+  currency: string;
+  balance: number;
+}
+
+export function useBinanceBalance(mode: 'LIVE' | 'TESTNET', hasKeys: boolean) {
+  return useQuery<BinanceBalanceEntry[]>({
+    queryKey: ['trading', 'binance-balance', mode],
+    queryFn: () => api.get(`/trading/balance?mode=${mode}`),
+    enabled: hasKeys,
+    // Backend caches this for 5 minutes — polling more often only wastes requests.
+    // For TESTNET this avoids IP-ban escalation on testnet.binance.vision.
+    refetchInterval: 5 * 60_000, // 5 minutes
+    retry: false,
   });
 }

@@ -18,7 +18,70 @@ export interface Trade {
   fee: number;
   executedAt: string;
   mode: 'LIVE' | 'PAPER' | 'SANDBOX';
-  position?: { asset: string; pair: string };
+  position?: {
+    asset: string;
+    pair: string;
+    entryPrice: number;
+    exitPrice?: number | null;
+    pnl?: number | null;
+    fees: number;
+    status: string;
+    entryAt: string;
+    exitAt?: string | null;
+    config?: {
+      stopLossPct: number;
+      takeProfitPct: number;
+      maxTradePct: number;
+      buyThreshold: number;
+      sellThreshold: number;
+      minIntervalMinutes: number;
+      orderPriceOffsetPct: number;
+    };
+  };
+}
+
+export interface AgentDecisionIndicators {
+  rsi?: { value: number; signal: string };
+  macd?: { macd: number; signal: number; histogram: number; crossover: string };
+  bollingerBands?: {
+    upper: number;
+    middle: number;
+    lower: number;
+    bandwidth: number;
+    position: string;
+  };
+  emaCross?: {
+    ema9: number;
+    ema21: number;
+    ema200: number;
+    trend: string;
+  };
+  volume?: { current: number; average: number; ratio: number; signal: string };
+  supportResistance?: { support: number[]; resistance: number[] };
+}
+
+export interface AgentDecisionHeadline {
+  headline: string;
+  sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+  summary?: string | null;
+  author?: string | null;
+  source: string;
+}
+
+export interface AgentDecisionConfigDetails {
+  buyThreshold: number;
+  sellThreshold: number;
+  stopLossPct: number;
+  takeProfitPct: number;
+  minProfitPct: number;
+  maxTradePct: number;
+  maxConcurrentPositions: number;
+  minIntervalMinutes: number;
+  intervalMode: string;
+  orderPriceOffsetPct: number;
+  isRunning: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AgentDecision {
@@ -29,12 +92,21 @@ export interface AgentDecision {
   confidence: number;
   reasoning: string;
   waitMinutes?: number;
+  configId?: string;
+  configName?: string;
+  mode?: string;
   createdAt: string;
+  indicators?: AgentDecisionIndicators;
+  newsHeadlines?: AgentDecisionHeadline[];
+  configDetails?: AgentDecisionConfigDetails | null;
+  llmProvider?: string | null;
+  llmModel?: string | null;
 }
 
 export interface TradeInfo {
   pnl: number | null;
   asset: string;
+  pair: string;
   executedAt: string | null;
 }
 

@@ -128,8 +128,14 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
     );
 
     return () => {
-      socket?.disconnect();
-      socket = null;
+      // Remove all listeners first so no stale callbacks fire after cleanup,
+      // even if the socket is still in CONNECTING state (avoids the
+      // "WebSocket is closed before the connection is established" browser warning).
+      if (socket) {
+        socket.removeAllListeners();
+        socket.disconnect();
+        socket = null;
+      }
       connected.current = false;
     };
   }, [isAuthenticated, accessToken, queryClient, setPrice]);

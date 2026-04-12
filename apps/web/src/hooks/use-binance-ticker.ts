@@ -76,8 +76,10 @@ export function useBinanceTicker(symbol: string): {
         }
       };
 
+      // Do NOT call ws.close() here — the browser closes the socket automatically
+      // after an error and fires onclose, which handles reconnect.
       ws.onerror = () => {
-        ws.close();
+        // intentionally empty; onclose will fire next and schedule reconnect
       };
 
       ws.onclose = () => {
@@ -93,9 +95,22 @@ export function useBinanceTicker(symbol: string): {
     return () => {
       dead = true;
       if (retryRef.current) clearTimeout(retryRef.current);
-      wsRef.current?.close();
-      wsRef.current = null;
-      setConnected(false);
+      const ws = wsRef.current;
+      if (ws) {
+        // Null out handlers first so no state updates or retries fire after cleanup,
+        // even if the socket is still in CONNECTING state when we close it.
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        if (
+          ws.readyState !== WebSocket.CLOSING &&
+          ws.readyState !== WebSocket.CLOSED
+        ) {
+          ws.close();
+        }
+        wsRef.current = null;
+      }
     };
   }, [symbol]);
 

@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "nx": "nx",
-    "dev": "pnpm dev:api & pnpm dev:web",
+    "dev": "pnpm docker:infra && pnpm dev:api & pnpm dev:web",
     "dev:api": "pnpm nx serve api",
     "dev:web": "pnpm nx serve web",
     "build": "pnpm nx run-many --target=build --all",
@@ -30,6 +30,7 @@
     "db:seed": "cd apps/api && npx prisma db seed",
     "db:studio": "cd apps/api && npx prisma studio",
     "db:generate": "pnpm exec prisma generate --schema=apps/api/prisma/schema.prisma",
+    "docker:infra": "docker compose up -d postgres redis",
     "typecheck": "pnpm nx run-many --target=typecheck --all",
     "affected:build": "pnpm nx affected --target=build",
     "affected:test": "pnpm nx affected --target=test",

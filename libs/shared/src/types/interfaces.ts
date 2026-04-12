@@ -80,6 +80,13 @@ export interface IndicatorSnapshot {
 }
 
 // ── LLM ──────────────────────────────────────────────────
+export interface RecentDecisionRecord {
+  decision: string;
+  confidence: number;
+  reasoning: string;
+  createdAt: string;
+}
+
 export interface LLMAnalysisInput {
   asset: Asset;
   pair: QuoteCurrency;
@@ -87,7 +94,11 @@ export interface LLMAnalysisInput {
   recentCandles: Candle[];
   newsItems: NewsItem[];
   recentTrades: TradeRecord[];
+  /** Last N agent decisions for this config (newest first) */
+  recentDecisions?: RecentDecisionRecord[];
   userConfig: TradingConfigData;
+  /** Weight (0-100) that news sentiment carries in the decision */
+  newsWeight: number;
 }
 
 export interface LLMDecision {
@@ -146,6 +157,8 @@ export interface TradingConfigData {
   sellThreshold: number;
   stopLossPct: number;
   takeProfitPct: number;
+  /** Minimum profit % required for LLM-driven SELL (e.g. 0.003 = 0.3%) */
+  minProfitPct: number;
   maxTradePct: number;
   maxConcurrentPositions: number;
   minIntervalMinutes: number;

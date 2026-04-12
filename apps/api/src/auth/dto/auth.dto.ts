@@ -72,6 +72,18 @@ export class BinanceKeyDto {
   apiSecret!: string;
 }
 
+export class SetTestnetBinanceKeysDto {
+  @ApiProperty({
+    description: 'Binance Testnet API Key',
+  })
+  @IsString()
+  apiKey!: string;
+
+  @ApiProperty({ description: 'Binance Testnet API Secret' })
+  @IsString()
+  apiSecret!: string;
+}
+
 export class LLMKeyDto {
   @ApiProperty({ enum: ['CLAUDE', 'OPENAI', 'GROQ'], example: 'CLAUDE' })
   @IsString()

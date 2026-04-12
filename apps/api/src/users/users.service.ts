@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   UpdateUserDto,
   BinanceKeyDto,
+  SetTestnetBinanceKeysDto,
   LLMKeyDto,
   NewsApiKeyDto,
 } from '../auth/dto/auth.dto';
@@ -55,9 +56,10 @@ export class UsersService {
     const { encrypted: secretEncrypted, iv: secretIv } = encrypt(dto.apiSecret);
 
     return this.prisma.binanceCredential.upsert({
-      where: { userId },
+      where: { userId_isTestnet: { userId, isTestnet: false } },
       create: {
         userId,
+        isTestnet: false,
         apiKeyEncrypted,
         apiKeyIv,
         secretEncrypted,
@@ -76,12 +78,14 @@ export class UsersService {
   }
 
   async deleteBinanceKeys(userId: string) {
-    await this.prisma.binanceCredential.deleteMany({ where: { userId } });
+    await this.prisma.binanceCredential.deleteMany({
+      where: { userId, isTestnet: false },
+    });
   }
 
   async getBinanceKeyStatus(userId: string) {
     const cred = await this.prisma.binanceCredential.findUnique({
-      where: { userId },
+      where: { userId_isTestnet: { userId, isTestnet: false } },
       select: { isActive: true, createdAt: true },
     });
     return { hasKeys: !!cred, isActive: cred?.isActive ?? false };
@@ -89,13 +93,76 @@ export class UsersService {
 
   async getBinanceKeys(userId: string) {
     const cred = await this.prisma.binanceCredential.findUnique({
-      where: { userId },
+      where: { userId_isTestnet: { userId, isTestnet: false } },
     });
     if (!cred) throw new NotFoundException('No Binance credentials found');
     return {
       apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
       apiSecret: decrypt(cred.secretEncrypted, cred.secretIv),
     };
+  }
+
+  // ── Binance Testnet credentials ────────────────────────────────────────────
+
+  async setTestnetBinanceKeys(userId: string, dto: SetTestnetBinanceKeysDto) {
+    const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
+    const { encrypted: secretEncrypted, iv: secretIv } = encrypt(dto.apiSecret);
+
+    return this.prisma.binanceCredential.upsert({
+      where: { userId_isTestnet: { userId, isTestnet: true } },
+      create: {
+        userId,
+        isTestnet: true,
+        apiKeyEncrypted,
+        apiKeyIv,
+        secretEncrypted,
+        secretIv,
+        isActive: true,
+      },
+      update: {
+        apiKeyEncrypted,
+        apiKeyIv,
+        secretEncrypted,
+        secretIv,
+        isActive: true,
+      },
+      select: { id: true, isActive: true, createdAt: true },
+    });
+  }
+
+  async deleteTestnetBinanceKeys(userId: string) {
+    await this.prisma.binanceCredential.deleteMany({
+      where: { userId, isTestnet: true },
+    });
+  }
+
+  async getTestnetBinanceKeyStatus(userId: string) {
+    const cred = await this.prisma.binanceCredential.findUnique({
+      where: { userId_isTestnet: { userId, isTestnet: true } },
+      select: { isActive: true, createdAt: true },
+    });
+    return { hasKeys: !!cred, isActive: cred?.isActive ?? false };
+  }
+
+  async testTestnetBinanceConnection(userId: string) {
+    const cred = await this.prisma.binanceCredential.findUnique({
+      where: { userId_isTestnet: { userId, isTestnet: true } },
+    });
+    if (!cred)
+      return { connected: false, error: 'No testnet credentials saved' };
+    try {
+      const { BinanceRestClient } = await import('@crypto-trader/data-fetcher');
+      const client = new BinanceRestClient({
+        apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+        apiSecret: decrypt(cred.secretEncrypted, cred.secretIv),
+        testnet: true,
+      });
+      await client.getBalances();
+      return { connected: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { connected: false, error: msg };
+    }
   }
 
   // ── LLM credentials ────────────────────────────────────────────────────────
@@ -179,7 +246,7 @@ export class UsersService {
 
   async testBinanceConnection(userId: string) {
     const cred = await this.prisma.binanceCredential.findUnique({
-      where: { userId },
+      where: { userId_isTestnet: { userId, isTestnet: false } },
     });
     if (!cred) return { connected: false, error: 'No credentials saved' };
     try {

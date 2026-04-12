@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Delete,
   Param,
   UseGuards,
   HttpCode,
@@ -66,5 +67,15 @@ export class NotificationsController {
   @ApiResponse({ status: 404, description: 'Notificación no encontrada' })
   markRead(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.notificationsService.markRead(user.userId, id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar una notificación' })
+  @ApiParam({ name: 'id', description: 'ID de la notificación' })
+  @ApiResponse({ status: 204, description: 'Notificación eliminada' })
+  @ApiResponse({ status: 404, description: 'Notificación no encontrada' })
+  deleteOne(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.notificationsService.deleteOne(user.userId, id);
   }
 }

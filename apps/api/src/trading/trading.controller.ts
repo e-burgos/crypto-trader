@@ -3,12 +3,14 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
   UseGuards,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -23,6 +25,7 @@ import {
   CreateTradingConfigDto,
   UpdateTradingConfigDto,
   StartAgentDto,
+  StopAgentDto,
 } from './dto/trading-config.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -46,17 +49,29 @@ export class TradingController {
     return this.tradingService.getConfigs(user.userId);
   }
 
-  @Put('config')
-  @ApiOperation({
-    summary:
-      'Crear o actualizar configuración de trading (upsert por asset+pair)',
-  })
-  @ApiResponse({ status: 200, description: 'Configuración guardada' })
-  upsertConfig(
+  @Post('config')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear una nueva configuración de trading' })
+  @ApiResponse({ status: 201, description: 'Configuración creada' })
+  @ApiResponse({ status: 400, description: 'Configuración idéntica ya existe' })
+  createConfig(
     @CurrentUser() user: RequestUser,
     @Body() dto: CreateTradingConfigDto,
   ) {
-    return this.tradingService.upsertConfig(user.userId, dto);
+    return this.tradingService.createConfig(user.userId, dto);
+  }
+
+  @Delete('config/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Eliminar una configuración y detener su agente' })
+  @ApiParam({ name: 'id', description: 'ID de la configuración' })
+  @ApiResponse({ status: 200, description: 'Configuración eliminada' })
+  @ApiResponse({ status: 404, description: 'Configuración no encontrada' })
+  deleteConfig(
+    @CurrentUser() user: RequestUser,
+    @Param('id') configId: string,
+  ) {
+    return this.tradingService.deleteConfig(user.userId, configId);
   }
 
   @Put('config/:id')
@@ -91,14 +106,11 @@ export class TradingController {
   @Post('stop')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Detener el agente de trading para un par específico',
+    summary: 'Detener el agente de trading para una configuración específica',
   })
   @ApiResponse({ status: 200, description: 'Agente detenido' })
-  stopAgent(
-    @CurrentUser() user: RequestUser,
-    @Body() body: { asset: string; pair: string },
-  ) {
-    return this.tradingService.stopAgent(user.userId, body.asset, body.pair);
+  stopAgent(@CurrentUser() user: RequestUser, @Body() dto: StopAgentDto) {
+    return this.tradingService.stopAgent(user.userId, dto.configId);
   }
 
   @Post('stop-all')
@@ -224,5 +236,48 @@ export class TradingController {
   @ApiResponse({ status: 200, description: 'Balances por moneda estable' })
   getWallet(@CurrentUser() user: RequestUser) {
     return this.tradingService.getSandboxWallet(user.userId);
+  }
+
+  // ── Live Binance balance (LIVE / TESTNET) ─────────────────────────────────
+
+  @Get('balance')
+  @ApiOperation({
+    summary:
+      'Balance real de USDT y USDC desde Binance (requiere claves API del modo)',
+  })
+  @ApiQuery({
+    name: 'mode',
+    required: true,
+    enum: ['LIVE', 'TESTNET'],
+    description:
+      'Modo de trading: LIVE (producción) o TESTNET (testnet Binance)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array de { currency, balance } para USDT y USDC',
+    schema: {
+      example: [
+        { currency: 'USDT', balance: 1000.5 },
+        { currency: 'USDC', balance: 500 },
+      ],
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Modo inválido o sin claves configuradas',
+  })
+  getLiveBinanceBalance(
+    @CurrentUser() user: RequestUser,
+    @Query('mode') mode?: string,
+  ) {
+    if (mode !== 'LIVE' && mode !== 'TESTNET') {
+      throw new BadRequestException(
+        "El parámetro 'mode' debe ser 'LIVE' o 'TESTNET'",
+      );
+    }
+    return this.tradingService.getLiveBinanceBalance(
+      user.userId,
+      mode === 'TESTNET',
+    );
   }
 }

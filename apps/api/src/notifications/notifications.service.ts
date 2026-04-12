@@ -55,4 +55,10 @@ export class NotificationsService {
       data: { read: true },
     });
   }
+
+  async deleteOne(userId: string, notificationId: string) {
+    await this.prisma.notification.deleteMany({
+      where: { id: notificationId, userId },
+    });
+  }
 }

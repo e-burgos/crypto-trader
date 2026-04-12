@@ -22,6 +22,7 @@ import { UsersService } from './users.service';
 import {
   UpdateUserDto,
   BinanceKeyDto,
+  SetTestnetBinanceKeysDto,
   LLMKeyDto,
   NewsApiKeyDto,
   UpdateUserStatusDto,
@@ -94,6 +95,50 @@ export class UsersController {
   @ApiResponse({ status: 200, schema: { example: { connected: true } } })
   testBinanceConnection(@CurrentUser() user: RequestUser) {
     return this.usersService.testBinanceConnection(user.userId);
+  }
+
+  // ── /users/me/binance-keys/testnet ─────────────────────────────────────
+
+  @Post('users/me/binance-keys/testnet')
+  @ApiOperation({
+    summary:
+      'Guardar credenciales de Binance Testnet (encriptadas AES-256-GCM)',
+  })
+  @ApiResponse({ status: 201, description: 'Credenciales testnet guardadas' })
+  setTestnetBinanceKeys(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: SetTestnetBinanceKeysDto,
+  ) {
+    return this.usersService.setTestnetBinanceKeys(user.userId, dto);
+  }
+
+  @Delete('users/me/binance-keys/testnet')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Eliminar credenciales de Binance Testnet' })
+  @ApiResponse({ status: 204, description: 'Credenciales testnet eliminadas' })
+  deleteTestnetBinanceKeys(@CurrentUser() user: RequestUser) {
+    return this.usersService.deleteTestnetBinanceKeys(user.userId);
+  }
+
+  @Get('users/me/binance-keys/testnet/status')
+  @ApiOperation({
+    summary: 'Verificar si hay credenciales de Binance Testnet configuradas',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: { example: { hasKeys: true, isActive: true } },
+  })
+  getTestnetBinanceKeyStatus(@CurrentUser() user: RequestUser) {
+    return this.usersService.getTestnetBinanceKeyStatus(user.userId);
+  }
+
+  @Get('users/me/binance-keys/testnet/test')
+  @ApiOperation({
+    summary: 'Probar conexión con Binance Testnet usando las claves guardadas',
+  })
+  @ApiResponse({ status: 200, schema: { example: { connected: true } } })
+  testTestnetBinanceConnection(@CurrentUser() user: RequestUser) {
+    return this.usersService.testTestnetBinanceConnection(user.userId);
   }
 
   // ── /users/me/llm-keys ────────────────────────────────────────────────────

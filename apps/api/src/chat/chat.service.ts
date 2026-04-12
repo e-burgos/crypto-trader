@@ -163,7 +163,9 @@ export class ChatService {
         this.logger.error(`Stream error for session ${sessionId}`, err);
         subject.next(
           new MessageEvent('message', {
-            data: JSON.stringify({ error: 'An unexpected error occurred. Please try again.' }),
+            data: JSON.stringify({
+              error: 'An unexpected error occurred. Please try again.',
+            }),
           }),
         );
         subject.complete();
@@ -183,7 +185,11 @@ export class ChatService {
       where: { id: sessionId, userId },
     });
     if (!session) {
-      subject.next(new MessageEvent('message', { data: JSON.stringify({ error: 'Session not found.' }) }));
+      subject.next(
+        new MessageEvent('message', {
+          data: JSON.stringify({ error: 'Session not found.' }),
+        }),
+      );
       subject.complete();
       return;
     }
@@ -192,7 +198,13 @@ export class ChatService {
       where: { userId, provider: session.provider, isActive: true },
     });
     if (!cred) {
-      subject.next(new MessageEvent('message', { data: JSON.stringify({ error: `No active credentials for ${session.provider}. Check Settings.` }) }));
+      subject.next(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            error: `No active credentials for ${session.provider}. Check Settings.`,
+          }),
+        }),
+      );
       subject.complete();
       return;
     }
@@ -224,19 +236,42 @@ export class ChatService {
         history,
         (delta) => {
           fullContent += delta;
-          subject.next(new MessageEvent('message', { data: JSON.stringify({ delta }) }));
+          subject.next(
+            new MessageEvent('message', { data: JSON.stringify({ delta }) }),
+          );
         },
       );
     } catch (err) {
       this.logger.error(`LLM streaming failed for session ${sessionId}`, err);
       const partialNote = fullContent ? ' [generation stopped]' : '';
-      subject.next(new MessageEvent('message', { data: JSON.stringify({ error: `Provider error. Check your API key.${partialNote}` }) }));
+      subject.next(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            error: `Provider error. Check your API key.${partialNote}`,
+          }),
+        }),
+      );
       if (fullContent) {
         const msg = await this.prisma.chatMessage.create({
-          data: { sessionId, role: ChatRole.ASSISTANT, content: fullContent + ' [...]' },
+          data: {
+            sessionId,
+            role: ChatRole.ASSISTANT,
+            content: fullContent + ' [...]',
+          },
         });
-        await this.prisma.chatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } });
-        subject.next(new MessageEvent('message', { data: JSON.stringify({ done: true, messageId: msg.id, fullContent: msg.content }) }));
+        await this.prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { updatedAt: new Date() },
+        });
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              done: true,
+              messageId: msg.id,
+              fullContent: msg.content,
+            }),
+          }),
+        );
       }
       subject.complete();
       return;
@@ -245,8 +280,19 @@ export class ChatService {
     const assistantMsg = await this.prisma.chatMessage.create({
       data: { sessionId, role: ChatRole.ASSISTANT, content: fullContent },
     });
-    await this.prisma.chatSession.update({ where: { id: sessionId }, data: { updatedAt: new Date() } });
-    subject.next(new MessageEvent('message', { data: JSON.stringify({ done: true, messageId: assistantMsg.id, fullContent }) }));
+    await this.prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { updatedAt: new Date() },
+    });
+    subject.next(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          done: true,
+          messageId: assistantMsg.id,
+          fullContent,
+        }),
+      }),
+    );
     subject.complete();
   }
 
@@ -392,7 +438,8 @@ export class ChatService {
 
 ### Trading Modes:
 - **SANDBOX**: Paper trading with virtual funds ($10,000 USDT/USDC). Full simulation — same logic, same indicators, no real money at risk. Recommended for new users and strategy testing.
-- **LIVE**: Real trading using your Binance account. Actual funds, actual orders on the exchange.
+- **TESTNET**: Real orders executed against the official Binance Testnet (testnet.binance.vision) using dedicated testnet API keys. No real money involved — Binance provides test funds. More realistic than SANDBOX because it exercises the actual Binance order flow. Requires separate testnet API keys (obtainable at testnet.binance.vision).
+- **LIVE**: Real trading using your Binance production account. Actual funds, actual orders on the exchange.
 
 ### How to Place an Order / Start Trading:
 1. Go to **Config** → Create a configuration for the asset/pair you want (e.g., BTC/USDT)
@@ -449,9 +496,21 @@ Always respond in the same language the user writes to you. Be direct and confid
   ): Promise<void> {
     switch (provider) {
       case LLMProvider.CLAUDE:
-        return this.streamClaude(apiKey, model, systemPrompt, messages, onDelta);
+        return this.streamClaude(
+          apiKey,
+          model,
+          systemPrompt,
+          messages,
+          onDelta,
+        );
       case LLMProvider.OPENAI:
-        return this.streamOpenAI(apiKey, model, systemPrompt, messages, onDelta);
+        return this.streamOpenAI(
+          apiKey,
+          model,
+          systemPrompt,
+          messages,
+          onDelta,
+        );
       case LLMProvider.GROQ:
         return this.streamGroq(apiKey, model, systemPrompt, messages, onDelta);
       default:

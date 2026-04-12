@@ -30,6 +30,7 @@ export interface NewsConfig {
   enabledSources: string[];
   onlySummary: boolean;
   botEnabled: boolean;
+  newsWeight: number;
   updatedAt: string;
 }
 
@@ -362,9 +363,9 @@ export function deriveOpportunity(
     weight: 'strong',
   });
   if (snapshot.rsi.value > 70)
-    warnings.push('RSI > 70: mercado sobrecomprado, riesgo de corrección');
+    warnings.push('RSI > 70: overbought market, risk of correction');
   if (snapshot.rsi.value < 30)
-    warnings.push('RSI < 30: posible rebote, pero confirmar con volumen');
+    warnings.push('RSI < 30: possible bounce, confirm with volume');
 
   // ── MACD check ───────────────────────────────────────
   const macdBull =
@@ -395,7 +396,7 @@ export function deriveOpportunity(
     weight: 'strong',
   });
   if (price < snapshot.emaCross.ema200)
-    warnings.push('Precio bajo EMA 200: tendencia macro bajista');
+    warnings.push('Price below EMA 200: bearish macro trend');
 
   // ── Bollinger check ──────────────────────────────────
   const bbOk = snapshot.bollingerBands.position === 'BELOW';
@@ -410,20 +411,18 @@ export function deriveOpportunity(
     weight: 'medium',
   });
   if (snapshot.bollingerBands.bandwidth < 500 && price > 1000)
-    warnings.push(
-      'Bandas de Bollinger comprimidas: movimiento fuerte inminente',
-    );
+    warnings.push('Bollinger Bands compressed: strong move imminent');
 
   // ── Volume check ─────────────────────────────────────
   const volOk = snapshot.volume.signal === 'HIGH';
   checks.push({
-    label: 'Volumen',
-    value: `${snapshot.volume.signal} (×${snapshot.volume.ratio.toFixed(2)} promedio)`,
+    label: 'Volume',
+    value: `${snapshot.volume.signal} (×${snapshot.volume.ratio.toFixed(2)} avg)`,
     ok: volOk,
     weight: 'medium',
   });
   if (snapshot.volume.signal === 'LOW')
-    warnings.push('Volumen bajo: señal poco confiable, esperar confirmación');
+    warnings.push('Low volume: signal unreliable, wait for confirmation');
 
   // ── Confidence ───────────────────────────────────────
   // Based on how many checks pass — avoids score-cancellation giving 0%

@@ -1,165 +1,1456 @@
-import { useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { useTranslation } from 'react-i18next';
 import {
   Bot,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Clock,
   MessageSquare,
+  TrendingDown,
+  Minus,
+  ShoppingCart,
+  Target,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  ListChecks,
+  SlidersHorizontal,
+  X,
+  Cpu,
+  Settings2,
+  BarChart3,
+  Newspaper,
+  TrendingUp,
+  Zap,
+  ShieldCheck,
+  ExternalLink,
 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import {
   useAgentDecisions,
   type AgentDecision,
+  type AgentDecisionIndicators,
+  type AgentDecisionConfigDetails,
 } from '../../hooks/use-analytics';
-import { cn } from '../../lib/utils';
-import { useTranslation } from 'react-i18next';
+import { useCountdown } from './bot-analysis';
 
 gsap.registerPlugin(useGSAP);
 
-const DECISION_CONFIG = {
-  BUY: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', icon: TrendingUp },
-  SELL: { color: 'text-red-500', bg: 'bg-red-500/10', icon: TrendingDown },
-  HOLD: { color: 'text-amber-500', bg: 'bg-amber-500/10', icon: Minus },
-  CLOSE: { color: 'text-blue-500', bg: 'bg-blue-500/10', icon: TrendingDown },
+// ── Color maps ────────────────────────────────────────────────────────────────
+
+const DECISION_COLOR: Record<string, string> = {
+  BUY: 'text-emerald-500',
+  SELL: 'text-red-500',
+  HOLD: 'text-amber-500',
+  CLOSE: 'text-blue-500',
 };
 
-function ConfidenceBar({ value }: { value: number }) {
+const DECISION_BG: Record<string, string> = {
+  BUY: 'bg-emerald-500/10',
+  SELL: 'bg-red-500/10',
+  HOLD: 'bg-amber-500/10',
+  CLOSE: 'bg-blue-500/10',
+};
+
+const DECISION_BORDER: Record<string, string> = {
+  BUY: 'border-emerald-500/20',
+  SELL: 'border-red-500/20',
+  HOLD: 'border-amber-500/20',
+  CLOSE: 'border-blue-500/20',
+};
+
+const DECISION_ICON: Record<string, typeof TrendingDown> = {
+  BUY: ShoppingCart,
+  SELL: TrendingDown,
+  CLOSE: Target,
+  HOLD: Minus,
+};
+
+type DecisionFilter = 'ALL' | 'BUY' | 'SELL' | 'HOLD' | 'CLOSE';
+type AssetFilter = 'ALL' | string;
+type AgentFilter = 'ALL' | string;
+const DECISION_FILTERS: DecisionFilter[] = [
+  'ALL',
+  'BUY',
+  'SELL',
+  'HOLD',
+  'CLOSE',
+];
+
+// ── Confidence Bar ────────────────────────────────────────────────────────────
+
+function ConfidenceBar({ value, color }: { value: number; color: string }) {
+  const { t } = useTranslation();
+  const pct = Math.round(value * 100);
   return (
-    <div className="mt-2 flex items-center gap-2">
-      <div className="h-1.5 flex-1 rounded-full bg-muted">
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          {t('botAnalysis.confidence')}
+        </span>
+        <span className={cn('text-sm font-bold tabular-nums', color)}>
+          {pct}%
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div
-          className="h-1.5 rounded-full bg-primary transition-all"
-          style={{ width: `${value * 100}%` }}
+          className={cn(
+            'h-full rounded-full transition-all',
+            pct >= 70
+              ? 'bg-emerald-500'
+              : pct >= 50
+                ? 'bg-amber-500'
+                : 'bg-red-500',
+          )}
+          style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs text-muted-foreground">
-        {Math.round(value * 100)}%
+    </div>
+  );
+}
+
+// ── Indicator Panel ───────────────────────────────────────────────────────────
+
+function IndicatorPanel({
+  indicators,
+}: {
+  indicators: AgentDecisionIndicators;
+}) {
+  const rows = [
+    {
+      label: 'RSI',
+      value: indicators.rsi?.value?.toFixed(1) ?? '—',
+      sub: indicators.rsi?.signal,
+    },
+    {
+      label: 'MACD',
+      value: indicators.macd?.macd?.toFixed(4) ?? '—',
+      sub: indicators.macd?.crossover,
+    },
+    { label: 'EMA9', value: indicators.emaCross?.ema9?.toFixed(2) ?? '—' },
+    { label: 'EMA21', value: indicators.emaCross?.ema21?.toFixed(2) ?? '—' },
+    {
+      label: 'BB Upper',
+      value: indicators.bollingerBands?.upper?.toFixed(2) ?? '—',
+    },
+    {
+      label: 'BB Lower',
+      value: indicators.bollingerBands?.lower?.toFixed(2) ?? '—',
+    },
+    {
+      label: 'Volume',
+      value: indicators.volume?.current?.toFixed(0) ?? '—',
+      sub: indicators.volume?.signal,
+    },
+  ];
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+      <div className="mb-2 flex items-center gap-1.5">
+        <ListChecks className="h-3 w-3 text-muted-foreground" />
+        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          Indicators
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className="flex items-center justify-between gap-2"
+          >
+            <span className="text-muted-foreground">{r.label}</span>
+            <span className="font-mono font-semibold tabular-nums">
+              {r.value}
+              {r.sub && (
+                <span className="ml-1 text-muted-foreground font-normal">
+                  ({r.sub})
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── News Headlines Panel ──────────────────────────────────────────────────────
+
+const SENTIMENT_COLOR: Record<string, string> = {
+  POSITIVE: 'text-emerald-400',
+  NEGATIVE: 'text-red-400',
+  NEUTRAL: 'text-muted-foreground',
+};
+
+function NewsHeadlinesPanel({
+  headlines,
+}: {
+  headlines: Array<{ headline: string; sentiment: string; source?: string }>;
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+      <div className="mb-2 flex items-center gap-1.5">
+        <MessageSquare className="h-3 w-3 text-muted-foreground" />
+        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          News context
+        </span>
+      </div>
+      <div className="space-y-1.5">
+        {headlines.map((h, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <span
+              className={cn(
+                'mt-0.5 shrink-0 text-[10px] font-bold uppercase',
+                SENTIMENT_COLOR[h.sentiment] ?? 'text-muted-foreground',
+              )}
+            >
+              {h.sentiment.slice(0, 3)}
+            </span>
+            <p className="text-[11px] leading-snug text-foreground/80">
+              {h.headline}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Agent Decision Card ───────────────────────────────────────────────────────
+
+function AgentDecisionCard({
+  decision,
+  isLast,
+  isFirst = false,
+  onOpenDetail,
+}: {
+  decision: AgentDecision;
+  isLast: boolean;
+  isFirst?: boolean;
+  onOpenDetail: (d: AgentDecision) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { t } = useTranslation();
+  const color = DECISION_COLOR[decision.decision] ?? 'text-amber-500';
+  const bg = DECISION_BG[decision.decision] ?? 'bg-amber-500/10';
+  const border = DECISION_BORDER[decision.decision] ?? 'border-amber-500/20';
+  const Icon = DECISION_ICON[decision.decision] ?? Minus;
+  const hasExtra = !!(decision.indicators || decision.newsHeadlines?.length);
+
+  const nextDecisionTargetMs = useMemo(() => {
+    if (!isFirst || !decision.waitMinutes || decision.waitMinutes <= 0)
+      return null;
+    return (
+      new Date(decision.createdAt).getTime() + decision.waitMinutes * 60_000
+    );
+  }, [isFirst, decision.createdAt, decision.waitMinutes]);
+
+  const countdown = useCountdown(nextDecisionTargetMs);
+
+  return (
+    <div className="decision-card relative flex gap-4">
+      {/* Timeline spine */}
+      <div className="flex flex-col items-center">
+        <div
+          className={cn(
+            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm',
+            bg,
+            color,
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+        {!isLast && (
+          <div className="mt-1 w-px flex-1 bg-border/60 min-h-[1rem]" />
+        )}
+      </div>
+
+      {/* Card */}
+      <div
+        className={cn(
+          'mb-4 flex-1 rounded-xl border bg-card overflow-hidden',
+          border,
+        )}
+      >
+        <div
+          className={cn(
+            'flex items-center justify-between px-4 py-2.5',
+            bg.replace('/10', '/5'),
+          )}
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={cn(
+                'text-xs font-bold uppercase tracking-wider',
+                color,
+              )}
+            >
+              {decision.decision}
+            </span>
+            <span className="text-sm font-bold text-foreground">
+              {decision.asset} / {decision.pair}
+            </span>
+            {decision.configName && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                {decision.configName}
+              </span>
+            )}
+            {decision.mode && (
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-xs font-semibold',
+                  decision.mode === 'SANDBOX'
+                    ? 'bg-muted text-muted-foreground'
+                    : decision.mode === 'TESTNET'
+                      ? 'bg-sky-500/10 text-sky-400'
+                      : 'bg-red-500/10 text-red-400',
+                )}
+              >
+                {decision.mode}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {new Date(decision.createdAt).toLocaleString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </div>
+        </div>
+
+        <div className="px-4 py-3 space-y-3">
+          <ConfidenceBar value={decision.confidence} color={color} />
+
+          <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5">
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <MessageSquare className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                {t('botAnalysis.justification')}
+              </span>
+            </div>
+            <p className="text-[12px] leading-relaxed text-foreground/85">
+              {decision.reasoning}
+            </p>
+          </div>
+
+          {decision.waitMinutes && decision.waitMinutes > 0 && (
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-1.5">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground">
+                  {t('botAnalysis.waitMinutes', {
+                    count: decision.waitMinutes,
+                  })}
+                </span>
+              </div>
+              {countdown !== null ? (
+                <span className="font-mono text-xs font-bold text-primary tabular-nums">
+                  {countdown}
+                </span>
+              ) : isFirst && decision.waitMinutes > 0 ? (
+                <span className="text-[10px] text-emerald-400 font-semibold">
+                  Ready
+                </span>
+              ) : null}
+            </div>
+          )}
+
+          {hasExtra && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="flex w-full items-center justify-between rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 transition-colors"
+            >
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3 w-3" />
+                {expanded ? 'Hide details' : 'Show indicator snapshot & news'}
+              </div>
+              {expanded ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
+
+          {/* Ver detalle completo */}
+          <button
+            onClick={() => onOpenDetail(decision)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/50 bg-primary/5 px-3 py-2 text-[11px] font-semibold text-primary hover:bg-primary/10 transition-colors"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Ver detalle completo
+          </button>
+
+          {expanded && decision.indicators && (
+            <IndicatorPanel indicators={decision.indicators} />
+          )}
+          {expanded &&
+            decision.newsHeadlines &&
+            decision.newsHeadlines.length > 0 && (
+              <NewsHeadlinesPanel headlines={decision.newsHeadlines} />
+            )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Decision Detail Modal ─────────────────────────────────────────────────────
+
+type ModalTab = 'input' | 'output' | 'config' | 'provider';
+const MODAL_TABS: { id: ModalTab; label: string; icon: typeof Cpu }[] = [
+  { id: 'input', label: 'Entrada', icon: BarChart3 },
+  { id: 'output', label: 'Salida', icon: TrendingUp },
+  { id: 'config', label: 'Config Bot', icon: Settings2 },
+  { id: 'provider', label: 'Proveedor', icon: Cpu },
+];
+
+function DetailRow({
+  label,
+  value,
+  mono = false,
+  accent,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+  accent?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 border-b border-border/40 last:border-0">
+      <span className="text-[11px] text-muted-foreground shrink-0 pt-0.5">
+        {label}
+      </span>
+      <span
+        className={cn(
+          'text-[12px] font-semibold text-right',
+          mono && 'font-mono tabular-nums',
+          accent ?? 'text-foreground',
+        )}
+      >
+        {value}
       </span>
     </div>
   );
 }
 
-function DecisionCard({ decision }: { decision: AgentDecision }) {
-  const { t } = useTranslation();
-  const config = DECISION_CONFIG[decision.decision] || DECISION_CONFIG.HOLD;
-  const Icon = config.icon;
-
+function SectionTitle({
+  icon: Icon,
+  title,
+}: {
+  icon: typeof Cpu;
+  title: string;
+}) {
   return (
-    <div className="decision-card relative flex gap-4">
-      {/* Timeline line */}
-      <div className="flex flex-col items-center">
-        <div
-          className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-full text-sm',
-            config.bg,
-            config.color,
-          )}
-        >
-          <Icon className="h-4 w-4" />
-        </div>
-        <div className="mt-1 w-px flex-1 bg-border/60" />
-      </div>
-
-      {/* Card */}
-      <div className="mb-4 flex-1 rounded-xl border border-border bg-card p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <span className={cn('text-xs font-bold uppercase', config.color)}>
-              {decision.decision}
-            </span>
-            <span className="ml-2 text-sm font-semibold">{decision.pair}</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {new Date(decision.createdAt).toLocaleTimeString()}
-          </div>
-        </div>
-
-        {/* Justificación */}
-        {decision.reasoning && (
-          <div className="mt-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
-            <div className="mb-1 flex items-center gap-1.5">
-              <MessageSquare className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t('agentLog.justification')}
-              </span>
-            </div>
-            <p className="text-sm leading-relaxed text-foreground/80">
-              {decision.reasoning}
-            </p>
-          </div>
-        )}
-
-        {decision.waitMinutes && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('agentLog.waitMinutes', { count: decision.waitMinutes })}
-          </p>
-        )}
-
-        <ConfidenceBar value={decision.confidence} />
-      </div>
+    <div className="flex items-center gap-1.5 mb-3">
+      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+      <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        {title}
+      </span>
     </div>
   );
 }
 
+function DecisionDetailModal({
+  decision,
+  onClose,
+}: {
+  decision: AgentDecision;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<ModalTab>('input');
+  const color = DECISION_COLOR[decision.decision] ?? 'text-amber-500';
+  const bg = DECISION_BG[decision.decision] ?? 'bg-amber-500/10';
+  const border = DECISION_BORDER[decision.decision] ?? 'border-amber-500/20';
+  const Icon = DECISION_ICON[decision.decision] ?? Minus;
+  const cfg = decision.configDetails;
+
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const ind = decision.indicators;
+  const news = decision.newsHeadlines ?? [];
+
+  return createPortal(
+    /* Backdrop */
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Sheet */}
+      <div className="relative w-full sm:max-w-xl max-h-[92dvh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div
+          className={cn(
+            'flex items-center justify-between px-4 py-3 shrink-0',
+            bg.replace('/10', '/8'),
+          )}
+        >
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full',
+                bg,
+                color,
+              )}
+            >
+              <Icon className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'text-xs font-extrabold uppercase tracking-wider',
+                    color,
+                  )}
+                >
+                  {decision.decision}
+                </span>
+                <span className="text-sm font-bold text-foreground">
+                  {decision.asset}/{decision.pair}
+                </span>
+                {decision.mode && (
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-bold',
+                      decision.mode === 'SANDBOX'
+                        ? 'bg-muted text-muted-foreground'
+                        : decision.mode === 'TESTNET'
+                          ? 'bg-sky-500/10 text-sky-400'
+                          : 'bg-red-500/10 text-red-400',
+                    )}
+                  >
+                    {decision.mode}
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {new Date(decision.createdAt).toLocaleString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex shrink-0 border-b border-border bg-muted/20">
+          {MODAL_TABS.map(({ id, label, icon: TabIcon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[11px] font-bold uppercase tracking-wide transition-all',
+                tab === id
+                  ? 'border-b-2 border-primary text-primary bg-primary/5'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <TabIcon className="h-3 w-3 shrink-0" />
+              <span className="hidden sm:block">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* ── INPUT TAB ── */}
+          {tab === 'input' && (
+            <>
+              {/* Market snapshot */}
+              {ind && (
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                  <SectionTitle icon={BarChart3} title="Snapshot de mercado" />
+                  <div className="space-y-0">
+                    {ind.rsi && (
+                      <>
+                        <DetailRow
+                          label="RSI"
+                          value={ind.rsi.value.toFixed(2)}
+                          mono
+                        />
+                        <DetailRow label="RSI Signal" value={ind.rsi.signal} />
+                      </>
+                    )}
+                    {ind.macd && (
+                      <>
+                        <DetailRow
+                          label="MACD"
+                          value={ind.macd.macd.toFixed(5)}
+                          mono
+                        />
+                        <DetailRow
+                          label="MACD Signal"
+                          value={ind.macd.signal.toFixed(5)}
+                          mono
+                        />
+                        <DetailRow
+                          label="MACD Histogram"
+                          value={ind.macd.histogram.toFixed(5)}
+                          mono
+                        />
+                        <DetailRow
+                          label="MACD Crossover"
+                          value={ind.macd.crossover}
+                        />
+                      </>
+                    )}
+                    {ind.emaCross && (
+                      <>
+                        <DetailRow
+                          label="EMA 9"
+                          value={ind.emaCross.ema9.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="EMA 21"
+                          value={ind.emaCross.ema21.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="EMA 200"
+                          value={ind.emaCross.ema200.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="EMA Trend"
+                          value={ind.emaCross.trend}
+                        />
+                      </>
+                    )}
+                    {ind.bollingerBands && (
+                      <>
+                        <DetailRow
+                          label="BB Upper"
+                          value={ind.bollingerBands.upper.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="BB Middle"
+                          value={ind.bollingerBands.middle.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="BB Lower"
+                          value={ind.bollingerBands.lower.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="BB Bandwidth"
+                          value={ind.bollingerBands.bandwidth.toFixed(4)}
+                          mono
+                        />
+                        <DetailRow
+                          label="BB Position"
+                          value={ind.bollingerBands.position}
+                        />
+                      </>
+                    )}
+                    {ind.volume && (
+                      <>
+                        <DetailRow
+                          label="Volume (actual)"
+                          value={ind.volume.current.toFixed(0)}
+                          mono
+                        />
+                        <DetailRow
+                          label="Volume (promedio)"
+                          value={ind.volume.average.toFixed(0)}
+                          mono
+                        />
+                        <DetailRow
+                          label="Volume Ratio"
+                          value={ind.volume.ratio.toFixed(3)}
+                          mono
+                        />
+                        <DetailRow
+                          label="Volume Signal"
+                          value={ind.volume.signal}
+                        />
+                      </>
+                    )}
+                    {ind.supportResistance && (
+                      <>
+                        <DetailRow
+                          label="Soportes"
+                          value={
+                            ind.supportResistance.support
+                              .map((s) => s.toFixed(2))
+                              .join(' · ') || '—'
+                          }
+                          mono
+                        />
+                        <DetailRow
+                          label="Resistencias"
+                          value={
+                            ind.supportResistance.resistance
+                              .map((r) => r.toFixed(2))
+                              .join(' · ') || '—'
+                          }
+                          mono
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* News context */}
+              {news.length > 0 && (
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                  <SectionTitle icon={Newspaper} title="Noticias procesadas" />
+                  <div className="space-y-2">
+                    {news.map((h, i) => (
+                      <div
+                        key={i}
+                        className="rounded-lg border border-border/50 bg-card p-2.5"
+                      >
+                        <div className="flex items-start gap-2 mb-1">
+                          <span
+                            className={cn(
+                              'shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase',
+                              h.sentiment === 'POSITIVE'
+                                ? 'bg-emerald-500/15 text-emerald-400'
+                                : h.sentiment === 'NEGATIVE'
+                                  ? 'bg-red-500/15 text-red-400'
+                                  : 'bg-muted text-muted-foreground',
+                            )}
+                          >
+                            {h.sentiment.slice(0, 3)}
+                          </span>
+                          <p className="text-[11px] leading-snug text-foreground/85 font-medium">
+                            {h.headline}
+                          </p>
+                        </div>
+                        {h.summary && (
+                          <p className="text-[10px] text-muted-foreground leading-relaxed pl-7">
+                            {h.summary}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1.5 pl-7">
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {h.source}
+                          </span>
+                          {h.author && (
+                            <span className="text-[10px] text-muted-foreground/60">
+                              · {h.author}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!ind && news.length === 0 && (
+                <div className="rounded-xl border border-dashed border-border p-8 text-center text-[12px] text-muted-foreground">
+                  Sin datos de entrada almacenados para esta decisión.
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── OUTPUT TAB ── */}
+          {tab === 'output' && (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+              <SectionTitle
+                icon={TrendingUp}
+                title="Resultado de la decisión"
+              />
+              <div className="mb-4">
+                <div
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-xl px-4 py-2',
+                    bg,
+                    border,
+                    'border',
+                  )}
+                >
+                  <Icon className={cn('h-5 w-5', color)} />
+                  <span
+                    className={cn(
+                      'text-base font-extrabold uppercase tracking-wide',
+                      color,
+                    )}
+                  >
+                    {decision.decision}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-0 mb-4">
+                <DetailRow
+                  label="Confianza"
+                  value={`${Math.round(decision.confidence * 100)}%`}
+                  mono
+                  accent={
+                    decision.confidence >= 0.7
+                      ? 'text-emerald-400'
+                      : decision.confidence >= 0.5
+                        ? 'text-amber-400'
+                        : 'text-red-400'
+                  }
+                />
+                {decision.waitMinutes != null && decision.waitMinutes > 0 && (
+                  <DetailRow
+                    label="Espera sugerida"
+                    value={`${decision.waitMinutes} min`}
+                    mono
+                  />
+                )}
+                <DetailRow
+                  label="Generada el"
+                  value={new Date(decision.createdAt).toLocaleString(
+                    undefined,
+                    {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    },
+                  )}
+                />
+                {decision.configName && (
+                  <DetailRow label="Agente" value={decision.configName} />
+                )}
+                {decision.mode && (
+                  <DetailRow label="Modo" value={decision.mode} />
+                )}
+              </div>
+
+              {/* Confidence bar detail */}
+              <div className="rounded-lg border border-border/50 bg-card p-3">
+                <SectionTitle icon={Zap} title="Justificación LLM" />
+                <p className="text-[12px] leading-relaxed text-foreground/85 whitespace-pre-wrap">
+                  {decision.reasoning}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── CONFIG TAB ── */}
+          {tab === 'config' && (
+            <>
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                <SectionTitle icon={ShieldCheck} title="Modo de operación" />
+                <div className="space-y-0">
+                  <DetailRow label="Modo" value={decision.mode ?? '—'} />
+                  <DetailRow
+                    label="Par"
+                    value={`${decision.asset}/${decision.pair}`}
+                  />
+                  {decision.configName && (
+                    <DetailRow
+                      label="Nombre del bot"
+                      value={decision.configName}
+                    />
+                  )}
+                  {decision.configId && (
+                    <DetailRow
+                      label="Config ID"
+                      value={decision.configId.slice(0, 16) + '…'}
+                      mono
+                    />
+                  )}
+                </div>
+              </div>
+
+              {cfg ? (
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+                  <SectionTitle icon={Settings2} title="Parámetros del bot" />
+                  <div className="space-y-0">
+                    <DetailRow
+                      label="Umbral compra"
+                      value={`${cfg.buyThreshold}%`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Umbral venta"
+                      value={`${cfg.sellThreshold}%`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Stop Loss"
+                      value={`${(cfg.stopLossPct * 100).toFixed(2)}%`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Take Profit"
+                      value={`${(cfg.takeProfitPct * 100).toFixed(2)}%`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Beneficio mínimo"
+                      value={`${(cfg.minProfitPct * 100).toFixed(2)}%`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Max. capital / operación"
+                      value={`${(cfg.maxTradePct * 100).toFixed(0)}%`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Posiciones simultáneas"
+                      value={String(cfg.maxConcurrentPositions)}
+                      mono
+                    />
+                    <DetailRow
+                      label="Intervalo mínimo"
+                      value={`${cfg.minIntervalMinutes} min`}
+                      mono
+                    />
+                    <DetailRow
+                      label="Modo intervalo"
+                      value={cfg.intervalMode}
+                    />
+                    {cfg.orderPriceOffsetPct !== 0 && (
+                      <DetailRow
+                        label="Offset precio orden"
+                        value={`${(cfg.orderPriceOffsetPct * 100).toFixed(2)}%`}
+                        mono
+                      />
+                    )}
+                    <DetailRow
+                      label="Estado"
+                      value={cfg.isRunning ? 'Activo' : 'Detenido'}
+                      accent={
+                        cfg.isRunning
+                          ? 'text-emerald-400'
+                          : 'text-muted-foreground'
+                      }
+                    />
+                    <DetailRow
+                      label="Config creada"
+                      value={new Date(cfg.createdAt).toLocaleDateString()}
+                    />
+                    <DetailRow
+                      label="Última actualización"
+                      value={new Date(cfg.updatedAt).toLocaleDateString()}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border p-8 text-center text-[12px] text-muted-foreground">
+                  Configuración del bot no disponible para esta decisión.
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── PROVIDER TAB ── */}
+          {tab === 'provider' && (
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+              <SectionTitle icon={Cpu} title="Proveedor LLM activo" />
+              {decision.llmProvider || decision.llmModel ? (
+                <div className="space-y-0">
+                  {decision.llmProvider && (
+                    <DetailRow label="Proveedor" value={decision.llmProvider} />
+                  )}
+                  {decision.llmModel && (
+                    <DetailRow label="Modelo" value={decision.llmModel} mono />
+                  )}
+                  <DetailRow
+                    label="Procesada"
+                    value={new Date(decision.createdAt).toLocaleString(
+                      undefined,
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      },
+                    )}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  <p className="text-[12px] text-muted-foreground leading-relaxed">
+                    El proveedor y modelo LLM corresponden al configurado
+                    activamente en tu cuenta al momento de ejecutar esta
+                    decisión.
+                  </p>
+                  <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <ExternalLink className="h-3 w-3" />
+                    <span>
+                      Configura tu proveedor LLM en Ajustes → Integraciones.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border px-4 py-3 flex items-center justify-between bg-muted/10">
+          <span className="text-[10px] text-muted-foreground font-mono">
+            ID: {decision.id.slice(0, 20)}…
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border px-3 py-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export function AgentLogPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { data: decisions = [], isLoading } = useAgentDecisions(30);
+
+  const PAGE_SIZE = 10;
+  const { data: allDecisions = [], isLoading } = useAgentDecisions(200);
+  const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('ALL');
+  const [assetFilter, setAssetFilter] = useState<AssetFilter>('ALL');
+  const [agentFilter, setAgentFilter] = useState<AgentFilter>('ALL');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedDecision, setSelectedDecision] =
+    useState<AgentDecision | null>(null);
+  const [page, setPage] = useState(1);
+
+  const setDecisionFilterAndReset = (v: DecisionFilter) => {
+    setDecisionFilter(v);
+    setPage(1);
+  };
+  const setAssetFilterAndReset = (v: string) => {
+    setAssetFilter(v);
+    setPage(1);
+  };
+  const setAgentFilterAndReset = (v: string) => {
+    setAgentFilter(v);
+    setPage(1);
+  };
+
+  const assetOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { key: string; label: string }[] = [
+      { key: 'ALL', label: 'All' },
+    ];
+    allDecisions.forEach((d) => {
+      const key = `${d.asset}/${d.pair}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        opts.push({ key, label: key });
+      }
+    });
+    return opts;
+  }, [allDecisions]);
+
+  const agentOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { key: string; label: string }[] = [
+      { key: 'ALL', label: 'All' },
+    ];
+    allDecisions.forEach((d) => {
+      if (d.configId && !seen.has(d.configId)) {
+        seen.add(d.configId);
+        opts.push({ key: d.configId, label: d.configName ?? d.configId });
+      }
+    });
+    return opts;
+  }, [allDecisions]);
+
+  const filtered = useMemo(() => {
+    return allDecisions.filter((d) => {
+      if (decisionFilter !== 'ALL' && d.decision !== decisionFilter)
+        return false;
+      if (assetFilter !== 'ALL' && `${d.asset}/${d.pair}` !== assetFilter)
+        return false;
+      if (agentFilter !== 'ALL' && d.configId !== agentFilter) return false;
+      return true;
+    });
+  }, [allDecisions, decisionFilter, assetFilter, agentFilter]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, page, PAGE_SIZE]);
 
   useGSAP(
     () => {
       gsap.from('.decision-card', {
         opacity: 0,
-        x: -20,
-        duration: 0.5,
-        stagger: 0.08,
+        x: -16,
+        duration: 0.4,
+        stagger: 0.06,
         ease: 'power2.out',
       });
     },
-    { scope: containerRef, dependencies: [decisions.length] },
+    { scope: containerRef, dependencies: [filtered.length, page] },
   );
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('sidebar.agentLog')}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('agentLog.subtitle')}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-sm text-muted-foreground">
-          <Bot className="h-4 w-4 text-primary" />
-          {t('agentLog.decisions', { count: decisions.length })}
-        </div>
+    <div className="p-4 sm:p-6 space-y-5">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Bot className="h-6 w-6 text-primary" />
+          {t('sidebar.agentLog')}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {t('botAnalysis.agentLogSubtitle')}
+        </p>
       </div>
 
+      {/* Filters */}
+      {(() => {
+        const activeCount = [
+          decisionFilter !== 'ALL',
+          assetFilter !== 'ALL',
+          agentFilter !== 'ALL',
+        ].filter(Boolean).length;
+
+        const PillGroup = ({
+          label,
+          options,
+          value,
+          onChange,
+          colorMap,
+          bgMap,
+        }: {
+          label: string;
+          options: { key: string; label: string }[];
+          value: string;
+          onChange: (v: string) => void;
+          colorMap?: Record<string, string>;
+          bgMap?: Record<string, string>;
+        }) => (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-0.5 sm:hidden">
+              {label}
+            </span>
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5 overflow-x-auto scrollbar-none">
+              {options.map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => onChange(opt.key)}
+                  className={cn(
+                    'shrink-0 rounded-md px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all touch-manipulation',
+                    value === opt.key
+                      ? opt.key === 'ALL'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : colorMap && bgMap
+                          ? cn(
+                              bgMap[opt.key] ?? 'bg-muted',
+                              colorMap[opt.key] ?? 'text-foreground',
+                              'shadow-sm',
+                            )
+                          : 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+
+        return (
+          <>
+            {/* Mobile: compact toggle bar */}
+            <div className="flex items-center gap-2 sm:hidden">
+              <button
+                onClick={() => setFiltersOpen((v) => !v)}
+                className={cn(
+                  'flex flex-1 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-[12px] font-semibold transition-colors',
+                  filtersOpen || activeCount > 0
+                    ? 'border-primary/40 bg-primary/5 text-primary'
+                    : 'border-border bg-muted/20 text-muted-foreground',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Filtros</span>
+                  {activeCount > 0 && (
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                      {activeCount}
+                    </span>
+                  )}
+                </div>
+                {filtersOpen ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+              </button>
+
+              {activeCount > 0 && (
+                <button
+                  onClick={() => {
+                    setDecisionFilter('ALL');
+                    setAssetFilter('ALL');
+                    setAgentFilter('ALL');
+                    setPage(1);
+                  }}
+                  className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+
+              <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground">
+                <Bot className="h-3.5 w-3.5 text-primary" />
+                <span className="font-semibold tabular-nums">
+                  {filtered.length}
+                </span>
+                {allDecisions.length !== filtered.length && (
+                  <span className="text-muted-foreground/60">
+                    / {allDecisions.length}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile: expanded filter panel */}
+            {filtersOpen && (
+              <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:hidden">
+                <PillGroup
+                  label="Decisión"
+                  options={DECISION_FILTERS.map((f) => ({ key: f, label: f }))}
+                  value={decisionFilter}
+                  onChange={(v) =>
+                    setDecisionFilterAndReset(v as DecisionFilter)
+                  }
+                  colorMap={DECISION_COLOR}
+                  bgMap={DECISION_BG}
+                />
+                {assetOptions.length > 2 && (
+                  <PillGroup
+                    label="Par"
+                    options={assetOptions}
+                    value={assetFilter}
+                    onChange={setAssetFilterAndReset}
+                  />
+                )}
+                {agentOptions.length > 2 && (
+                  <PillGroup
+                    label="Agente"
+                    options={agentOptions}
+                    value={agentFilter}
+                    onChange={setAgentFilterAndReset}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Desktop: inline pill row */}
+            <div className="hidden sm:flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
+                {DECISION_FILTERS.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setDecisionFilterAndReset(f)}
+                    className={cn(
+                      'rounded-md px-2.5 py-1 text-[11px] font-bold uppercase transition-all',
+                      decisionFilter === f
+                        ? f === 'ALL'
+                          ? 'bg-primary text-primary-foreground'
+                          : cn(
+                              DECISION_BG[f] ?? 'bg-muted',
+                              DECISION_COLOR[f] ?? 'text-foreground',
+                              'shadow-sm',
+                            )
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+
+              {assetOptions.length > 2 && (
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
+                  {assetOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setAssetFilterAndReset(opt.key)}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all',
+                        assetFilter === opt.key
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {agentOptions.length > 2 && (
+                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
+                  <Bot className="ml-1 h-3 w-3 text-muted-foreground shrink-0" />
+                  {agentOptions.map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => setAgentFilterAndReset(opt.key)}
+                      className={cn(
+                        'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all',
+                        agentFilter === opt.key
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-2.5 py-1 text-[11px] text-muted-foreground">
+                <Bot className="h-3.5 w-3.5 text-primary" />
+                <span className="font-semibold">
+                  {t('botAnalysis.agentDecisions', { count: filtered.length })}
+                </span>
+                {allDecisions.length !== filtered.length && (
+                  <span className="text-muted-foreground/60">
+                    ({allDecisions.length})
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
+      {/* List */}
       <div ref={containerRef}>
         {isLoading ? (
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-32 animate-pulse rounded-xl bg-muted" />
+              <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
             ))}
           </div>
-        ) : decisions.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-12 text-center">
             <Bot className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-            <h3 className="font-semibold">{t('agentLog.noDecisions')}</h3>
+            <h3 className="font-semibold">
+              {t('botAnalysis.noAgentDecisions')}
+            </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {t('agentLog.noDecisionsHint')}
+              {t('botAnalysis.noAgentDecisionsHint')}
             </p>
           </div>
         ) : (
-          <div>
-            {decisions.map((d) => (
-              <DecisionCard key={d.id} decision={d} />
-            ))}
-          </div>
+          <>
+            <div>
+              {paginated.map((d, idx) => (
+                <AgentDecisionCard
+                  key={d.id}
+                  decision={d}
+                  isLast={idx === paginated.length - 1}
+                  isFirst={idx === 0 && page === 1}
+                  onOpenDetail={setSelectedDecision}
+                />
+              ))}
+            </div>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/20 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronUp className="h-3.5 w-3.5 -rotate-90" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const WINDOW = 2;
+                    const pages: (number | 'ellipsis')[] = [];
+                    for (let p = 1; p <= totalPages; p++) {
+                      if (
+                        p === 1 ||
+                        p === totalPages ||
+                        (p >= page - WINDOW && p <= page + WINDOW)
+                      ) {
+                        pages.push(p);
+                      } else if (pages[pages.length - 1] !== 'ellipsis') {
+                        pages.push('ellipsis');
+                      }
+                    }
+                    return pages.map((p, i) =>
+                      p === 'ellipsis' ? (
+                        <span
+                          key={`ellipsis-${i}`}
+                          className="flex h-8 w-6 items-end justify-center pb-1.5 text-[11px] text-muted-foreground"
+                        >
+                          …
+                        </span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={cn(
+                            'flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-[12px] font-semibold transition-all',
+                            page === p
+                              ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                              : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ),
+                    );
+                  })()}
+                </div>
+
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/20 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronDown className="h-3.5 w-3.5 -rotate-90" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Decision detail modal */}
+      {selectedDecision && (
+        <DecisionDetailModal
+          decision={selectedDecision}
+          onClose={() => setSelectedDecision(null)}
+        />
+      )}
     </div>
   );
 }

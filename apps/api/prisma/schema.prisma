@@ -28,6 +28,7 @@ enum QuoteCurrency {
 enum TradingMode {
   LIVE
   SANDBOX
+  TESTNET
 }
 
 enum PositionStatus {
@@ -44,6 +45,11 @@ enum Decision {
   BUY
   SELL
   HOLD
+}
+
+enum IntervalMode {
+  AGENT
+  CUSTOM
 }
 
 enum Sentiment {
@@ -90,7 +96,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  binanceCredential  BinanceCredential?
+  binanceCredentials BinanceCredential[]
   llmCredentials     LLMCredential[]
   newsApiCredentials NewsApiCredential[]
   tradingConfigs    TradingConfig[]
@@ -110,7 +116,8 @@ model User {
 
 model BinanceCredential {
   id              String   @id @default(cuid())
-  userId          String   @unique
+  userId          String
+  isTestnet       Boolean  @default(false)
   apiKeyEncrypted String
   secretEncrypted String
   apiKeyIv        String
@@ -120,6 +127,7 @@ model BinanceCredential {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, isTestnet])
   @@map("binance_credentials")
 }
 
@@ -157,15 +165,19 @@ model NewsApiCredential {
 model TradingConfig {
   id                     String        @id @default(cuid())
   userId                 String
+  name                   String        @default("")
   asset                  Asset
   pair                   QuoteCurrency
   buyThreshold           Float         @default(70)
   sellThreshold          Float         @default(70)
   stopLossPct            Float         @default(0.03)
   takeProfitPct          Float         @default(0.05)
+  /// Minimum profit % required for LLM-driven SELL to execute (default 0.3%)
+  minProfitPct           Float         @default(0.003)
   maxTradePct            Float         @default(0.05)
   maxConcurrentPositions Int           @default(2)
   minIntervalMinutes     Int           @default(5)
+  intervalMode           IntervalMode  @default(AGENT)
   orderPriceOffsetPct    Float         @default(0)
   mode                   TradingMode   @default(SANDBOX)
   isRunning              Boolean       @default(false)
@@ -175,7 +187,6 @@ model TradingConfig {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   positions Position[]
 
-  @@unique([userId, asset, pair])
   @@map("trading_configs")
 }
 
@@ -227,6 +238,9 @@ model Trade {
 model AgentDecision {
   id            String        @id @default(cuid())
   userId        String
+  configId      String?
+  configName    String?
+  mode          TradingMode?
   asset         Asset
   pair          QuoteCurrency
   decision      Decision
@@ -266,6 +280,8 @@ model NewsConfig {
   onlySummary     Boolean  @default(true)
   /// Whether the trading bot should include news analysis in its decisions
   botEnabled      Boolean  @default(true)
+  /// Weight (0-100%) that news sentiment carries in the LLM trading decision
+  newsWeight      Int      @default(15)
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

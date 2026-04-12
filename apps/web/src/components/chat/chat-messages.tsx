@@ -63,7 +63,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={copy}
-      className="absolute right-2 top-2 rounded-lg p-1 opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-white/10"
+      className="absolute right-2 top-2 rounded-lg p-1 opacity-0 transition-all duration-150 group-hover:opacity-100 hover:bg-muted"
       title="Copy"
     >
       {copied ? (
@@ -135,13 +135,13 @@ function MessageBubble({
         <div
           className={cn(
             'group relative rounded-2xl rounded-tl-sm px-4 py-3 text-sm',
-            'bg-white/[0.04] backdrop-blur-sm',
-            'ring-1 ring-white/10',
+            'bg-muted/40',
+            'ring-1 ring-border/60',
             glow,
           )}
         >
           <CopyButton text={message.content} />
-          <div className="prose prose-sm prose-invert max-w-none">
+          <div className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
@@ -151,7 +151,7 @@ function MessageBubble({
                   if (isInline) {
                     return (
                       <code
-                        className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-xs text-primary"
+                        className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-primary"
                         {...props}
                       >
                         {children}
@@ -165,7 +165,7 @@ function MessageBubble({
                   );
                 },
                 pre: ({ children }) => (
-                  <pre className="overflow-x-auto rounded-xl bg-black/50 p-3 text-xs ring-1 ring-white/10">
+                  <pre className="overflow-x-auto rounded-xl bg-muted p-3 text-xs ring-1 ring-border">
                     {children}
                   </pre>
                 ),

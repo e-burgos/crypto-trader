@@ -44,58 +44,60 @@ export function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
-              {error}
-            </div>
-          )}
+        <div className="onboarding-glow-border shadow-lg">
+          <div className="rounded-xl bg-card p-8">
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                {error}
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-1.5 block text-sm font-medium"
-              >
-                {t('auth.email')}
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
-                placeholder="you@example.com"
-              />
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-1.5 block text-sm font-medium"
+                >
+                  {t('auth.email')}
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/50"
+                  placeholder="you@example.com"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1.5 block text-sm font-medium"
-              >
-                {t('auth.password')}
-              </label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
-            </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-sm font-medium"
+                >
+                  {t('auth.password')}
+                </label>
+                <PasswordInput
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                />
+              </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                t('auth.loginButton')
-              )}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  t('auth.loginButton')
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">

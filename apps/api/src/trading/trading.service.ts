@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue, Job } from 'bull';
+import { Queue } from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -15,6 +15,7 @@ import {
   UpdateTradingConfigDto,
   StartAgentDto,
 } from './dto/trading-config.dto';
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import {
   SandboxOrderExecutor,
@@ -26,7 +27,7 @@ import {
   TradeType,
   NotificationType,
 } from '@crypto-trader/shared';
-import { SUPPORTED_PAIRS } from '@crypto-trader/shared';
+import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 
 const DEFAULTS = {
@@ -34,6 +35,7 @@ const DEFAULTS = {
   sellThreshold: 70,
   stopLossPct: 0.03,
   takeProfitPct: 0.05,
+  minProfitPct: 0.003,
   maxTradePct: 0.05,
   maxConcurrentPositions: 2,
   minIntervalMinutes: 5,
@@ -45,6 +47,14 @@ export const TRADING_QUEUE = 'trading-agent';
 export class TradingService implements OnModuleInit {
   private readonly logger = new Logger(TradingService.name);
   private readonly positionManager = new PositionManager();
+
+  // Cache for Binance balance to avoid hammering testnet.binance.vision
+  // Keyed by `${userId}:${isTestnet}`, TTL = 5 minutes
+  private readonly balanceCache = new Map<
+    string,
+    { data: { currency: string; balance: number }[]; expiresAt: number }
+  >();
+  private static readonly BALANCE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private readonly prisma: PrismaService,
@@ -105,39 +115,67 @@ export class TradingService implements OnModuleInit {
     });
   }
 
-  async upsertConfig(userId: string, dto: CreateTradingConfigDto) {
-    return this.prisma.tradingConfig.upsert({
-      where: {
-        userId_asset_pair: {
-          userId,
-          asset: dto.asset as any,
-          pair: dto.pair as any,
-        },
-      },
-      create: {
+  async createConfig(userId: string, dto: CreateTradingConfigDto) {
+    // Build a comparable snapshot of the incoming config values
+    const incoming = {
+      asset: dto.asset,
+      pair: dto.pair,
+      mode: dto.mode,
+      buyThreshold: dto.buyThreshold ?? DEFAULTS.buyThreshold,
+      sellThreshold: dto.sellThreshold ?? DEFAULTS.sellThreshold,
+      stopLossPct: dto.stopLossPct ?? DEFAULTS.stopLossPct,
+      takeProfitPct: dto.takeProfitPct ?? DEFAULTS.takeProfitPct,
+      maxTradePct: dto.maxTradePct ?? DEFAULTS.maxTradePct,
+      maxConcurrentPositions:
+        dto.maxConcurrentPositions ?? DEFAULTS.maxConcurrentPositions,
+      minIntervalMinutes: dto.minIntervalMinutes ?? DEFAULTS.minIntervalMinutes,
+      intervalMode: dto.intervalMode ?? 'AGENT',
+      orderPriceOffsetPct: dto.orderPriceOffsetPct ?? 0,
+    };
+
+    // Detect configs for the same pair that share identical parameters
+    const existing = await this.prisma.tradingConfig.findMany({
+      where: { userId, asset: dto.asset as any, pair: dto.pair as any },
+    });
+
+    for (const cfg of existing) {
+      const isSame =
+        cfg.mode === incoming.mode &&
+        cfg.buyThreshold === incoming.buyThreshold &&
+        cfg.sellThreshold === incoming.sellThreshold &&
+        Math.abs(cfg.stopLossPct - incoming.stopLossPct) < 0.0001 &&
+        Math.abs(cfg.takeProfitPct - incoming.takeProfitPct) < 0.0001 &&
+        Math.abs(cfg.maxTradePct - incoming.maxTradePct) < 0.0001 &&
+        cfg.maxConcurrentPositions === incoming.maxConcurrentPositions &&
+        cfg.minIntervalMinutes === incoming.minIntervalMinutes &&
+        cfg.intervalMode === incoming.intervalMode &&
+        Math.abs(cfg.orderPriceOffsetPct - incoming.orderPriceOffsetPct) <
+          0.0001;
+
+      if (isSame) {
+        throw new BadRequestException(
+          `Ya existe una configuración idéntica para ${dto.asset}/${dto.pair}. Cambia al menos un parámetro o asigna un nombre diferente.`,
+        );
+      }
+    }
+
+    return this.prisma.tradingConfig.create({
+      data: {
         userId,
+        name: dto.name ?? '',
         asset: dto.asset as any,
         pair: dto.pair as any,
         mode: dto.mode as any,
-        buyThreshold: dto.buyThreshold ?? DEFAULTS.buyThreshold,
-        sellThreshold: dto.sellThreshold ?? DEFAULTS.sellThreshold,
-        stopLossPct: dto.stopLossPct ?? DEFAULTS.stopLossPct,
-        takeProfitPct: dto.takeProfitPct ?? DEFAULTS.takeProfitPct,
-        maxTradePct: dto.maxTradePct ?? DEFAULTS.maxTradePct,
-        maxConcurrentPositions:
-          dto.maxConcurrentPositions ?? DEFAULTS.maxConcurrentPositions,
-        minIntervalMinutes:
-          dto.minIntervalMinutes ?? DEFAULTS.minIntervalMinutes,
-      },
-      update: {
-        mode: dto.mode as any,
-        buyThreshold: dto.buyThreshold,
-        sellThreshold: dto.sellThreshold,
-        stopLossPct: dto.stopLossPct,
-        takeProfitPct: dto.takeProfitPct,
-        maxTradePct: dto.maxTradePct,
-        maxConcurrentPositions: dto.maxConcurrentPositions,
-        minIntervalMinutes: dto.minIntervalMinutes,
+        buyThreshold: incoming.buyThreshold,
+        sellThreshold: incoming.sellThreshold,
+        stopLossPct: incoming.stopLossPct,
+        takeProfitPct: incoming.takeProfitPct,
+        minProfitPct: dto.minProfitPct ?? DEFAULTS.minProfitPct,
+        maxTradePct: incoming.maxTradePct,
+        maxConcurrentPositions: incoming.maxConcurrentPositions,
+        minIntervalMinutes: incoming.minIntervalMinutes,
+        intervalMode: incoming.intervalMode as any,
+        orderPriceOffsetPct: incoming.orderPriceOffsetPct,
       },
     });
   }
@@ -158,20 +196,35 @@ export class TradingService implements OnModuleInit {
     });
   }
 
+  async deleteConfig(userId: string, configId: string) {
+    const config = await this.prisma.tradingConfig.findFirst({
+      where: { id: configId, userId },
+    });
+    if (!config) throw new NotFoundException('Trading config not found');
+
+    // Stop agent if running before deleting
+    if (config.isRunning) {
+      await this.stopAgentById(userId, configId);
+    }
+
+    await this.prisma.tradingConfig.delete({ where: { id: configId } });
+    return { deleted: true, configId };
+  }
+
   // ── Agent lifecycle ───────────────────────────────────────────────────────
 
   async startAgent(userId: string, dto: StartAgentDto) {
     const config = await this.prisma.tradingConfig.findFirst({
-      where: { userId, asset: dto.asset as any, pair: dto.pair as any },
+      where: { id: dto.configId, userId },
     });
     if (!config) {
       throw new NotFoundException(
-        `No trading config found for ${dto.asset}/${dto.pair}. Create one first.`,
+        `No trading config found with id ${dto.configId}.`,
       );
     }
     if (config.isRunning) {
       throw new BadRequestException(
-        `Agent for ${dto.asset}/${dto.pair} is already running`,
+        `Agent for config ${dto.configId} is already running`,
       );
     }
 
@@ -199,16 +252,15 @@ export class TradingService implements OnModuleInit {
     };
   }
 
-  async stopAgent(userId: string, asset: string, pair: string) {
+  async stopAgent(userId: string, configId: string) {
+    return this.stopAgentById(userId, configId);
+  }
+
+  async stopAgentById(userId: string, configId: string) {
     const config = await this.prisma.tradingConfig.findFirst({
-      where: {
-        userId,
-        asset: asset as any,
-        pair: pair as any,
-        isRunning: true,
-      },
+      where: { id: configId, userId },
     });
-    if (!config) {
+    if (!config || !config.isRunning) {
       return { stopped: false, reason: 'Agent was not running' };
     }
 
@@ -379,6 +431,30 @@ export class TradingService implements OnModuleInit {
           fees: true,
           status: true,
           pnl: true,
+          config: {
+            select: {
+              stopLossPct: true,
+              takeProfitPct: true,
+              maxTradePct: true,
+              buyThreshold: true,
+              sellThreshold: true,
+              minIntervalMinutes: true,
+              orderPriceOffsetPct: true,
+              maxConcurrentPositions: true,
+            },
+          },
+          trades: {
+            orderBy: { executedAt: 'asc' },
+            select: {
+              id: true,
+              type: true,
+              price: true,
+              quantity: true,
+              fee: true,
+              executedAt: true,
+              binanceOrderId: true,
+            },
+          },
         },
       }),
       this.prisma.position.count({ where }),
@@ -472,12 +548,17 @@ export class TradingService implements OnModuleInit {
     let executor: SandboxOrderExecutor | LiveOrderExecutor;
     let exitPrice: number;
 
-    if (mode === TradingMode.LIVE) {
+    if (mode === TradingMode.LIVE || mode === TradingMode.TESTNET) {
+      const isTestnet = mode === TradingMode.TESTNET;
       const binanceCreds = await this.prisma.binanceCredential.findUnique({
-        where: { userId },
+        where: { userId_isTestnet: { userId, isTestnet } },
       });
       if (!binanceCreds)
-        throw new BadRequestException('No Binance credentials configured');
+        throw new BadRequestException(
+          isTestnet
+            ? 'No Binance Testnet credentials configured'
+            : 'No Binance credentials configured',
+        );
       const apiKey = decrypt(
         binanceCreds.apiKeyEncrypted,
         binanceCreds.apiKeyIv,
@@ -487,7 +568,7 @@ export class TradingService implements OnModuleInit {
         binanceCreds.secretIv,
       );
       executor = new LiveOrderExecutor(
-        new BinanceRestClient({ apiKey, apiSecret }),
+        new BinanceRestClient({ apiKey, apiSecret, testnet: isTestnet }),
       );
       const order = await executor.placeMarketOrder(
         symbol,
@@ -537,7 +618,7 @@ export class TradingService implements OnModuleInit {
       },
     });
 
-    const fee = exitPrice * position.quantity * 0.001;
+    const fee = exitPrice * position.quantity * TRADE_FEE_PCT;
     await this.prisma.trade.create({
       data: {
         userId,
@@ -593,6 +674,65 @@ export class TradingService implements OnModuleInit {
       pnl,
       status: 'CLOSED',
     };
+  }
+
+  // ── Live Binance balance ──────────────────────────────────────────────────
+
+  async getLiveBinanceBalance(
+    userId: string,
+    isTestnet: boolean,
+  ): Promise<{ currency: string; balance: number }[]> {
+    // Serve from cache if available — avoids hammering testnet.binance.vision
+    // (shared community server that aggressively IP-bans frequent callers)
+    const cacheKey = `${userId}:${isTestnet}`;
+    const cached = this.balanceCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
+    const creds = await this.prisma.binanceCredential.findUnique({
+      where: { userId_isTestnet: { userId, isTestnet } },
+    });
+    if (!creds) {
+      throw new BadRequestException(
+        isTestnet
+          ? 'No Binance Testnet credentials configured'
+          : 'No Binance credentials configured',
+      );
+    }
+    const apiKey = decrypt(creds.apiKeyEncrypted, creds.apiKeyIv);
+    const apiSecret = decrypt(creds.secretEncrypted, creds.secretIv);
+    const client = new BinanceRestClient({
+      apiKey,
+      apiSecret,
+      testnet: isTestnet,
+    });
+    let balances: { asset: string; free: number; locked: number }[];
+    try {
+      balances = await client.getBalances();
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { msg?: string } } })?.response?.data
+          ?.msg ?? (err instanceof Error ? err.message : 'Binance API error');
+      throw new BadRequestException(
+        `Could not fetch balance from Binance${isTestnet ? ' Testnet' : ''}: ${msg}`,
+      );
+    }
+    const QUOTE_CURRENCIES = ['USDT', 'USDC'];
+    const result = balances
+      .filter((b: { asset: string; free: number; locked: number }) =>
+        QUOTE_CURRENCIES.includes(b.asset),
+      )
+      .map((b: { asset: string; free: number; locked: number }) => ({
+        currency: b.asset,
+        balance: b.free + b.locked,
+      }));
+
+    this.balanceCache.set(cacheKey, {
+      data: result,
+      expiresAt: Date.now() + TradingService.BALANCE_CACHE_TTL_MS,
+    });
+    return result;
   }
 
   // ── Wallet ────────────────────────────────────────────────────────────────

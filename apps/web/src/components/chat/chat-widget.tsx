@@ -132,12 +132,12 @@ export function ChatWidget() {
             // Desktop: floating panel bottom-right
             'sm:inset-x-auto sm:top-auto sm:bottom-24 sm:right-6 sm:w-[420px] sm:h-[70%]',
             'rounded-2xl',
-            'shadow-[0_8px_32px_rgba(0,0,0,0.5),0_0_0_1px_hsl(var(--primary)/0.25)]',
-            'bg-[hsl(222_84%_5.5%)]',
+            'shadow-[0_8px_32px_rgba(0,0,0,0.25),0_0_0_1px_hsl(var(--primary)/0.25)]',
+            'bg-card border border-border',
           )}
         >
           {/* Top accent line */}
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
           {/* ── Header ──────────────────────────────────────── */}
           <div className="relative flex items-center justify-between px-4 py-3">
@@ -149,7 +149,7 @@ export function ChatWidget() {
               <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/30 shadow-[0_0_14px_hsl(var(--primary)/0.3)]">
                 <BotMessageSquare className="h-5 w-5 text-primary" />
                 {/* Online dot */}
-                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[hsl(222_84%_5.5%)]" />
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
@@ -186,7 +186,7 @@ export function ChatWidget() {
                   navigate('/dashboard/chat');
                   close();
                 }}
-                className="rounded-lg p-1.5 text-muted-foreground/60 hover:bg-white/10 hover:text-foreground transition-colors"
+                className="rounded-lg p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-colors"
                 title={t('chat.openFullscreen', {
                   defaultValue: 'Open fullscreen',
                 })}
@@ -195,7 +195,7 @@ export function ChatWidget() {
               </button>
               <button
                 onClick={close}
-                className="rounded-lg p-1.5 text-muted-foreground/60 hover:bg-white/10 hover:text-foreground transition-colors"
+                className="rounded-lg p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -203,7 +203,7 @@ export function ChatWidget() {
           </div>
 
           {/* Divider */}
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
 
           {/* ── Body ────────────────────────────────────────── */}
           {!activeSessionId ? (
@@ -221,7 +221,7 @@ export function ChatWidget() {
                   provider={session?.provider}
                 />
               </div>
-              <div className="h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+              <div className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
               <ChatInput
                 onSend={handleSend}
                 onStop={stopStream}

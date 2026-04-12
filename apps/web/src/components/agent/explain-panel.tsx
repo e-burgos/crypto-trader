@@ -25,29 +25,29 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
       icon: <Target className="h-5 w-5" />,
       color: 'blue' as const,
       title: t('config.explain.thresholdTitle'),
-      field: 'buy_threshold · sell_threshold',
+      field: `${t('trading.buyThreshold')} · ${t('trading.sellThreshold')}`,
       desc: t('config.explain.thresholdDesc'),
       example: (
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.examplePrefix')} buy_threshold = 70
+            {t('config.explain.examplePrefix')} {t('trading.buyThreshold')} = 70
           </p>
           <div className="space-y-1">
             {[
               {
-                cond: 'confidence: 73 ≥ 70',
+                cond: `${t('config.guide.confidence')}: 73 ≥ 70`,
                 out: t('config.explain.executes'),
                 color: 'emerald',
                 icon: <CheckCircle2 className="h-3 w-3" />,
               },
               {
-                cond: 'confidence: 65 < 70',
+                cond: `${t('config.guide.confidence')}: 65 < 70`,
                 out: 'HOLD ⏸',
                 color: 'muted',
                 icon: <XCircle className="h-3 w-3" />,
               },
               {
-                cond: 'confidence: 70 = 70',
+                cond: `${t('config.guide.confidence')}: 70 = 70`,
                 out: t('config.explain.executes'),
                 color: 'emerald',
                 icon: <CheckCircle2 className="h-3 w-3" />,
@@ -94,7 +94,7 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
       icon: <Shield className="h-5 w-5" />,
       color: 'red' as const,
       title: t('config.explain.slTitle'),
-      field: 'stop_loss_pct',
+      field: t('trading.stopLoss'),
       desc: t('config.explain.slDesc'),
       example: (
         <div className="space-y-1.5">
@@ -140,17 +140,17 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
       icon: <Wallet className="h-5 w-5" />,
       color: 'purple' as const,
       title: t('config.explain.capitalTitle'),
-      field: 'max_trade_pct',
+      field: t('trading.maxTrade'),
       desc: t('config.explain.capitalDesc'),
       example: (
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.examplePrefix')} max_trade_pct = 10%
+            {t('config.explain.examplePrefix')} {t('trading.maxTrade')} = 10%
           </p>
           <div className="rounded-md bg-muted/40 px-3 py-2 text-[10px] space-y-1">
             {[
               { label: t('config.explain.balance'), value: '$10,000' },
-              { label: 'max_trade_pct', value: '10%' },
+              { label: t('trading.maxTrade'), value: '10%' },
               {
                 label: t('config.explain.maxOrder'),
                 value: '$1,000',
@@ -191,7 +191,7 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
       icon: <Timer className="h-5 w-5" />,
       color: 'amber' as const,
       title: t('config.explain.intervalTitle'),
-      field: 'min_interval_minutes',
+      field: t('trading.minInterval'),
       desc: t('config.explain.intervalDesc'),
       example: (
         <div className="space-y-1.5">
@@ -265,7 +265,7 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
       icon: <MapPin className="h-5 w-5" />,
       color: 'slate' as const,
       title: t('config.explain.offsetTitle'),
-      field: 'order_price_offset_pct',
+      field: t('trading.orderPriceOffset'),
       desc: t('config.explain.offsetDesc'),
       example: (
         <div className="space-y-1.5">

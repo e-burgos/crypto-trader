@@ -10,9 +10,12 @@ setup('authenticate', async ({ page }) => {
     .getByLabel(/email/i)
     .fill(process.env.E2E_USER_EMAIL || 'trader@cryptotrader.dev');
   await page
-    .getByLabel(/password/i)
+    .locator('input[type="password"]')
     .fill(process.env.E2E_USER_PASSWORD || 'trader123');
-  await page.getByRole('main').getByRole('button', { name: /sign in/i }).click();
+  await page
+    .getByRole('main')
+    .getByRole('button', { name: /sign in/i })
+    .click();
 
   // Wait for redirect to dashboard
   await page.waitForURL('**/dashboard**', { timeout: 10_000 });

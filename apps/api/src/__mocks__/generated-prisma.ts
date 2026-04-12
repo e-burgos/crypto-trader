@@ -20,5 +20,10 @@ export const $Enums = {
     SYSTEM: 'SYSTEM',
   },
 };
-export const TradingMode = { LIVE: 'LIVE', PAPER: 'PAPER' };
+export const TradingMode = {
+  LIVE: 'LIVE',
+  SANDBOX: 'SANDBOX',
+  TESTNET: 'TESTNET',
+  PAPER: 'PAPER',
+};
 export const NotificationType = $Enums.NotificationType;

@@ -87,6 +87,7 @@ export class MarketController {
         newsCount: { type: 'number', example: 40 },
         enabledSources: { type: 'array', items: { type: 'string' } },
         onlySummary: { type: 'boolean', example: true },
+        newsWeight: { type: 'number', example: 15 },
       },
     },
   })
@@ -99,6 +100,7 @@ export class MarketController {
       newsCount?: number;
       enabledSources?: string[];
       onlySummary?: boolean;
+      newsWeight?: number;
     },
   ) {
     return this.marketService.updateNewsConfig(user.userId, body);

@@ -13,6 +13,7 @@ export enum QuoteCurrency {
 export enum TradingMode {
   LIVE = 'LIVE',
   SANDBOX = 'SANDBOX',
+  TESTNET = 'TESTNET',
 }
 
 export enum Decision {

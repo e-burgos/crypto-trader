@@ -60,33 +60,136 @@ export class AnalyticsService {
         fee: true,
         executedAt: true,
         mode: true,
-        position: { select: { asset: true, pair: true } },
+        position: {
+          select: {
+            asset: true,
+            pair: true,
+            entryPrice: true,
+            exitPrice: true,
+            pnl: true,
+            fees: true,
+            status: true,
+            entryAt: true,
+            exitAt: true,
+            config: {
+              select: {
+                stopLossPct: true,
+                takeProfitPct: true,
+                maxTradePct: true,
+                buyThreshold: true,
+                sellThreshold: true,
+                minIntervalMinutes: true,
+                orderPriceOffsetPct: true,
+              },
+            },
+          },
+        },
       },
     });
   }
 
   async getAgentDecisionHistory(userId: string, limit = 20) {
-    return this.prisma.agentDecision.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        asset: true,
-        pair: true,
-        decision: true,
-        confidence: true,
-        reasoning: true,
-        waitMinutes: true,
-        createdAt: true,
-      },
+    const [decisions, activeLlm] = await Promise.all([
+      this.prisma.agentDecision.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          asset: true,
+          pair: true,
+          decision: true,
+          confidence: true,
+          reasoning: true,
+          waitMinutes: true,
+          configId: true,
+          configName: true,
+          mode: true,
+          createdAt: true,
+          indicators: true,
+          newsHeadlines: true,
+        },
+      }),
+      this.prisma.lLMCredential.findFirst({
+        where: { userId, isActive: true },
+        select: { provider: true, selectedModel: true },
+      }),
+    ]);
+
+    // Fetch full TradingConfig for all unique configIds
+    const configIds = [
+      ...new Set(
+        decisions.filter((d) => d.configId).map((d) => d.configId as string),
+      ),
+    ];
+
+    const configs = configIds.length
+      ? await this.prisma.tradingConfig.findMany({
+          where: { id: { in: configIds } },
+          select: {
+            id: true,
+            name: true,
+            mode: true,
+            asset: true,
+            pair: true,
+            buyThreshold: true,
+            sellThreshold: true,
+            stopLossPct: true,
+            takeProfitPct: true,
+            minProfitPct: true,
+            maxTradePct: true,
+            maxConcurrentPositions: true,
+            minIntervalMinutes: true,
+            intervalMode: true,
+            orderPriceOffsetPct: true,
+            isRunning: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        })
+      : [];
+
+    const configMap = new Map(configs.map((c) => [c.id, c]));
+
+    return decisions.map((d) => {
+      const cfg = d.configId ? configMap.get(d.configId) : undefined;
+      return {
+        ...d,
+        mode: d.mode ?? cfg?.mode ?? null,
+        configName: d.configName ?? cfg?.name ?? null,
+        configDetails: cfg
+          ? {
+              buyThreshold: cfg.buyThreshold,
+              sellThreshold: cfg.sellThreshold,
+              stopLossPct: cfg.stopLossPct,
+              takeProfitPct: cfg.takeProfitPct,
+              minProfitPct: cfg.minProfitPct,
+              maxTradePct: cfg.maxTradePct,
+              maxConcurrentPositions: cfg.maxConcurrentPositions,
+              minIntervalMinutes: cfg.minIntervalMinutes,
+              intervalMode: cfg.intervalMode,
+              orderPriceOffsetPct: cfg.orderPriceOffsetPct,
+              isRunning: cfg.isRunning,
+              createdAt: cfg.createdAt,
+              updatedAt: cfg.updatedAt,
+            }
+          : null,
+        llmProvider: activeLlm?.provider ?? null,
+        llmModel: activeLlm?.selectedModel ?? null,
+      };
     });
   }
 
   async getSummary(userId: string) {
     const closedPositions = await this.prisma.position.findMany({
       where: { userId, status: 'CLOSED' },
-      select: { pnl: true, asset: true, exitAt: true, entryAt: true },
+      select: {
+        pnl: true,
+        asset: true,
+        pair: true,
+        exitAt: true,
+        entryAt: true,
+      },
     });
 
     const totalTrades = closedPositions.length;
@@ -109,12 +212,19 @@ export class AnalyticsService {
     const avgPnl = totalPnl / totalTrades;
     const winRate = (wins / totalTrades) * 100;
 
-    const bestTradePos = closedPositions.reduce((a, b) =>
-      (a.pnl ?? 0) > (b.pnl ?? 0) ? a : b,
-    );
-    const worstTradePos = closedPositions.reduce((a, b) =>
-      (a.pnl ?? 0) < (b.pnl ?? 0) ? a : b,
-    );
+    const positionsWithPnl = closedPositions.filter((p) => p.pnl != null);
+    const bestTradePos =
+      positionsWithPnl.length > 0
+        ? positionsWithPnl.reduce((a, b) =>
+            (a.pnl ?? 0) > (b.pnl ?? 0) ? a : b,
+          )
+        : null;
+    const worstTradePos =
+      positionsWithPnl.length > 1
+        ? positionsWithPnl.reduce((a, b) =>
+            (a.pnl ?? 0) < (b.pnl ?? 0) ? a : b,
+          )
+        : null;
 
     // Drawdown: peak–trough of cumulative P&L
     let peak = 0;
@@ -150,16 +260,22 @@ export class AnalyticsService {
       winRate: Math.round(winRate * 100) / 100,
       avgPnl: Math.round(avgPnl * 100) / 100,
       totalPnl: Math.round(totalPnl * 100) / 100,
-      bestTrade: {
-        pnl: bestTradePos.pnl,
-        asset: bestTradePos.asset,
-        executedAt: bestTradePos.exitAt,
-      },
-      worstTrade: {
-        pnl: worstTradePos.pnl,
-        asset: worstTradePos.asset,
-        executedAt: worstTradePos.exitAt,
-      },
+      bestTrade: bestTradePos
+        ? {
+            pnl: bestTradePos.pnl,
+            asset: bestTradePos.asset,
+            pair: bestTradePos.pair,
+            executedAt: bestTradePos.exitAt,
+          }
+        : null,
+      worstTrade: worstTradePos
+        ? {
+            pnl: worstTradePos.pnl,
+            asset: worstTradePos.asset,
+            pair: worstTradePos.pair,
+            executedAt: worstTradePos.exitAt,
+          }
+        : null,
       currentDrawdown: Math.round(maxDrawdown * 10000) / 100,
       sharpeRatio: Math.round(sharpeRatio * 100) / 100,
     };

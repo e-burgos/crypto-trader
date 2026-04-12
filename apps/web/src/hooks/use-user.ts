@@ -82,6 +82,65 @@ export function useDeleteBinanceKeys() {
   });
 }
 
+// ── Binance Testnet keys ───────────────────────────────────────────────────
+
+export function useTestnetBinanceKeyStatus() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<KeyStatus>({
+    queryKey: ['user', 'binance-testnet-status'],
+    queryFn: () => api.get('/users/me/binance-keys/testnet/status'),
+    staleTime: 60_000,
+    enabled: isAuthenticated,
+  });
+}
+
+export function useSetTestnetBinanceKeys() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { apiKey: string; apiSecret: string }) =>
+      api.post('/users/me/binance-keys/testnet', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'binance-testnet-status'] });
+      toast.success('Claves API de Binance Testnet guardadas');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al guardar las claves testnet'),
+  });
+}
+
+export function useDeleteTestnetBinanceKeys() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete('/users/me/binance-keys/testnet'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'binance-testnet-status'] });
+      toast.success('Claves de Binance Testnet eliminadas');
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al eliminar las claves testnet'),
+  });
+}
+
+export function useTestTestnetBinanceConnection() {
+  return useMutation({
+    mutationFn: () =>
+      api.get<{ connected: boolean; error?: string }>(
+        '/users/me/binance-keys/testnet/test',
+      ),
+    onSuccess: (data) => {
+      if (data.connected) {
+        toast.success('Conexión con Binance Testnet exitosa');
+      } else {
+        toast.error(
+          `Error de conexión testnet: ${data.error ?? 'desconocido'}`,
+        );
+      }
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al probar la conexión testnet'),
+  });
+}
+
 export function useSetLLMKey() {
   const qc = useQueryClient();
   return useMutation({

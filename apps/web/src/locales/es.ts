@@ -1,9 +1,10 @@
 const es = {
   nav: {
     dashboard: 'Panel',
-    signIn: 'Iniciar sesión',
+    signIn: 'Ingresar',
     getStarted: 'Comenzar',
     signOut: 'Cerrar sesión',
+    profile: 'Perfil',
     help: 'Ayuda',
     lightMode: 'Modo claro',
     darkMode: 'Modo oscuro',
@@ -14,15 +15,20 @@ const es = {
     tradeHistory: 'Historial',
     agentLog: 'Registro del Agente',
     analytics: 'Análisis',
-    market: 'Análisis de Mercado',
+    market: 'Mercado',
     botAnalysis: 'Análisis del Bot',
     config: 'Configuración',
     settings: 'Ajustes',
+    notifications: 'Notificaciones',
     positions: 'Posiciones',
-    news: 'Noticias',
+    news: 'Análisis de Noticias',
     chat: 'KRYPTO IA',
     admin: 'Admin',
     help: 'Ayuda y Guía',
+    groupTrading: 'Trading',
+    groupAgente: 'Agente',
+    groupSystem: 'Sistema',
+    agentLog: 'Registro del Agente',
   },
   dashboard: {
     overview: 'Resumen',
@@ -65,6 +71,22 @@ const es = {
       feeNote: '0.1% del total',
       feeExplain:
         'Comisión de ${{fee}} = 0.1% del valor del trade ${{total}}. Esta es la tarifa estándar de Binance (taker).',
+      sectionPosition: 'Posición',
+      sectionConfig: 'Configuración del Agente',
+      entryPrice: 'Precio de Entrada',
+      exitPrice: 'Precio de Salida',
+      positionPnl: 'P&G de la Posición',
+      positionFees: 'Comisiones Totales',
+      positionStatus: 'Estado de la Posición',
+      entryAt: 'Posición Abierta',
+      exitAt: 'Posición Cerrada',
+      stopLoss: 'Stop Loss',
+      takeProfit: 'Take Profit',
+      maxTrade: 'Máx. Trade %',
+      buyThreshold: 'Umbral de Compra',
+      sellThreshold: 'Umbral de Venta',
+      minInterval: 'Intervalo Mínimo',
+      priceOffset: 'Offset de Precio',
     },
   },
   agentLog: {
@@ -102,6 +124,185 @@ const es = {
     signalReasons: 'Factores de la Señal',
     refresh: 'Actualizar ahora',
     loadError: 'Error al cargar datos de mercado. Verifica tu conexión.',
+    tabChart: 'Gráfico de Velas',
+    tabAnalysis: 'Indicadores',
+    chartTitle: 'Gráfico de Velas',
+    chartSubtitle:
+      'Gráfico de velas japonesas con indicadores técnicos superpuestos',
+    modalWhat: '¿Qué es?',
+    modalVisualization: 'Visualización',
+    modalHow: '¿Cómo funciona?',
+    modalSignals: 'Señales',
+    modalClose: 'Cerrar',
+    indicators: {
+      price: {
+        title: 'Precio Actual',
+        subtitle: 'Precio de mercado en tiempo real + señal consolidada',
+        what: 'Esta tarjeta muestra el precio actual del par seleccionado, obtenido en tiempo real via WebSocket desde el exchange. También calcula y muestra una señal consolidada (BUY, SELL, HOLD o NEUTRAL) basada en el agregado de todos los indicadores técnicos.',
+        how: 'El precio se actualiza cada segundo desde el stream de mercado. La señal se deriva calculando un "score" ponderado de RSI, MACD, EMA, Bollinger Bands, Volumen y niveles de Soporte/Resistencia. Scores positivos apuntan a BUY, negativos a SELL, y cercanos a cero a NEUTRAL u HOLD.',
+        tip: '💡 El agente de trading usa exactamente esta señal consolidada para decidir si ejecutar una orden. Un score cercano a 0 generará NEUTRAL — el agente no operará.',
+        s0Label: 'BUY — Comprar',
+        s0Desc:
+          'Score consolidado positivo alto. La mayoría de indicadores sugieren condiciones alcistas.',
+        s1Label: 'HOLD — Mantener',
+        s1Desc:
+          'Score moderado. Señales mixtas. El agente puede abrir posición con precaución.',
+        s2Label: 'NEUTRAL',
+        s2Desc:
+          'Score cercano a cero. Los indicadores no tienen consenso claro. Se recomienda esperar.',
+        s3Label: 'SELL — Vender',
+        s3Desc:
+          'Score consolidado negativo. La mayoría de indicadores sugieren condiciones bajistas.',
+      },
+      signalReasons: {
+        title: 'Factores de la Señal',
+        subtitle: 'Por qué el sistema emite BUY, SELL, HOLD o NEUTRAL',
+        what: 'Los Factores de la Señal son los motivos individuales que cada indicador técnico aporta al score consolidado. Cada factor es una observación puntual: "RSI en zona oversold", "MACD cruce alcista", etc. Juntos forman el veredicto final.',
+        how: 'El sistema evalúa RSI, MACD, EMA, Bollinger Bands, Volumen y Soporte/Resistencia. Cada uno aporta +1, -1 o 0 al score. Si el score supera el umbral positivo configurado → BUY; umbral negativo → SELL; cercano a 0 → NEUTRAL; moderado → HOLD.',
+        tip: '💡 Si ves pocos factores o factores contradictorios (algunos alcistas y algunos bajistas), el mercado está en equilibrio. El agente usará NEUTRAL y no operará hasta tener más claridad.',
+        s0Label: 'Factores alcistas',
+        s0Desc:
+          'Condiciones como RSI oversold, MACD cruce positivo, precio sobre EMA, volumen alto. Suman al score.',
+        s1Label: 'Factores bajistas',
+        s1Desc:
+          'Condiciones como RSI overbought, MACD cruce negativo, precio bajo EMA, Bollinger sobre banda superior. Restan del score.',
+        s2Label: 'Factores neutrales',
+        s2Desc:
+          'Indicadores sin señal clara (RSI en zona media, volumen normal). No suman ni restan.',
+        s3Label: 'Score consolidado',
+        s3Desc:
+          'La suma de todos los factores. Visible como "Puntaje: +2" en la tarjeta de precio. Cuanto mayor el valor absoluto, más convicción tiene la señal.',
+      },
+      rsi: {
+        title: 'RSI — Índice de Fuerza Relativa',
+        subtitle: 'Relative Strength Index (14 períodos)',
+        what: 'El RSI mide qué tan fuerte o débil se mueve un activo. Imagína un péndulo: si se fue demasiado hacia un lado, es probable que vuelva al centro.',
+        how: 'Va de 0 a 100. Las zonas clave son 30 y 70. Cuando baja de 30, el mercado posiblemente exageró a la baja ("rebote probable"). Cuando sube de 70, posiblemente exageró al alza ("caída probable").',
+        tip: '💡 El RSI funciona mejor en mercados laterales. En tendencias fuertes puede estar "overbought" durante mucho tiempo.',
+        s0Label: '< 30 — OVERSOLD',
+        s0Desc: 'El precio cayó mucho. Posible oportunidad de compra.',
+        s1Label: '30–70 — NEUTRAL',
+        s1Desc: 'Zona de equilibrio, sin señal clara.',
+        s2Label: '> 70 — OVERBOUGHT',
+        s2Desc: 'El precio subió demasiado. Posible corrección.',
+      },
+      macd: {
+        title: 'MACD — Convergencia/Divergencia de Medias',
+        subtitle: 'Moving Average Convergence Divergence (12, 26, 9)',
+        what: 'El MACD compara dos medias móviles para detectar cambios de tendencia. Es como medir si el motor del precio está acelerando o frenando.',
+        how: 'Tiene 3 componentes: la línea MACD (rápida), la línea de Señal (lenta) y el Histograma (diferencia). Cuando la línea MACD cruza por encima de la Señal → momento alcista. Cuando cruza por debajo → momento bajista.',
+        tip: '💡 El MACD es un indicador retrasado, confirma tendencias. Úsalo junto con el RSI para señales más confiables.',
+        s0Label: 'BULLISH',
+        s0Desc: 'MACD cruzó por encima de la Señal. Momentum positivo.',
+        s1Label: 'BEARISH',
+        s1Desc: 'MACD cruzó por debajo de la Señal. Momentum negativo.',
+        s2Label: 'Histograma +',
+        s2Desc: 'Barras verdes: el momentum alcista se fortalece.',
+        s3Label: 'Histograma -',
+        s3Desc: 'Barras rojas: el momentum bajista se fortalece.',
+      },
+      ema: {
+        title: 'Cruce de EMAs — Tendencia de Medias Móviles',
+        subtitle: 'Exponential Moving Averages (9, 21, 200)',
+        what: 'Las EMAs son promedios del precio que dan más peso a los datos recientes. Son como la "temperatura promedio" del mercado en diferentes períodos de tiempo.',
+        how: 'Cuando la EMA rápida (9) cruza por encima de la lenta (21) es una señal alcista ("Golden Cross" mini). Cuando el precio está sobre la EMA 200, la tendencia a largo plazo es alcista.',
+        tip: '💡 La EMA 200 es la más importante para traders a largo plazo. Muchos fondos compran cuando el precio está por encima de ella.',
+        s0Label: 'BULLISH',
+        s0Desc: 'EMA 9 > EMA 21 y precio sobre EMAs. Tendencia al alza.',
+        s1Label: 'BEARISH',
+        s1Desc: 'EMA 9 < EMA 21. El precio está cayendo en promedio.',
+        s2Label: 'ABOVE EMA 200',
+        s2Desc: 'Tendencia a largo plazo alcista. Mercado "sano".',
+        s3Label: 'BELOW EMA 200',
+        s3Desc: 'Tendencia a largo plazo bajista. Precaución.',
+      },
+      bollinger: {
+        title: 'Bandas de Bollinger',
+        subtitle: 'Volatilidad del mercado (SMA 20 ± 2σ)',
+        what: 'Las Bandas de Bollinger son como un "carril" dinámico para el precio. Se expanden cuando el mercado es volátil y se contraen cuando está tranquilo.',
+        how: 'Hay 3 líneas: media central (SMA 20) y dos bandas a 2 desviaciones estándar. El precio suele mantenerse dentro de las bandas el ~95% del tiempo. Tocar la banda es una advertencia, salirse es una señal.',
+        tip: '💡 Las bandas estrechas (squeeze) son la señal más poderosa: el mercado está acumulando energía para un gran movimiento.',
+        s0Label: 'ABOVE — Sobre banda superior',
+        s0Desc:
+          'El precio rompió el techo. Posible sobrecompra o inicio de breakout.',
+        s1Label: 'BELOW — Bajo banda inferior',
+        s1Desc:
+          'El precio tocó el suelo. Posible sobreventa o inicio de caída.',
+        s2Label: 'WIDE — Bandas anchas',
+        s2Desc: 'Alta volatilidad. Movimientos bruscos probables.',
+        s3Label: 'NARROW — Bandas estrechas',
+        s3Desc: '"Squeeze" o compresión. Suele preceder un movimiento grande.',
+      },
+      volume: {
+        title: 'Volumen de Operaciones',
+        subtitle: 'Cantidad de activo negociado (vs. promedio)',
+        what: 'El volumen muestra cuántas personas están comprando o vendiendo. Es la "convicción" detrás de un movimiento de precio. Sin volumen, los movimientos no son sostenibles.',
+        how: 'Se compara el volumen actual con el promedio de los últimos períodos. Un volumen 2x el promedio con precio al alza confirma la tendencia. Un volumen muy bajo sugiere que el movimiento puede revertirse.',
+        tip: '💡 Regla de oro: el volumen precede al precio. Si el precio sube pero el volumen cae, la tendencia está perdiendo fuerza.',
+        s0Label: 'HIGH — Volumen alto',
+        s0Desc: 'Ratio > 1.5x. Movimiento con fuerte convicción del mercado.',
+        s1Label: 'NORMAL — Volumen normal',
+        s1Desc: 'Ratio ~ 1x. Actividad habitual, sin señal especial.',
+        s2Label: 'LOW — Volumen bajo',
+        s2Desc:
+          'Ratio < 0.7x. Poco interés. Posible consolidación o reversión.',
+      },
+      opportunity: {
+        title: 'Panel de Oportunidad',
+        subtitle: 'Señal de acción + confianza + niveles de precio sugeridos',
+        what: 'Esta tarjeta resume todo el análisis técnico en una sola acción sugerida: COMPRAR, VENDER o ESPERAR SEÑAL. Incluye el porcentaje de confianza, los niveles de entrada, stop loss y take profit calculados automáticamente, y la lista de checks de indicadores que determinaron la decisión.',
+        how: 'El sistema evalúa 5 checks (RSI, MACD, EMA, Bollinger, Volumen) con pesos distintos: indicadores fuertes cuentan ×2, medios ×1. La confianza se calcula como el porcentaje del peso total que aprueba. La acción depende del score consolidado: ≥ 4 → COMPRAR, ≤ -4 → VENDER, entre -4 y +4 → ESPERAR. Los niveles de precio usan el soporte/resistencia más cercano o un % fijo como fallback.',
+        tip: '💡 El % de confianza y el estado de acción son independientes. Puedes ver 71% alcista con ESPERAR porque el score (+1 ó +2) no llegó a 4. Para cambiar de ESPERAR a COMPRAR el MACD necesita cruzar al alza (sum +3 de golpe) o acumularse entre RSI, EMA y Bollinger.',
+        s0Label: 'COMPRAR — score ≥ 4',
+        s0Desc:
+          'Fuerte confluencia alcista. RSI no sobrecomprado, MACD positivo, EMA alineada al alza. El agente puede ejecutar una orden de compra si supera el umbral configurado.',
+        s1Label: 'VENDER — score ≤ -4',
+        s1Desc:
+          'Fuerte confluencia bajista. Los indicadores apuntan a presión vendedora. El agente puede cerrar posición o abrir corto si está habilitado.',
+        s2Label: 'ESPERAR SEÑAL — score entre -3 y +3',
+        s2Desc:
+          'No hay confluencia suficiente. Los indicadores están divididos o son débiles. El agente no opera hasta que el score supere los umbrales.',
+        s3Label: '% Confianza',
+        s3Desc:
+          'Porcentaje de peso de checks que pasan. Un 71% alcista con estado ESPERAR significa que los checks individuales favorecen la compra, pero el score agregado aún no alcansa el umbral de ≥ 4 para activar la señal.',
+      },
+      chart: {
+        title: 'Gráfico de Velas',
+        subtitle:
+          'Gráfico de velas japonesas con indicadores técnicos superpuestos',
+        what: 'El gráfico de velas muestra el movimiento del precio a lo largo del tiempo. Cada vela representa un período (1m, 5m, 1h, etc.) mostrando su apertura, cierre, máximo y mínimo. Los indicadores técnicos calculados por el sistema se pueden activar como capas sobre las velas.',
+        how: 'Los datos OHLCV (Apertura, Máximo, Mínimo, Cierre, Volumen) se obtienen del exchange vía API. El stream en tiempo real actualiza la vela actual cada segundo por WebSocket. Los indicadores superpuestos son líneas de precio derivadas del snapshot de indicadores y se refrescan automáticamente cada 60 segundos.',
+        tip: '💡 Los indicadores superpuestos muestran el valor puntual actual de cada indicador (snapshot), no la curva histórica. Graficar la curva histórica completa requeriría calcular el indicador sobre todas las velas — disponible como Opción B en el roadmap.',
+        s0Label: 'EMA 9 / 21',
+        s0Desc:
+          'Medias móviles exponenciales de corto plazo. Cuando la EMA 9 cruza por encima de la EMA 21 es una señal alcista. Se muestran como líneas horizontales en el precio calculado actual.',
+        s1Label: 'EMA 200',
+        s1Desc:
+          'Media móvil de largo plazo. Actúa como soporte o resistencia macro. Precio por encima de la EMA 200 = tendencia alcista estructural.',
+        s2Label: 'Bandas de Bollinger',
+        s2Desc:
+          'Tres bandas (superior, media, inferior) que encierran el rango estadístico del precio. El precio tocando la banda inferior puede señalar sobreventa; la superior, sobrecompra.',
+        s3Label: 'S/R — Soporte y Resistencia',
+        s3Desc:
+          'Niveles clave de precio detectados automáticamente. Las líneas rojas son resistencias (techos) y las verdes son soportes (pisos). Activo por defecto por ser la capa más informativa.',
+      },
+      supportResistance: {
+        title: 'Soporte y Resistencia',
+        subtitle: 'Niveles clave de precio detectados automáticamente',
+        what: 'Los soportes y resistencias son zonas de precio donde históricamente el mercado "rebota". El soporte es como el suelo y la resistencia como el techo.',
+        how: 'Se identifican buscando niveles donde el precio se detuvo varias veces. Si el precio rompe una resistencia, ésta puede convertirse en nuevo soporte. Si rompe un soporte, puede convertirse en resistencia.',
+        tip: '💡 Cuantas más veces el precio toca un nivel sin romperlo, más fuerte es ese nivel. Un nivel "probado" múltiples veces es muy significativo.',
+        s0Label: 'Resistencia',
+        s0Desc:
+          'Nivel por encima donde vendedores toman control. El precio tiende a bajar desde ahí.',
+        s1Label: 'Soporte',
+        s1Desc:
+          'Nivel por debajo donde compradores toman control. El precio tiende a rebotar desde ahí.',
+        s2Label: '% distancia',
+        s2Desc:
+          'Qué tan lejos está el nivel del precio actual. Más cerca = más relevante ahora.',
+      },
+    },
   },
   liveChart: {
     loading: 'Cargando velas...',
@@ -138,6 +339,29 @@ const es = {
     agentRunning: '● En ejecución',
     agentStopped: '○ Detenido',
   },
+  connections: {
+    title: 'Estado de Conexiones',
+    refresh: 'Actualizar',
+    manageKeys: 'Gestionar claves API',
+    internet: 'Internet',
+    internetSub: 'Conectividad de red del navegador',
+    api: 'Servidor API',
+    apiSub: 'Backend de la plataforma',
+    binanceLive: 'Binance Live',
+    binanceLiveSub: 'Claves API de trading real',
+    binanceTestnet: 'Binance Testnet',
+    binanceTestnetSub: 'Claves API de testnet',
+    llm: 'Proveedor LLM',
+    llmSub: 'Sin proveedor configurado',
+    statusOk: 'Todo OK',
+    statusWarning: 'Atención',
+    statusError: 'Con errores',
+    statusLoading: 'Verificando...',
+    connOk: 'Conectado',
+    connWarning: 'Sin clave',
+    connError: 'Error',
+    connLoading: '...',
+  },
   trading: {
     startAgent: 'Iniciar Agente',
     stopAgent: 'Detener Agente',
@@ -152,14 +376,26 @@ const es = {
     riskManagement: 'Gestión de Riesgo',
     timing: 'Tiempos',
     realFundsWarning: '⚠️ Se usarán fondos reales',
+    testnetRealOrders: 'Binance Testnet · órdenes reales en entorno de prueba',
+    intervalModeAgent: 'Decisión del Agente',
+    intervalModeCustom: 'Intervalo personalizado',
+    intervalModeAgentHint:
+      'El agente usará el tiempo de espera sugerido por la IA entre ciclos.',
     buyThreshold: 'Umbral de Compra',
     sellThreshold: 'Umbral de Venta',
+    minProfit: 'Ganancia Mínima para Venta (%)',
     stopLoss: 'Stop Loss %',
     takeProfit: 'Take Profit %',
     maxTrade: 'Máx. Trade %',
     maxConcurrent: 'Posiciones Concurrentes Máx.',
     minInterval: 'Intervalo Mínimo (min)',
     saveConfig: 'Guardar Configuración',
+    createConfig: 'Crear Configuración',
+    agentName: 'Nombre del Agente',
+    agentNamePlaceholder: 'ej: BTC Agresivo',
+    deleteConfig: 'Eliminar Configuración',
+    confirmDelete:
+      '¿Eliminar este agente y su configuración? Esta acción no se puede deshacer.',
     activeAgents: 'Agentes Activos',
     noConfigs: 'Sin configuraciones de trading',
     configSaved: 'Configuración guardada',
@@ -212,6 +448,11 @@ const es = {
     password: 'Nueva Contraseña',
     saveProfile: 'Guardar Perfil',
     binanceKeys: 'Claves API de Binance',
+    binanceTestnetKeys: 'Claves API de Binance Testnet',
+    binanceTestnetApiKey: 'API Key de Binance Testnet',
+    binanceTestnetApiSecret: 'API Secret de Binance Testnet',
+    binanceTestnetTip:
+      'Obtén tus claves testnet gratis en testnet.binance.vision. No tienen valor real.',
     apiKey: 'Clave API',
     apiSecret: 'Secreto API',
     saveKeys: 'Guardar Claves',
@@ -246,8 +487,20 @@ const es = {
   notifications: {
     title: 'Notificaciones',
     markAllRead: 'Marcar todas como leídas',
+    markRead: 'Marcar como leída',
+    goTo: 'Ir al recurso',
+    delete: 'Eliminar notificación',
     noNotifications: 'Sin notificaciones',
     justNow: 'Ahora mismo',
+    pageSubtitle: 'Toda la actividad de tu cuenta y eventos del agente',
+    sectionUnread: 'Sin leer',
+    sectionRead: 'Anteriores',
+    viewAll: 'Ver todas',
+    tabAll: 'Todas',
+    tabUnread: 'Sin leer',
+    tabTrades: 'Trades',
+    tabAgent: 'Agente',
+    paginationInfo: '{{from}}–{{to}} de {{total}}',
   },
   help: {
     title: 'Ayuda y Guía',
@@ -259,8 +512,15 @@ const es = {
     agentFlow: 'Cómo decide el Agente',
     agentPresets: 'Presets de Estrategia',
     agentParams: 'Referencia de Parámetros',
+    agentCycle: 'Ciclo del Agente y Tiempo de Espera',
+    tradeExecution: 'Flujo de Compra y Venta',
+    conceptThresholds: 'Umbrales de Decisión',
+    conceptSl: 'Stop Loss / Take Profit',
+    conceptCapital: 'Capital por Trade',
+    conceptInterval: 'Intervalo de Análisis',
+    conceptOffset: 'Offset de Precio',
     faq: 'Preguntas Frecuentes',
-    guide: 'Cómo Operar — Paso a Paso',
+    guide: 'Cómo Operar',
     apiKeys: 'Configuración de Claves API',
     behaviors: 'Comportamientos y Avisos Importantes',
     stopAllTitle: 'Detener los agentes no cierra las posiciones abiertas',
@@ -355,9 +615,61 @@ const es = {
         desc: 'Solo cuando entiendas y confíes en los resultados: cambia el modo a EN VIVO en Configuración y reinicia el agente.',
       },
     ],
+    binanceIntegrationTitle: 'Cómo opera con Binance',
+    binanceIntegration: {
+      subtitle:
+        'Todo lo que ocurre entre esta plataforma y tu cuenta de Binance — mercado, órdenes, comisiones y seguridad.',
+      marketTitle: 'Mercado Spot — sin apalancamiento',
+      marketDesc:
+        'Todas las operaciones son en Spot. No hay futuros, margin trading ni contratos de derivados. Cada orden compra o vende el activo directamente en tu cartera.',
+      pairsTitle: 'Pares soportados',
+      ordersTitle: 'Tipo de órdenes',
+      ordersDesc:
+        'La plataforma usa exclusivamente Market Orders. Se ejecutan al precio de mercado en el instante exacto en que el agente (o tú manualmente) decide actuar. No se usan órdenes límite ni stop-limit.',
+      modesTitle: 'Modos de operación',
+      sandboxTitle: 'SANDBOX (Paper Trading)',
+      sandboxDesc:
+        'Ninguna orden llega a Binance. El agente opera con 10.000 USDT virtuales usando precios reales obtenidos de la API pública de Binance sin autenticación. Ideal para probar sin riesgo.',
+      liveTitle: 'EN VIVO',
+      liveDesc:
+        'Cada decisión del agente ejecuta una orden de mercado real en tu cuenta de Binance Spot. Tu API Key autentica y firma la request con HMAC-SHA256. El saldo y las posiciones son reales.',
+      feesTitle: 'Comisiones',
+      feesDesc:
+        'Binance cobra 0,1% por operación en Spot. La plataforma aplica exactamente esa tasa en ambos modos para que el paper trading refleje el coste real.',
+      feesEntry: 'Comisión de entrada',
+      feesEntryFormula: 'precioEntrada × cantidad × 0,001',
+      feesExit: 'Comisión de salida',
+      feesExitFormula: 'precioSalida × cantidad × 0,001',
+      feesNetFormula:
+        'PnL neto = (precioSalida − precioEntrada) × cantidad − (comisión entrada + comisión salida)',
+      feesExampleTitle: 'Ejemplo real',
+      feesExampleSetup: 'Compras 0,01 BTC a $85.000 · vendes a $87.000',
+      feesTableGrossPnl: 'PnL bruto',
+      feesTableEntryFee: 'Comisión entrada',
+      feesTableExitFee: 'Comisión salida',
+      feesTableNetPnl: 'PnL neto',
+      feesBnbNote:
+        'Si pagas comisiones con BNB en Binance (25% de descuento), el PnL mostrado será levemente más conservador que el real. La plataforma no detecta ni gestiona el descuento BNB.',
+      securityTitle: 'Seguridad de credenciales',
+      securityDesc:
+        'Tu API Key y Secret nunca se almacenan en texto plano ni se exponen en la interfaz.',
+      securityStep1: 'Se cifran con AES antes de guardarse en base de datos.',
+      securityStep2: 'Se desencriptan en memoria solo al ejecutar una orden.',
+      securityStep3:
+        'La request a Binance se firma con HMAC-SHA256 (requerido por la API).',
+      securityStep4: 'Nunca se exponen en logs, WebSockets ni en la UI.',
+      permissionsTitle: 'Permisos mínimos requeridos en Binance',
+      permissionRead: 'Leer información de cuenta',
+      permissionSpot: 'Trading Spot',
+      permissionNoWithdraw: 'Retiros — NO habilitar nunca',
+      minProfitNote:
+        'El agente nunca vende de forma autónoma si la posición está en pérdida. Hay un umbral mínimo de rentabilidad (por defecto 0,3%) que debe superarse antes de ejecutar una venta automática. El cierre manual no tiene esta restricción.',
+    },
   },
   common: {
     save: 'Guardar',
+    saving: 'Guardando...',
+    deleting: 'Eliminando...',
     cancel: 'Cancelar',
     loading: 'Cargando...',
     error: 'Algo salió mal',
@@ -369,6 +681,7 @@ const es = {
     stop: 'Detener',
     status: 'Estado',
     role: 'Rol',
+    action: 'Acción',
     actions: 'Acciones',
     empty: 'Sin elementos para mostrar',
     noData: 'Sin datos',
@@ -384,6 +697,51 @@ const es = {
     entryPrice: 'Precio de Entrada',
     opened: 'Apertura',
     openStatus: 'Abierta',
+    confirmCloseTitle: '¿Cerrar posición?',
+    confirmCloseDesc:
+      'Esto ejecutará una orden de venta a mercado y no se puede deshacer.',
+    tabOpen: 'Abiertas',
+    tabClosed: 'Cerradas',
+    exitPrice: 'Precio de Salida',
+    closed: 'Cierre',
+    loadingPrice: 'Cargando…',
+    closeNow: 'Cerrar ahora',
+    close: 'Cerrar',
+    confirmClose: {
+      currentPrice: 'Precio Actual',
+      feesSection: 'Comisiones',
+      entryFee: 'Comisión de Entrada (pagada)',
+      exitFee: 'Comisión de Cierre (est. 0.1%)',
+      estimatedPnl: 'G/P Neta Estimada',
+    },
+    modal: {
+      title: 'Detalle de Posición',
+      sectionPosition: 'Posición',
+      sectionConfig: 'Configuración del Agente',
+      sectionTrades: 'Trades Ejecutados',
+      status: 'Estado',
+      entryPrice: 'Precio de Entrada',
+      exitPrice: 'Precio de Salida',
+      quantity: 'Cantidad',
+      fees: 'Comisiones',
+      pnl: 'G/P',
+      entryAt: 'Abierta',
+      exitAt: 'Cerrada',
+      stopLoss: 'Stop Loss',
+      takeProfit: 'Take Profit',
+      maxTrade: 'Máx. Trade %',
+      buyThreshold: 'Umbral de Compra',
+      sellThreshold: 'Umbral de Venta',
+      minInterval: 'Intervalo Mínimo',
+      priceOffset: 'Offset de Precio',
+      maxPositions: 'Máx. Posiciones',
+      tradeType: 'Tipo',
+      tradePrice: 'Precio',
+      tradeQty: 'Cant.',
+      tradeFee: 'Comisión',
+      tradeAt: 'Hora',
+      noTrades: 'Sin trades registrados para esta posición.',
+    },
   },
   tooltips: {
     pnl: 'Ganancias y Pérdidas — ganancias realizadas totales menos comisiones',
@@ -396,6 +754,7 @@ const es = {
     worstTrade: 'Mayor pérdida de un solo trade cerrado',
     pnlOpen:
       'Ganancias y Pérdidas — ganancia o pérdida no realizada de la posición abierta',
+    pnlClosed: 'G/P realizada después de comisiones',
     binanceKeys:
       'Tus claves API de Binance están cifradas con AES-256 en el servidor. Nunca se exponen en la UI.',
     coingecko:
@@ -422,6 +781,8 @@ const es = {
       'Puntuación mínima que el LLM debe asignar para que el agente coloque una orden de COMPRA',
     sellThreshold:
       'Puntuación mínima que el LLM debe asignar para que el agente coloque una orden de VENTA',
+    minProfit:
+      'Ganancia mínima que debe tener la posición para que el agente ejecute el SELL del LLM. Evita cerrar con ganancias menores a las comisiones.',
     stopLoss:
       'Si la posición pierde este porcentaje, el agente la cerrará automáticamente para limitar pérdidas',
     takeProfit:
@@ -446,6 +807,57 @@ const es = {
       '¿Querés entender cada parámetro antes de configurar? Consultá la documentación →',
     docsCalloutGuide: 'Ver Guía del Agente',
     docsCalloutConcepts: 'Ver Conceptos',
+    editModal: { title: 'Editar Agente' },
+    deleteModal: {
+      title: 'Eliminar Agente',
+      body: '¿Estás seguro que querés eliminar este agente? Esta acción no se puede deshacer.',
+      warning: 'Las posiciones abiertas no se cerrarán automáticamente.',
+      confirm: 'Eliminar',
+    },
+    agentSingular: 'agente',
+    agentPlural: 'agentes',
+    noConfigsHint: 'Creá tu primer agente para comenzar a operar.',
+    viewDetail: 'Ver detalle',
+    stepper: {
+      title: 'Nuevo Agente',
+      openStepper: 'Nuevo Agente',
+      back: 'Anterior',
+      next: 'Siguiente',
+      create: 'Crear Agente',
+      stepPreset: 'Elige una estrategia de partida',
+      stepPresetHint:
+        'Los presets son un buen punto de inicio. Puedes ajustar cualquier parámetro en los pasos siguientes.',
+      stepIdentity: 'Identidad del agente',
+      stepIdentityHint:
+        '¿Qué activo quieres operar, en qué modo y cómo se llamará este bot?',
+      stepThresholds: 'Umbrales de decisión',
+      stepThresholdsHint:
+        'Define el nivel mínimo de confianza que el LLM debe alcanzar para que el agente actúe.',
+      stepRisk: 'Gestión de riesgo',
+      stepRiskHint:
+        'Protege tu capital definiendo los límites de pérdida y ganancia por operación.',
+      stepTiming: 'Timing y posiciones',
+      stepTimingHint:
+        'Controla cuántas posiciones simultáneas puede tener el bot y con qué frecuencia analiza el mercado.',
+      stepReview: 'Revisar y crear',
+      stepReviewHint:
+        'Confirmá la configuración antes de guardar. Podés editar el agente en cualquier momento.',
+      nameHint:
+        'Un nombre que te ayude a identificar este bot rápidamente. Por ejemplo: "BTC Conservador" o "ETH Testnet".',
+      modeHint:
+        'SANDBOX opera con fondos virtuales, sin riesgo. TESTNET usa la red de pruebas de Binance. EN VIVO usa tu saldo real.',
+      modeSandboxSub: 'Sin riesgo',
+      modeTestnetSub: 'Red de pruebas',
+      modeLiveSub: 'Dinero real',
+      thresholdsCallout:
+        'Un umbral más alto = menos operaciones pero más selectivas. Un umbral más bajo = más operaciones, más riesgo.',
+      riskCallout:
+        'El stop-loss cierra la posición si la pérdida supera el % configurado. Take-profit hace lo mismo si la ganancia supera el %.',
+      customIntervalHint:
+        'El agente esperará este tiempo entre análisis, independientemente de lo que sugiera el LLM.',
+      reviewNote:
+        'Estos parámetros se pueden editar desde la lista de agentes activos.',
+    },
     guide: {
       flowTitle: 'Cómo toma decisiones el Agente',
       presetsTitle:
@@ -466,6 +878,82 @@ const es = {
       outcomeSLSub: 'Stop-loss / Take-profit',
       outcomeHold: 'Esperar',
       outcomeHoldSub: 'Aguardar minInterval min',
+      agentFlowDesc:
+        'En cada ciclo de análisis, el agente sigue un pipeline fijo de 4 pasos para decidir si operar o esperar.',
+      agentFlowStep1: 'Recopilación de Datos',
+      agentFlowStep1Desc:
+        'El agente obtiene 200 velas OHLCV, calcula RSI · MACD · Bandas de Bollinger, lee tus últimas 10 operaciones ejecutadas y obtiene 10 titulares recientes del feed de noticias.',
+      agentFlowStep2: 'Análisis LLM',
+      agentFlowStep2Desc:
+        'Todo el contexto recopilado se empaqueta en un prompt estructurado y se envía al LLM configurado (Claude, GPT-4o o Groq). El modelo devuelve un JSON con la decisión, un puntaje de confianza 0–100, texto de razonamiento y un tiempo de espera sugerido.',
+      agentFlowStep3: 'Lógica de Decisión',
+      agentFlowStep3Desc:
+        'El puntaje de confianza se compara con tu buyThreshold / sellThreshold. Si ningún umbral se supera, o si ya tienes una posición abierta para el mismo activo, el agente registra HOLD y programa el siguiente ciclo.',
+      agentFlowStep4: 'Ejecución de Orden',
+      agentFlowStep4Desc:
+        'Si el puntaje supera un umbral, el agente coloca una orden de mercado en Binance. Los niveles de Stop Loss y Take Profit se establecen inmediatamente sobre la nueva posición.',
+      agentDecisionsTitle: 'Decisiones Posibles',
+      agentDecisionBuy: 'BUY',
+      agentDecisionBuyDesc:
+        'Puntaje ≥ buyThreshold — abre una nueva posición larga con el % de capital configurado.',
+      agentDecisionSell: 'SELL',
+      agentDecisionSellDesc:
+        'Puntaje ≥ sellThreshold Y tienes una posición en ganancia ≥ minProfitPct — la cierra al precio de mercado.',
+      tradeExecTitle: 'Flujo de Compra y Venta',
+      tradeExecSubtitle:
+        'Cómo el agente decide cuándo abrir y cuándo cerrar posiciones, con la prioridad exacta de cada mecanismo.',
+      tradeExecBuyTitle: 'Flujo de COMPRA',
+      tradeExecBuyStep1: '¿El modelo de IA decide comprar?',
+      tradeExecBuyStep2:
+        'La confianza supera el umbral mínimo de compra (ej: 70%)',
+      tradeExecBuyStep3:
+        'La cantidad de posiciones abiertas no supera el máximo configurado',
+      tradeExecBuyStep4:
+        'Compra al precio de mercado más el ajuste de offset configurado',
+      tradeExecBuyStep5:
+        'El agente registra la posición, el trade y descuenta el capital del saldo',
+      tradeExecSellTitle: 'Flujo de VENTA — 3 caminos (en orden)',
+      tradeExecSell1Title: '1. SELL por decisión LLM (prioridad alta)',
+      tradeExecSell1Desc:
+        'Si el modelo de IA decide vender con suficiente confianza y la posición tiene una ganancia que supera el mínimo configurado, el agente cierra la posición. Si la ganancia no alcanza ese mínimo, la omite y deja actuar al Stop-Loss.',
+      tradeExecSell2Title: '2. Take-Profit (techo de seguridad)',
+      tradeExecSell2Desc:
+        'Se evalúa después de la venta por IA en posiciones que siguen abiertas. Si el precio actual supera el precio de compra más el porcentaje de ganancia objetivo, el agente cierra la posición automáticamente.',
+      tradeExecSell3Title: '3. Stop-Loss (último recurso)',
+      tradeExecSell3Desc:
+        'Si el precio actual cae por debajo del precio de compra menos el porcentaje de pérdida máxima, el agente cierra la posición para limitar el daño.',
+      tradeExecExampleTitle: 'Ejemplo con configuración típica',
+      tradeExecExampleBuy: 'Umbral de Compra',
+      tradeExecExampleSell: 'Umbral de Venta',
+      tradeExecExampleMinProfit: 'Ganancia Mínima LLM',
+      tradeExecExampleTP: 'Take Profit',
+      tradeExecExampleSL: 'Stop Loss',
+      tradeExecExample1Title: 'Escenario A — LLM vende con ganancia',
+      tradeExecExample1Desc:
+        'Compraste BTC a $80,000. Precio actual $80,300 (+0.375%). La IA decide vender con 78% de confianza. Supera el umbral de venta ✓, ganancia 0.375% ≥ ganancia mínima 0.3% ✓ → el agente ejecuta la venta.',
+      tradeExecExample2Title:
+        'Escenario B — la IA quiere vender pero la ganancia es insuficiente',
+      tradeExecExample2Desc:
+        'Precio actual $80,100 (+0.125%). La IA decide vender → supera el umbral de venta ✓, pero ganancia 0.125% < ganancia mínima 0.3% ✗ → se omite. El Take-Profit y el Stop-Loss tampoco se activan → el agente registra espera y aguarda el próximo ciclo.',
+      tradeExecManualTitle: 'Cierre manual',
+      tradeExecManualDesc:
+        'Desde /dashboard/positions podés cerrar cualquier posición abierta manualmente en cualquier momento, sin importar la ganancia o pérdida.',
+      tradeExecNoteTitle: 'Sobre la ganancia mínima para venta',
+      tradeExecNoteDesc:
+        'Este parámetro protege contra cierres donde las comisiones del exchange (0.1% en Binance) se comerían toda la ganancia. El valor por defecto es 0.3%. Podés ajustarlo en la sección de Noticias del dashboard.',
+      tradeExecPriorityLabel: 'Prioridad',
+      tradeExecPriority1:
+        'Venta por IA — cuando la ganancia supera el mínimo configurado',
+      tradeExecPriority2:
+        'Take-Profit — el precio alcanzó el objetivo de ganancias',
+      tradeExecPriority3:
+        'Stop-Loss — el precio cayó por debajo del límite de pérdida',
+      agentDecisionHold: 'HOLD',
+      agentDecisionHoldDesc:
+        'Puntaje por debajo del umbral o sin señal accionable — espera hasta el próximo ciclo.',
+      agentDecisionClose: 'CLOSE',
+      agentDecisionCloseDesc:
+        'Se activa el SL o TP automáticamente — posición cerrada para asegurar ganancia o limitar pérdida.',
       preset: {
         conservative: 'Conservador',
         conservativeDesc:
@@ -500,7 +988,7 @@ const es = {
         'Con qué frecuencia el agente evalua el mercado y cuántas posiciones puede tener.',
       timingExample1: 'minInterval: 60 min',
       timingExample2:
-        '→ El agente evaluú el mercado como máximo una vez por hora',
+        '→ El agente evalúa el mercado como máximo una vez por hora',
       cardTimingTip:
         'Intervalos más largos = menos ruido. 60–120 min es un buen valor inicial.',
     },
@@ -551,8 +1039,31 @@ const es = {
       costMed: 'Equilibrado ✅',
       costLow: 'Bajo costo / estable',
       intervalTip:
-        '60–120 min es ideal para la mayoría de estrategias. Intervalos cortos aumentan el costo de la API del LLM y exponen al agente al micro-ruido del mercado.',
-      // Offset
+        '60–120 min es ideal para la mayoría de estrategias. Intervalos cortos aumentan el costo de la API del LLM y exponen al agente al micro-ruido del mercado.', // Agent cycle
+      cycleTitle: 'Ciclo del Agente y Tiempo de Espera',
+      cycleDesc:
+        'Después de cada ciclo de análisis el agente no vuelve a ejecutarse de inmediato. Espera un número calculado de minutos antes del siguiente ciclo. Este tiempo de espera proviene de dos fuentes independientes que se combinan.',
+      cycleSource1Title: 'Espera sugerida por el LLM',
+      cycleSource1Desc:
+        'Cada vez que el LLM devuelve una decisión (COMPRA / VENTA / ESPERAR) también devuelve un campo llamado suggestedWaitMinutes — un número entre 1 y 60. El modelo decide este valor por sí mismo basándose en las condiciones actuales del mercado: indicadores (RSI, MACD), sentimiento de noticias y volatilidad. Si el mercado está neutro o incierto, el modelo normalmente sugiere una espera más larga como 30–60 min. Si hay una señal clara sugiere una espera más corta.',
+      cycleSource2Title: 'Intervalo mínimo (tu configuración)',
+      cycleSource2Desc:
+        'En la configuración del agente estableces un intervalo mínimo en minutos. Este es el límite inferior: el agente nunca ejecutará ciclos más frecuentemente que este valor, sin importar lo que sugiera el LLM.',
+      cycleCombined: 'Cómo se combinan',
+      cycleCombinedDesc:
+        'La espera real antes del siguiente ciclo es el máximo de los dos valores. Si el LLM dice 30 min y tu minInterval es 15 min, el agente espera 30 min. Si el LLM dice 5 min y tu minInterval es 15 min, el agente espera 15 min.',
+      cycleFormula:
+        'tiempoEspera = Math.max( suggestedWaitMinutes, minIntervalMinutes )',
+      cycleExample1:
+        'LLM sugiere 30 min · Tu minInterval: 15 min → Espera: 30 min',
+      cycleExample2:
+        'LLM sugiere 5 min · Tu minInterval: 15 min → Espera: 15 min',
+      cycleExample3:
+        'LLM sugiere 60 min · Tu minInterval: 15 min → Espera: 60 min',
+      cycleTip:
+        'Para garantizar ciclos más rápidos, baja tu minInterval en la configuración del agente. Pero ten en cuenta que el LLM siempre tiene la última palabra — puede seguir sugiriendo una espera mayor según las condiciones del mercado.',
+      cycleLlmNote:
+        'El valor suggestedWaitMinutes siempre se fuerza entre 1 y 60 minutos, incluso si el modelo devuelve un valor fuera de ese rango.', // Offset
       offsetTitle: 'Offset de Precio de Orden',
       offsetDesc:
         'Un ajuste porcentual aplicado al precio de mercado actual cuando se colocan órdenes límite de compra. Un offset negativo coloca la orden por debajo del mercado (mejor precio, puede tardar en ejecutarse). Uno positivo la coloca por encima (se ejecuta antes, ligero sobreprecio). En cero se ejecuta al precio de mercado.',
@@ -608,12 +1119,32 @@ const es = {
   },
   notificationMessages: {
     agentNoLLM: 'Agente pausado: no hay credenciales LLM configuradas',
+    agentNoTestnetKeys:
+      'Agente pausado: no hay claves API de Binance Testnet configuradas',
+    agentRateLimit:
+      'Agente en espera: límite de requests de Binance alcanzado. Reintentando en {{retryMinutes}} min.',
+    agentNetworkError:
+      'Agente en espera: sin conexión a Binance. Reintentando en {{retryMinutes}} min.',
     agentError: 'Error del agente: {{message}}',
     tradeBuy: 'COMPRA {{qty}} {{asset}} @ ${{price}} ({{mode}})',
+    tradeSell:
+      'VENTA LLM {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}} ({{mode}})',
+    manualClose:
+      'Posición cerrada manualmente: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
     stopLoss:
       'Stop-loss activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
     takeProfit:
       'Take-profit activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
+    orderError: 'Orden fallida: {{message}}',
+  },
+  balanceSource: {
+    sandbox: 'Saldo virtual · Sandbox',
+    testnet: 'Binance Testnet',
+    live: 'Binance En Vivo',
+    noKeysConfigured: 'Sin claves configuradas para este modo',
+    loadingBalance: 'Cargando balance...',
+    fetchError: 'No se pudo cargar el balance',
+    goToSettings: 'Configurar API Keys',
   },
   auth: {
     loginTitle: 'Bienvenido de vuelta',
@@ -650,6 +1181,7 @@ const es = {
       'Crea una API Key de lectura+trading (sin retiros) en la configuración de tu cuenta Binance.',
     binanceHelpLinkText: 'Abrir gestión de API de Binance →',
     skipBinance: 'Omitir por ahora — usar Trading Sandbox',
+    skipTestnet: 'Omitir — no necesito trading en Testnet',
     aiProviderSubtitle:
       'Elige el proveedor de IA que impulsará tu agente de trading.',
     apiKey: 'Clave API',
@@ -662,9 +1194,14 @@ const es = {
     sandboxDesc:
       'Simula trades sin riesgo. El agente usa la lógica real pero sin dinero real.',
     sandboxRecommended: 'Recomendado para principiantes',
+    testnetTitle: 'Binance Testnet',
+    testnetDesc:
+      'Órdenes reales en la testnet oficial de Binance. Sin dinero real; más fidelidad que Sandbox.',
+    testnetRecommended: 'Para probar el flujo completo de trading',
     liveTitle: 'Trading En Vivo',
     liveDesc: 'Opera con fondos reales. Requiere claves API de Binance.',
     liveRequiresBinance: '⚠️ Requiere claves API de Binance (Paso 1)',
+    testnetRequiresKeys: '⚠️ Requiere claves API de Binance Testnet',
     initialCapitalSandbox: 'Capital Inicial (USDT) — simulado',
     initialCapitalNote: 'Valor de referencia para tu portafolio simulado.',
     continue: 'Continuar',
@@ -777,6 +1314,102 @@ const es = {
     footerSignUp: 'Crear cuenta',
     footerLogin: 'Iniciar sesión',
     footerAITitle: 'Modelos de IA',
+  },
+  botAnalysis: {
+    title: 'Análisis del Bot',
+    subtitle:
+      'Razonamiento técnico, sentimiento de noticias e historial de decisiones de la IA',
+    tabAnalysis: 'Análisis',
+    tabAgentLog: 'Registro del Agente',
+    agentLogSubtitle:
+      'Historial de todas las decisiones tomadas por el agente de trading IA',
+    refresh: 'Actualizar',
+    updatedAgo: 'hace {{count}} min',
+    techSignal: 'Señal Técnica',
+    newsSentiment: 'Sentimiento Noticias',
+    lastDecision: 'Última Decisión IA',
+    scoreOf: 'Score {{score}} de 8 indicadores',
+    sentimentScoreLabel: 'Score {{score}} en noticias recientes',
+    noData: 'Sin datos',
+    startAgent: 'Inicia un agente para ver datos',
+    technicalAnalysis: 'Análisis Técnico',
+    confluenceScore: 'Puntaje de confluencia',
+    strong: 'fuerte',
+    entry: 'Entrada',
+    stopLoss: 'Stop Loss',
+    takeProfit: 'Take Profit',
+    newsSentimentTitle: 'Sentimiento de Noticias',
+    loadingNews: 'Cargando noticias…',
+    newsUsedByBot: 'El bot usa noticias en sus decisiones',
+    newsNotUsedByBot: 'El bot no usa noticias en sus decisiones',
+    newsWeightLabel: 'de influencia',
+    configureNews: 'Configurar',
+    loadingConfig: 'Cargando config…',
+    viewIndicators: 'Indicadores',
+    inputSummaryTitle: 'Entradas del Agente',
+    inputSummarySubtitle: '— datos enviados al agente antes de cada decisión',
+    inputGroupPrice: 'Precio',
+    inputGroupIndicators: 'Indicadores',
+    inputGroupNews: 'Noticias',
+    inputGroupConfig: 'Config',
+    inputGroupHistory: 'Historial Decisiones',
+    inputHistoryEmpty: 'Sin decisiones aún',
+    nextDecisionTitle: 'Próxima Decisión del Agente',
+    nextDecisionIn: 'Próxima decisión en',
+    nextDecisionNow: 'Analizando...',
+    nextDecisionAnalyzing: 'Analizando...',
+    lastDecisionLabel: 'Última decisión',
+    inputCurrentPrice: 'Precio',
+    inputChange24h: 'Cambio 24h',
+    inputTechSignal: 'Señal Téc',
+    inputVolume: 'Volumen',
+    inputSupportResistance: 'S / R',
+    inputNewsEnabled: 'Bot usa noticias',
+    inputNewsEnabledYes: '✓ Activo (peso {{weight}}%)',
+    inputNewsEnabledNo: '✗ Desactivado',
+    inputAnalysisMethod: 'Método',
+    inputNewsSentiment: 'General',
+    inputNewsDistribution: 'Distribución',
+    inputConfigPair: 'Par / Modo',
+    inputBuyThreshold: 'Umbral Compra',
+    inputSellThreshold: 'Umbral Venta',
+    inputStopLoss: 'Stop Loss',
+    inputTakeProfit: 'Take Profit',
+    inputRiskZone: 'Niveles de Riesgo',
+    inputAgentRunning: '{{count}} agente activo',
+    positiveNews: '{{count}} positivas',
+    negativeNews: '{{count}} negativas',
+    neutralNews: '{{count}} neutras',
+    sentimentBull: 'Alcista',
+    sentimentBear: 'Bajista',
+    sentimentNeutral: 'Neutral',
+    scoreLabel: 'Score',
+    detectedFactors: 'Factores detectados',
+    decisionHistory: 'Historial de Decisiones del Agente',
+    records: '{{count}} registros',
+    noDecisions: 'Sin decisiones del agente todavía.',
+    noDecisionsHint:
+      'Inicia un agente de trading para ver el historial de razonamiento aquí.',
+    waitMinutes: 'Esperar {{count}} min antes de la próxima acción',
+    justification: 'Justificación',
+    signalBUY: 'COMPRAR',
+    signalSELL: 'VENDER',
+    signalHOLD: 'MANTENER',
+    signalNEUTRAL: 'NEUTRAL',
+    sentimentBULLISH: 'Alcista',
+    sentimentBEARISH: 'Bajista',
+    timeNow: 'ahora',
+    timeMin: '{{count}}min',
+    timeHour: '{{count}}h',
+    timeDay: '{{count}}d',
+    agentDecisions: '{{count}} decisiones',
+    noAgentDecisions: 'Sin decisiones del agente todavía',
+    noAgentDecisionsHint:
+      'Inicia un agente de trading para ver el razonamiento y las decisiones de la IA aquí.',
+    confidence: 'Confianza',
+    viewCurrentState: 'Ver Estado Actual',
+    currentState: 'Estado actual',
+    noDecisionsYet: 'El agente aún no ha tomado ninguna decisión.',
   },
 };
 

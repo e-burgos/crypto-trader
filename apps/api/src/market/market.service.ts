@@ -121,6 +121,7 @@ export class MarketService {
         enabledSources: [],
         onlySummary: true,
         botEnabled: true,
+        newsWeight: 15,
       },
     });
   }
@@ -133,6 +134,7 @@ export class MarketService {
       enabledSources?: string[];
       onlySummary?: boolean;
       botEnabled?: boolean;
+      newsWeight?: number;
     },
   ) {
     return this.prisma.newsConfig.upsert({
@@ -144,6 +146,7 @@ export class MarketService {
         enabledSources: data.enabledSources ?? [],
         onlySummary: data.onlySummary ?? true,
         botEnabled: data.botEnabled ?? true,
+        newsWeight: data.newsWeight ?? 15,
       },
       update: data,
     });
@@ -214,8 +217,30 @@ export class MarketService {
       publishedAt: n.publishedAt,
     }));
 
-    // Delete old record and create new (one active record per user)
-    await this.prisma.newsAnalysis.deleteMany({ where: { userId } });
+    // Upsert: preserve AI fields if they exist from a previous AI analysis
+    const existing = await this.prisma.newsAnalysis.findFirst({
+      where: { userId },
+      orderBy: { analyzedAt: 'desc' },
+    });
+
+    if (existing) {
+      return this.prisma.newsAnalysis.update({
+        where: { id: existing.id },
+        data: {
+          analyzedAt: new Date(),
+          newsCount: total,
+          positiveCount: positive,
+          negativeCount: negative,
+          neutralCount: neutral,
+          score,
+          overallSentiment,
+          summary,
+          headlines: headlines as any,
+          // AI fields are intentionally NOT touched — preserved from previous run
+        },
+      });
+    }
+
     return this.prisma.newsAnalysis.create({
       data: {
         userId,

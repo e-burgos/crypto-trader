@@ -2,6 +2,8 @@ import {
   IsEnum,
   IsNumber,
   IsOptional,
+  IsString,
+  MaxLength,
   Min,
   Max,
   IsBoolean,
@@ -21,9 +23,24 @@ export enum QuoteCurrencyEnum {
 export enum TradingModeEnum {
   LIVE = 'LIVE',
   SANDBOX = 'SANDBOX',
+  TESTNET = 'TESTNET',
+}
+
+export enum IntervalModeEnum {
+  AGENT = 'AGENT',
+  CUSTOM = 'CUSTOM',
 }
 
 export class CreateTradingConfigDto {
+  @ApiPropertyOptional({
+    example: 'BTC Agresivo',
+    description: 'Nombre descriptivo del agente',
+  })
+  @IsString()
+  @MaxLength(50)
+  @IsOptional()
+  name?: string;
+
   @ApiProperty({ enum: AssetEnum, example: AssetEnum.BTC })
   @IsEnum(AssetEnum)
   asset!: AssetEnum;
@@ -83,6 +100,19 @@ export class CreateTradingConfigDto {
   @Max(1, { message: 'Take-profit no puede superar $constraint1 (100%)' })
   @IsOptional()
   takeProfitPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 0.5,
+    example: 0.003,
+    description:
+      'Ganancia mínima requerida para ejecutar SELL por decisión LLM (0.003 = 0.3%)',
+  })
+  @IsNumber({}, { message: 'Ganancia mínima debe ser un número válido' })
+  @Min(0, { message: 'Ganancia mínima debe ser mayor o igual a $constraint1' })
+  @Max(0.5, { message: 'Ganancia mínima no puede superar $constraint1 (50%)' })
+  @IsOptional()
+  minProfitPct?: number;
 
   @ApiPropertyOptional({
     minimum: 0.01,
@@ -150,9 +180,28 @@ export class CreateTradingConfigDto {
   @Max(0.05, { message: 'Offset de precio no puede superar +5%' })
   @IsOptional()
   orderPriceOffsetPct?: number;
+
+  @ApiPropertyOptional({
+    enum: IntervalModeEnum,
+    example: IntervalModeEnum.AGENT,
+    description:
+      'AGENT = respeta la sugerencia del LLM; CUSTOM = usa minIntervalMinutes fijo',
+  })
+  @IsEnum(IntervalModeEnum)
+  @IsOptional()
+  intervalMode?: IntervalModeEnum;
 }
 
 export class UpdateTradingConfigDto {
+  @ApiPropertyOptional({
+    example: 'BTC Agresivo',
+    description: 'Nombre descriptivo del agente',
+  })
+  @IsString()
+  @MaxLength(50)
+  @IsOptional()
+  name?: string;
+
   @ApiPropertyOptional({ enum: TradingModeEnum })
   @IsEnum(TradingModeEnum)
   @IsOptional()
@@ -185,6 +234,19 @@ export class UpdateTradingConfigDto {
   @Max(1, { message: 'Take-profit no puede superar $constraint1 (100%)' })
   @IsOptional()
   takeProfitPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 0.5,
+    example: 0.003,
+    description:
+      'Ganancia mínima requerida para ejecutar SELL por decisión LLM (0.003 = 0.3%)',
+  })
+  @IsNumber({}, { message: 'Ganancia mínima debe ser un número válido' })
+  @Min(0, { message: 'Ganancia mínima debe ser mayor o igual a $constraint1' })
+  @Max(0.5, { message: 'Ganancia mínima no puede superar $constraint1 (50%)' })
+  @IsOptional()
+  minProfitPct?: number;
 
   @ApiPropertyOptional({ minimum: 0.01, maximum: 1, example: 0.1 })
   @IsNumber(
@@ -231,6 +293,14 @@ export class UpdateTradingConfigDto {
   orderPriceOffsetPct?: number;
 
   @ApiPropertyOptional({
+    enum: IntervalModeEnum,
+    example: IntervalModeEnum.AGENT,
+  })
+  @IsEnum(IntervalModeEnum)
+  @IsOptional()
+  intervalMode?: IntervalModeEnum;
+
+  @ApiPropertyOptional({
     example: true,
     description: 'Activar o desactivar la configuración',
   })
@@ -240,11 +310,13 @@ export class UpdateTradingConfigDto {
 }
 
 export class StartAgentDto {
-  @ApiProperty({ enum: AssetEnum, example: AssetEnum.BTC })
-  @IsEnum(AssetEnum)
-  asset!: AssetEnum;
+  @ApiProperty({ description: 'ID de la configuración del agente' })
+  @IsString()
+  configId!: string;
+}
 
-  @ApiProperty({ enum: QuoteCurrencyEnum, example: QuoteCurrencyEnum.USDT })
-  @IsEnum(QuoteCurrencyEnum)
-  pair!: QuoteCurrencyEnum;
+export class StopAgentDto {
+  @ApiProperty({ description: 'ID de la configuración del agente' })
+  @IsString()
+  configId!: string;
 }

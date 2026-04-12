@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
 import { MarketService } from '../market/market.service';
 
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
 import { LLMAnalyzer, createLLMProvider } from '@crypto-trader/analysis';
@@ -25,7 +26,7 @@ import {
   NotificationType,
   NewsItem,
 } from '@crypto-trader/shared';
-import { SUPPORTED_PAIRS } from '@crypto-trader/shared';
+import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 
 interface AgentJobData {
@@ -70,13 +71,41 @@ export class TradingProcessor {
         throw new Error(`Unsupported pair: ${config.asset}/${config.pair}`);
 
       // 2. Decrypt Binance credentials
-      const binanceCreds = await this.prisma.binanceCredential.findUnique({
-        where: { userId },
-      });
+      const isTestnetMode = config.mode === TradingMode.TESTNET;
+      const isLiveMode = config.mode === TradingMode.LIVE;
+
+      // Guard: TESTNET mode requires testnet credentials
+      if (isTestnetMode) {
+        const testnetCreds = await this.prisma.binanceCredential.findUnique({
+          where: { userId_isTestnet: { userId, isTestnet: true } },
+        });
+        if (!testnetCreds) {
+          this.logger.warn(
+            `No testnet credentials for user ${userId} — pausing agent`,
+          );
+          await this.prisma.tradingConfig.update({
+            where: { id: configId },
+            data: { isRunning: false },
+          });
+          await this.notificationsService.create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({ key: 'agentNoTestnetKeys' }),
+          );
+          return;
+        }
+      }
+
+      const binanceCreds =
+        isLiveMode || isTestnetMode
+          ? await this.prisma.binanceCredential.findUnique({
+              where: { userId_isTestnet: { userId, isTestnet: isTestnetMode } },
+            })
+          : null;
 
       let binanceApiKey: string | undefined;
       let binanceSecret: string | undefined;
-      if (binanceCreds && config.mode === TradingMode.LIVE) {
+      if (binanceCreds && (isLiveMode || isTestnetMode)) {
         binanceApiKey = decrypt(
           binanceCreds.apiKeyEncrypted,
           binanceCreds.apiKeyIv,
@@ -110,11 +139,12 @@ export class TradingProcessor {
       const llmApiKey = decrypt(llmCred.apiKeyEncrypted, llmCred.apiKeyIv);
 
       // 4. Fetch candles
-      const binanceClient = new BinanceRestClient({
-        apiKey: binanceApiKey,
-        apiSecret: binanceSecret,
-      });
-      const candles = await binanceClient.getKlines(pair.symbol, '1h', 200);
+      // Klines is a PUBLIC endpoint — no auth or testnet URL needed.
+      // Using api.binance.com (production) regardless of agent mode avoids
+      // rate-limit issues on testnet.binance.vision (shared, unreliable server).
+      // Testnet only differs for authenticated calls (orders, account balance).
+      const publicKlineClient = new BinanceRestClient({ testnet: false });
+      const candles = await publicKlineClient.getKlines(pair.symbol, '1h', 200);
 
       // 5. Build indicator snapshot
       const indicatorSnapshot = calculateIndicatorSnapshot(candles);
@@ -200,6 +230,25 @@ export class TradingProcessor {
         binanceOrderId: t.binanceOrderId ?? undefined,
       }));
 
+      // 7b. Load recent agent decisions for this config
+      const recentDbDecisions = await this.prisma.agentDecision.findMany({
+        where: { userId, configId: config.id },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          decision: true,
+          confidence: true,
+          reasoning: true,
+          createdAt: true,
+        },
+      });
+      const recentDecisions = recentDbDecisions.map((d) => ({
+        decision: d.decision as string,
+        confidence: d.confidence,
+        reasoning: d.reasoning,
+        createdAt: d.createdAt.toISOString(),
+      }));
+
       // 8. Call LLM
       const llmProvider = createLLMProvider(
         llmCred.provider as any,
@@ -214,6 +263,8 @@ export class TradingProcessor {
         recentCandles: candles.slice(-20),
         newsItems: newsItems as unknown as NewsItem[],
         recentTrades,
+        recentDecisions,
+        newsWeight: newsConfig.newsWeight ?? 15,
         userConfig: {
           id: config.id,
           userId: config.userId,
@@ -223,6 +274,7 @@ export class TradingProcessor {
           sellThreshold: config.sellThreshold,
           stopLossPct: config.stopLossPct,
           takeProfitPct: config.takeProfitPct,
+          minProfitPct: config.minProfitPct ?? 0.003,
           maxTradePct: config.maxTradePct,
           maxConcurrentPositions: config.maxConcurrentPositions,
           minIntervalMinutes: config.minIntervalMinutes,
@@ -249,29 +301,93 @@ export class TradingProcessor {
             source: n.source,
           })) as any,
           waitMinutes: decision.suggestedWaitMinutes,
+          configId: config.id,
+          configName: config.name || undefined,
+          mode: config.mode as any,
         },
       });
 
       // Emit decision to WebSocket
       this.gateway.emitToUser(userId, 'agent:decision', savedDecision);
 
-      // 10. Execute BUY if conditions met
+      // 10. Execute based on LLM decision
       const confidencePct = decision.confidence * 100;
+
       if (
         decision.decision === Decision.BUY &&
         confidencePct >= config.buyThreshold
       ) {
-        await this.executeBuy(
-          userId,
-          config,
-          pair.symbol,
-          config.mode as TradingMode,
-          binanceApiKey,
-          binanceSecret,
-        );
+        try {
+          await this.executeBuy(
+            userId,
+            config,
+            pair.symbol,
+            config.mode as TradingMode,
+            binanceApiKey,
+            binanceSecret,
+          );
+        } catch (orderErr) {
+          const axiosData = (orderErr as any)?.response?.data;
+          const binanceDetail = axiosData
+            ? ` [Binance ${axiosData.code}: ${axiosData.msg}]`
+            : '';
+          const orderMsg =
+            (orderErr instanceof Error ? orderErr.message : String(orderErr)) +
+            binanceDetail;
+          this.logger.warn(
+            `BUY order failed for config ${configId} — skipping cycle: ${orderMsg}`,
+          );
+          await this.notificationsService
+            .create(
+              userId,
+              NotificationType.AGENT_ERROR,
+              JSON.stringify({
+                key: 'orderError',
+                message: `BUY failed: ${orderMsg.slice(0, 180)}`,
+              }),
+            )
+            .catch(() => null);
+        }
       }
 
-      // 11. Check stop-loss / take-profit on open positions
+      if (
+        decision.decision === Decision.SELL &&
+        confidencePct >= config.sellThreshold
+      ) {
+        try {
+          await this.executeLLMSell(
+            userId,
+            config,
+            pair.symbol,
+            config.mode as TradingMode,
+            binanceApiKey,
+            binanceSecret,
+          );
+        } catch (orderErr) {
+          const axiosData = (orderErr as any)?.response?.data;
+          const binanceDetail = axiosData
+            ? ` [Binance ${axiosData.code}: ${axiosData.msg}]`
+            : '';
+          const orderMsg =
+            (orderErr instanceof Error ? orderErr.message : String(orderErr)) +
+            binanceDetail;
+          this.logger.warn(
+            `SELL order failed for config ${configId} — skipping cycle: ${orderMsg}`,
+          );
+          await this.notificationsService
+            .create(
+              userId,
+              NotificationType.AGENT_ERROR,
+              JSON.stringify({
+                key: 'orderError',
+                message: `SELL failed: ${orderMsg.slice(0, 180)}`,
+              }),
+            )
+            .catch(() => null);
+        }
+      }
+
+      // 11. Check stop-loss / take-profit on remaining open positions
       await this.checkOpenPositions(
         userId,
         config,
@@ -282,10 +398,12 @@ export class TradingProcessor {
       );
 
       // 12. Schedule next cycle
-      const waitMinutes = Math.max(
-        decision.suggestedWaitMinutes,
-        config.minIntervalMinutes,
-      );
+      // If intervalMode is CUSTOM, always use the user-configured minIntervalMinutes.
+      // If AGENT (default), use the LLM's suggested wait but enforce minIntervalMinutes as floor.
+      const waitMinutes =
+        config.intervalMode === 'CUSTOM'
+          ? config.minIntervalMinutes
+          : Math.max(decision.suggestedWaitMinutes, config.minIntervalMinutes);
       const delay = waitMinutes * 60 * 1000;
 
       // Re-queue only if still running.
@@ -307,7 +425,102 @@ export class TradingProcessor {
         );
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      // Extract Binance-specific error detail from Axios response body
+      const httpStatus = (err as any)?.response?.status as number | undefined;
+      const axiosData = (err as any)?.response?.data;
+      const binanceDetail =
+        axiosData?.code && axiosData?.msg
+          ? ` [Binance ${axiosData.code}: ${axiosData.msg}]`
+          : '';
+      const message =
+        (err instanceof Error ? err.message : String(err)) + binanceDetail;
+
+      // 429 = Binance rate-limit: transient error — do NOT stop the agent.
+      // Use the Retry-After header if present.
+      // Fallback: 70s (just past the 60s window reset) for testnet; 10 min for live.
+      if (httpStatus === 429) {
+        const retryAfterHeader = (err as any)?.response?.headers?.[
+          'retry-after'
+        ];
+        const configMode = await this.prisma.tradingConfig
+          .findUnique({ where: { id: configId }, select: { mode: true } })
+          .then((c) => c?.mode ?? null)
+          .catch(() => null);
+        const isTestnet = configMode === 'TESTNET';
+        const fallbackSeconds = isTestnet ? 70 : 600;
+        const retryAfterSeconds = retryAfterHeader
+          ? Math.max(parseInt(String(retryAfterHeader), 10), 60)
+          : fallbackSeconds;
+        const retryDelay = retryAfterSeconds * 1000;
+        const retryMinutes = Math.ceil(retryAfterSeconds / 60);
+        this.logger.warn(
+          `Rate-limited by Binance for user=${userId}. Retrying in ${retryMinutes} min (Retry-After: ${retryAfterHeader ?? 'not provided'}).`,
+        );
+        const stillRunning = await this.prisma.tradingConfig
+          .findUnique({ where: { id: configId }, select: { isRunning: true } })
+          .catch(() => null);
+        if (stillRunning?.isRunning) {
+          await job.queue
+            .add(
+              'run-cycle',
+              { userId, configId },
+              { delay: retryDelay, removeOnComplete: true },
+            )
+            .catch(() => null);
+        }
+        await this.notificationsService
+          .create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({
+              key: 'agentRateLimit',
+              retryMinutes: String(retryMinutes),
+            }),
+          )
+          .catch(() => null);
+        return;
+      }
+
+      // Network errors: transient — do NOT stop the agent, retry in 5 min.
+      const networkErrorCodes = [
+        'ENOTFOUND',
+        'EAI_AGAIN',
+        'ECONNREFUSED',
+        'ECONNRESET',
+        'ETIMEDOUT',
+      ];
+      const errCode = (err as NodeJS.ErrnoException)?.code ?? '';
+      if (networkErrorCodes.includes(errCode)) {
+        const retryMinutes = 5;
+        const retryDelay = retryMinutes * 60 * 1000;
+        this.logger.warn(
+          `Network error for user=${userId} (${errCode}). Retrying in ${retryMinutes} min.`,
+        );
+        const stillRunning = await this.prisma.tradingConfig
+          .findUnique({ where: { id: configId }, select: { isRunning: true } })
+          .catch(() => null);
+        if (stillRunning?.isRunning) {
+          await job.queue
+            .add(
+              'run-cycle',
+              { userId, configId },
+              { delay: retryDelay, removeOnComplete: true },
+            )
+            .catch(() => null);
+        }
+        await this.notificationsService
+          .create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({
+              key: 'agentNetworkError',
+              retryMinutes: String(retryMinutes),
+            }),
+          )
+          .catch(() => null);
+        return;
+      }
+
       this.logger.error(`Agent cycle error for user=${userId}: ${message}`);
       await this.prisma.tradingConfig
         .update({
@@ -364,7 +577,7 @@ export class TradingProcessor {
       if (quantity <= 0) return;
 
       const cost = livePrice * quantity;
-      const fee = cost * 0.001;
+      const fee = cost * TRADE_FEE_PCT;
       const total = cost + fee;
       if (wallet.balance < total) return;
 
@@ -422,9 +635,13 @@ export class TradingProcessor {
       return;
     }
 
-    // ── LIVE ─────────────────────────────────────────────────────────────────
+    // ── LIVE or TESTNET: use real Binance (prod or testnet) ──────────────────
     const executor = new LiveOrderExecutor(
-      new BinanceRestClient({ apiKey, apiSecret }),
+      new BinanceRestClient({
+        apiKey,
+        apiSecret,
+        testnet: mode === TradingMode.TESTNET,
+      }),
     );
     const currentPrice = await executor.getPrice(symbol);
     // Apply offset to the reference price used for quantity calculation
@@ -465,7 +682,7 @@ export class TradingProcessor {
         type: TradeType.BUY,
         price: order.price,
         quantity: order.quantity,
-        fee: order.price * order.quantity * 0.001,
+        fee: order.price * order.quantity * TRADE_FEE_PCT,
         mode,
         binanceOrderId: order.orderId,
       },
@@ -487,6 +704,138 @@ export class TradingProcessor {
     });
   }
 
+  private async executeLLMSell(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    apiKey?: string,
+    apiSecret?: string,
+  ) {
+    const openPositions = await this.prisma.position.findMany({
+      where: { userId, asset: config.asset, status: 'OPEN', mode },
+    });
+    if (!openPositions.length) return;
+
+    const executor =
+      mode === TradingMode.SANDBOX
+        ? new SandboxOrderExecutor()
+        : new LiveOrderExecutor(
+            new BinanceRestClient({
+              apiKey,
+              apiSecret,
+              testnet: mode === TradingMode.TESTNET,
+            }),
+          );
+
+    if (mode === TradingMode.SANDBOX) {
+      const publicClient = new BinanceRestClient({});
+      const livePrice = await publicClient
+        .getTickerPrice(symbol)
+        .catch(() => null);
+      if (livePrice)
+        (executor as SandboxOrderExecutor).setPrice(symbol, livePrice);
+    }
+
+    const currentPrice = await executor.getPrice(symbol).catch(() => null);
+    if (!currentPrice) return;
+
+    const minProfitPct: number = config.minProfitPct ?? 0.003;
+
+    for (const pos of openPositions) {
+      // Only sell if the position is currently profitable above the minimum threshold
+      const profitPct = (currentPrice - pos.entryPrice) / pos.entryPrice;
+      if (profitPct < minProfitPct) {
+        this.logger.log(
+          `LLM SELL skipped for position ${pos.id}: profit ${(profitPct * 100).toFixed(2)}% below minimum ${(minProfitPct * 100).toFixed(2)}%`,
+        );
+        continue;
+      }
+
+      const order = await executor.placeMarketOrder(
+        symbol,
+        TradeType.SELL,
+        pos.quantity,
+      );
+      const posData = {
+        ...pos,
+        asset: pos.asset as any,
+        pair: pos.pair as any,
+        mode: pos.mode as any,
+        status: pos.status as any,
+        exitPrice: pos.exitPrice ?? undefined,
+        exitAt: pos.exitAt ?? undefined,
+        pnl: pos.pnl ?? undefined,
+      };
+      const { position: closedPosition, pnl } =
+        this.positionManager.closePosition(posData, order.price);
+
+      await this.prisma.position.update({
+        where: { id: pos.id },
+        data: {
+          exitPrice: closedPosition.exitPrice,
+          exitAt: closedPosition.exitAt,
+          status: 'CLOSED',
+          pnl: closedPosition.pnl,
+          fees: closedPosition.fees,
+        },
+      });
+
+      await this.prisma.trade.create({
+        data: {
+          userId,
+          positionId: pos.id,
+          type: TradeType.SELL,
+          price: order.price,
+          quantity: order.quantity,
+          fee: order.price * order.quantity * TRADE_FEE_PCT,
+          mode,
+          binanceOrderId: order.orderId,
+        },
+      });
+
+      if (mode === TradingMode.SANDBOX) {
+        const proceeds = order.price * order.quantity;
+        const fee = proceeds * TRADE_FEE_PCT;
+        await this.prisma.sandboxWallet.upsert({
+          where: { userId_currency: { userId, currency: pos.pair as any } },
+          create: {
+            userId,
+            currency: pos.pair as any,
+            balance: 10_000 + proceeds - fee,
+          },
+          update: { balance: { increment: proceeds - fee } },
+        });
+        const updatedWallet = await this.prisma.sandboxWallet.findUnique({
+          where: { userId_currency: { userId, currency: pos.pair as any } },
+        });
+        this.gateway.emitToUser(userId, 'wallet:updated', {
+          currency: pos.pair,
+          balance: updatedWallet?.balance,
+        });
+      }
+
+      await this.notificationsService.create(
+        userId,
+        NotificationType.TRADE_EXECUTED,
+        JSON.stringify({
+          key: 'tradeSell',
+          qty: pos.quantity.toString(),
+          asset: config.asset,
+          price: order.price.toFixed(2),
+          pnl: pnl.toFixed(2),
+          mode,
+        }),
+      );
+      this.gateway.emitToUser(userId, 'trade:executed', {
+        position: closedPosition,
+      });
+      this.gateway.emitToUser(userId, 'position:updated', {
+        position: closedPosition,
+      });
+    }
+  }
+
   private async checkOpenPositions(
     userId: string,
     config: any,
@@ -503,7 +852,13 @@ export class TradingProcessor {
     const executor =
       mode === TradingMode.SANDBOX
         ? new SandboxOrderExecutor()
-        : new LiveOrderExecutor(new BinanceRestClient({ apiKey, apiSecret }));
+        : new LiveOrderExecutor(
+            new BinanceRestClient({
+              apiKey,
+              apiSecret,
+              testnet: mode === TradingMode.TESTNET,
+            }),
+          );
 
     // For SANDBOX: inject real market price from Binance public API (no auth needed)
     if (mode === TradingMode.SANDBOX) {
@@ -567,7 +922,7 @@ export class TradingProcessor {
             type: TradeType.SELL,
             price: order.price,
             quantity: order.quantity,
-            fee: order.price * order.quantity * 0.001,
+            fee: order.price * order.quantity * TRADE_FEE_PCT,
             mode,
             binanceOrderId: order.orderId,
           },
@@ -576,7 +931,7 @@ export class TradingProcessor {
         // ── For SANDBOX: credit proceeds back to wallet ─────────────────────
         if (mode === TradingMode.SANDBOX) {
           const proceeds = order.price * order.quantity;
-          const fee = proceeds * 0.001;
+          const fee = proceeds * TRADE_FEE_PCT;
           await this.prisma.sandboxWallet.upsert({
             where: { userId_currency: { userId, currency: pos.pair as any } },
             create: {
@@ -595,7 +950,6 @@ export class TradingProcessor {
           });
         }
 
-        const reason = shouldStopLoss ? 'Stop-loss' : 'Take-profit';
         const notifType = shouldStopLoss
           ? NotificationType.STOP_LOSS_TRIGGERED
           : NotificationType.TAKE_PROFIT_HIT;

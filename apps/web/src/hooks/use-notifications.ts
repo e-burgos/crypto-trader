@@ -46,3 +46,14 @@ export function useMarkRead() {
     },
   });
 }
+
+export function useDeleteNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/notifications/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+    },
+    onError: () => toast.error('Error al eliminar la notificación'),
+  });
+}

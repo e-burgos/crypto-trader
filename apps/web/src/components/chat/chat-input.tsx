@@ -59,10 +59,10 @@ export function ChatInput({
         <div
           className={cn(
             'relative flex items-center gap-2 rounded-2xl border px-3 py-2.5 transition-all duration-200',
-            'bg-white/[0.04] backdrop-blur-sm',
+            'bg-muted/30',
             focused
               ? 'border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary)/0.3),0_0_16px_hsl(var(--primary)/0.15)]'
-              : 'border-white/10 shadow-none',
+              : 'border-border/60 shadow-none',
           )}
         >
           <textarea
@@ -106,7 +106,7 @@ export function ChatInput({
                 'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
                 canSend
                   ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_18px_hsl(var(--primary)/0.6)] hover:scale-105 active:scale-95'
-                  : 'bg-white/5 text-muted-foreground/30 cursor-not-allowed',
+                  : 'bg-muted text-muted-foreground/40 cursor-not-allowed',
               )}
               title="Send (Enter · Shift+Enter for newline)"
             >

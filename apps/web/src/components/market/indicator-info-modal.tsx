@@ -2,12 +2,15 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type IndicatorKey =
   | 'price'
   | 'signalReasons'
+  | 'opportunity'
+  | 'chart'
   | 'rsi'
   | 'macd'
   | 'ema'
@@ -637,65 +640,37 @@ interface IndicatorInfo {
   chart: React.ReactNode;
 }
 
-const INDICATORS: Record<IndicatorKey, IndicatorInfo> = {
+function getIndicators(
+  t: (key: string) => string,
+): Record<IndicatorKey, IndicatorInfo> {
+  const k = (s: string) => t(`market.indicators.${s}`);
+  return {
   price: {
-    title: 'Precio Actual',
-    subtitle: 'Precio de mercado en tiempo real + señal consolidada',
-    what: 'Esta tarjeta muestra el precio actual del par seleccionado, obtenido en tiempo real via WebSocket desde el exchange. También calcula y muestra una señal consolidada (BUY, SELL, HOLD o NEUTRAL) basada en el agregado de todos los indicadores técnicos.',
-    how: 'El precio se actualiza cada segundo desde el stream de mercado. La señal se deriva calculando un "score" ponderado de RSI, MACD, EMA, Bollinger Bands, Volumen y niveles de Soporte/Resistencia. Scores positivos apuntan a BUY, negativos a SELL, y cercanos a cero a NEUTRAL u HOLD.',
+    title: k('price.title'),
+    subtitle: k('price.subtitle'),
+    what: k('price.what'),
+    how: k('price.how'),
     signals: [
-      {
-        label: 'BUY — Comprar',
-        color: 'text-emerald-400',
-        desc: 'Score consolidado positivo alto. La mayoría de indicadores sugieren condiciones alcistas.',
-      },
-      {
-        label: 'HOLD — Mantener',
-        color: 'text-sky-400',
-        desc: 'Score moderado. Señales mixtas. El agente puede abrir posición con precaución.',
-      },
-      {
-        label: 'NEUTRAL',
-        color: 'text-amber-400',
-        desc: 'Score cercano a cero. Los indicadores no tienen consenso claro. Se recomienda esperar.',
-      },
-      {
-        label: 'SELL — Vender',
-        color: 'text-red-400',
-        desc: 'Score consolidado negativo. La mayoría de indicadores sugieren condiciones bajistas.',
-      },
+      { label: k('price.s0Label'), color: 'text-emerald-400', desc: k('price.s0Desc') },
+      { label: k('price.s1Label'), color: 'text-sky-400', desc: k('price.s1Desc') },
+      { label: k('price.s2Label'), color: 'text-amber-400', desc: k('price.s2Desc') },
+      { label: k('price.s3Label'), color: 'text-red-400', desc: k('price.s3Desc') },
     ],
-    tip: '💡 El agente de trading usa exactamente esta señal consolidada para decidir si ejecutar una orden. Un score cercano a 0 generará NEUTRAL — el agente no operará.',
+    tip: k('price.tip'),
     chart: <PriceChart />,
   },
   signalReasons: {
-    title: 'Factores de la Señal',
-    subtitle: 'Por qué el sistema emite BUY, SELL, HOLD o NEUTRAL',
-    what: 'Los Factores de la Señal son los motivos individuales que cada indicador técnico aporta al score consolidado. Cada factor es una observación puntual: “RSI en zona oversold”, “MACD cruce alcista”, etc. Juntos forman el veredicto final.',
-    how: 'El sistema evalúa RSI, MACD, EMA, Bollinger Bands, Volumen y Soporte/Resistencia. Cada uno aporta +1, -1 o 0 al score. Si el score supera el umbral positivo configurado → BUY; umbral negativo → SELL; cercano a 0 → NEUTRAL; moderado → HOLD.',
+    title: k('signalReasons.title'),
+    subtitle: k('signalReasons.subtitle'),
+    what: k('signalReasons.what'),
+    how: k('signalReasons.how'),
     signals: [
-      {
-        label: 'Factores alcistas',
-        color: 'text-emerald-400',
-        desc: 'Condiciones como RSI oversold, MACD cruce positivo, precio sobre EMA, volumen alto. Suman al score.',
-      },
-      {
-        label: 'Factores bajistas',
-        color: 'text-red-400',
-        desc: 'Condiciones como RSI overbought, MACD cruce negativo, precio bajo EMA, Bollinger sobre banda superior. Restan del score.',
-      },
-      {
-        label: 'Factores neutrales',
-        color: 'text-amber-400',
-        desc: 'Indicadores sin señal clara (RSI en zona media, volumen normal). No suman ni restan.',
-      },
-      {
-        label: 'Score consolidado',
-        color: 'text-sky-400',
-        desc: 'La suma de todos los factores. Visible como “Puntaje: +2” en la tarjeta de precio. Cuanto mayor el valor absoluto, más convicción tiene la señal.',
-      },
+      { label: k('signalReasons.s0Label'), color: 'text-emerald-400', desc: k('signalReasons.s0Desc') },
+      { label: k('signalReasons.s1Label'), color: 'text-red-400', desc: k('signalReasons.s1Desc') },
+      { label: k('signalReasons.s2Label'), color: 'text-amber-400', desc: k('signalReasons.s2Desc') },
+      { label: k('signalReasons.s3Label'), color: 'text-sky-400', desc: k('signalReasons.s3Desc') },
     ],
-    tip: '💡 Si ves pocos factores o factores contradictorios (algunos alcistas y algunos bajistas), el mercado está en equilibrio. El agente usará NEUTRAL y no operará hasta tener más claridad.',
+    tip: k('signalReasons.tip'),
     chart: (
       <svg
         viewBox="0 0 280 90"
@@ -830,171 +805,364 @@ const INDICATORS: Record<IndicatorKey, IndicatorInfo> = {
     ),
   },
   rsi: {
-    title: 'RSI — Índice de Fuerza Relativa',
-    subtitle: 'Relative Strength Index (14 períodos)',
-    what: 'El RSI mide qué tan fuerte o débil se mueve un activo. Imagína un péndulo: si se fue demasiado hacia un lado, es probable que vuelva al centro.',
-    how: 'Va de 0 a 100. Las zonas clave son 30 y 70. Cuando baja de 30, el mercado posiblemente exageró a la baja ("rebote probable"). Cuando sube de 70, posiblemente exageró al alza ("caída probable").',
+    title: k('rsi.title'),
+    subtitle: k('rsi.subtitle'),
+    what: k('rsi.what'),
+    how: k('rsi.how'),
     signals: [
-      {
-        label: '< 30 — OVERSOLD',
-        color: 'text-emerald-400',
-        desc: 'El precio cayó mucho. Posible oportunidad de compra.',
-      },
-      {
-        label: '30–70 — NEUTRAL',
-        color: 'text-amber-400',
-        desc: 'Zona de equilibrio, sin señal clara.',
-      },
-      {
-        label: '> 70 — OVERBOUGHT',
-        color: 'text-red-400',
-        desc: 'El precio subió demasiado. Posible corrección.',
-      },
+      { label: k('rsi.s0Label'), color: 'text-emerald-400', desc: k('rsi.s0Desc') },
+      { label: k('rsi.s1Label'), color: 'text-amber-400', desc: k('rsi.s1Desc') },
+      { label: k('rsi.s2Label'), color: 'text-red-400', desc: k('rsi.s2Desc') },
     ],
-    tip: '💡 El RSI funciona mejor en mercados laterales. En tendencias fuertes puede estar "overbought" durante mucho tiempo.',
+    tip: k('rsi.tip'),
     chart: <RsiChart />,
   },
   macd: {
-    title: 'MACD — Convergencia/Divergencia de Medias',
-    subtitle: 'Moving Average Convergence Divergence (12, 26, 9)',
-    what: 'El MACD compara dos medias móviles para detectar cambios de tendencia. Es como medir si el motor del precio está acelerando o frenando.',
-    how: 'Tiene 3 componentes: la línea MACD (rápida), la línea de Señal (lenta) y el Histograma (diferencia). Cuando la línea MACD cruza por encima de la Señal → momento alcista. Cuando cruza por debajo → momento bajista.',
+    title: k('macd.title'),
+    subtitle: k('macd.subtitle'),
+    what: k('macd.what'),
+    how: k('macd.how'),
     signals: [
-      {
-        label: 'BULLISH',
-        color: 'text-emerald-400',
-        desc: 'MACD cruzó por encima de la Señal. Momentum positivo.',
-      },
-      {
-        label: 'BEARISH',
-        color: 'text-red-400',
-        desc: 'MACD cruzó por debajo de la Señal. Momentum negativo.',
-      },
-      {
-        label: 'Histograma +',
-        color: 'text-emerald-400',
-        desc: 'Barras verdes: el momentum alcista se fortalece.',
-      },
-      {
-        label: 'Histograma -',
-        color: 'text-red-400',
-        desc: 'Barras rojas: el momentum bajista se fortalece.',
-      },
+      { label: k('macd.s0Label'), color: 'text-emerald-400', desc: k('macd.s0Desc') },
+      { label: k('macd.s1Label'), color: 'text-red-400', desc: k('macd.s1Desc') },
+      { label: k('macd.s2Label'), color: 'text-emerald-400', desc: k('macd.s2Desc') },
+      { label: k('macd.s3Label'), color: 'text-red-400', desc: k('macd.s3Desc') },
     ],
-    tip: '💡 El MACD es un indicador retrasado, confirma tendencias. Úsalo junto con el RSI para señales más confiables.',
+    tip: k('macd.tip'),
     chart: <MacdChart />,
   },
   ema: {
-    title: 'Cruce de EMAs — Tendencia de Medias Móviles',
-    subtitle: 'Exponential Moving Averages (9, 21, 200)',
-    what: 'Las EMAs son promedios del precio que dan más peso a los datos recientes. Son como la "temperatura promedio" del mercado en diferentes períodos de tiempo.',
-    how: 'Cuando la EMA rápida (9) cruza por encima de la lenta (21) es una señal alcista ("Golden Cross" mini). Cuando el precio está sobre la EMA 200, la tendencia a largo plazo es alcista.',
+    title: k('ema.title'),
+    subtitle: k('ema.subtitle'),
+    what: k('ema.what'),
+    how: k('ema.how'),
     signals: [
-      {
-        label: 'BULLISH',
-        color: 'text-emerald-400',
-        desc: 'EMA 9 > EMA 21 y precio sobre EMAs. Tendencia al alza.',
-      },
-      {
-        label: 'BEARISH',
-        color: 'text-red-400',
-        desc: 'EMA 9 < EMA 21. El precio está cayendo en promedio.',
-      },
-      {
-        label: 'ABOVE EMA 200',
-        color: 'text-emerald-400',
-        desc: 'Tendencia a largo plazo alcista. Mercado "sano".',
-      },
-      {
-        label: 'BELOW EMA 200',
-        color: 'text-red-400',
-        desc: 'Tendencia a largo plazo bajista. Precaución.',
-      },
+      { label: k('ema.s0Label'), color: 'text-emerald-400', desc: k('ema.s0Desc') },
+      { label: k('ema.s1Label'), color: 'text-red-400', desc: k('ema.s1Desc') },
+      { label: k('ema.s2Label'), color: 'text-emerald-400', desc: k('ema.s2Desc') },
+      { label: k('ema.s3Label'), color: 'text-red-400', desc: k('ema.s3Desc') },
     ],
-    tip: '💡 La EMA 200 es la más importante para traders a largo plazo. Muchos fondos compran cuando el precio está por encima de ella.',
+    tip: k('ema.tip'),
     chart: <EmaChart />,
   },
   bollinger: {
-    title: 'Bandas de Bollinger',
-    subtitle: 'Volatilidad del mercado (SMA 20 ± 2σ)',
-    what: 'Las Bandas de Bollinger son como un "carril" dinámico para el precio. Se expanden cuando el mercado es volátil y se contraen cuando está tranquilo.',
-    how: 'Hay 3 líneas: media central (SMA 20) y dos bandas a 2 desviaciones estándar. El precio suele mantenerse dentro de las bandas el ~95% del tiempo. Tocar la banda es una advertencia, salirse es una señal.',
+    title: k('bollinger.title'),
+    subtitle: k('bollinger.subtitle'),
+    what: k('bollinger.what'),
+    how: k('bollinger.how'),
     signals: [
-      {
-        label: 'ABOVE — Sobre banda superior',
-        color: 'text-red-400',
-        desc: 'El precio rompió el techo. Posible sobrecompra o inicio de breakout.',
-      },
-      {
-        label: 'BELOW — Bajo banda inferior',
-        color: 'text-emerald-400',
-        desc: 'El precio tocó el suelo. Posible sobreventa o inicio de caída.',
-      },
-      {
-        label: 'WIDE — Bandas anchas',
-        color: 'text-amber-400',
-        desc: 'Alta volatilidad. Movimientos bruscos probables.',
-      },
-      {
-        label: 'NARROW — Bandas estrechas',
-        color: 'text-sky-400',
-        desc: '"Squeeze" o compresión. Suele preceder un movimiento grande.',
-      },
+      { label: k('bollinger.s0Label'), color: 'text-red-400', desc: k('bollinger.s0Desc') },
+      { label: k('bollinger.s1Label'), color: 'text-emerald-400', desc: k('bollinger.s1Desc') },
+      { label: k('bollinger.s2Label'), color: 'text-amber-400', desc: k('bollinger.s2Desc') },
+      { label: k('bollinger.s3Label'), color: 'text-sky-400', desc: k('bollinger.s3Desc') },
     ],
-    tip: '💡 Las bandas estrechas (squeeze) son la señal más poderosa: el mercado está acumulando energía para un gran movimiento.',
+    tip: k('bollinger.tip'),
     chart: <BollingerChart />,
   },
   volume: {
-    title: 'Volumen de Operaciones',
-    subtitle: 'Cantidad de activo negociado (vs. promedio)',
-    what: 'El volumen muestra cuántas personas están comprando o vendiendo. Es la "convicción" detrás de un movimiento de precio. Sin volumen, los movimientos no son sostenibles.',
-    how: 'Se compara el volumen actual con el promedio de los últimos períodos. Un volumen 2x el promedio con precio al alza confirma la tendencia. Un volumen muy bajo sugiere que el movimiento puede revertirse.',
+    title: k('volume.title'),
+    subtitle: k('volume.subtitle'),
+    what: k('volume.what'),
+    how: k('volume.how'),
     signals: [
-      {
-        label: 'HIGH — Volumen alto',
-        color: 'text-emerald-400',
-        desc: 'Ratio > 1.5x. Movimiento con fuerte convicción del mercado.',
-      },
-      {
-        label: 'NORMAL — Volumen normal',
-        color: 'text-amber-400',
-        desc: 'Ratio ~ 1x. Actividad habitual, sin señal especial.',
-      },
-      {
-        label: 'LOW — Volumen bajo',
-        color: 'text-red-400',
-        desc: 'Ratio < 0.7x. Poco interés. Posible consolidación o reversión.',
-      },
+      { label: k('volume.s0Label'), color: 'text-emerald-400', desc: k('volume.s0Desc') },
+      { label: k('volume.s1Label'), color: 'text-amber-400', desc: k('volume.s1Desc') },
+      { label: k('volume.s2Label'), color: 'text-red-400', desc: k('volume.s2Desc') },
     ],
-    tip: '💡 Regla de oro: el volumen precede al precio. Si el precio sube pero el volumen cae, la tendencia está perdiendo fuerza.',
+    tip: k('volume.tip'),
     chart: <VolumeChart />,
   },
-  supportResistance: {
-    title: 'Soporte y Resistencia',
-    subtitle: 'Niveles clave de precio detectados automáticamente',
-    what: 'Los soportes y resistencias son zonas de precio donde históricamente el mercado "rebota". El soporte es como el suelo y la resistencia como el techo.',
-    how: 'Se identifican buscando niveles donde el precio se detuvo varias veces. Si el precio rompe una resistencia, ésta puede convertirse en nuevo soporte. Si rompe un soporte, puede convertirse en resistencia.',
+  opportunity: {
+    title: k('opportunity.title'),
+    subtitle: k('opportunity.subtitle'),
+    what: k('opportunity.what'),
+    how: k('opportunity.how'),
     signals: [
-      {
-        label: 'Resistencia',
-        color: 'text-red-400',
-        desc: 'Nivel por encima donde vendedores toman control. El precio tiende a bajar desde ahí.',
-      },
-      {
-        label: 'Soporte',
-        color: 'text-emerald-400',
-        desc: 'Nivel por debajo donde compradores toman control. El precio tiende a rebotar desde ahí.',
-      },
-      {
-        label: '% distancia',
-        color: 'text-sky-400',
-        desc: 'Qué tan lejos está el nivel del precio actual. Más cerca = más relevante ahora.',
-      },
+      { label: k('opportunity.s0Label'), color: 'text-emerald-400', desc: k('opportunity.s0Desc') },
+      { label: k('opportunity.s1Label'), color: 'text-red-400', desc: k('opportunity.s1Desc') },
+      { label: k('opportunity.s2Label'), color: 'text-amber-400', desc: k('opportunity.s2Desc') },
+      { label: k('opportunity.s3Label'), color: 'text-sky-400', desc: k('opportunity.s3Desc') },
     ],
-    tip: '💡 Cuantas más veces el precio toca un nivel sin romperlo, más fuerte es ese nivel. Un nivel "probado" múltiples veces es muy significativo.',
+    tip: k('opportunity.tip'),
+    chart: (
+      <svg
+        viewBox="0 0 280 100"
+        className="w-full h-28"
+        role="img"
+        aria-label="Opportunity panel diagram"
+      >
+        {/* Score axis */}
+        <rect x="10" y="42" width="260" height="12" rx="6" fill="#1e293b" />
+        {/* Sell zone left */}
+        <rect
+          x="10"
+          y="42"
+          width="86"
+          height="12"
+          rx="6"
+          fill="#ef4444"
+          opacity="0.35"
+        />
+        {/* Neutral zone center */}
+        <rect
+          x="96"
+          y="42"
+          width="88"
+          height="12"
+          fill="#f59e0b"
+          opacity="0.25"
+        />
+        {/* Buy zone right */}
+        <rect
+          x="184"
+          y="42"
+          width="86"
+          height="12"
+          rx="6"
+          fill="#10b981"
+          opacity="0.35"
+        />
+        {/* Zone labels */}
+        <text
+          x="53"
+          y="38"
+          fill="#ef4444"
+          fontSize="8"
+          fontWeight="600"
+          textAnchor="middle"
+        >
+          VENDER
+        </text>
+        <text
+          x="140"
+          y="38"
+          fill="#f59e0b"
+          fontSize="8"
+          fontWeight="600"
+          textAnchor="middle"
+        >
+          ESPERAR
+        </text>
+        <text
+          x="227"
+          y="38"
+          fill="#10b981"
+          fontSize="8"
+          fontWeight="600"
+          textAnchor="middle"
+        >
+          COMPRAR
+        </text>
+        {/* Score markers */}
+        <line
+          x1="96"
+          y1="35"
+          x2="96"
+          y2="62"
+          stroke="#94a3b8"
+          strokeWidth="1"
+          strokeDasharray="3,2"
+        />
+        <line
+          x1="184"
+          y1="35"
+          x2="184"
+          y2="62"
+          stroke="#94a3b8"
+          strokeWidth="1"
+          strokeDasharray="3,2"
+        />
+        <text x="96" y="70" fill="#64748b" fontSize="8" textAnchor="middle">
+          -4
+        </text>
+        <text x="184" y="70" fill="#64748b" fontSize="8" textAnchor="middle">
+          +4
+        </text>
+        <text x="10" y="70" fill="#64748b" fontSize="8">
+          -8
+        </text>
+        <text x="265" y="70" fill="#64748b" fontSize="8" textAnchor="end">
+          +8
+        </text>
+        {/* Example score needle at +1 (WAIT zone) */}
+        <circle
+          cx="147"
+          cy="48"
+          r="7"
+          fill="#f59e0b"
+          stroke="#fff"
+          strokeWidth="1.5"
+        />
+        <text
+          x="147"
+          y="52"
+          fill="#fff"
+          fontSize="8"
+          fontWeight="700"
+          textAnchor="middle"
+        >
+          +1
+        </text>
+        {/* Confidence bar */}
+        <text x="10" y="86" fill="#94a3b8" fontSize="8">
+          Confianza:
+        </text>
+        <rect x="65" y="78" width="160" height="8" rx="4" fill="#1e293b" />
+        <rect
+          x="65"
+          y="78"
+          width="113"
+          height="8"
+          rx="4"
+          fill="#f59e0b"
+          opacity="0.7"
+        />
+        <text x="232" y="86" fill="#f59e0b" fontSize="9" fontWeight="700">
+          71%
+        </text>
+        <text x="10" y="99" fill="#64748b" fontSize="7">
+          Score bajo → ESPERAR aunque % sea alto
+        </text>
+      </svg>
+    ),
+  },
+  chart: {
+    title: k('chart.title'),
+    subtitle: k('chart.subtitle'),
+    what: k('chart.what'),
+    how: k('chart.how'),
+    signals: [
+      { label: k('chart.s0Label'), color: 'text-violet-400', desc: k('chart.s0Desc') },
+      { label: k('chart.s1Label'), color: 'text-orange-400', desc: k('chart.s1Desc') },
+      { label: k('chart.s2Label'), color: 'text-amber-400', desc: k('chart.s2Desc') },
+      { label: k('chart.s3Label'), color: 'text-slate-400', desc: k('chart.s3Desc') },
+    ],
+    tip: k('chart.tip'),
+    chart: (
+      <svg
+        viewBox="0 0 280 100"
+        className="w-full h-28"
+        role="img"
+        aria-label="Candlestick chart with overlays"
+      >
+        {/* Grid lines */}
+        {[20, 40, 60, 80].map((y) => (
+          <line
+            key={y}
+            x1="10"
+            y1={y}
+            x2="270"
+            y2={y}
+            stroke="#1e293b"
+            strokeWidth="1"
+          />
+        ))}
+        {/* Candles */}
+        {[
+          { x: 20, o: 70, c: 55, h: 75, l: 50, bull: false },
+          { x: 40, o: 55, c: 60, h: 65, l: 48, bull: true },
+          { x: 60, o: 60, c: 52, h: 63, l: 45, bull: false },
+          { x: 80, o: 52, c: 58, h: 62, l: 48, bull: true },
+          { x: 100, o: 58, c: 65, h: 68, l: 55, bull: true },
+          { x: 120, o: 65, c: 60, h: 70, l: 56, bull: false },
+          { x: 140, o: 60, c: 68, h: 72, l: 57, bull: true },
+          { x: 160, o: 68, c: 74, h: 78, l: 65, bull: true },
+          { x: 180, o: 74, c: 70, h: 80, l: 66, bull: false },
+          { x: 200, o: 70, c: 76, h: 82, l: 68, bull: true },
+          { x: 220, o: 76, c: 72, h: 79, l: 68, bull: false },
+          { x: 240, o: 72, c: 78, h: 83, l: 70, bull: true },
+        ].map(({ x, o, c, h, l, bull }) => (
+          <g key={x}>
+            <line
+              x1={x}
+              y1={h}
+              x2={x}
+              y2={l}
+              stroke={bull ? '#10b981' : '#ef4444'}
+              strokeWidth="1"
+            />
+            <rect
+              x={x - 5}
+              y={Math.min(o, c)}
+              width={10}
+              height={Math.max(Math.abs(o - c), 2)}
+              fill={bull ? '#10b981' : '#ef4444'}
+            />
+          </g>
+        ))}
+        {/* S line (green) */}
+        <line
+          x1="10"
+          y1="72"
+          x2="270"
+          y2="72"
+          stroke="#10b981"
+          strokeWidth="1.5"
+          strokeDasharray="4,3"
+          opacity="0.9"
+        />
+        <text x="14" y="70" fill="#10b981" fontSize="7" fontWeight="700">
+          S
+        </text>
+        {/* R line (red) */}
+        <line
+          x1="10"
+          y1="28"
+          x2="270"
+          y2="28"
+          stroke="#ef4444"
+          strokeWidth="1.5"
+          strokeDasharray="4,3"
+          opacity="0.9"
+        />
+        <text x="14" y="26" fill="#ef4444" fontSize="7" fontWeight="700">
+          R
+        </text>
+        {/* EMA 9 (violet) */}
+        <line
+          x1="10"
+          y1="62"
+          x2="270"
+          y2="62"
+          stroke="#a78bfa"
+          strokeWidth="1.5"
+          opacity="0.8"
+        />
+        <text x="248" y="60" fill="#a78bfa" fontSize="7">
+          EMA 9
+        </text>
+        {/* EMA 200 (orange dashed) */}
+        <line
+          x1="10"
+          y1="85"
+          x2="270"
+          y2="85"
+          stroke="#f97316"
+          strokeWidth="2"
+          strokeDasharray="6,3"
+          opacity="0.7"
+        />
+        <text x="232" y="83" fill="#f97316" fontSize="7">
+          EMA 200
+        </text>
+      </svg>
+    ),
+  },
+  supportResistance: {
+    title: k('supportResistance.title'),
+    subtitle: k('supportResistance.subtitle'),
+    what: k('supportResistance.what'),
+    how: k('supportResistance.how'),
+    signals: [
+      { label: k('supportResistance.s0Label'), color: 'text-red-400', desc: k('supportResistance.s0Desc') },
+      { label: k('supportResistance.s1Label'), color: 'text-emerald-400', desc: k('supportResistance.s1Desc') },
+      { label: k('supportResistance.s2Label'), color: 'text-sky-400', desc: k('supportResistance.s2Desc') },
+    ],
+    tip: k('supportResistance.tip'),
     chart: <SupportResistanceChart />,
   },
-};
+  };
+}
 
 // ── Modal Component ────────────────────────────────────────────────────────────
 
@@ -1008,6 +1176,7 @@ export function IndicatorInfoModal({
   onClose,
 }: IndicatorInfoModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!indicatorKey) return;
@@ -1024,7 +1193,7 @@ export function IndicatorInfoModal({
 
   if (!indicatorKey) return null;
 
-  const info = INDICATORS[indicatorKey];
+  const info = getIndicators(t)[indicatorKey];
 
   return createPortal(
     <div
@@ -1049,7 +1218,7 @@ export function IndicatorInfoModal({
           <button
             onClick={onClose}
             className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            aria-label="Cerrar"
+            aria-label={t('market.modalClose')}
           >
             <X className="h-4 w-4" />
           </button>
@@ -1059,7 +1228,7 @@ export function IndicatorInfoModal({
           {/* What is it */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              ¿Qué es?
+              {t('market.modalWhat')}
             </h3>
             <p className="text-sm leading-relaxed text-foreground/90">
               {info.what}
@@ -1069,7 +1238,7 @@ export function IndicatorInfoModal({
           {/* Visual chart */}
           <section className="rounded-xl border border-border bg-muted/20 p-4">
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Visualización
+              {t('market.modalVisualization')}
             </h3>
             {info.chart}
           </section>
@@ -1077,7 +1246,7 @@ export function IndicatorInfoModal({
           {/* How it works */}
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              ¿Cómo funciona?
+              {t('market.modalHow')}
             </h3>
             <p className="text-sm leading-relaxed text-foreground/90">
               {info.how}
@@ -1087,7 +1256,7 @@ export function IndicatorInfoModal({
           {/* Signals */}
           <section>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Señales
+              {t('market.modalSignals')}
             </h3>
             <div className="space-y-2">
               {info.signals.map((s) => (

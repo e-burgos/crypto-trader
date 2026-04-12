@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  TestTube2,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { PasswordInput } from '../components/ui/password-input';
@@ -19,14 +20,18 @@ import { useAuthStore } from '../store/auth.store';
 import i18n from '../lib/i18n';
 
 // ── Step Types ────────────────────────────────────────────────────────────────
-type TradingMode = 'LIVE' | 'SANDBOX';
+type TradingMode = 'LIVE' | 'SANDBOX' | 'TESTNET';
 type LLMProvider = 'CLAUDE' | 'OPENAI' | 'GROQ';
 
 interface OnboardingState {
-  // Step 1: Binance Keys
+  // Step 1: Binance Keys (Live)
   binanceApiKey: string;
   binanceApiSecret: string;
   skipBinance: boolean;
+  // Step 1: Binance Keys (Testnet)
+  binanceTestnetApiKey: string;
+  binanceTestnetApiSecret: string;
+  skipTestnet: boolean;
   // Step 2: LLM Provider
   llmProvider: LLMProvider;
   llmApiKey: string;
@@ -67,6 +72,7 @@ const LLM_PROVIDERS: {
 ];
 
 const BINANCE_API_URL = 'https://www.binance.com/en/my/settings/api-management';
+const BINANCE_TESTNET_URL = 'https://testnet.binance.vision/';
 
 // ── Step Components ───────────────────────────────────────────────────────────
 function StepBinance({
@@ -84,6 +90,7 @@ function StepBinance({
         {t('onboarding.binanceTipText')}
       </div>
 
+      {/* ── Live keys ── */}
       {!state.skipBinance && (
         <>
           <div>
@@ -136,6 +143,75 @@ function StepBinance({
         />
         {t('onboarding.skipBinance')}
       </button>
+
+      {/* ── Testnet keys ── */}
+      <div className="border-t border-border/50 pt-4">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t('settings.binanceTestnetKeys')}
+        </p>
+        <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3 text-xs text-sky-600 dark:text-sky-400 mb-3">
+          {t('settings.binanceTestnetTip')}
+        </div>
+
+        {!state.skipTestnet && (
+          <>
+            <div className="mb-3">
+              <label className="mb-1.5 block text-sm font-medium">
+                {t('settings.binanceTestnetApiKey')}
+              </label>
+              <input
+                type="text"
+                value={state.binanceTestnetApiKey}
+                onChange={(e) =>
+                  onChange({ binanceTestnetApiKey: e.target.value })
+                }
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Testnet API Key"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="mb-1.5 block text-sm font-medium">
+                {t('settings.binanceTestnetApiSecret')}
+              </label>
+              <PasswordInput
+                value={state.binanceTestnetApiSecret}
+                onChange={(e) =>
+                  onChange({ binanceTestnetApiSecret: e.target.value })
+                }
+                placeholder="Testnet API Secret"
+              />
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1 mb-3">
+              <p>
+                Get free testnet keys at testnet.binance.vision (no real money).
+              </p>
+              <a
+                href={BINANCE_TESTNET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+              >
+                testnet.binance.vision
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onChange({ skipTestnet: !state.skipTestnet })}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <div
+            className={cn(
+              'h-4 w-4 rounded border-2 transition-colors',
+              state.skipTestnet ? 'border-primary bg-primary' : 'border-border',
+            )}
+          />
+          {t('onboarding.skipTestnet')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -217,6 +293,10 @@ function StepMode({
   const { t } = useTranslation();
   const hasBinanceKeys =
     !state.skipBinance && !!state.binanceApiKey && !!state.binanceApiSecret;
+  const hasTestnetKeys =
+    !state.skipTestnet &&
+    !!state.binanceTestnetApiKey &&
+    !!state.binanceTestnetApiSecret;
 
   return (
     <div className="space-y-4">
@@ -242,6 +322,41 @@ function StepMode({
             {t('onboarding.sandboxRecommended')}
           </div>
         </button>
+
+        {/* Show TESTNET only if Testnet keys were provided */}
+        {hasTestnetKeys ? (
+          <button
+            type="button"
+            onClick={() => onChange({ mode: 'TESTNET' })}
+            className={cn(
+              'rounded-xl border p-5 text-left transition-all',
+              state.mode === 'TESTNET'
+                ? 'border-sky-500 bg-sky-500/5'
+                : 'border-border hover:border-sky-500/40',
+            )}
+          >
+            <div className="mb-1 flex items-center gap-1.5 font-semibold">
+              <TestTube2 className="h-4 w-4 text-sky-400" />
+              {t('onboarding.testnetTitle')}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('onboarding.testnetDesc')}
+            </div>
+            <div className="mt-2 text-xs font-medium text-sky-400">
+              {t('onboarding.testnetRecommended')}
+            </div>
+          </button>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border p-5 opacity-40">
+            <div className="mb-1 flex items-center gap-1.5 font-semibold text-muted-foreground">
+              <TestTube2 className="h-4 w-4" />
+              {t('onboarding.testnetTitle')}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t('onboarding.testnetRequiresKeys')}
+            </div>
+          </div>
+        )}
 
         {/* Show LIVE only if Binance keys were provided */}
         {hasBinanceKeys ? (
@@ -309,6 +424,9 @@ export function OnboardingPage() {
     binanceApiKey: '',
     binanceApiSecret: '',
     skipBinance: true,
+    binanceTestnetApiKey: '',
+    binanceTestnetApiSecret: '',
+    skipTestnet: true,
     llmProvider: 'CLAUDE',
     llmApiKey: '',
     llmModel: 'claude-3-5-sonnet-20241022',
@@ -322,7 +440,14 @@ export function OnboardingPage() {
       // If Binance keys are cleared/skipped, force SANDBOX mode
       const hasBinanceKeys =
         !next.skipBinance && !!next.binanceApiKey && !!next.binanceApiSecret;
+      const hasTestnetKeys =
+        !next.skipTestnet &&
+        !!next.binanceTestnetApiKey &&
+        !!next.binanceTestnetApiSecret;
       if (!hasBinanceKeys && next.mode === 'LIVE') {
+        next.mode = 'SANDBOX';
+      }
+      if (!hasTestnetKeys && next.mode === 'TESTNET') {
         next.mode = 'SANDBOX';
       }
       return next;
@@ -344,11 +469,19 @@ export function OnboardingPage() {
     setIsLoading(true);
     setError('');
     try {
-      // Save Binance keys if provided
+      // Save Binance live keys if provided
       if (!state.skipBinance && state.binanceApiKey) {
         await api.post('/users/me/binance-keys', {
           apiKey: state.binanceApiKey,
           apiSecret: state.binanceApiSecret,
+        });
+      }
+
+      // Save Binance testnet keys if provided
+      if (!state.skipTestnet && state.binanceTestnetApiKey) {
+        await api.post('/users/me/binance-keys/testnet', {
+          apiKey: state.binanceTestnetApiKey,
+          apiSecret: state.binanceTestnetApiSecret,
         });
       }
 

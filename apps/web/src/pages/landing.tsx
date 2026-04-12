@@ -275,7 +275,7 @@ function ProcessStep({
         <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-primary/30 bg-primary/15 text-primary shadow-lg shadow-primary/10">
           {icon}
         </div>
-        <div className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary font-mono text-xs font-bold text-primary-foreground shadow-md shadow-primary/25">
+        <div className="proc-number absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary font-mono text-xs font-bold text-primary-foreground shadow-md shadow-primary/25">
           {number}
         </div>
       </div>

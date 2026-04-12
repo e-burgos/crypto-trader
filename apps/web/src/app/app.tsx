@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '../components/theme-provider';
@@ -12,9 +12,7 @@ import { OnboardingPage } from '../pages/onboarding';
 import { HelpPage } from '../pages/help';
 import { DashboardLayout } from '../layouts/dashboard-layout';
 import { OverviewPage } from '../pages/dashboard/overview';
-import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { TradeHistoryPage } from '../pages/dashboard/trade-history';
-import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { AnalyticsPage } from '../pages/dashboard/analytics';
 import { MarketPage } from '../pages/dashboard/market';
 import { ConfigPage } from '../pages/dashboard/config';
@@ -23,7 +21,10 @@ import { PositionsPage } from '../pages/dashboard/positions';
 import { NewsFeedPage } from '../pages/dashboard/news-feed';
 import { ChatPage } from '../pages/dashboard/chat';
 import { BotAnalysisPage } from '../pages/dashboard/bot-analysis';
+import { AgentLogPage } from '../pages/dashboard/agent-log';
+import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { ChatWidget } from '../components/chat/chat-widget';
+import { NotificationsPage } from '../pages/dashboard/notifications';
 import { AdminLayout } from '../pages/admin/index';
 import { AdminStatsPage } from '../pages/admin/stats';
 import { AdminUsersPage } from '../pages/admin/users';
@@ -108,17 +109,29 @@ export function App() {
             }
           >
             <Route index element={<OverviewPage />} />
-            <Route path="chart" element={<LiveChartPage />} />
+            <Route
+              path="chart"
+              element={<Navigate to="/dashboard/market" replace />}
+            />
             <Route path="positions" element={<PositionsPage />} />
             <Route path="history" element={<TradeHistoryPage />} />
-            <Route path="agent" element={<AgentLogPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route
+              path="agent"
+              element={<Navigate to="/dashboard/bot-analysis" replace />}
+            />
+            <Route
+              path="analytics"
+              element={<Navigate to="/dashboard" replace />}
+            />
             <Route path="market" element={<MarketPage />} />
             <Route path="bot-analysis" element={<BotAnalysisPage />} />
+            <Route path="agent-log" element={<AgentLogPage />} />
+            <Route path="live-chart" element={<LiveChartPage />} />
             <Route path="news" element={<NewsFeedPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="config" element={<ConfigPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
           <Route
             path="/admin"

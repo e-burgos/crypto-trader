@@ -1,15 +1,12 @@
-import { useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   LayoutDashboard,
-  BarChart3,
   History,
-  Bot,
   Settings,
   LogOut,
   TrendingUp,
-  LineChart,
   SlidersHorizontal,
   Briefcase,
   Newspaper,
@@ -18,9 +15,13 @@ import {
   Activity,
   BotMessageSquare,
   Brain,
+  Bell,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  User,
   X,
+  ListChecks,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
@@ -58,6 +59,100 @@ function NavTooltip({
   );
 }
 
+// ── User dropdown ────────────────────────────────────────────────────────────
+function UserDropdown({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation();
+  const { logout, user } = useAuthStore();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const initial = user?.email?.[0]?.toUpperCase() ?? 'U';
+
+  return (
+    <div ref={ref} className="relative">
+      <NavTooltip label={user?.email ?? ''} show={collapsed && !open}>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            'flex w-full items-center gap-2.5 rounded-xl transition-all duration-150',
+            collapsed
+              ? 'justify-center p-2 hover:bg-muted/60'
+              : 'px-3 py-2.5 ring-1 ring-border/50 bg-muted/30 hover:bg-muted/50 hover:ring-border',
+          )}
+        >
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary uppercase ring-2 ring-primary/20">
+            {initial}
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
+          </div>
+          {!collapsed && (
+            <>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-xs font-medium text-foreground">
+                  {user?.email}
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 capitalize">
+                  {user?.role?.toLowerCase() ?? 'user'}
+                </p>
+              </div>
+              <ChevronUp
+                className={cn(
+                  'h-3.5 w-3.5 text-muted-foreground transition-transform duration-200',
+                  open && 'rotate-180',
+                )}
+              />
+            </>
+          )}
+        </button>
+      </NavTooltip>
+
+      {open && (
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          className={cn(
+            'absolute z-[9999] w-48 rounded-xl border border-border bg-card shadow-xl',
+            collapsed ? 'left-full bottom-0 ml-3' : 'bottom-full left-0 mb-2',
+          )}
+        >
+          <div className="p-1">
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate('/dashboard/settings?tab=profile');
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors"
+            >
+              <User className="h-4 w-4 text-muted-foreground" />
+              {t('nav.profile')}
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                logout();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              {t('nav.signOut')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared nav content ────────────────────────────────────────────────────────
 function NavContent({
   collapsed,
@@ -67,23 +162,26 @@ function NavContent({
   onNavClick?: () => void;
 }) {
   const { t } = useTranslation();
-  const { logout, user } = useAuthStore();
+  const { user } = useAuthStore();
   const isAdmin = user?.role === 'ADMIN';
 
-  const GROUPS = [
+  type NavItem = {
+    to: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    end?: boolean;
+    admin?: boolean;
+  };
+
+  const GROUPS: { label: string; items: NavItem[] }[] = [
     {
-      label: 'Trading',
+      label: t('sidebar.groupTrading'),
       items: [
         {
           to: '/dashboard',
           label: t('sidebar.overview'),
           icon: LayoutDashboard,
           end: true,
-        },
-        {
-          to: '/dashboard/chart',
-          label: t('sidebar.liveChart'),
-          icon: BarChart3,
         },
         {
           to: '/dashboard/positions',
@@ -95,43 +193,50 @@ function NavContent({
           label: t('sidebar.tradeHistory'),
           icon: History,
         },
+        {
+          to: '/dashboard/market',
+          label: t('sidebar.market'),
+          icon: Activity,
+        },
       ],
     },
     {
-      label: 'Analysis',
+      label: t('sidebar.groupAgente'),
       items: [
-        { to: '/dashboard/market', label: t('sidebar.market'), icon: Activity },
         {
           to: '/dashboard/bot-analysis',
           label: t('sidebar.botAnalysis'),
           icon: Brain,
         },
         {
-          to: '/dashboard/analytics',
-          label: t('sidebar.analytics'),
-          icon: LineChart,
+          to: '/dashboard/agent-log',
+          label: t('sidebar.agentLog'),
+          icon: ListChecks,
         },
-        { to: '/dashboard/agent', label: t('sidebar.agentLog'), icon: Bot },
-      ],
-    },
-    {
-      label: 'Explore',
-      items: [
-        { to: '/dashboard/news', label: t('sidebar.news'), icon: Newspaper },
+        {
+          to: '/dashboard/news',
+          label: t('sidebar.news'),
+          icon: Newspaper,
+        },
         {
           to: '/dashboard/chat',
           label: t('sidebar.chat'),
           icon: BotMessageSquare,
         },
-      ],
-    },
-    {
-      label: 'System',
-      items: [
         {
           to: '/dashboard/config',
           label: t('sidebar.config'),
           icon: SlidersHorizontal,
+        },
+      ],
+    },
+    {
+      label: t('sidebar.groupSystem'),
+      items: [
+        {
+          to: '/dashboard/notifications',
+          label: t('sidebar.notifications'),
+          icon: Bell,
         },
         {
           to: '/dashboard/settings',
@@ -233,38 +338,7 @@ function NavContent({
       <div className={cn('shrink-0', collapsed ? 'p-2' : 'px-3 pb-3 pt-0')}>
         {/* Gradient separator */}
         <div className="mb-3 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
-
-        {!collapsed && user?.email && (
-          <div className="mb-2 flex items-center gap-2.5 rounded-xl bg-muted/30 px-3 py-2.5 ring-1 ring-border/50">
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary uppercase ring-2 ring-primary/20">
-              {user.email[0]}
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-card" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-medium text-foreground">
-                {user.email}
-              </p>
-              <p className="text-[10px] text-muted-foreground/60 capitalize">
-                {user.role?.toLowerCase() ?? 'user'}
-              </p>
-            </div>
-          </div>
-        )}
-        <NavTooltip label={t('nav.signOut')} show={collapsed}>
-          <button
-            onClick={logout}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium',
-              'text-muted-foreground transition-all duration-150 hover:bg-red-500/10 hover:text-red-400',
-              collapsed && 'justify-center px-0',
-            )}
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors group-hover:bg-red-500/10">
-              <LogOut className="h-4 w-4" />
-            </span>
-            {!collapsed && <span className="truncate">{t('nav.signOut')}</span>}
-          </button>
-        </NavTooltip>
+        <UserDropdown collapsed={collapsed} />
       </div>
     </>
   );
@@ -316,14 +390,16 @@ function MobileDrawer() {
       >
         {/* Drawer header */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-              <TrendingUp className="h-4 w-4 text-primary" />
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
+              <span className="text-sm font-bold tracking-tight">
+                Crypto<span className="text-primary">Trader</span>
+              </span>
             </div>
-            <span className="text-sm font-bold tracking-tight">
-              CryptoTrader
-            </span>
-          </div>
+          </Link>
           <button
             onClick={closeMobile}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -360,14 +436,16 @@ export function Sidebar() {
             collapsed ? 'justify-center' : 'gap-2.5 px-4',
           )}
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </div>
-          {!collapsed && (
-            <span className="text-sm font-bold tracking-tight truncate">
-              CryptoTrader
-            </span>
-          )}
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
+            {!collapsed && (
+              <span className="text-sm font-bold tracking-tight truncate">
+                CryptoTrader
+              </span>
+            )}
+          </Link>
         </div>
 
         <NavContent collapsed={collapsed} />

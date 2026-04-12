@@ -13,7 +13,10 @@ const basename = import.meta.env.BASE_URL ?? '/';
 
 root.render(
   <StrictMode>
-    <BrowserRouter basename={basename}>
+    <BrowserRouter
+      basename={basename}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <App />
     </BrowserRouter>
   </StrictMode>,

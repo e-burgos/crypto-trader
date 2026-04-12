@@ -1,6 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import {
+  createChart,
+  CandlestickSeries,
+  ColorType,
+  type DeepPartial,
+  type CandlestickSeriesOptions,
+  type ISeriesApi,
+  type IPriceLine,
+} from 'lightweight-charts';
 import {
   TrendingUp,
   TrendingDown,
@@ -20,7 +30,10 @@ import {
   XCircle,
   Clock,
   Zap,
+  BarChart3,
 } from 'lucide-react';
+import { useThemeStore } from '../../store/theme.store';
+import { useBinanceKlineStream } from '../../hooks/use-binance-kline';
 import {
   IndicatorInfoModal,
   type IndicatorKey,
@@ -32,8 +45,10 @@ import {
   deriveOverallSignal,
   deriveOpportunity,
   MARKET_SYMBOLS,
+  useOhlcv,
   type OverallSignal,
   type OpportunityAnalysis,
+  type MarketSnapshot,
 } from '../../hooks/use-market';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
 
@@ -390,7 +405,13 @@ function InfoButton({
 
 // ── Opportunity Panel ─────────────────────────────────────────────────────────
 
-function OpportunityPanel({ opp }: { opp: OpportunityAnalysis }) {
+function OpportunityPanel({
+  opp,
+  onOpenInfo,
+}: {
+  opp: OpportunityAnalysis;
+  onOpenInfo?: (k: IndicatorKey) => void;
+}) {
   const actionConfig = {
     BUY: {
       label: 'COMPRAR AHORA',
@@ -489,27 +510,32 @@ function OpportunityPanel({ opp }: { opp: OpportunityAnalysis }) {
           </div>
         </div>
 
-        {/* Confidence bar */}
-        <div className="shrink-0 text-right hidden sm:block">
-          <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">
-            {opp.action !== 'WAIT'
-              ? 'Confianza'
-              : opp.scoreBias >= 0
-                ? 'Señal alcista'
-                : 'Señal bajista'}
-          </p>
-          <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn(
-                'h-full rounded-full transition-all',
-                actionConfig.barColor,
-              )}
-              style={{ width: `${opp.confidence}%` }}
-            />
+        {/* Confidence bar + info */}
+        <div className="shrink-0 text-right hidden sm:flex sm:flex-col sm:items-end gap-2">
+          <div>
+            <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">
+              {opp.action !== 'WAIT'
+                ? 'Confianza'
+                : opp.scoreBias >= 0
+                  ? 'Señal alcista'
+                  : 'Señal bajista'}
+            </p>
+            <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all',
+                  actionConfig.barColor,
+                )}
+                style={{ width: `${opp.confidence}%` }}
+              />
+            </div>
+            <p className={cn('text-sm font-bold mt-1', actionConfig.color)}>
+              {opp.confidence}%
+            </p>
           </div>
-          <p className={cn('text-sm font-bold mt-1', actionConfig.color)}>
-            {opp.confidence}%
-          </p>
+          {onOpenInfo && (
+            <InfoButton indicatorKey="opportunity" onOpen={onOpenInfo} />
+          )}
         </div>
       </div>
 
@@ -692,7 +718,7 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
   return (
     <div className="market-panel space-y-4">
       {/* ── Opportunity Panel (top, most visible) ── */}
-      <OpportunityPanel opp={opportunity} />
+      <OpportunityPanel opp={opportunity} onOpenInfo={setInfoModal} />
       {/* Price header — uses live WebSocket price when available */}
       <div
         className={cn(
@@ -1082,12 +1108,412 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
   );
 }
 
+// ── Chart helpers ─────────────────────────────────────────────────────────────
+
+const CHART_INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const;
+type ChartInterval = (typeof CHART_INTERVALS)[number];
+
+function chartColors(isDark: boolean) {
+  return {
+    bg: isDark ? '#0a0f1e' : '#ffffff',
+    text: isDark ? 'rgba(255,255,255,0.75)' : '#1a1a2e',
+    gridLine: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)',
+    border: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
+  };
+}
+
+// Offset UTC timestamp by local timezone so lightweight-charts shows local time
+const TZ_OFFSET_SECONDS = -new Date().getTimezoneOffset() * 60;
+
+function normalizeCandles(
+  raw: {
+    time?: number | string;
+    openTime?: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }[],
+) {
+  return raw
+    .map((c) => {
+      const rawTime = (c as { openTime?: number }).openTime ?? c.time;
+      const t: number =
+        typeof rawTime === 'string'
+          ? Math.floor(new Date(rawTime).getTime() / 1000)
+          : (rawTime as number) > 1e12
+            ? Math.floor((rawTime as number) / 1000)
+            : (rawTime as number);
+      return {
+        time: (t +
+          TZ_OFFSET_SECONDS) as import('lightweight-charts').UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      };
+    })
+    .filter((c) => (c.time as number) > 0)
+    .sort((a, b) => (a.time as number) - (b.time as number));
+}
+
+// ── Overlay filter config ────────────────────────────────────────────────────
+
+type OverlayKey = 'ema9' | 'ema21' | 'ema200' | 'bollinger' | 'sr';
+
+const OVERLAY_CONFIG: Record<
+  OverlayKey,
+  { label: string; color: string; dotColor: string }
+> = {
+  ema9: { label: 'EMA 9', color: '#a78bfa', dotColor: 'bg-violet-400' },
+  ema21: { label: 'EMA 21', color: '#38bdf8', dotColor: 'bg-sky-400' },
+  ema200: { label: 'EMA 200', color: '#f97316', dotColor: 'bg-orange-400' },
+  bollinger: { label: 'Bollinger', color: '#f59e0b', dotColor: 'bg-amber-400' },
+  sr: { label: 'S/R', color: '#94a3b8', dotColor: 'bg-slate-400' },
+};
+
+// ── Chart Tab ────────────────────────────────────────────────────────────────
+
+function ChartTab({
+  symbol,
+  snapshot,
+}: {
+  symbol: string;
+  snapshot: MarketSnapshot | undefined;
+}) {
+  const { t } = useTranslation();
+  const chartRef = useRef<HTMLDivElement>(null);
+  const { theme } = useThemeStore();
+  const isDark = theme === 'dark';
+  const [interval, setChartInterval] = useState<ChartInterval>('1h');
+  const [activeOverlays, setActiveOverlays] = useState<Set<OverlayKey>>(
+    new Set<OverlayKey>(['sr']),
+  );
+  const [chartInfoOpen, setChartInfoOpen] = useState(false);
+
+  const assetEntry = MARKET_SYMBOLS.find((s) => s.symbol === symbol);
+  const asset = assetEntry?.asset ?? symbol.replace(/USDT|USDC/g, '');
+  const { data: candles, isLoading, refetch } = useOhlcv(asset, interval, 200);
+  const { kline } = useBinanceKlineStream(symbol, interval);
+  const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
+  const [chartReady, setChartReady] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Countdown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(id);
+  }, [cooldown]);
+
+  const handleRefresh = () => {
+    if (cooldown > 0) return;
+    refetch();
+    setCooldown(30);
+  };
+
+  const toggleOverlay = (key: OverlayKey) => {
+    setActiveOverlays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!kline || !seriesRef.current) return;
+    seriesRef.current.update({
+      time: ((kline.time as number) +
+        TZ_OFFSET_SECONDS) as import('lightweight-charts').UTCTimestamp,
+      open: kline.open,
+      high: kline.high,
+      low: kline.low,
+      close: kline.close,
+    });
+  }, [kline]);
+
+  // Apply/remove price lines whenever overlays or snapshot change
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+
+    // Remove all existing price lines
+    priceLinesRef.current.forEach((pl) => {
+      try {
+        series.removePriceLine(pl);
+      } catch {
+        /* already removed */
+      }
+    });
+    priceLinesRef.current = [];
+
+    if (!snapshot) return;
+
+    const addLine = (
+      price: number,
+      title: string,
+      color: string,
+      lineStyle = 0,
+      lineWidth = 1,
+    ) => {
+      if (!price || price <= 0) return;
+      const pl = series.createPriceLine({
+        price,
+        color,
+        lineWidth: lineWidth as 1 | 2 | 3 | 4,
+        lineStyle,
+        axisLabelVisible: true,
+        title,
+      });
+      priceLinesRef.current.push(pl);
+    };
+
+    // EMA lines
+    if (activeOverlays.has('ema9'))
+      addLine(snapshot.emaCross.ema9, 'EMA 9', OVERLAY_CONFIG.ema9.color, 0, 1);
+    if (activeOverlays.has('ema21'))
+      addLine(
+        snapshot.emaCross.ema21,
+        'EMA 21',
+        OVERLAY_CONFIG.ema21.color,
+        0,
+        1,
+      );
+    if (activeOverlays.has('ema200'))
+      addLine(
+        snapshot.emaCross.ema200,
+        'EMA 200',
+        OVERLAY_CONFIG.ema200.color,
+        2,
+        2,
+      );
+
+    // Bollinger Bands (dashed)
+    if (activeOverlays.has('bollinger')) {
+      addLine(
+        snapshot.bollingerBands.upper,
+        'BB ↑',
+        OVERLAY_CONFIG.bollinger.color,
+        1,
+        1,
+      );
+      addLine(
+        snapshot.bollingerBands.middle,
+        'BB mid',
+        OVERLAY_CONFIG.bollinger.color,
+        3,
+        1,
+      );
+      addLine(
+        snapshot.bollingerBands.lower,
+        'BB ↓',
+        OVERLAY_CONFIG.bollinger.color,
+        1,
+        1,
+      );
+    }
+
+    // Support / Resistance
+    if (activeOverlays.has('sr')) {
+      snapshot.supportResistance.resistance
+        .slice(0, 3)
+        .forEach((r) => addLine(r, 'R', '#ef4444', 1, 1));
+      snapshot.supportResistance.support
+        .slice(-3)
+        .forEach((s) => addLine(s, 'S', '#10b981', 1, 1));
+    }
+  }, [activeOverlays, snapshot, chartReady]);
+
+  useEffect(() => {
+    const container = chartRef.current;
+    if (!container) return;
+
+    const colors = chartColors(isDark);
+    const chart = createChart(container, {
+      width: container.clientWidth || container.offsetWidth || 800,
+      height: 520,
+      layout: {
+        background: { type: ColorType.Solid, color: colors.bg },
+        textColor: colors.text,
+        attributionLogo: false,
+      },
+      grid: {
+        vertLines: { color: colors.gridLine },
+        horzLines: { color: colors.gridLine },
+      },
+      crosshair: { mode: 1 },
+      timeScale: {
+        borderColor: colors.border,
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      rightPriceScale: { borderColor: colors.border },
+    });
+
+    const series = chart.addSeries(CandlestickSeries, {
+      upColor: '#10b981',
+      downColor: '#ef4444',
+      borderUpColor: '#10b981',
+      borderDownColor: '#ef4444',
+      wickUpColor: '#10b981',
+      wickDownColor: '#ef4444',
+    } as DeepPartial<CandlestickSeriesOptions>);
+    seriesRef.current = series;
+
+    // Signal that a new series is ready so the overlay effect re-runs
+    setChartReady((n) => n + 1);
+
+    if (candles && candles.length > 0) {
+      const mapped = normalizeCandles(candles);
+      if (mapped.length > 0) {
+        series.setData(mapped);
+        chart.timeScale().fitContent();
+      }
+    }
+
+    const ro = new ResizeObserver(() => {
+      chart.applyOptions({ width: container.clientWidth });
+    });
+    ro.observe(container);
+
+    return () => {
+      priceLinesRef.current = [];
+      ro.disconnect();
+      chart.remove();
+    };
+  }, [isDark, candles]);
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+      {/* Card header */}
+      <div className="flex items-center gap-2.5">
+        <BarChart3 className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold">{t('market.tabChart')}</h2>
+        <span className="rounded-md bg-primary/10 border border-primary/20 px-2 py-0.5 text-xs font-bold text-primary font-mono">
+          {symbol}
+        </span>
+        <InfoButton
+          indicatorKey="chart"
+          onOpen={() => setChartInfoOpen(true)}
+        />
+      </div>
+
+      {/* Toolbar: indicators + intervals + refresh — all in one row */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Left: overlay pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mr-0.5">
+            Indicadores:
+          </span>
+          {(
+            Object.entries(OVERLAY_CONFIG) as [
+              OverlayKey,
+              (typeof OVERLAY_CONFIG)[OverlayKey],
+            ][]
+          ).map(([key, cfg]) => {
+            const active = activeOverlays.has(key);
+            return (
+              <button
+                key={key}
+                onClick={() => toggleOverlay(key)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all',
+                  active
+                    ? 'border-transparent bg-muted text-foreground'
+                    : 'border-border/40 bg-transparent text-muted-foreground/50 line-through',
+                )}
+              >
+                <span
+                  className={cn(
+                    'h-2 w-2 rounded-full shrink-0 transition-opacity',
+                    cfg.dotColor,
+                    !active && 'opacity-30',
+                  )}
+                />
+                {cfg.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right: interval buttons + refresh */}
+        <div className="flex items-center gap-1.5">
+          {CHART_INTERVALS.map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setChartInterval(tf)}
+              className={cn(
+                'rounded-md border px-3 py-1 text-xs font-medium transition-colors',
+                interval === tf
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',
+              )}
+            >
+              {tf}
+            </button>
+          ))}
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <button
+            onClick={handleRefresh}
+            disabled={cooldown > 0}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all',
+              cooldown > 0
+                ? 'border-border/40 text-muted-foreground/40 cursor-not-allowed'
+                : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',
+            )}
+          >
+            <RefreshCw
+              className={cn('h-3 w-3 shrink-0', isLoading && 'animate-spin')}
+            />
+            {cooldown > 0 ? `${cooldown}s` : t('market.refresh')}
+          </button>
+        </div>
+      </div>
+
+      {/* Candlestick chart */}
+      <div className="rounded-xl overflow-hidden relative -mx-4 -mb-4">
+        {isLoading && (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground bg-card/80 backdrop-blur-sm"
+            style={{ height: 520 }}
+          >
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            {t('liveChart.loading')}
+          </div>
+        )}
+        <div ref={chartRef} className="w-full" />
+      </div>
+
+      <IndicatorInfoModal
+        indicatorKey={chartInfoOpen ? 'chart' : null}
+        onClose={() => setChartInfoOpen(false)}
+      />
+    </div>
+  );
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export function MarketPage() {
   const { t } = useTranslation();
+  const location = useLocation();
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
+  const [activeTab, setActiveTab] = useState<'chart' | 'analysis'>(() =>
+    location.hash === '#indicators' ? 'analysis' : 'chart',
+  );
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-switch to analysis tab when navigating with #indicators hash
+  useEffect(() => {
+    if (location.hash === '#indicators') {
+      setActiveTab('analysis');
+    }
+  }, [location.hash]);
+  const { data: sharedSnapshot } = useMarketSnapshot(selectedSymbol);
 
   useGSAP(
     () => {
@@ -1097,7 +1523,7 @@ export function MarketPage() {
         { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' },
       );
     },
-    { scope: containerRef, dependencies: [selectedSymbol] },
+    { scope: containerRef, dependencies: [selectedSymbol, activeTab] },
   );
 
   return (
@@ -1139,8 +1565,42 @@ export function MarketPage() {
       {/* Live real-time ticker */}
       <LiveTickerPanel symbol={selectedSymbol} />
 
-      {/* Indicators snapshot (60s refresh) */}
-      <SnapshotPanel symbol={selectedSymbol} />
+      {/* Tab switcher */}
+      <div className="flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-fit">
+        <button
+          onClick={() => setActiveTab('chart')}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+            activeTab === 'chart'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <BarChart3 className="h-4 w-4" />
+          {t('market.tabChart')}
+        </button>
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+            activeTab === 'analysis'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <Activity className="h-4 w-4" />
+          {t('market.tabAnalysis')}
+        </button>
+      </div>
+
+      {/* Tab content */}
+      <div className="market-panel">
+        {activeTab === 'chart' ? (
+          <ChartTab symbol={selectedSymbol} snapshot={sharedSnapshot} />
+        ) : (
+          <SnapshotPanel symbol={selectedSymbol} />
+        )}
+      </div>
     </div>
   );
 }

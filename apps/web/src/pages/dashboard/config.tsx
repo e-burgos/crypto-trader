@@ -1,17 +1,27 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Save,
   Play,
   Square,
   Loader2,
-  Settings2,
   BookOpen,
-  Zap,
-  Shield,
-  TrendingUp,
-  ArrowRight,
   X,
   Eye,
+  TestTube2,
+  Trash2,
+  Pencil,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  Plus,
+  Shield,
+  Zap,
+  TrendingUp,
+  Target,
+  Clock,
+  ListChecks,
+  Bot,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
@@ -23,7 +33,9 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import {
   useTradingConfigs,
-  useUpsertConfig,
+  useCreateConfig,
+  useUpdateConfig,
+  useDeleteConfig,
   useStartAgent,
   useStopAgent,
   useAgentStatus,
@@ -31,18 +43,18 @@ import {
   type TradingMode,
   type TradingAsset,
   type TradingPair,
+  type IntervalMode,
 } from '../../hooks/use-trading';
-import { DecisionFlowDiagram } from '../../components/agent/decision-flow-diagram';
+import { useTestnetBinanceKeyStatus } from '../../hooks/use-user';
 import {
   StrategyPresets,
   PRESETS,
 } from '../../components/agent/strategy-presets';
-import { ParameterCards } from '../../components/agent/parameter-cards';
-import { ExplainPanel } from '../../components/agent/explain-panel';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface ConfigForm {
+  name: string;
   asset: TradingAsset;
   pair: TradingPair;
   mode: TradingMode;
@@ -50,16 +62,20 @@ interface ConfigForm {
   sellThreshold: string;
   stopLossPct: string;
   takeProfitPct: string;
+  minProfitPct: string;
   maxTradePct: string;
   maxConcurrentPositions: string;
+  intervalMode: IntervalMode;
   minIntervalMinutes: string;
   orderPriceOffsetPct: string;
 }
 
 const DEFAULT_FORM: ConfigForm = {
+  name: '',
   asset: 'BTC',
   pair: 'USDT',
   mode: 'SANDBOX',
+  intervalMode: 'AGENT',
   ...PRESETS.balanced,
 };
 
@@ -130,889 +146,6 @@ function SliderField({
   );
 }
 
-// ── Decision Flow Diagram ─────────────────────────────────────────────────────
-
-function DecisionFlowDiagram() {
-  const { t } = useTranslation();
-  return (
-    <div className="overflow-x-auto pb-1">
-      <div className="flex min-w-[560px] items-stretch gap-2">
-        {/* Sources */}
-        <div className="flex flex-col justify-center gap-2">
-          {[
-            {
-              icon: '📡',
-              label: t('config.guide.sourceMarket'),
-              sub: '200 candles · RSI · MACD · BB',
-            },
-            {
-              icon: '📰',
-              label: t('config.guide.sourceNews'),
-              sub: t('config.guide.sourceNewsSub'),
-            },
-            {
-              icon: '📊',
-              label: t('config.guide.sourceTrades'),
-              sub: t('config.guide.sourceTradesSub'),
-            },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-2"
-            >
-              <div className="text-xs font-semibold text-blue-400">
-                {s.icon} {s.label}
-              </div>
-              <div className="text-[10px] text-muted-foreground">{s.sub}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center text-muted-foreground/50">
-          <ArrowRight className="h-5 w-5" />
-        </div>
-
-        {/* LLM */}
-        <div className="flex items-center">
-          <div className="rounded-xl border-2 border-purple-500/40 bg-purple-500/10 px-4 py-4 text-center w-36">
-            <div className="text-2xl mb-1">🧠</div>
-            <div className="text-xs font-bold text-purple-300">
-              {t('config.guide.llmLabel')}
-            </div>
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              Claude · GPT-4o · Groq
-            </div>
-            <div className="mt-2 rounded-md bg-purple-500/20 px-2 py-1">
-              <div className="text-[10px] text-purple-300 font-semibold">
-                {t('config.guide.confidence')}
-              </div>
-              <div className="text-xs font-bold text-purple-200">0 – 100%</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center text-muted-foreground/50">
-          <ArrowRight className="h-5 w-5" />
-        </div>
-
-        {/* Decision Logic */}
-        <div className="flex items-center">
-          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-3 w-52">
-            <div className="mb-2 text-xs font-bold text-yellow-400">
-              ⚙️ {t('config.guide.decisionLogic')}
-            </div>
-            <div className="space-y-1.5 text-[10px]">
-              {[
-                {
-                  cond: 'Score ≥ buyThreshold',
-                  out: 'BUY',
-                  color: 'text-emerald-400',
-                },
-                {
-                  cond: 'SL threshold hit',
-                  out: 'STOP LOSS',
-                  color: 'text-orange-400',
-                },
-                {
-                  cond: 'TP threshold hit',
-                  out: 'TAKE PROFIT',
-                  color: 'text-blue-400',
-                },
-                {
-                  cond: t('config.guide.otherwise'),
-                  out: 'HOLD ⏳',
-                  color: 'text-muted-foreground',
-                },
-              ].map((row) => (
-                <div key={row.out} className="flex items-center gap-1.5">
-                  <span className="text-muted-foreground">{row.cond}</span>
-                  <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50 shrink-0" />
-                  <span className={cn('font-semibold', row.color)}>
-                    {row.out}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center text-muted-foreground/50">
-          <ArrowRight className="h-5 w-5" />
-        </div>
-
-        {/* Outcomes */}
-        <div className="flex flex-col justify-center gap-2">
-          {[
-            {
-              color: 'emerald',
-              icon: '✓',
-              label: t('config.guide.outcomeBuy'),
-              sub: t('config.guide.outcomeBuySub'),
-            },
-            {
-              color: 'orange',
-              icon: '↓',
-              label: t('config.guide.outcomeSL'),
-              sub: t('config.guide.outcomeSLSub'),
-            },
-            {
-              color: 'slate',
-              icon: '⏳',
-              label: t('config.guide.outcomeHold'),
-              sub: t('config.guide.outcomeHoldSub'),
-            },
-          ].map((o) => (
-            <div
-              key={o.label}
-              className={cn(
-                'rounded-lg border px-3 py-2',
-                o.color === 'emerald'
-                  ? 'border-emerald-500/30 bg-emerald-500/5'
-                  : o.color === 'orange'
-                    ? 'border-orange-500/30 bg-orange-500/5'
-                    : 'border-border bg-muted/20',
-              )}
-            >
-              <div
-                className={cn(
-                  'text-xs font-semibold',
-                  o.color === 'emerald'
-                    ? 'text-emerald-400'
-                    : o.color === 'orange'
-                      ? 'text-orange-400'
-                      : 'text-muted-foreground',
-                )}
-              >
-                {o.icon} {o.label}
-              </div>
-              <div className="text-[10px] text-muted-foreground">{o.sub}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Parameter Reference Cards ─────────────────────────────────────────────────
-
-function ParameterCards() {
-  const { t } = useTranslation();
-
-  const cards = [
-    {
-      title: t('config.guide.cardThresholds'),
-      color: 'blue',
-      icon: '🎯',
-      content: (
-        <div className="space-y-2 text-[11px]">
-          <p className="text-muted-foreground">
-            {t('config.guide.cardThresholdsDesc')}
-          </p>
-          <div className="rounded-md bg-muted/40 p-2 font-mono text-xs">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">BUY:</span>
-              <span className="text-emerald-400">score ≥ 72% → order</span>
-            </div>
-            <div className="flex justify-between mt-0.5">
-              <span className="text-muted-foreground">HOLD:</span>
-              <span className="text-muted-foreground">
-                score &lt; 72% → wait
-              </span>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            💡 {t('config.guide.cardThresholdsTip')}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: t('config.guide.cardRisk'),
-      color: 'red',
-      icon: '🛡️',
-      content: (
-        <div className="space-y-2 text-[11px]">
-          <p className="text-muted-foreground">
-            {t('config.guide.cardRiskDesc')}
-          </p>
-          <div className="rounded-md bg-muted/40 p-2 text-xs">
-            <div>
-              <span className="text-red-400 font-semibold">Stop Loss 3%: </span>
-              <span className="text-muted-foreground">
-                {t('config.guide.slExample')}
-              </span>
-            </div>
-            <div className="mt-0.5">
-              <span className="text-emerald-400 font-semibold">
-                Take Profit 5%:{' '}
-              </span>
-              <span className="text-muted-foreground">
-                {t('config.guide.tpExample')}
-              </span>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            💡 {t('config.guide.cardRiskTip')}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: t('config.guide.cardCapital'),
-      color: 'purple',
-      icon: '💰',
-      content: (
-        <div className="space-y-2 text-[11px]">
-          <p className="text-muted-foreground">
-            {t('config.guide.cardCapitalDesc')}
-          </p>
-          <div className="rounded-md bg-muted/40 p-2 text-xs">
-            <div className="text-muted-foreground">
-              {t('config.guide.capitalExample1')}
-            </div>
-            <div className="mt-0.5 text-purple-400 font-semibold">
-              {t('config.guide.capitalExample2')}
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            💡 {t('config.guide.cardCapitalTip')}
-          </p>
-        </div>
-      ),
-    },
-    {
-      title: t('config.guide.cardTiming'),
-      color: 'amber',
-      icon: '⏱️',
-      content: (
-        <div className="space-y-2 text-[11px]">
-          <p className="text-muted-foreground">
-            {t('config.guide.cardTimingDesc')}
-          </p>
-          <div className="rounded-md bg-muted/40 p-2 text-xs space-y-0.5">
-            <div className="text-amber-400 font-semibold">
-              {t('config.guide.timingExample1')}
-            </div>
-            <div className="text-muted-foreground">
-              {t('config.guide.timingExample2')}
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            💡 {t('config.guide.cardTimingTip')}
-          </p>
-        </div>
-      ),
-    },
-  ];
-
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {cards.map((card) => (
-        <div
-          key={card.title}
-          className={cn(
-            'rounded-xl border p-3',
-            card.color === 'blue'
-              ? 'border-blue-500/20 bg-blue-500/5'
-              : card.color === 'red'
-                ? 'border-red-500/20 bg-red-500/5'
-                : card.color === 'purple'
-                  ? 'border-purple-500/20 bg-purple-500/5'
-                  : 'border-amber-500/20 bg-amber-500/5',
-          )}
-        >
-          <div className="mb-2 flex items-center gap-1.5">
-            <span className="text-base">{card.icon}</span>
-            <span className="text-xs font-bold">{card.title}</span>
-          </div>
-          {card.content}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Strategy Preset Selector ──────────────────────────────────────────────────
-
-function StrategyPresets({
-  onApply,
-}: {
-  onApply: (preset: keyof typeof PRESETS) => void;
-}) {
-  const { t } = useTranslation();
-
-  const presets: Array<{
-    key: keyof typeof PRESETS;
-    icon: React.ReactNode;
-    colorClass: string;
-    borderClass: string;
-    textClass: string;
-  }> = [
-    {
-      key: 'conservative',
-      icon: <Shield className="h-5 w-5" />,
-      colorClass: 'bg-blue-500/10 hover:bg-blue-500/15',
-      borderClass: 'border-blue-500/30',
-      textClass: 'text-blue-400',
-    },
-    {
-      key: 'balanced',
-      icon: <TrendingUp className="h-5 w-5" />,
-      colorClass: 'bg-emerald-500/10 hover:bg-emerald-500/15',
-      borderClass: 'border-emerald-500/30',
-      textClass: 'text-emerald-400',
-    },
-    {
-      key: 'aggressive',
-      icon: <Zap className="h-5 w-5" />,
-      colorClass: 'bg-red-500/10 hover:bg-red-500/15',
-      borderClass: 'border-red-500/30',
-      textClass: 'text-red-400',
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      {presets.map((p) => {
-        const preset = PRESETS[p.key];
-        return (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => onApply(p.key)}
-            className={cn(
-              'rounded-xl border p-3 text-left transition-all',
-              p.colorClass,
-              p.borderClass,
-            )}
-          >
-            <div className={cn('mb-1 flex items-center gap-1.5', p.textClass)}>
-              {p.icon}
-              <span className="text-sm font-bold">
-                {t(`config.guide.preset.${p.key}`)}
-              </span>
-            </div>
-            <p className="mb-2 text-[10px] text-muted-foreground">
-              {t(`config.guide.preset.${p.key}Desc`)}
-            </p>
-            <div className="space-y-0.5 text-[10px] text-muted-foreground">
-              <div className="flex justify-between">
-                <span>{t('trading.buyThreshold')}</span>
-                <span className="font-medium">{preset.buyThreshold}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('trading.stopLoss')}</span>
-                <span className="font-medium">{preset.stopLossPct}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t('trading.maxTrade')}</span>
-                <span className="font-medium">{preset.maxTradePct}%</span>
-              </div>
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Explain Panel ────────────────────────────────────────────────────────────
-
-function ExplainPanel() {
-  const { t } = useTranslation();
-
-  const concepts = [
-    {
-      id: 'threshold',
-      icon: '🎯',
-      color: 'blue' as const,
-      title: t('config.explain.thresholdTitle'),
-      field: 'buy_threshold · sell_threshold',
-      desc: t('config.explain.thresholdDesc'),
-      example: (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.examplePrefix')} buy_threshold = 70
-          </p>
-          <div className="space-y-1">
-            {[
-              {
-                cond: 'confidence: 73 ≥ 70',
-                out: t('config.explain.executes'),
-                color: 'emerald',
-                icon: <CheckCircle2 className="h-3 w-3" />,
-              },
-              {
-                cond: 'confidence: 65 < 70',
-                out: 'HOLD ⏸',
-                color: 'muted',
-                icon: <XCircle className="h-3 w-3" />,
-              },
-              {
-                cond: 'confidence: 70 = 70',
-                out: t('config.explain.executes'),
-                color: 'emerald',
-                icon: <CheckCircle2 className="h-3 w-3" />,
-              },
-            ].map((row) => (
-              <div
-                key={row.cond}
-                className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1 font-mono text-[10px]"
-              >
-                <span className="text-muted-foreground">{row.cond}</span>
-                <span
-                  className={cn(
-                    'flex items-center gap-1 font-semibold',
-                    row.color === 'emerald'
-                      ? 'text-emerald-400'
-                      : 'text-muted-foreground',
-                  )}
-                >
-                  {row.icon}
-                  {row.out}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ),
-      profiles: [
-        {
-          name: t('config.guide.preset.conservative'),
-          buy: '85%',
-          sell: '80%',
-        },
-        { name: t('config.guide.preset.balanced'), buy: '72%', sell: '68%' },
-        { name: t('config.guide.preset.aggressive'), buy: '60%', sell: '55%' },
-      ],
-      profileCols: [
-        t('config.explain.buyLabel'),
-        t('config.explain.sellLabel'),
-      ],
-      tip: t('config.explain.thresholdTip'),
-    },
-    {
-      id: 'sl',
-      icon: '🛡️',
-      color: 'red' as const,
-      title: t('config.explain.slTitle'),
-      field: 'stop_loss_pct',
-      desc: t('config.explain.slDesc'),
-      example: (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.examplePrefix')} stop_loss = 3%
-          </p>
-          <div className="rounded-md bg-muted/40 px-3 py-2 text-[10px] space-y-1">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {t('config.explain.entryPrice')}
-              </span>
-              <span className="font-mono font-semibold">$80,000</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {t('config.explain.slTrigger')}
-              </span>
-              <span className="font-mono font-semibold text-red-400">
-                $77,600 (–3%)
-              </span>
-            </div>
-            <div className="flex justify-between border-t border-border/50 pt-1">
-              <span className="text-muted-foreground">
-                {t('config.explain.result')}
-              </span>
-              <span className="font-semibold text-red-400">
-                {t('config.explain.autoSell')}
-              </span>
-            </div>
-          </div>
-        </div>
-      ),
-      profiles: [
-        { name: t('config.guide.preset.conservative'), buy: '2%', sell: '3%' },
-        { name: t('config.guide.preset.balanced'), buy: '3%', sell: '5%' },
-        { name: t('config.guide.preset.aggressive'), buy: '5%', sell: '10%' },
-      ],
-      profileCols: ['Stop Loss', 'Take Profit'],
-      tip: t('config.explain.slTip'),
-    },
-    {
-      id: 'capital',
-      icon: '💰',
-      color: 'purple' as const,
-      title: t('config.explain.capitalTitle'),
-      field: 'max_trade_pct',
-      desc: t('config.explain.capitalDesc'),
-      example: (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.examplePrefix')} max_trade_pct = 10%
-          </p>
-          <div className="rounded-md bg-muted/40 px-3 py-2 text-[10px] space-y-1">
-            {[
-              { label: t('config.explain.balance'), value: '$10,000' },
-              { label: 'max_trade_pct', value: '10%' },
-              {
-                label: t('config.explain.maxOrder'),
-                value: '$1,000',
-                highlight: true,
-              },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className={cn(
-                  'flex justify-between',
-                  row.highlight ? 'border-t border-border/50 pt-1' : '',
-                )}
-              >
-                <span className="text-muted-foreground">{row.label}</span>
-                <span
-                  className={cn(
-                    'font-mono font-semibold',
-                    row.highlight ? 'text-purple-400' : '',
-                  )}
-                >
-                  {row.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ),
-      profiles: [
-        { name: t('config.guide.preset.conservative'), buy: '5%', sell: '1' },
-        { name: t('config.guide.preset.balanced'), buy: '10%', sell: '3' },
-        { name: t('config.guide.preset.aggressive'), buy: '20%', sell: '5' },
-      ],
-      profileCols: ['Max Trade', t('config.explain.maxPositionsLabel')],
-      tip: t('config.explain.capitalTip'),
-    },
-    {
-      id: 'interval',
-      icon: '⏱️',
-      color: 'amber' as const,
-      title: t('config.explain.intervalTitle'),
-      field: 'min_interval_minutes',
-      desc: t('config.explain.intervalDesc'),
-      example: (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.intervalComparison')}
-          </p>
-          <div className="space-y-1">
-            {[
-              {
-                interval: '30 min',
-                freq: t('config.explain.freq30'),
-                cost: t('config.explain.costHigh'),
-                col: 'amber',
-              },
-              {
-                interval: '60 min',
-                freq: t('config.explain.freq60'),
-                cost: t('config.explain.costMed'),
-                col: 'emerald',
-              },
-              {
-                interval: '120 min',
-                freq: t('config.explain.freq120'),
-                cost: t('config.explain.costLow'),
-                col: 'blue',
-              },
-            ].map((row) => (
-              <div
-                key={row.interval}
-                className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1 font-mono text-[10px]"
-              >
-                <span className="font-semibold text-foreground">
-                  {row.interval}
-                </span>
-                <span className="text-muted-foreground">{row.freq}</span>
-                <span
-                  className={cn(
-                    'font-semibold',
-                    row.col === 'amber'
-                      ? 'text-amber-400'
-                      : row.col === 'emerald'
-                        ? 'text-emerald-400'
-                        : 'text-blue-400',
-                  )}
-                >
-                  {row.cost}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ),
-      profiles: [
-        {
-          name: t('config.guide.preset.conservative'),
-          buy: '120 min',
-          sell: '1',
-        },
-        { name: t('config.guide.preset.balanced'), buy: '60 min', sell: '3' },
-        { name: t('config.guide.preset.aggressive'), buy: '30 min', sell: '5' },
-      ],
-      profileCols: ['Min Interval', t('config.explain.maxPositionsLabel')],
-      tip: t('config.explain.intervalTip'),
-    },
-    {
-      id: 'offset',
-      icon: '📌',
-      color: 'slate' as const,
-      title: t('config.explain.offsetTitle'),
-      field: 'order_price_offset_pct',
-      desc: t('config.explain.offsetDesc'),
-      example: (
-        <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            {t('config.explain.examplePrefix')} BTC = $80,000
-          </p>
-          <div className="space-y-1">
-            {[
-              {
-                label: 'offset = –1%',
-                price: '$79,200',
-                color: 'emerald',
-                note: t('config.explain.offsetNegNote'),
-              },
-              {
-                label: 'offset = 0%',
-                price: '$80,000',
-                color: 'muted',
-                note: t('config.explain.offsetZeroNote'),
-              },
-              {
-                label: 'offset = +1%',
-                price: '$80,800',
-                color: 'amber',
-                note: t('config.explain.offsetPosNote'),
-              },
-            ].map((row) => (
-              <div
-                key={row.label}
-                className="flex items-center justify-between rounded-md bg-muted/40 px-2 py-1 font-mono text-[10px]"
-              >
-                <span className="text-muted-foreground">{row.label}</span>
-                <span
-                  className={cn(
-                    'font-semibold',
-                    row.color === 'emerald'
-                      ? 'text-emerald-400'
-                      : row.color === 'amber'
-                        ? 'text-amber-400'
-                        : 'text-muted-foreground',
-                  )}
-                >
-                  {row.price}
-                </span>
-                <span className="text-muted-foreground">{row.note}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ),
-      profiles: [
-        { name: t('config.guide.preset.conservative'), buy: '–1%', sell: '–' },
-        { name: t('config.guide.preset.balanced'), buy: '0%', sell: '–' },
-        { name: t('config.guide.preset.aggressive'), buy: '+1%', sell: '–' },
-      ],
-      profileCols: ['Offset', ''],
-      tip: t('config.explain.offsetTip'),
-    },
-  ];
-
-  const colorMap = {
-    blue: {
-      border: 'border-blue-500/20',
-      bg: 'bg-blue-500/5',
-      badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-      heading: 'text-blue-400',
-    },
-    red: {
-      border: 'border-red-500/20',
-      bg: 'bg-red-500/5',
-      badge: 'bg-red-500/10 text-red-400 border-red-500/20',
-      heading: 'text-red-400',
-    },
-    purple: {
-      border: 'border-purple-500/20',
-      bg: 'bg-purple-500/5',
-      badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-      heading: 'text-purple-400',
-    },
-    amber: {
-      border: 'border-amber-500/20',
-      bg: 'bg-amber-500/5',
-      badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      heading: 'text-amber-400',
-    },
-    slate: {
-      border: 'border-border',
-      bg: 'bg-muted/20',
-      badge: 'bg-muted text-muted-foreground border-border',
-      heading: 'text-muted-foreground',
-    },
-  };
-
-  return (
-    <div className="config-card space-y-4 rounded-2xl border border-border bg-card p-6">
-      <div>
-        <h3 className="text-sm font-bold">{t('config.explain.title')}</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {t('config.explain.subtitle')}
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        {concepts.map((c) => {
-          const colors = colorMap[c.color];
-          return (
-            <div
-              key={c.id}
-              className={cn(
-                'rounded-xl border p-4 space-y-3',
-                colors.border,
-                colors.bg,
-              )}
-            >
-              {/* Header */}
-              <div className="flex items-start gap-2">
-                <span className="text-xl leading-none">{c.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className={cn('text-sm font-bold', colors.heading)}>
-                      {c.title}
-                    </h4>
-                    <span
-                      className={cn(
-                        'rounded-full border px-2 py-0.5 font-mono text-[9px]',
-                        colors.badge,
-                      )}
-                    >
-                      {c.field}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    {c.desc}
-                  </p>
-                </div>
-              </div>
-
-              {/* Example */}
-              <div>{c.example}</div>
-
-              {/* Profiles table */}
-              {c.profileCols[1] !== '' && (
-                <div>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t('config.explain.profilesTitle')}
-                  </p>
-                  <div className="rounded-md border border-border/50 overflow-hidden">
-                    <table className="w-full text-[10px]">
-                      <thead>
-                        <tr className="border-b border-border/50 bg-muted/30">
-                          <th className="px-2 py-1 text-left font-semibold text-muted-foreground">
-                            {t('config.explain.profile')}
-                          </th>
-                          {c.profileCols.filter(Boolean).map((col) => (
-                            <th
-                              key={col}
-                              className="px-2 py-1 text-right font-semibold text-muted-foreground"
-                            >
-                              {col}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {c.profiles.map((p, i) => (
-                          <tr
-                            key={p.name}
-                            className={cn(
-                              i !== c.profiles.length - 1 &&
-                                'border-b border-border/40',
-                            )}
-                          >
-                            <td className="px-2 py-1.5 font-medium">
-                              {p.name}
-                            </td>
-                            <td className="px-2 py-1.5 text-right font-mono">
-                              {p.buy}
-                            </td>
-                            {c.profileCols[1] && (
-                              <td className="px-2 py-1.5 text-right font-mono">
-                                {p.sell}
-                              </td>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Tip */}
-              <p className="text-[10px] text-muted-foreground">💡 {c.tip}</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Guide Panel ───────────────────────────────────────────────────────────────
-
-function GuidePanel({
-  onApplyPreset,
-}: {
-  onApplyPreset: (preset: keyof typeof PRESETS) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="config-card space-y-6 rounded-2xl border border-border bg-card p-6">
-      <div>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
-            1
-          </span>
-          {t('config.guide.flowTitle')}
-        </h3>
-        <DecisionFlowDiagram />
-      </div>
-
-      <hr className="border-border/50" />
-
-      <div>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
-            2
-          </span>
-          {t('config.guide.presetsTitle')}
-        </h3>
-        <StrategyPresets onApply={onApplyPreset} />
-      </div>
-
-      <hr className="border-border/50" />
-
-      <div>
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
-            3
-          </span>
-          {t('config.guide.paramTitle')}
-        </h3>
-        <ParameterCards />
-      </div>
-    </div>
-  );
-}
-
 // ── Agent Detail Modal ───────────────────────────────────────────────────────
 
 function AgentDetailModal({
@@ -1029,6 +162,16 @@ function AgentDetailModal({
   onStop: () => void;
 }) {
   const { t } = useTranslation();
+  const { mutate: updateConfig, isPending: isSavingName } = useUpdateConfig();
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(cfg.name || '');
+
+  function saveName() {
+    updateConfig(
+      { id: cfg.id, data: { name: nameValue } },
+      { onSuccess: () => setEditingName(false) },
+    );
+  }
 
   const rows: Array<{ label: string; value: React.ReactNode }> = [
     { label: t('trading.asset'), value: `${cfg.asset} / ${cfg.pair}` },
@@ -1088,13 +231,13 @@ function AgentDetailModal({
     },
   ];
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
+      {/* Backdrop — fully opaque so the form behind is not visible */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
 
       {/* Panel */}
       <div
@@ -1103,13 +246,56 @@ function AgentDetailModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <div>
-            <h2 className="font-bold">
-              {cfg.asset}/{cfg.pair}
-            </h2>
+          <div className="flex-1 min-w-0 pr-4">
+            {/* Editable name */}
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  type="text"
+                  maxLength={50}
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveName();
+                    if (e.key === 'Escape') setEditingName(false);
+                  }}
+                  className="flex-1 rounded-md border border-primary/50 bg-background px-2 py-1 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <button
+                  type="button"
+                  onClick={saveName}
+                  disabled={isSavingName}
+                  className="rounded p-1 text-emerald-500 hover:bg-emerald-500/10"
+                >
+                  {isSavingName ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 group">
+                <h2 className="font-bold truncate">
+                  {cfg.name ? cfg.name : `${cfg.asset}/${cfg.pair}`}
+                </h2>
+                <button
+                  type="button"
+                  title={t('trading.agentName')}
+                  onClick={() => setEditingName(true)}
+                  className="rounded p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground transition-opacity"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {cfg.asset}/{cfg.pair} · {cfg.mode}
+            </p>
             <span
               className={cn(
-                'mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
                 isRunning
                   ? 'bg-emerald-500/10 text-emerald-500'
                   : 'bg-muted text-muted-foreground',
@@ -1127,7 +313,7 @@ function AgentDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground shrink-0"
           >
             <X className="h-4 w-4" />
           </button>
@@ -1176,47 +362,171 @@ function AgentDetailModal({
           )}
         </div>
       </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── New Agent Stepper Modal ────────────────────────────────────────────────────
+
+type StepId =
+  | 'preset'
+  | 'identity'
+  | 'thresholds'
+  | 'risk'
+  | 'timing'
+  | 'review';
+
+const STEPS: { id: StepId; icon: typeof Bot }[] = [
+  { id: 'preset', icon: Zap },
+  { id: 'identity', icon: Bot },
+  { id: 'thresholds', icon: Target },
+  { id: 'risk', icon: Shield },
+  { id: 'timing', icon: Clock },
+  { id: 'review', icon: ListChecks },
+];
+
+const PRESET_META: {
+  key: keyof typeof PRESETS;
+  icon: typeof Shield;
+  color: string;
+  border: string;
+  bg: string;
+}[] = [
+  {
+    key: 'conservative',
+    icon: Shield,
+    color: 'text-sky-400',
+    border: 'border-sky-500/30',
+    bg: 'bg-sky-500/5',
+  },
+  {
+    key: 'balanced',
+    icon: TrendingUp,
+    color: 'text-primary',
+    border: 'border-primary/30',
+    bg: 'bg-primary/5',
+  },
+  {
+    key: 'aggressive',
+    icon: Zap,
+    color: 'text-amber-400',
+    border: 'border-amber-500/30',
+    bg: 'bg-amber-500/5',
+  },
+];
+
+function StepperSlider({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  step = 1,
+  unit = '%',
+  signed = false,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  min: number;
+  max: number;
+  step?: number;
+  unit?: string;
+  signed?: boolean;
+  onChange: (v: string) => void;
+}) {
+  const num = parseFloat(value);
+  const displayValue = signed && num > 0 ? `+${value}` : value;
+  const valueColor =
+    signed && num < 0
+      ? 'text-emerald-400'
+      : signed && num > 0
+        ? 'text-amber-400'
+        : 'text-primary';
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-sm font-semibold">{label}</span>
+        <span className={cn('text-lg font-bold tabular-nums', valueColor)}>
+          {displayValue}
+          {unit}
+        </span>
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
+        {hint}
+      </p>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full accent-primary"
+      />
+      <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+        <span>
+          {signed && min > 0 ? '+' : ''}
+          {min}
+          {unit}
+        </span>
+        <span>
+          {signed && max > 0 ? '+' : ''}
+          {max}
+          {unit}
+        </span>
+      </div>
     </div>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
-export function ConfigPage() {
+function NewAgentStepperModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const { t } = useTranslation();
-  const [form, setForm] = useState<ConfigForm>(DEFAULT_FORM);
-  const [selectedConfig, setSelectedConfig] = useState<TradingConfig | null>(
-    null,
-  );
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { mutate: upsert, isPending } = useUpsertConfig();
-  const { mutate: startAgent } = useStartAgent();
-  const { mutate: stopAgent } = useStopAgent();
-  const { data: configs = [] } = useTradingConfigs();
-  const { data: agentStatuses = [] } = useAgentStatus();
+  const [stepIdx, setStepIdx] = useState(0);
+  const [selectedPreset, setSelectedPreset] = useState<
+    keyof typeof PRESETS | null
+  >('balanced');
+  const [form, setForm] = useState<ConfigForm>({
+    ...DEFAULT_FORM,
+    ...PRESETS.balanced,
+  });
+  const { mutate: createConfig, isPending } = useCreateConfig();
+  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
+  const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
 
-  useGSAP(
-    () => {
-      gsap.fromTo(
-        '.config-card',
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, stagger: 0.1, duration: 0.5, ease: 'power2.out' },
-      );
-    },
-    { scope: containerRef },
-  );
+  const totalSteps = STEPS.length;
+  const currentStep = STEPS[stepIdx].id;
+
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   function update(patch: Partial<ConfigForm>) {
     setForm((f) => ({ ...f, ...patch }));
   }
 
   function applyPreset(key: keyof typeof PRESETS) {
+    setSelectedPreset(key);
     setForm((f) => ({ ...f, ...PRESETS[key] }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleSubmit() {
     const dto: TradingConfigDto = {
+      name: form.name || undefined,
       asset: form.asset,
       pair: form.pair,
       mode: form.mode,
@@ -1224,29 +534,1151 @@ export function ConfigPage() {
       sellThreshold: parseFloat(form.sellThreshold),
       stopLossPct: parseFloat(form.stopLossPct) / 100,
       takeProfitPct: parseFloat(form.takeProfitPct) / 100,
+      minProfitPct: parseFloat(form.minProfitPct) / 100,
       maxTradePct: parseFloat(form.maxTradePct) / 100,
       maxConcurrentPositions: parseInt(form.maxConcurrentPositions),
+      intervalMode: form.intervalMode,
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
       orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
     };
-    upsert(dto);
+    createConfig(dto, { onSuccess: onCreated });
   }
 
-  function getAgentIsRunning(asset: string, pair: string) {
-    return (
-      agentStatuses.find((s) => s.asset === asset && s.pair === pair)
-        ?.isRunning ?? false
-    );
+  const isLastStep = stepIdx === totalSteps - 1;
+
+  const STEP_META: Record<StepId, { title: string; subtitle: string }> = {
+    preset: {
+      title: t('config.stepper.stepPreset'),
+      subtitle: t('config.stepper.stepPresetHint'),
+    },
+    identity: {
+      title: t('config.stepper.stepIdentity'),
+      subtitle: t('config.stepper.stepIdentityHint'),
+    },
+    thresholds: {
+      title: t('config.stepper.stepThresholds'),
+      subtitle: t('config.stepper.stepThresholdsHint'),
+    },
+    risk: {
+      title: t('config.stepper.stepRisk'),
+      subtitle: t('config.stepper.stepRiskHint'),
+    },
+    timing: {
+      title: t('config.stepper.stepTiming'),
+      subtitle: t('config.stepper.stepTimingHint'),
+    },
+    review: {
+      title: t('config.stepper.stepReview'),
+      subtitle: t('config.stepper.stepReviewHint'),
+    },
+  };
+
+  const meta = STEP_META[currentStep];
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full sm:max-w-lg max-h-[96dvh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="shrink-0 flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-border bg-muted/20">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t('config.stepper.title')} · {stepIdx + 1}/{totalSteps}
+              </span>
+            </div>
+            <h2 className="text-base font-bold leading-tight">{meta.title}</h2>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              {meta.subtitle}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="shrink-0 mt-0.5 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Progress dots */}
+        <div className="shrink-0 flex items-center justify-center gap-1.5 px-5 py-3 bg-muted/10 border-b border-border/50">
+          {STEPS.map((s, i) => {
+            const StepIcon = s.icon;
+            const done = i < stepIdx;
+            const active = i === stepIdx;
+            return (
+              <button
+                key={s.id}
+                onClick={() => i < stepIdx && setStepIdx(i)}
+                disabled={i > stepIdx}
+                className={cn(
+                  'flex items-center justify-center rounded-full transition-all duration-200',
+                  active
+                    ? 'h-7 w-7 bg-primary text-primary-foreground shadow-md'
+                    : done
+                      ? 'h-6 w-6 bg-primary/20 text-primary cursor-pointer hover:bg-primary/30'
+                      : 'h-5 w-5 bg-muted text-muted-foreground/40 cursor-not-allowed',
+                )}
+              >
+                {done ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <StepIcon
+                    className={cn(active ? 'h-3.5 w-3.5' : 'h-2.5 w-2.5')}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Step content */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* ── STEP: PRESET ── */}
+          {currentStep === 'preset' && (
+            <div className="space-y-3">
+              {PRESET_META.map((pm) => {
+                const PresetIcon = pm.icon;
+                const preset = PRESETS[pm.key];
+                const isSelected = selectedPreset === pm.key;
+                return (
+                  <button
+                    key={pm.key}
+                    type="button"
+                    onClick={() => applyPreset(pm.key)}
+                    className={cn(
+                      'w-full rounded-xl border p-4 text-left transition-all',
+                      isSelected
+                        ? cn(pm.border, pm.bg, 'ring-1 ring-inset', pm.border)
+                        : 'border-border hover:border-primary/30 hover:bg-muted/30',
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={cn(
+                          'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border',
+                          pm.bg,
+                          pm.border,
+                        )}
+                      >
+                        <PresetIcon className={cn('h-4 w-4', pm.color)} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={cn('text-sm font-bold', pm.color)}>
+                            {t(`config.guide.preset.${pm.key}`)}
+                          </span>
+                          {isSelected && (
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary">
+                              <Check className="h-3 w-3 text-primary-foreground" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
+                          {t(`config.guide.preset.${pm.key}Desc`)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground/80">
+                          <span>
+                            📈 {t('trading.buyThreshold')}:{' '}
+                            <strong>{preset.buyThreshold}%</strong>
+                          </span>
+                          <span>
+                            🛡️ Stop Loss: <strong>{preset.stopLossPct}%</strong>
+                          </span>
+                          <span>
+                            🎯 Take Profit:{' '}
+                            <strong>{preset.takeProfitPct}%</strong>
+                          </span>
+                          <span>
+                            ⏱️ Intervalo:{' '}
+                            <strong>{preset.minIntervalMinutes} min</strong>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── STEP: IDENTITY ── */}
+          {currentStep === 'identity' && (
+            <div className="space-y-4">
+              {/* Name */}
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                <label className="mb-1 block text-sm font-semibold">
+                  {t('trading.agentName')}
+                </label>
+                <p className="mb-2.5 text-xs text-muted-foreground">
+                  {t('config.stepper.nameHint')}
+                </p>
+                <input
+                  type="text"
+                  maxLength={50}
+                  value={form.name}
+                  onChange={(e) => update({ name: e.target.value })}
+                  placeholder={t('trading.agentNamePlaceholder')}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+
+              {/* Asset + Pair */}
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                <p className="mb-3 text-sm font-semibold">
+                  {t('trading.market')}
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      {t('trading.asset')}
+                    </label>
+                    <div className="flex gap-2">
+                      {(['BTC', 'ETH'] as TradingAsset[]).map((a) => (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => update({ asset: a })}
+                          className={cn(
+                            'flex-1 rounded-lg border py-2.5 text-sm font-bold transition-colors',
+                            form.asset === a
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border hover:border-primary/40',
+                          )}
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      {t('trading.pair')}
+                    </label>
+                    <div className="flex gap-2">
+                      {(['USDT', 'USDC'] as TradingPair[]).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => update({ pair: p })}
+                          className={cn(
+                            'flex-1 rounded-lg border py-2.5 text-sm font-bold transition-colors',
+                            form.pair === p
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border hover:border-primary/40',
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mode */}
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                <label className="mb-1 block text-sm font-semibold">
+                  {t('trading.mode')}
+                </label>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {t('config.stepper.modeHint')}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['SANDBOX', 'TESTNET', 'LIVE'] as TradingMode[]).map(
+                    (m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => update({ mode: m })}
+                        className={cn(
+                          'rounded-xl border px-2 py-3 text-center text-xs font-bold transition-all',
+                          form.mode === m
+                            ? m === 'LIVE'
+                              ? 'border-red-500 bg-red-500/10 text-red-400'
+                              : m === 'TESTNET'
+                                ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                                : 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:border-primary/30',
+                        )}
+                      >
+                        {m === 'SANDBOX' ? (
+                          <div>
+                            <div>🧪</div>
+                            <div className="mt-0.5">{t('trading.sandbox')}</div>
+                            <div className="mt-0.5 text-[9px] font-normal opacity-70">
+                              {t('config.stepper.modeSandboxSub')}
+                            </div>
+                          </div>
+                        ) : m === 'TESTNET' ? (
+                          <div>
+                            <div>
+                              <TestTube2 className="mx-auto h-3.5 w-3.5" />
+                            </div>
+                            <div className="mt-0.5">Testnet</div>
+                            <div className="mt-0.5 text-[9px] font-normal opacity-70">
+                              {t('config.stepper.modeTestnetSub')}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div>🔴</div>
+                            <div className="mt-0.5">{t('trading.live')}</div>
+                            <div className="mt-0.5 text-[9px] font-normal opacity-70">
+                              {t('config.stepper.modeLiveSub')}
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ),
+                  )}
+                </div>
+                {form.mode === 'LIVE' && (
+                  <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
+                    ⚠️ {t('trading.realFundsWarning')}
+                  </p>
+                )}
+                {form.mode === 'TESTNET' && !hasTestnetKeys && (
+                  <p className="mt-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-xs text-sky-400">
+                    {t('onboarding.testnetRequiresKeys')}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── STEP: THRESHOLDS ── */}
+          {currentStep === 'thresholds' && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border/60 bg-primary/5 p-3.5">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  💡 {t('config.stepper.thresholdsCallout')}
+                </p>
+              </div>
+              <StepperSlider
+                label={`📈 ${t('trading.buyThreshold')}`}
+                hint={t('tooltips.buyThreshold')}
+                value={form.buyThreshold}
+                min={50}
+                max={95}
+                onChange={(v) => update({ buyThreshold: v })}
+              />
+              <StepperSlider
+                label={`📉 ${t('trading.sellThreshold')}`}
+                hint={t('tooltips.sellThreshold')}
+                value={form.sellThreshold}
+                min={50}
+                max={95}
+                onChange={(v) => update({ sellThreshold: v })}
+              />
+            </div>
+          )}
+
+          {/* ── STEP: RISK ── */}
+          {currentStep === 'risk' && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  🛡️ {t('config.stepper.riskCallout')}
+                </p>
+              </div>
+              <StepperSlider
+                label={`🔴 ${t('trading.stopLoss')}`}
+                hint={t('tooltips.stopLoss')}
+                value={form.stopLossPct}
+                min={0.5}
+                max={20}
+                step={0.5}
+                onChange={(v) => update({ stopLossPct: v })}
+              />
+              <StepperSlider
+                label={`🟢 ${t('trading.takeProfit')}`}
+                hint={t('tooltips.takeProfit')}
+                value={form.takeProfitPct}
+                min={0.5}
+                max={50}
+                step={0.5}
+                onChange={(v) => update({ takeProfitPct: v })}
+              />
+              <StepperSlider
+                label={`💰 ${t('trading.minProfit')}`}
+                hint={t('tooltips.minProfit')}
+                value={form.minProfitPct}
+                min={0}
+                max={5}
+                step={0.1}
+                onChange={(v) => update({ minProfitPct: v })}
+              />
+              <StepperSlider
+                label={`💼 ${t('trading.maxTrade')}`}
+                hint={t('tooltips.maxTrade')}
+                value={form.maxTradePct}
+                min={1}
+                max={50}
+                onChange={(v) => update({ maxTradePct: v })}
+              />
+            </div>
+          )}
+
+          {/* ── STEP: TIMING ── */}
+          {currentStep === 'timing' && (
+            <div className="space-y-4">
+              {/* Max concurrent */}
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                <label className="mb-1 block text-sm font-semibold">
+                  🔁 {t('trading.maxConcurrent')}
+                </label>
+                <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
+                  {t('tooltips.maxPositions')}
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {[1, 2, 3, 5, 10].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() =>
+                        update({ maxConcurrentPositions: String(n) })
+                      }
+                      className={cn(
+                        'flex-1 min-w-[3rem] rounded-lg border py-2.5 text-sm font-bold transition-colors',
+                        form.maxConcurrentPositions === String(n)
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:border-primary/30',
+                      )}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Interval mode */}
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                <label className="mb-1 block text-sm font-semibold">
+                  ⏱️ {t('trading.minInterval')}
+                </label>
+                <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
+                  {t('tooltips.minInterval')}
+                </p>
+                <div className="flex gap-2 mb-3">
+                  {(['AGENT', 'CUSTOM'] as IntervalMode[]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => update({ intervalMode: m })}
+                      className={cn(
+                        'flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors',
+                        form.intervalMode === m
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:border-primary/30',
+                      )}
+                    >
+                      {m === 'AGENT'
+                        ? `🤖 ${t('trading.intervalModeAgent')}`
+                        : `✏️ ${t('trading.intervalModeCustom')}`}
+                    </button>
+                  ))}
+                </div>
+                {form.intervalMode === 'AGENT' ? (
+                  <p className="text-xs text-muted-foreground rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+                    {t('trading.intervalModeAgentHint')}
+                  </p>
+                ) : (
+                  <div>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      {t('config.stepper.customIntervalHint')}
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {[5, 15, 30, 60, 120].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() =>
+                            update({ minIntervalMinutes: String(n) })
+                          }
+                          className={cn(
+                            'flex-1 min-w-[3rem] rounded-lg border py-2 text-xs font-bold transition-colors',
+                            form.minIntervalMinutes === String(n)
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border text-muted-foreground hover:border-primary/30',
+                          )}
+                        >
+                          {n}m
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Price offset */}
+              <StepperSlider
+                label={`📊 ${t('trading.orderPriceOffset')}`}
+                hint={t('tooltips.orderPriceOffset')}
+                value={form.orderPriceOffsetPct}
+                min={-5}
+                max={5}
+                step={0.5}
+                signed={true}
+                onChange={(v) => update({ orderPriceOffsetPct: v })}
+              />
+            </div>
+          )}
+
+          {/* ── STEP: REVIEW ── */}
+          {currentStep === 'review' && (
+            <div className="space-y-4">
+              {/* Summary header */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15 border border-primary/20">
+                    <Bot className="h-4.5 w-4.5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">
+                      {form.name || `${form.asset}/${form.pair}`}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {form.asset}/{form.pair} ·{' '}
+                      <span
+                        className={cn(
+                          'font-semibold',
+                          form.mode === 'LIVE'
+                            ? 'text-red-400'
+                            : form.mode === 'TESTNET'
+                              ? 'text-sky-400'
+                              : 'text-primary',
+                        )}
+                      >
+                        {form.mode}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  {
+                    label: t('trading.buyThreshold'),
+                    value: `${form.buyThreshold}%`,
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    label: t('trading.sellThreshold'),
+                    value: `${form.sellThreshold}%`,
+                    color: 'text-sky-400',
+                  },
+                  {
+                    label: t('trading.stopLoss'),
+                    value: `${form.stopLossPct}%`,
+                    color: 'text-red-400',
+                  },
+                  {
+                    label: t('trading.takeProfit'),
+                    value: `${form.takeProfitPct}%`,
+                    color: 'text-emerald-400',
+                  },
+                  {
+                    label: t('trading.minProfit'),
+                    value: `${form.minProfitPct}%`,
+                    color: 'text-foreground',
+                  },
+                  {
+                    label: t('trading.maxTrade'),
+                    value: `${form.maxTradePct}%`,
+                    color: 'text-foreground',
+                  },
+                  {
+                    label: t('trading.maxConcurrent'),
+                    value: form.maxConcurrentPositions,
+                    color: 'text-foreground',
+                  },
+                  {
+                    label: t('trading.minInterval'),
+                    value:
+                      form.intervalMode === 'AGENT'
+                        ? 'Auto'
+                        : `${form.minIntervalMinutes} min`,
+                    color: 'text-foreground',
+                  },
+                  {
+                    label: t('trading.orderPriceOffset'),
+                    value: `${parseFloat(form.orderPriceOffsetPct) > 0 ? '+' : ''}${form.orderPriceOffsetPct}%`,
+                    color:
+                      parseFloat(form.orderPriceOffsetPct) < 0
+                        ? 'text-emerald-400'
+                        : parseFloat(form.orderPriceOffsetPct) > 0
+                          ? 'text-amber-400'
+                          : 'text-muted-foreground',
+                  },
+                ].map(({ label, value, color }) => (
+                  <div
+                    key={label}
+                    className="flex flex-col rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5"
+                  >
+                    <span className="text-[10px] text-muted-foreground">
+                      {label}
+                    </span>
+                    <span
+                      className={cn('text-sm font-bold tabular-nums', color)}
+                    >
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center">
+                {t('config.stepper.reviewNote')}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer nav */}
+        <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-5 py-4 bg-muted/10">
+          <button
+            type="button"
+            onClick={stepIdx === 0 ? onClose : () => setStepIdx((s) => s - 1)}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {stepIdx === 0 ? t('common.cancel') : t('config.stepper.back')}
+          </button>
+
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={isLastStep ? handleSubmit : () => setStepIdx((s) => s + 1)}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-5 py-2 text-sm font-bold transition-all',
+              isLastStep
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md'
+                : 'border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20',
+            )}
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('common.saving')}
+              </>
+            ) : isLastStep ? (
+              <>
+                <Save className="h-4 w-4" />
+                {t('config.stepper.create')}
+              </>
+            ) : (
+              <>
+                {t('config.stepper.next')}
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Edit Agent Modal ──────────────────────────────────────────────────────────
+
+function EditAgentModal({
+  cfg,
+  onClose,
+}: {
+  cfg: TradingConfig;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { mutate: updateConfig, isPending } = useUpdateConfig();
+  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
+  const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
+
+  const toForm = (c: TradingConfig): ConfigForm => ({
+    name: c.name ?? '',
+    asset: c.asset,
+    pair: c.pair,
+    mode: c.mode,
+    buyThreshold: String(c.buyThreshold),
+    sellThreshold: String(c.sellThreshold),
+    stopLossPct: String((c.stopLossPct * 100).toFixed(1)),
+    takeProfitPct: String((c.takeProfitPct * 100).toFixed(1)),
+    minProfitPct: String((c.minProfitPct * 100).toFixed(1)),
+    maxTradePct: String((c.maxTradePct * 100).toFixed(0)),
+    maxConcurrentPositions: String(c.maxConcurrentPositions),
+    intervalMode: c.intervalMode,
+    minIntervalMinutes: String(c.minIntervalMinutes),
+    orderPriceOffsetPct: String((c.orderPriceOffsetPct * 100).toFixed(1)),
+  });
+
+  const [form, setForm] = useState<ConfigForm>(() => toForm(cfg));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  function update(patch: Partial<ConfigForm>) {
+    setForm((f) => ({ ...f, ...patch }));
+  }
+
+  function handleSave() {
+    const dto: Partial<TradingConfigDto> = {
+      name: form.name || undefined,
+      mode: form.mode,
+      buyThreshold: parseFloat(form.buyThreshold),
+      sellThreshold: parseFloat(form.sellThreshold),
+      stopLossPct: parseFloat(form.stopLossPct) / 100,
+      takeProfitPct: parseFloat(form.takeProfitPct) / 100,
+      minProfitPct: parseFloat(form.minProfitPct) / 100,
+      maxTradePct: parseFloat(form.maxTradePct) / 100,
+      maxConcurrentPositions: parseInt(form.maxConcurrentPositions),
+      intervalMode: form.intervalMode,
+      minIntervalMinutes: parseInt(form.minIntervalMinutes),
+      orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
+    };
+    updateConfig({ id: cfg.id, data: dto }, { onSuccess: onClose });
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative w-full sm:max-w-lg max-h-[96dvh] flex flex-col rounded-t-2xl sm:rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+          <div>
+            <h2 className="text-base font-bold">
+              {t('config.editModal.title')}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {cfg.asset}/{cfg.pair} · {cfg.mode}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Name */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <label className="mb-1 block text-sm font-semibold">
+              {t('trading.agentName')}
+            </label>
+            <input
+              type="text"
+              maxLength={50}
+              value={form.name}
+              onChange={(e) => update({ name: e.target.value })}
+              placeholder={t('trading.agentNamePlaceholder')}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+            />
+          </div>
+
+          {/* Mode */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+            <label className="mb-1 block text-sm font-semibold">
+              {t('trading.mode')}
+            </label>
+            <div className="mt-2.5 flex gap-2">
+              {(['SANDBOX', 'TESTNET', 'LIVE'] as TradingMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => update({ mode: m })}
+                  className={cn(
+                    'flex-1 rounded-lg border py-2 text-xs font-bold transition-colors',
+                    form.mode === m
+                      ? m === 'LIVE'
+                        ? 'border-red-500 bg-red-500/10 text-red-400'
+                        : m === 'TESTNET'
+                          ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                          : 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:border-primary/30',
+                  )}
+                >
+                  {m === 'TESTNET' ? (
+                    <span className="flex items-center justify-center gap-1">
+                      <TestTube2 className="h-3 w-3" />
+                      Testnet
+                    </span>
+                  ) : m === 'SANDBOX' ? (
+                    t('trading.sandbox')
+                  ) : (
+                    t('trading.live')
+                  )}
+                </button>
+              ))}
+            </div>
+            {form.mode === 'LIVE' && (
+              <p className="mt-2 text-xs text-red-400">
+                ⚠️ {t('trading.realFundsWarning')}
+              </p>
+            )}
+            {form.mode === 'TESTNET' && !hasTestnetKeys && (
+              <p className="mt-2 text-xs text-sky-400">
+                {t('onboarding.testnetRequiresKeys')}
+              </p>
+            )}
+          </div>
+
+          {/* Thresholds */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+            <p className="text-sm font-semibold">
+              {t('trading.decisionThresholds')}
+            </p>
+            <StepperSlider
+              label={`📈 ${t('trading.buyThreshold')}`}
+              hint={t('tooltips.buyThreshold')}
+              value={form.buyThreshold}
+              min={50}
+              max={95}
+              onChange={(v) => update({ buyThreshold: v })}
+            />
+            <StepperSlider
+              label={`📉 ${t('trading.sellThreshold')}`}
+              hint={t('tooltips.sellThreshold')}
+              value={form.sellThreshold}
+              min={50}
+              max={95}
+              onChange={(v) => update({ sellThreshold: v })}
+            />
+          </div>
+
+          {/* Risk */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+            <p className="text-sm font-semibold">
+              {t('trading.riskManagement')}
+            </p>
+            <StepperSlider
+              label={`🔴 ${t('trading.stopLoss')}`}
+              hint={t('tooltips.stopLoss')}
+              value={form.stopLossPct}
+              min={0.5}
+              max={20}
+              step={0.5}
+              onChange={(v) => update({ stopLossPct: v })}
+            />
+            <StepperSlider
+              label={`🟢 ${t('trading.takeProfit')}`}
+              hint={t('tooltips.takeProfit')}
+              value={form.takeProfitPct}
+              min={0.5}
+              max={50}
+              step={0.5}
+              onChange={(v) => update({ takeProfitPct: v })}
+            />
+            <StepperSlider
+              label={`💰 ${t('trading.minProfit')}`}
+              hint={t('tooltips.minProfit')}
+              value={form.minProfitPct}
+              min={0}
+              max={5}
+              step={0.1}
+              onChange={(v) => update({ minProfitPct: v })}
+            />
+            <StepperSlider
+              label={`💼 ${t('trading.maxTrade')}`}
+              hint={t('tooltips.maxTrade')}
+              value={form.maxTradePct}
+              min={1}
+              max={50}
+              onChange={(v) => update({ maxTradePct: v })}
+            />
+          </div>
+
+          {/* Timing */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+            <p className="text-sm font-semibold">{t('trading.timing')}</p>
+
+            {/* Max concurrent */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                🔁 {t('trading.maxConcurrent')}
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {[1, 2, 3, 5, 10].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() =>
+                      update({ maxConcurrentPositions: String(n) })
+                    }
+                    className={cn(
+                      'flex-1 min-w-[3rem] rounded-lg border py-2 text-sm font-bold transition-colors',
+                      form.maxConcurrentPositions === String(n)
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/30',
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Interval mode */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                ⏱️ {t('trading.minInterval')}
+              </label>
+              <div className="flex gap-2 mb-2">
+                {(['AGENT', 'CUSTOM'] as IntervalMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => update({ intervalMode: m })}
+                    className={cn(
+                      'flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors',
+                      form.intervalMode === m
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/30',
+                    )}
+                  >
+                    {m === 'AGENT'
+                      ? `🤖 ${t('trading.intervalModeAgent')}`
+                      : `✏️ ${t('trading.intervalModeCustom')}`}
+                  </button>
+                ))}
+              </div>
+              {form.intervalMode === 'AGENT' ? (
+                <p className="text-xs text-muted-foreground rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+                  {t('trading.intervalModeAgentHint')}
+                </p>
+              ) : (
+                <div className="flex gap-2 flex-wrap">
+                  {[5, 15, 30, 60, 120].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => update({ minIntervalMinutes: String(n) })}
+                      className={cn(
+                        'flex-1 min-w-[3rem] rounded-lg border py-2 text-xs font-bold transition-colors',
+                        form.minIntervalMinutes === String(n)
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border text-muted-foreground hover:border-primary/30',
+                      )}
+                    >
+                      {n}m
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Price offset */}
+            <StepperSlider
+              label={`📊 ${t('trading.orderPriceOffset')}`}
+              hint={t('tooltips.orderPriceOffset')}
+              value={form.orderPriceOffsetPct}
+              min={-5}
+              max={5}
+              step={0.5}
+              signed={true}
+              onChange={(v) => update({ orderPriceOffsetPct: v })}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 flex items-center justify-between gap-3 border-t border-border px-5 py-4 bg-muted/10">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={handleSave}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 shadow-sm transition-all disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('common.saving')}
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                {t('common.save')}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── DeleteAgentModal ──────────────────────────────────────────────────────────
+
+function DeleteAgentModal({
+  cfg,
+  onClose,
+}: {
+  cfg: TradingConfig;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const { mutate: deleteConfig, isPending } = useDeleteConfig();
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  function handleConfirm() {
+    deleteConfig(cfg.id, { onSuccess: onClose });
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-500">
+              <Trash2 className="h-4 w-4" />
+            </div>
+            <h2 className="font-bold">{t('config.deleteModal.title')}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-6 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            {t('config.deleteModal.body')}
+          </p>
+          <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+            <p className="font-semibold text-sm">
+              {cfg.name || `${cfg.asset}/${cfg.pair}`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {cfg.mode} · {cfg.asset}/{cfg.pair}
+            </p>
+          </div>
+          <p className="text-xs text-red-500/80">
+            {t('config.deleteModal.warning')}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={isPending}
+            className="flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2 text-sm font-bold text-white hover:bg-red-600 transition-colors disabled:opacity-60"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            {isPending ? t('common.deleting') : t('config.deleteModal.confirm')}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+export function ConfigPage() {
+  const { t } = useTranslation();
+  const [selectedConfig, setSelectedConfig] = useState<TradingConfig | null>(
+    null,
+  );
+  const [editingConfig, setEditingConfig] = useState<TradingConfig | null>(
+    null,
+  );
+  const [deletingConfig, setDeletingConfig] = useState<TradingConfig | null>(
+    null,
+  );
+  const [stepperOpen, setStepperOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { mutate: startAgent } = useStartAgent();
+  const { mutate: stopAgent } = useStopAgent();
+  const { data: configs = [], isLoading } = useTradingConfigs();
+  useAgentStatus();
+
+  useGSAP(
+    () => {
+      gsap.fromTo(
+        '.config-card',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, stagger: 0.08, duration: 0.4, ease: 'power2.out' },
+      );
+    },
+    { scope: containerRef },
+  );
+
+  function getAgentIsRunning(configId: string) {
+    return configs.find((c) => c.id === configId)?.isRunning ?? false;
   }
 
   return (
-    <div ref={containerRef} className="p-6 space-y-5">
+    <div ref={containerRef} className="p-4 sm:p-6 space-y-5 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="config-card">
-        <h1 className="text-2xl font-bold">{t('sidebar.config')}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t('trading.configSubtitle')}
-        </p>
+      <div className="config-card flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">{t('sidebar.config')}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t('trading.configSubtitle')}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setStepperOpen(true)}
+          className="shrink-0 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary hover:bg-primary/20 transition-colors shadow-sm"
+        >
+          <Plus className="h-4 w-4" />
+          {t('config.stepper.openStepper')}
+        </button>
       </div>
 
       {/* Docs callout */}
@@ -1271,342 +1703,209 @@ export function ConfigPage() {
         </div>
       </div>
 
-      {/* Strategy Presets */}
-      <div className="config-card rounded-2xl border border-border bg-card p-5">
-        <h2 className="mb-3 text-sm font-bold">
-          {t('config.guide.presetsTitle')}
-        </h2>
-        <StrategyPresets onApply={applyPreset} />
-      </div>
+      {/* Agents list */}
+      <div className="config-card rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="font-semibold">{t('trading.activeAgents')}</h2>
+          {configs.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {configs.length}{' '}
+              {configs.length === 1
+                ? t('config.agentSingular')
+                : t('config.agentPlural')}
+            </span>
+          )}
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Form */}
-        <form
-          onSubmit={handleSubmit}
-          className="config-card lg:col-span-2 space-y-5"
-        >
-          {/* Market */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">{t('trading.market')}</h2>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">
-                  {t('trading.asset')}
-                </label>
-                <div className="flex gap-2">
-                  {(['BTC', 'ETH'] as TradingAsset[]).map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={() => update({ asset: a })}
-                      className={cn(
-                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
-                        form.asset === a
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border hover:border-primary/40',
-                      )}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium">
-                  {t('trading.pair')}
-                </label>
-                <div className="flex gap-2">
-                  {(['USDT', 'USDC'] as TradingPair[]).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => update({ pair: p })}
-                      className={cn(
-                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
-                        form.pair === p
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border hover:border-primary/40',
-                      )}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <label className="text-sm font-medium">
-                    {t('trading.mode')}
-                  </label>
-                  <InfoTooltip text={t('tooltips.sandboxMode')} />
-                </div>
-                <div className="flex gap-2">
-                  {(['SANDBOX', 'LIVE'] as TradingMode[]).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => update({ mode: m })}
-                      className={cn(
-                        'flex-1 rounded-lg border py-2 text-sm font-medium transition-colors',
-                        form.mode === m
-                          ? m === 'LIVE'
-                            ? 'border-red-500 bg-red-500/10 text-red-500'
-                            : 'border-primary bg-primary/10 text-primary'
-                          : 'border-border hover:border-primary/40',
-                      )}
-                    >
-                      {m === 'SANDBOX'
-                        ? t('trading.sandbox')
-                        : t('trading.live')}
-                    </button>
-                  ))}
-                </div>
-                {form.mode === 'LIVE' && (
-                  <p className="mt-1.5 text-xs text-red-500">
-                    {t('trading.realFundsWarning')}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Decision Thresholds */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">
-              {t('trading.decisionThresholds')}
-            </h2>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <SliderField
-                label={t('trading.buyThreshold')}
-                value={form.buyThreshold}
-                min={50}
-                max={95}
-                onChange={(v) => update({ buyThreshold: v })}
-                tooltip={t('tooltips.buyThreshold')}
+        {/* Loading */}
+        {isLoading && (
+          <div className="p-5 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-20 animate-pulse rounded-xl bg-muted/50"
               />
-              <SliderField
-                label={t('trading.sellThreshold')}
-                value={form.sellThreshold}
-                min={50}
-                max={95}
-                onChange={(v) => update({ sellThreshold: v })}
-                tooltip={t('tooltips.sellThreshold')}
-              />
-            </div>
+            ))}
           </div>
+        )}
 
-          {/* Risk Management */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">
-              {t('trading.riskManagement')}
-            </h2>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <SliderField
-                label={t('trading.stopLoss')}
-                value={form.stopLossPct}
-                min={0.5}
-                max={20}
-                step={0.5}
-                onChange={(v) => update({ stopLossPct: v })}
-                tooltip={t('tooltips.stopLoss')}
-              />
-              <SliderField
-                label={t('trading.takeProfit')}
-                value={form.takeProfitPct}
-                min={0.5}
-                max={50}
-                step={0.5}
-                onChange={(v) => update({ takeProfitPct: v })}
-                tooltip={t('tooltips.takeProfit')}
-              />
-              <SliderField
-                label={t('trading.maxTrade')}
-                value={form.maxTradePct}
-                min={1}
-                max={50}
-                onChange={(v) => update({ maxTradePct: v })}
-                tooltip={t('tooltips.maxTrade')}
-              />
+        {/* Empty state */}
+        {!isLoading && configs.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-4 px-5">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-muted/30">
+              <Bot className="h-7 w-7 text-muted-foreground/50" />
             </div>
-          </div>
-
-          {/* Order Execution Price */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-1 font-semibold">
-              {t('trading.orderExecution')}
-            </h2>
-            <p className="mb-4 text-xs text-muted-foreground">
-              {t('trading.orderExecutionSub')}
-            </p>
-            <SliderField
-              label={t('trading.orderPriceOffset')}
-              value={form.orderPriceOffsetPct}
-              min={-5}
-              max={5}
-              step={0.5}
-              signed={true}
-              onChange={(v) => update({ orderPriceOffsetPct: v })}
-              tooltip={t('tooltips.orderPriceOffset')}
-            />
-            <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
-              <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 text-center">
-                <div className="font-bold text-emerald-400">
-                  {t('trading.offsetNegative')}
-                </div>
-                <div className="mt-0.5 text-muted-foreground">
-                  {t('trading.offsetNegativeDesc')}
-                </div>
-              </div>
-              <div className="rounded-md border border-border bg-muted/20 p-2 text-center">
-                <div className="font-bold text-muted-foreground">
-                  0% ({t('trading.offsetZero')})
-                </div>
-                <div className="mt-0.5 text-muted-foreground">
-                  {t('trading.offsetZeroDesc')}
-                </div>
-              </div>
-              <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-center">
-                <div className="font-bold text-amber-400">
-                  {t('trading.offsetPositive')}
-                </div>
-                <div className="mt-0.5 text-muted-foreground">
-                  {t('trading.offsetPositiveDesc')}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Timing */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">{t('trading.timing')}</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <label className="text-sm font-medium">
-                    {t('trading.maxConcurrent')}
-                  </label>
-                  <InfoTooltip text={t('tooltips.maxPositions')} />
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={form.maxConcurrentPositions}
-                  onChange={(e) =>
-                    update({ maxConcurrentPositions: e.target.value })
-                  }
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
-              <div>
-                <div className="mb-1.5 flex items-center gap-1.5">
-                  <label className="text-sm font-medium">
-                    {t('trading.minInterval')}
-                  </label>
-                  <InfoTooltip text={t('tooltips.minInterval')} />
-                </div>
-                <input
-                  type="number"
-                  min={1}
-                  max={1440}
-                  value={form.minIntervalMinutes}
-                  onChange={(e) =>
-                    update({ minIntervalMinutes: e.target.value })
-                  }
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={isPending}
-            className="w-full sm:w-auto"
-          >
-            {isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {t('trading.saveConfig')}
-          </Button>
-        </form>
-
-        {/* Active Agents */}
-        <div className="config-card space-y-4">
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">{t('trading.activeAgents')}</h2>
-            {configs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+            <div className="text-center">
+              <p className="font-semibold text-foreground">
                 {t('trading.noConfigs')}
               </p>
-            ) : (
-              <ul className="space-y-3">
-                {configs.map((cfg) => {
-                  const isRunning = getAgentIsRunning(cfg.asset, cfg.pair);
-                  return (
-                    <li key={cfg.id}>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t('config.noConfigsHint')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStepperOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-5 py-2.5 text-sm font-bold text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              {t('config.stepper.openStepper')}
+            </button>
+          </div>
+        )}
+
+        {/* Agent cards */}
+        {!isLoading && configs.length > 0 && (
+          <div className="divide-y divide-border">
+            {configs.map((cfg) => {
+              const isRunning = getAgentIsRunning(cfg.id);
+              const modeColor =
+                cfg.mode === 'TESTNET'
+                  ? 'text-sky-400 bg-sky-500/10 border-sky-500/20'
+                  : cfg.mode === 'LIVE'
+                    ? 'text-red-400 bg-red-500/10 border-red-500/20'
+                    : 'text-muted-foreground bg-muted/30 border-border';
+
+              return (
+                <div
+                  key={cfg.id}
+                  className="flex items-center gap-4 px-5 py-4 hover:bg-muted/20 transition-colors"
+                >
+                  {/* Status dot */}
+                  <div
+                    className={cn(
+                      'shrink-0 h-2.5 w-2.5 rounded-full',
+                      isRunning
+                        ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
+                        : 'bg-muted-foreground/30',
+                    )}
+                  />
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold truncate">
+                        {cfg.name || `${cfg.asset}/${cfg.pair}`}
+                      </span>
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold',
+                          modeColor,
+                        )}
+                      >
+                        {cfg.mode}
+                      </span>
+                      <span
+                        className={cn(
+                          'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                          isRunning
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {isRunning ? t('common.running') : t('common.stopped')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {cfg.name ? `${cfg.asset}/${cfg.pair} · ` : ''}
+                      SL {(cfg.stopLossPct * 100).toFixed(1)}% · TP{' '}
+                      {(cfg.takeProfitPct * 100).toFixed(1)}% · Compra{' '}
+                      {cfg.buyThreshold}%
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="shrink-0 flex items-center gap-1">
+                    {/* Start / Stop */}
+                    {isRunning ? (
                       <button
                         type="button"
-                        onClick={() => setSelectedConfig(cfg)}
-                        className="group w-full rounded-lg border border-border p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/30"
+                        title={t('trading.stopAgent')}
+                        onClick={() => stopAgent(cfg.id)}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 transition-colors"
                       >
-                        <div className="mb-1.5 flex items-center justify-between">
-                          <span className="text-sm font-semibold">
-                            {cfg.asset}/{cfg.pair}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-xs font-semibold',
-                                isRunning
-                                  ? 'bg-emerald-500/10 text-emerald-500'
-                                  : 'bg-muted text-muted-foreground',
-                              )}
-                            >
-                              {isRunning
-                                ? t('common.running')
-                                : t('common.stopped')}
-                            </span>
-                            <Eye className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {cfg.mode} · SL {(cfg.stopLossPct * 100).toFixed(1)}%
-                          · TP {(cfg.takeProfitPct * 100).toFixed(1)}%
-                        </div>
+                        <Square className="h-4 w-4" />
                       </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+                    ) : (
+                      <button
+                        type="button"
+                        title={t('trading.startAgent')}
+                        onClick={() => startAgent(cfg.id)}
+                        className="rounded-lg p-2 text-emerald-500 hover:bg-emerald-500/10 transition-colors"
+                      >
+                        <Play className="h-4 w-4" />
+                      </button>
+                    )}
+
+                    {/* View detail */}
+                    <button
+                      type="button"
+                      title={t('config.viewDetail')}
+                      onClick={() => setSelectedConfig(cfg)}
+                      className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+
+                    {/* Edit */}
+                    <button
+                      type="button"
+                      title={t('config.editModal.title')}
+                      onClick={() => setEditingConfig(cfg)}
+                      className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+
+                    {/* Delete */}
+                    <button
+                      type="button"
+                      title={t('trading.deleteConfig')}
+                      onClick={() => setDeletingConfig(cfg)}
+                      className="rounded-lg p-2 text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Agent Detail Modal */}
+      {/* Stepper Modal */}
+      {stepperOpen && (
+        <NewAgentStepperModal
+          onClose={() => setStepperOpen(false)}
+          onCreated={() => setStepperOpen(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editingConfig && (
+        <EditAgentModal
+          cfg={editingConfig}
+          onClose={() => setEditingConfig(null)}
+        />
+      )}
+
+      {/* Delete Modal */}
+      {deletingConfig && (
+        <DeleteAgentModal
+          cfg={deletingConfig}
+          onClose={() => setDeletingConfig(null)}
+        />
+      )}
+
+      {/* Detail Modal */}
       {selectedConfig && (
         <AgentDetailModal
           cfg={selectedConfig}
-          isRunning={getAgentIsRunning(
-            selectedConfig.asset,
-            selectedConfig.pair,
-          )}
+          isRunning={getAgentIsRunning(selectedConfig.id)}
           onClose={() => setSelectedConfig(null)}
-          onStart={() =>
-            startAgent({
-              asset: selectedConfig.asset,
-              pair: selectedConfig.pair,
-            })
-          }
-          onStop={() =>
-            stopAgent({
-              asset: selectedConfig.asset,
-              pair: selectedConfig.pair,
-            })
-          }
+          onStart={() => startAgent(selectedConfig.id)}
+          onStop={() => stopAgent(selectedConfig.id)}
         />
       )}
     </div>

@@ -32,6 +32,11 @@ export function buildAnalysisPrompt(input: LLMAnalysisInput): {
       ? `\nSANDBOX MODE: This is a paper trading simulation with no real funds at risk. Prioritize TAKING POSITIONS to test the system end-to-end. Lean toward BUY when RSI < 60 and no strong bearish divergence. HOLD only when RSI > 70 or there is clear bearish breakdown.`
       : '';
 
+  const newsWeightNote =
+    input.newsItems.length > 0
+      ? `\nNEWS WEIGHT: NEWS carries ${input.newsWeight}% weight in your decision. Strong NEGATIVE news overrides bullish technicals.`
+      : '';
+
   const system = `You are a professional crypto trading analyst. Analyze the provided market data and return a JSON decision.
 
 RULES:
@@ -40,7 +45,7 @@ RULES:
 - confidence is a float between 0.0 and 1.0
 - reasoning is a brief explanation (max 200 chars)
 - suggestedWaitMinutes is how long to wait before next analysis (1-60)
-${sandboxNote}
+${sandboxNote}${newsWeightNote}
 FORMAT:
 {
   "decision": "BUY" | "SELL" | "HOLD",
@@ -73,6 +78,17 @@ FORMAT:
     .map((t) => `${t.type} @ ${t.price}`)
     .join(', ');
 
+  const recentDecisionsSummary =
+    input.recentDecisions && input.recentDecisions.length > 0
+      ? input.recentDecisions
+          .slice(0, 5)
+          .map(
+            (d) =>
+              `${new Date(d.createdAt).toISOString().slice(11, 16)} ${d.decision} (${Math.round(d.confidence * 100)}%) — ${d.reasoning.slice(0, 100)}`,
+          )
+          .join('\n')
+      : 'No previous decisions';
+
   const config = input.userConfig;
 
   const user = `ASSET: ${input.asset}/${input.pair}
@@ -92,6 +108,9 @@ NEWS:
 ${newsSnippets || 'No recent news'}
 
 RECENT TRADES: ${recentTradesSummary || 'None'}
+
+PREVIOUS AGENT DECISIONS (newest first):
+${recentDecisionsSummary}
 
 THRESHOLDS:
 - Buy confidence >= ${config.buyThreshold}%

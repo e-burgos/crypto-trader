@@ -1,0 +1,216 @@
+{
+  "name": "crypto-trader",
+  "$schema": "node_modules/nx/schemas/project-schema.json",
+  "targets": {
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm docker:infra && pnpm dev:api & pnpm dev:web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "dev:api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx serve api",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "dev:web": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx serve web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx run-many --target=build --all",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "build:api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx build api",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "build:web": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx build web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx run-many --target=test --all",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test:api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx test api",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test:web": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx test web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test:e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx run-many --target=e2e --all",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test:e2e:api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx e2e api-e2e",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test:e2e:web": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx e2e web-e2e",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx run-many --target=lint --all",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "lint:fix": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx run-many --target=lint --all -- --fix",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "format:check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose up -d",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose down",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:reset": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose down -v && docker compose up -d",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:push": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/api && npx prisma db push",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/api && npx prisma migrate dev",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:migrate:deploy": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/api && npx prisma migrate deploy",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:seed": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/api && npx prisma db seed",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:studio": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cd apps/api && npx prisma studio",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "db:generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec prisma generate --schema=apps/api/prisma/schema.prisma",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "docker:infra": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose up -d postgres redis",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx run-many --target=typecheck --all",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "affected:build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx affected --target=build",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "affected:test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx affected --target=test",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "affected:lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx affected --target=lint",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

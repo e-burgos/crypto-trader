@@ -32,8 +32,10 @@
     {
       "plugin": "@nx/playwright/plugin",
       "options": {
-        "targetName": "e2e"
-      }
+        "targetName": "e2e",
+        "ciTargetName": "e2e-ci"
+      },
+      "exclude": ["apps/web-e2e/**", "playwright.config.ts"]
     },
     {
       "plugin": "@nx/webpack/plugin",

@@ -45,7 +45,10 @@ import {
   type TradingPair,
   type IntervalMode,
 } from '../../hooks/use-trading';
-import { useTestnetBinanceKeyStatus, usePlatformMode } from '../../hooks/use-user';
+import {
+  useTestnetBinanceKeyStatus,
+  usePlatformMode,
+} from '../../hooks/use-user';
 import {
   StrategyPresets,
   PRESETS,

@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FlaskConical, TestTube, Activity, Lock, ChevronDown, AlertTriangle } from 'lucide-react';
+import {
+  FlaskConical,
+  TestTube,
+  Activity,
+  Lock,
+  ChevronDown,
+  AlertTriangle,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import type { TradingMode } from '../hooks/use-user';
-import {
-  usePlatformMode,
-  useUpdatePlatformMode,
-} from '../hooks/use-user';
+import { usePlatformMode, useUpdatePlatformMode } from '../hooks/use-user';
 
 // ── Config por modo ───────────────────────────────────────────────────────────
 
@@ -27,21 +31,24 @@ const MODE_CONFIG: Record<
     icon: FlaskConical,
     label: 'Sandbox',
     descKey: 'modeSelector.sandboxDesc',
-    badgeClass: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30 dark:text-yellow-400',
+    badgeClass:
+      'bg-yellow-500/15 text-yellow-600 border-yellow-500/30 dark:text-yellow-400',
     dotClass: 'bg-yellow-500',
   },
   TESTNET: {
     icon: TestTube,
     label: 'Testnet',
     descKey: 'modeSelector.testnetDesc',
-    badgeClass: 'bg-orange-500/15 text-orange-600 border-orange-500/30 dark:text-orange-400',
+    badgeClass:
+      'bg-orange-500/15 text-orange-600 border-orange-500/30 dark:text-orange-400',
     dotClass: 'bg-orange-500',
   },
   LIVE: {
     icon: Activity,
     label: 'En Vivo',
     descKey: 'modeSelector.liveDesc',
-    badgeClass: 'bg-green-500/15 text-green-600 border-green-500/30 dark:text-green-400',
+    badgeClass:
+      'bg-green-500/15 text-green-600 border-green-500/30 dark:text-green-400',
     dotClass: 'bg-green-500 animate-pulse',
   },
 };
@@ -66,8 +73,7 @@ function CredentialsRequiredModal({ mode, onClose }: CredentialsModalProps) {
       ? 'modeSelector.credentialsModalTestnetDesc'
       : 'modeSelector.credentialsModalLiveDesc';
 
-  const tabTarget =
-    mode === 'TESTNET' ? 'binance-testnet' : 'binance';
+  const tabTarget = mode === 'TESTNET' ? 'binance-testnet' : 'binance';
 
   function handleAddCredentials() {
     onClose();
@@ -188,7 +194,9 @@ export function ModeSelector() {
   const updateMode = useUpdatePlatformMode();
 
   const [open, setOpen] = useState(false);
-  const [credentialsModal, setCredentialsModal] = useState<TradingMode | null>(null);
+  const [credentialsModal, setCredentialsModal] = useState<TradingMode | null>(
+    null,
+  );
   const [confirmLive, setConfirmLive] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -250,7 +258,9 @@ export function ModeSelector() {
     updateMode.mutate(target, {
       onSuccess: () => {
         toast.success(
-          t('modeSelector.switchedSuccess', { mode: MODE_CONFIG[target].label }),
+          t('modeSelector.switchedSuccess', {
+            mode: MODE_CONFIG[target].label,
+          }),
         );
       },
     });
@@ -324,7 +334,12 @@ export function ModeSelector() {
                       <span className="block truncate">{cfg.label}</span>
                     </div>
                     {isActive && (
-                      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', cfg.dotClass)} />
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full shrink-0',
+                          cfg.dotClass,
+                        )}
+                      />
                     )}
                     {!isAvailable && !isActive && (
                       <Lock className="h-3 w-3 text-muted-foreground shrink-0" />

@@ -1050,7 +1050,8 @@ export function AgentLogPage() {
   // Filtrar por modo de plataforma activo
   const modeFilteredDecisions = useMemo(() => {
     return allDecisions.filter((d) => {
-      if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX' || d.mode === 'PAPER';
+      if (platformMode === 'SANDBOX')
+        return d.mode === 'SANDBOX' || d.mode === 'PAPER';
       return d.mode === platformMode;
     });
   }, [allDecisions, platformMode]);

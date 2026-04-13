@@ -5,7 +5,14 @@ import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { usePlatformMode } from '../../hooks/use-user';
 
-type FilterType = 'ALL' | 'BUY' | 'SELL' | 'LIVE' | 'TESTNET' | 'SANDBOX' | 'PAPER';
+type FilterType =
+  | 'ALL'
+  | 'BUY'
+  | 'SELL'
+  | 'LIVE'
+  | 'TESTNET'
+  | 'SANDBOX'
+  | 'PAPER';
 
 // ── Trade Detail Modal ───────────────────────────────────────────────────────
 function TradeDetailModal({
@@ -388,7 +395,8 @@ export function TradeHistoryPage() {
     if (filter === 'SELL') return tr.type === 'SELL';
     if (filter === 'LIVE') return tr.mode === 'LIVE';
     if (filter === 'TESTNET') return tr.mode === 'TESTNET';
-    if (filter === 'SANDBOX') return tr.mode === 'SANDBOX' || tr.mode === 'PAPER';
+    if (filter === 'SANDBOX')
+      return tr.mode === 'SANDBOX' || tr.mode === 'PAPER';
     if (filter === 'PAPER') return tr.mode === 'PAPER';
     return true;
   });

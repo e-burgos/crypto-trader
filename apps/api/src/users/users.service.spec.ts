@@ -31,8 +31,7 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    process.env.BINANCE_KEY_ENCRYPTION_KEY =
-      'dev-encryption-key-32-chars-long';
+    process.env.BINANCE_KEY_ENCRYPTION_KEY = 'dev-encryption-key-32-chars-long';
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import bcrypt from 'bcrypt';
 import axios from 'axios';
@@ -13,6 +14,7 @@ import {
   SetTestnetBinanceKeysDto,
   LLMKeyDto,
   NewsApiKeyDto,
+  UpdateOperationModeDto,
 } from '../auth/dto/auth.dto';
 import { encrypt, decrypt } from './utils/encryption.util';
 import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
@@ -31,6 +33,7 @@ export class UsersService {
         email: true,
         role: true,
         isActive: true,
+        platformOperationMode: true,
         createdAt: true,
       },
     });
@@ -47,6 +50,41 @@ export class UsersService {
       data,
       select: { id: true, email: true, role: true, updatedAt: true },
     });
+  }
+
+  // ── Operation mode ─────────────────────────────────────────────────────────
+
+  async updateOperationMode(userId: string, dto: UpdateOperationModeDto) {
+    const { mode } = dto;
+
+    if (mode === 'LIVE') {
+      const cred = await this.prisma.binanceCredential.findUnique({
+        where: { userId_isTestnet: { userId, isTestnet: false } },
+      });
+      if (!cred) {
+        throw new BadRequestException(
+          'No Binance production keys configured. Add your API keys in Settings first.',
+        );
+      }
+    }
+
+    if (mode === 'TESTNET') {
+      const cred = await this.prisma.binanceCredential.findUnique({
+        where: { userId_isTestnet: { userId, isTestnet: true } },
+      });
+      if (!cred) {
+        throw new BadRequestException(
+          'No Binance testnet keys configured. Add your testnet API keys in Settings first.',
+        );
+      }
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { platformOperationMode: mode },
+    });
+
+    return { platformOperationMode: mode };
   }
 
   // ── Binance credentials ────────────────────────────────────────────────────

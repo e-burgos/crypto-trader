@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -182,6 +182,98 @@ describe('UsersService', () => {
       await expect(
         service.setUserStatus('admin-1', 'fake', true),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateOperationMode', () => {
+    it('should allow switching to SANDBOX without any key check', async () => {
+      prisma.user.update.mockResolvedValue({
+        id: 'user-1',
+        platformOperationMode: 'SANDBOX',
+      });
+
+      const result = await service.updateOperationMode('user-1', {
+        mode: 'SANDBOX',
+      });
+      expect(result).toEqual({ platformOperationMode: 'SANDBOX' });
+      expect(prisma.binanceCredential.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when switching to LIVE without production keys', async () => {
+      prisma.binanceCredential.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateOperationMode('user-1', { mode: 'LIVE' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow switching to LIVE when production keys exist', async () => {
+      prisma.binanceCredential.findUnique.mockResolvedValue({
+        id: 'cred-1',
+        isTestnet: false,
+        isActive: true,
+      });
+      prisma.user.update.mockResolvedValue({
+        id: 'user-1',
+        platformOperationMode: 'LIVE',
+      });
+
+      const result = await service.updateOperationMode('user-1', {
+        mode: 'LIVE',
+      });
+      expect(result).toEqual({ platformOperationMode: 'LIVE' });
+      expect(prisma.binanceCredential.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_isTestnet: { userId: 'user-1', isTestnet: false } },
+        }),
+      );
+    });
+
+    it('should throw BadRequestException when switching to TESTNET without testnet keys', async () => {
+      prisma.binanceCredential.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateOperationMode('user-1', { mode: 'TESTNET' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow switching to TESTNET when testnet keys exist', async () => {
+      prisma.binanceCredential.findUnique.mockResolvedValue({
+        id: 'cred-2',
+        isTestnet: true,
+        isActive: true,
+      });
+      prisma.user.update.mockResolvedValue({
+        id: 'user-1',
+        platformOperationMode: 'TESTNET',
+      });
+
+      const result = await service.updateOperationMode('user-1', {
+        mode: 'TESTNET',
+      });
+      expect(result).toEqual({ platformOperationMode: 'TESTNET' });
+      expect(prisma.binanceCredential.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_isTestnet: { userId: 'user-1', isTestnet: true } },
+        }),
+      );
+    });
+  });
+
+  describe('getMe', () => {
+    it('should include platformOperationMode in the response', async () => {
+      const user = {
+        id: 'user-1',
+        email: 'test@test.com',
+        role: 'TRADER',
+        isActive: true,
+        platformOperationMode: 'SANDBOX',
+        createdAt: new Date(),
+      };
+      prisma.user.findUnique.mockResolvedValue(user);
+
+      const result = await service.getMe('user-1');
+      expect(result).toHaveProperty('platformOperationMode', 'SANDBOX');
     });
   });
 });

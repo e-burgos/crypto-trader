@@ -64,6 +64,21 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get newsAnalysis() {
     return this._client.newsAnalysis;
   }
+  get agentDefinition() {
+    return this._client.agentDefinition;
+  }
+  get agentDocument() {
+    return this._client.agentDocument;
+  }
+  get agentDocumentChunk() {
+    return this._client.agentDocumentChunk;
+  }
+
+  $queryRaw<T = unknown>(
+    ...args: Parameters<PrismaClientInstance['$queryRaw']>
+  ): Promise<T> {
+    return (this._client.$queryRaw as (...a: unknown[]) => Promise<T>)(...args);
+  }
 
   $transaction(...args: Parameters<PrismaClientInstance['$transaction']>) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

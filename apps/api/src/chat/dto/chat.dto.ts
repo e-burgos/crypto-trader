@@ -6,7 +6,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LLMProvider } from '../../../generated/prisma/enums';
+import { LLMProvider, AgentId } from '../../../generated/prisma/enums';
 
 export class CreateSessionDto {
   @ApiProperty({ enum: LLMProvider })
@@ -22,6 +22,15 @@ export class CreateSessionDto {
   @IsOptional()
   @IsString()
   title?: string;
+
+  @ApiPropertyOptional({
+    enum: AgentId,
+    description:
+      'Agent to use for this session. If omitted, KRYPTO routes on first message.',
+  })
+  @IsOptional()
+  @IsEnum(AgentId)
+  agentId?: AgentId;
 }
 
 export class SendMessageDto {

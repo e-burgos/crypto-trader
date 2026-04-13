@@ -24,6 +24,7 @@ import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { CreateSessionDto, SendMessageDto } from './dto/chat.dto';
+import { ExecuteToolDto } from './dto/execute-tool.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -161,5 +162,28 @@ export class ChatController {
       content,
       capability,
     );
+  }
+
+  // ── Tool Execution (C.4) ──────────────────────────────────────────────────
+
+  @Post('sessions/:id/tools/execute')
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiOperation({
+    summary:
+      'Execute a FORGE tool on behalf of the agent (requires confirmation for destructive tools)',
+  })
+  @ApiResponse({ status: 200, description: 'Tool executed successfully' })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing confirmation or unknown tool',
+  })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  executeTool(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() dto: ExecuteToolDto,
+  ) {
+    return this.chatService.executeTool(user.userId, id, dto);
   }
 }

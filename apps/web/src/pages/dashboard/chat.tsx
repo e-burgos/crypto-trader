@@ -7,12 +7,16 @@ import {
   useChatStream,
   ChatCapability,
 } from '../../hooks/use-chat';
+import { useChatAgent } from '../../hooks/use-chat-agent';
 import { useChatStore } from '../../store/chat.store';
 import { ChatMessages } from '../../components/chat/chat-messages';
 import { ChatInput } from '../../components/chat/chat-input';
 import { CapabilityButtons } from '../../components/chat/capability-buttons';
 import { ChatSessionPanel } from '../../components/chat/chat-session-panel';
 import { NewSessionModal } from '../../components/chat/llm-selector';
+import { AgentSelector } from '../../components/chat/agent-selector';
+import { AgentHeader } from '../../components/chat/agent-header';
+import { OrchestratingIndicator } from '../../components/chat/orchestrating-indicator';
 import { useTranslation } from 'react-i18next';
 
 export function ChatPage() {
@@ -23,8 +27,28 @@ export function ChatPage() {
 
   const { data: session } = useChatSession(activeSessionId ?? '');
   const saveMessage = useSaveUserMessage(activeSessionId ?? '');
-  const { streamingContent, isStreaming, startStream, stopStream } =
-    useChatStream(activeSessionId ?? '');
+  const {
+    selectedAgentId,
+    routedAgentId,
+    isOrchestrating,
+    orchestratingStep,
+    activeAgentId,
+    selectAgent,
+    handleRoutingEvent,
+    handleOrchestratingEvent,
+    handleStreamDone,
+  } = useChatAgent();
+  const {
+    streamingContent,
+    isStreaming,
+    streamError,
+    startStream,
+    stopStream,
+  } = useChatStream(activeSessionId ?? '', {
+    onRouting: handleRoutingEvent,
+    onOrchestrating: handleOrchestratingEvent,
+    onDone: handleStreamDone,
+  });
 
   const handleSend = async (content: string, capability?: ChatCapability) => {
     if (!activeSessionId) {
@@ -104,19 +128,45 @@ export function ChatPage() {
           </div>
         ) : (
           <>
+            {/* Agent selector */}
+            <div className="border-b border-border px-4 py-2">
+              <AgentSelector
+                selected={selectedAgentId}
+                onSelect={selectAgent}
+              />
+            </div>
+            {/* Active agent header */}
+            {activeAgentId && (
+              <div className="border-b border-border/50 px-4 py-2">
+                <AgentHeader
+                  agentId={activeAgentId}
+                  routedByKrypto={!!routedAgentId && !selectedAgentId}
+                  provider={session?.provider}
+                  model={session?.model}
+                />
+              </div>
+            )}
             {/* Messages */}
             <div className="flex-1 overflow-hidden">
               <ChatMessages
                 messages={session.messages}
                 streamingContent={streamingContent}
                 isStreaming={isStreaming}
+                provider={session?.provider}
+                streamError={streamError}
               />
             </div>
+            {/* Orchestrating indicator */}
+            {isOrchestrating && (
+              <div className="px-4 pb-2">
+                <OrchestratingIndicator step={orchestratingStep} />
+              </div>
+            )}
             {/* Input */}
             <ChatInput
               onSend={handleSend}
               onStop={stopStream}
-              isStreaming={isStreaming}
+              isStreaming={isStreaming || isOrchestrating}
               hasMessages={hasMessages}
             />
           </>

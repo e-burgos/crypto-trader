@@ -58,7 +58,23 @@ enum Sentiment {
   NEGATIVE
 }
 
-enum NotificationType {
+// ── Spec 28 — Multi-Agent RAG ────────────────────────────────────────────────
+
+enum AgentId {
+  platform      // NEXUS  — Experto en CryptoTrader
+  operations    // FORGE  — Asistente de Operaciones
+  market        // SIGMA  — Analista de Mercado
+  blockchain    // CIPHER — Experto en Blockchain
+  risk          // AEGIS  — Gestor de Riesgo
+  orchestrator  // KRYPTO — Orquestador central
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  ERROR
+}enum NotificationType {
   TRADE_EXECUTED
   STOP_LOSS_TRIGGERED
   TAKE_PROFIT_HIT
@@ -249,6 +265,8 @@ model AgentDecision {
   indicators    Json
   newsHeadlines Json
   waitMinutes   Int
+  /// Orchestration metadata: { orchestrated: boolean, subAgentResults: SubAgentResult[] }
+  metadata      Json?
   createdAt     DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -317,6 +335,11 @@ model NewsAnalysis {
   /// JSON array of {id,sentiment,reasoning}
   aiHeadlines        Json?
 
+  // Orchestration enrichment (Phase 28 — OrchestratorService.enrichNews)
+  technicalRelevance  Float?
+  ecosystemImpact     String?
+  orchestratedTags    Json?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, analyzedAt])
@@ -374,6 +397,8 @@ model ChatSession {
   title     String      @default("New Chat")
   provider  LLMProvider
   model     String
+  /// Agent assigned to this session. null = KRYPTO classifies on first message.
+  agentId   AgentId? @map("agent_id")
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -396,4 +421,56 @@ model ChatMessage {
 
   @@index([sessionId, createdAt])
   @@map("chat_messages")
+}
+
+// ── Spec 28: Agent definitions (configurable by Admin) ───────────────────────
+
+model AgentDefinition {
+  id          AgentId  @id
+  displayName String
+  description String
+  systemPrompt String  @db.Text
+  skills      Json     // string[]
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+
+  documents AgentDocument[]
+
+  @@map("agent_definitions")
+}
+
+model AgentDocument {
+  id          String         @id @default(cuid())
+  agentId     AgentId
+  title       String
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  status      DocumentStatus @default(PENDING)
+  errorMsg    String?
+  uploadedAt  DateTime       @default(now())
+  processedAt DateTime?
+  uploadedBy  String
+
+  agent  AgentDefinition      @relation(fields: [agentId], references: [id])
+  chunks AgentDocumentChunk[]
+
+  @@index([agentId, status])
+  @@map("agent_documents")
+}
+
+model AgentDocumentChunk {
+  id         String  @id @default(cuid())
+  documentId String
+  agentId    AgentId
+  content    String  @db.Text
+  chunkIndex Int
+  /// Float[] stored as JSON — pgvector column added via raw migration
+  embedding  Json
+
+  document AgentDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([documentId])
+  @@map("agent_document_chunks")
 }

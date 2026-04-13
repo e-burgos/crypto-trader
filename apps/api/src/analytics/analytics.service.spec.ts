@@ -7,6 +7,7 @@ const mockPrisma = {
   trade: { findMany: jest.fn() },
   tradingConfig: { findMany: jest.fn() },
   agentDecision: { findMany: jest.fn() },
+  lLMCredential: { findFirst: jest.fn() },
 };
 
 jest.mock('../../generated/prisma/client', () => ({
@@ -20,7 +21,10 @@ describe('AnalyticsService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AnalyticsService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        AnalyticsService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     }).compile();
     service = module.get<AnalyticsService>(AnalyticsService);
   });

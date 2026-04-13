@@ -7,11 +7,12 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
 import { MarketService } from '../market/market.service';
+import { OrchestratorService } from '../orchestrator/orchestrator.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
+// eslint-disable-next-line @nx/enforce-module-boundaries
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
-import { LLMAnalyzer, createLLMProvider } from '@crypto-trader/analysis';
 import {
   SandboxOrderExecutor,
   LiveOrderExecutor,
@@ -24,7 +25,6 @@ import {
   TradingMode,
   TradeType,
   NotificationType,
-  NewsItem,
 } from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
@@ -45,6 +45,7 @@ export class TradingProcessor {
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
     private readonly marketService: MarketService,
+    private readonly orchestratorService: OrchestratorService,
   ) {}
 
   @Process('run-cycle')
@@ -249,39 +250,27 @@ export class TradingProcessor {
         createdAt: d.createdAt.toISOString(),
       }));
 
-      // 8. Call LLM
-      const llmProvider = createLLMProvider(
-        llmCred.provider as any,
-        llmApiKey,
-        llmCred.selectedModel,
-      );
-      const analyzer = new LLMAnalyzer(llmProvider);
-      const decision = await analyzer.analyze({
-        asset: config.asset as any,
-        pair: config.pair as any,
-        indicatorSnapshot,
-        recentCandles: candles.slice(-20),
-        newsItems: newsItems as unknown as NewsItem[],
-        recentTrades,
-        recentDecisions,
-        newsWeight: newsConfig.newsWeight ?? 15,
-        userConfig: {
-          id: config.id,
-          userId: config.userId,
-          asset: config.asset as any,
-          pair: config.pair as any,
-          buyThreshold: config.buyThreshold,
-          sellThreshold: config.sellThreshold,
-          stopLossPct: config.stopLossPct,
-          takeProfitPct: config.takeProfitPct,
-          minProfitPct: config.minProfitPct ?? 0.003,
-          maxTradePct: config.maxTradePct,
-          maxConcurrentPositions: config.maxConcurrentPositions,
-          minIntervalMinutes: config.minIntervalMinutes,
-          mode: config.mode as TradingMode,
-          isRunning: config.isRunning,
-        },
-      });
+      // 8. Call OrchestratorService (replaces direct LLM call — Spec 28 Phase A)
+      const orchestratedDecision =
+        await this.orchestratorService.orchestrateDecision(
+          userId,
+          configId,
+          indicatorSnapshot,
+          newsItems.map((n) => ({
+            headline: n.headline,
+            sentiment: n.sentiment,
+            summary: n.summary ?? null,
+          })),
+        );
+      // Adapt DecisionPayload to the shape expected by the rest of the processor
+      const decision = {
+        decision: orchestratedDecision.decision as Decision,
+        confidence: orchestratedDecision.confidence,
+        reasoning: orchestratedDecision.reasoning,
+        suggestedWaitMinutes: orchestratedDecision.waitMinutes,
+        orchestrated: orchestratedDecision.orchestrated,
+        subAgentResults: orchestratedDecision.subAgentResults,
+      };
 
       // 9. Save decision
       const savedDecision = await this.prisma.agentDecision.create({
@@ -304,6 +293,10 @@ export class TradingProcessor {
           configId: config.id,
           configName: config.name || undefined,
           mode: config.mode as any,
+          metadata: {
+            orchestrated: decision.orchestrated,
+            subAgentResults: decision.subAgentResults,
+          } as any,
         },
       });
 

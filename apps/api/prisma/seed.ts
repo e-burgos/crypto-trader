@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
+import { AGENT_SEEDS } from './seed/agents';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
@@ -79,31 +80,55 @@ async function main() {
     // ── Trading configs (for all trader users) ────────────────────────────────
 
     for (const t of [trader, traderShort]) {
-      await prisma.tradingConfig.upsert({
-        where: {
-          userId_asset_pair: {
+      const existingConfig = await prisma.tradingConfig.findFirst({
+        where: { userId: t.id, asset: 'BTC', pair: 'USDT' },
+      });
+      if (!existingConfig) {
+        await prisma.tradingConfig.create({
+          data: {
             userId: t.id,
             asset: 'BTC',
             pair: 'USDT',
+            buyThreshold: 70,
+            sellThreshold: 70,
+            stopLossPct: 0.03,
+            takeProfitPct: 0.05,
+            maxTradePct: 0.05,
+            maxConcurrentPositions: 2,
+            minIntervalMinutes: 15,
+            mode: 'SANDBOX',
+            isRunning: false,
           },
+        });
+        console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
+      } else {
+        console.log(
+          `Sandbox trading config already exists for ${t.email} (BTC/USDT)`,
+        );
+      }
+    }
+
+    // ── Agent Definitions (Spec 28) ──────────────────────────────────────────
+    for (const agent of AGENT_SEEDS) {
+      await prisma.agentDefinition.upsert({
+        where: { id: agent.id },
+        update: {
+          displayName: agent.displayName,
+          description: agent.description,
+          skills: agent.skills,
+          isActive: agent.isActive,
+          // systemPrompt is NOT updated on re-seed to preserve Admin customizations
         },
-        update: {},
         create: {
-          userId: t.id,
-          asset: 'BTC',
-          pair: 'USDT',
-          buyThreshold: 70,
-          sellThreshold: 70,
-          stopLossPct: 0.03,
-          takeProfitPct: 0.05,
-          maxTradePct: 0.05,
-          maxConcurrentPositions: 2,
-          minIntervalMinutes: 15,
-          mode: 'SANDBOX',
-          isRunning: false,
+          id: agent.id,
+          displayName: agent.displayName,
+          description: agent.description,
+          systemPrompt: agent.systemPrompt,
+          skills: agent.skills,
+          isActive: agent.isActive,
         },
       });
-      console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
+      console.log(`Agent: ${agent.displayName} (${agent.id})`);
     }
 
     console.log('\n✅ Seed completado!');

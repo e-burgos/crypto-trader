@@ -8,6 +8,7 @@ import { GatewayModule } from '../gateway/gateway.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { MarketModule } from '../market/market.module';
+import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MarketModule } from '../market/market.module';
     NotificationsModule,
     UsersModule,
     MarketModule,
+    OrchestratorModule,
   ],
   controllers: [TradingController],
   providers: [TradingService, TradingProcessor],

@@ -81,7 +81,10 @@ export function useUploadDocument() {
     mutationFn: ({ agentId, file }: { agentId: AgentId; file: File }) => {
       const form = new FormData();
       form.append('file', file);
-      return api.postForm<AgentDocument>(`/admin/agents/${agentId}/documents`, form);
+      return api.postForm<AgentDocument>(
+        `/admin/agents/${agentId}/documents`,
+        form,
+      );
     },
     onSuccess: (_, { agentId }) => {
       qc.invalidateQueries({ queryKey: agentKeys.detail(agentId) });

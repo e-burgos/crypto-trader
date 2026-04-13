@@ -26,7 +26,11 @@ export function AgentHeader({
   if (!agent) {
     // Fallback: show KRYPTO
     return (
-      <div className={cn('flex items-center gap-2', className)}>
+      <div
+        className={cn('flex items-center gap-2', className)}
+        data-testid="agent-header"
+        data-agent-id="orchestrator"
+      >
         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
           <Sparkles className="h-3 w-3 text-primary" />
         </div>
@@ -43,7 +47,11 @@ export function AgentHeader({
   const Icon = agent.icon;
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div
+      className={cn('flex items-center gap-2', className)}
+      data-testid="agent-header"
+      data-agent-id={agentId ?? 'orchestrator'}
+    >
       <div
         className={cn(
           'flex h-6 w-6 items-center justify-center rounded-lg ring-1',

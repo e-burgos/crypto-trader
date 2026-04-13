@@ -47,6 +47,7 @@ export function OrchestratingIndicator({
   return (
     <div
       ref={containerRef}
+      data-testid="orchestrating-indicator"
       className={cn(
         'flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3',
         className,
@@ -65,10 +66,7 @@ export function OrchestratingIndicator({
       </div>
       <div ref={dotsRef} className="flex items-center gap-1">
         {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="dot h-1.5 w-1.5 rounded-full bg-primary/60"
-          />
+          <div key={i} className="dot h-1.5 w-1.5 rounded-full bg-primary/60" />
         ))}
       </div>
     </div>

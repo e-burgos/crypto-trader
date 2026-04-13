@@ -1117,25 +1117,49 @@ const es = {
     },
     copied: '¡Copiado!',
     copy: 'Copiar mensaje',
+    errors: {
+      RATE_LIMIT:
+        'Se alcanzó el límite de solicitudes del proveedor de IA. Intentá de nuevo en {{retryAfter}} min.',
+      RATE_LIMIT_no_retry:
+        'Se alcanzó el límite de solicitudes del proveedor de IA. Intentá de nuevo en unos minutos.',
+      INVALID_API_KEY:
+        'La clave de API del proveedor no es válida o expiró. Revisá tu configuración en Ajustes → IA.',
+      PROVIDER_UNAVAILABLE:
+        'El proveedor de IA no está disponible en este momento. Intentá de nuevo más tarde.',
+      PROVIDER_ERROR:
+        'Ocurrió un error con el proveedor de IA. Intentá de nuevo o cambiá el proveedor.',
+      CONNECTION_ERROR:
+        'Se perdió la conexión con el servidor. Verificá tu conexión e intentá de nuevo.',
+      CREATE_SESSION_ERROR:
+        'No se pudo crear la sesión. Revisá tu clave de API en Ajustes.',
+      DELETE_SESSION_ERROR: 'No se pudo eliminar la sesión.',
+    },
   },
   agents: {
     selectAgent: 'Elige tu agente',
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',
-    nexusDesc: 'Experto en la plataforma — funciones, configuración, navegación',
-    forgeDesc: 'Asistente de operaciones — iniciar/detener agentes, gestionar configs',
+    nexusDesc:
+      'Experto en la plataforma — funciones, configuración, navegación',
+    forgeDesc:
+      'Asistente de operaciones — iniciar/detener agentes, gestionar configs',
     sigmaDesc: 'Analista de mercado — precios, indicadores, análisis técnico',
     cipherDesc: 'Experto en blockchain — DeFi, wallets, smart contracts',
-    aegisDesc: 'Gestor de riesgo — stop-loss, exposición, seguridad del portafolio',
+    aegisDesc:
+      'Gestor de riesgo — stop-loss, exposición, seguridad del portafolio',
     orchestratorDesc: 'Orquestador central — coordina todos los agentes',
-    platformDesc: 'Experto en la plataforma — funciones, configuración, navegación',
-    operationsDesc: 'Asistente de operaciones — iniciar/detener agentes, gestionar configs',
+    platformDesc:
+      'Experto en la plataforma — funciones, configuración, navegación',
+    operationsDesc:
+      'Asistente de operaciones — iniciar/detener agentes, gestionar configs',
     marketDesc: 'Analista de mercado — precios, indicadores, análisis técnico',
     blockchainDesc: 'Experto en blockchain — DeFi, wallets, smart contracts',
-    riskDesc: 'Gestor de riesgo — stop-loss, exposición, seguridad del portafolio',
+    riskDesc:
+      'Gestor de riesgo — stop-loss, exposición, seguridad del portafolio',
     routedByKrypto: 'Enrutado por KRYPTO',
     orchestrating: 'KRYPTO coordinando…',
     toolCall: 'Solicitud de herramienta FORGE',
-    pageDesc: 'Gestiona las definiciones de agentes IA, prompts del sistema y documentos de base de conocimiento.',
+    pageDesc:
+      'Gestiona las definiciones de agentes IA, prompts del sistema y documentos de base de conocimiento.',
     systemPrompt: 'Prompt del sistema',
     knowledgeBase: 'Base de conocimiento',
     dropZone: 'Arrastra un PDF, TXT o MD aquí, o haz clic para subir',

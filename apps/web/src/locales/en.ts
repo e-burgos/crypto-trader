@@ -1103,6 +1103,23 @@ const en = {
     },
     copied: 'Copied!',
     copy: 'Copy message',
+    errors: {
+      RATE_LIMIT:
+        'AI provider rate limit reached. Please try again in {{retryAfter}} min.',
+      RATE_LIMIT_no_retry:
+        'AI provider rate limit reached. Please try again in a few minutes.',
+      INVALID_API_KEY:
+        'The provider API key is invalid or expired. Check your settings in Settings → AI.',
+      PROVIDER_UNAVAILABLE:
+        'The AI provider is temporarily unavailable. Please try again later.',
+      PROVIDER_ERROR:
+        'An error occurred with the AI provider. Try again or switch provider.',
+      CONNECTION_ERROR:
+        'Connection to the server was lost. Check your connection and try again.',
+      CREATE_SESSION_ERROR:
+        'Failed to create session. Check your API key in Settings.',
+      DELETE_SESSION_ERROR: 'Failed to delete session.',
+    },
   },
   agents: {
     selectAgent: 'Choose your agent',
@@ -1121,7 +1138,8 @@ const en = {
     routedByKrypto: 'Routed by KRYPTO',
     orchestrating: 'KRYPTO coordinating…',
     toolCall: 'FORGE tool request',
-    pageDesc: 'Manage AI agent definitions, system prompts, and knowledge base documents.',
+    pageDesc:
+      'Manage AI agent definitions, system prompts, and knowledge base documents.',
     systemPrompt: 'System Prompt',
     knowledgeBase: 'Knowledge Base',
     dropZone: 'Drop a PDF, TXT or MD file here, or click to upload',

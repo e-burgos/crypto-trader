@@ -1,4 +1,14 @@
-import { Bot, Cpu, TrendingUp, Link, Shield, Sparkles } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import {
+  Bot,
+  Cpu,
+  TrendingUp,
+  Link,
+  Shield,
+  Sparkles,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { AgentId } from '../../hooks/use-chat-agent';
 import { useTranslation } from 'react-i18next';
@@ -67,87 +77,170 @@ export function AgentSelector({
   className,
 }: AgentSelectorProps) {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selectedAgent = selected ? AGENTS.find((a) => a.id === selected) : null;
+  const SelectedIcon = selectedAgent?.icon ?? Sparkles;
+
+  const handleSelect = (agentId: AgentId | null) => {
+    onSelect(agentId);
+    setOpen(false);
+  };
 
   return (
-    <div className={cn('space-y-2', className)}>
-      <p className="text-xs font-medium text-muted-foreground px-1">
-        {t('agents.selectAgent')}
-      </p>
-
-      {/* Auto (KRYPTO decides) */}
+    <div
+      ref={containerRef}
+      className={cn('relative', className)}
+      data-testid="agent-selector"
+    >
+      {/* Trigger button */}
       <button
         type="button"
-        onClick={() => onSelect(null)}
+        data-testid="agent-selector-trigger"
+        onClick={() => setOpen((v) => !v)}
         className={cn(
-          'w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left ring-1 transition-all duration-150',
-          selected === null
-            ? 'bg-primary/10 ring-primary/40 text-primary'
-            : 'bg-muted/30 ring-border text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+          'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm ring-1 transition-all duration-150',
+          'bg-muted/40 ring-border hover:bg-muted/70',
         )}
       >
+        {/* Icon */}
         <div
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1',
-            selected === null
-              ? 'bg-primary/15 ring-primary/30 text-primary'
-              : 'bg-muted ring-border text-muted-foreground',
+            'flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1',
+            selectedAgent
+              ? cn(selectedAgent.bgColor, selectedAgent.color)
+              : 'bg-primary/15 ring-primary/30 text-primary',
           )}
         >
-          <Sparkles className="h-4 w-4" />
+          <SelectedIcon className="h-3 w-3" />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">KRYPTO</div>
-          <div className="truncate text-xs opacity-70">
-            {t('agents.kryptoDesc')}
-          </div>
-        </div>
-        {selected === null && (
-          <div className="h-2 w-2 rounded-full bg-primary" />
-        )}
+
+        {/* Label */}
+        <span
+          className={cn(
+            'flex-1 font-medium',
+            selectedAgent ? selectedAgent.color : 'text-primary',
+          )}
+        >
+          {selectedAgent ? selectedAgent.name : 'KRYPTO'}
+        </span>
+
+        {/* Subtitle */}
+        <span className="hidden sm:block truncate max-w-[160px] text-xs text-muted-foreground">
+          {selectedAgent
+            ? t(selectedAgent.description)
+            : t('agents.kryptoDesc', { defaultValue: 'Auto-routing' })}
+        </span>
+
+        <ChevronDown
+          className={cn(
+            'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-180',
+          )}
+        />
       </button>
 
-      {/* Sub-agents */}
-      <div className="grid grid-cols-1 gap-1.5">
-        {AGENTS.map((agent) => {
-          const Icon = agent.icon;
-          const isSelected = selected === agent.id;
-          return (
-            <button
-              key={agent.id}
-              type="button"
-              onClick={() => onSelect(agent.id)}
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
+          {/* KRYPTO auto option */}
+          <button
+            type="button"
+            data-testid="agent-card-auto"
+            onClick={() => handleSelect(null)}
+            className={cn(
+              'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors',
+              selected === null
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+            )}
+          >
+            <div
               className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-left ring-1 transition-all duration-150',
-                isSelected
-                  ? cn(agent.bgColor, `ring-1`)
-                  : 'bg-muted/30 ring-border text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ring-1',
+                selected === null
+                  ? 'bg-primary/15 ring-primary/30 text-primary'
+                  : 'bg-muted ring-border',
               )}
             >
-              <div
+              <Sparkles className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold leading-none">KRYPTO</p>
+              <p className="mt-0.5 truncate text-xs opacity-70">
+                {t('agents.kryptoDesc', {
+                  defaultValue:
+                    'Let KRYPTO decide the best agent for your question',
+                })}
+              </p>
+            </div>
+            {selected === null && (
+              <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+            )}
+          </button>
+
+          {/* Divider */}
+          <div className="mx-2 h-px bg-border/60" />
+
+          {/* Sub-agents */}
+          {AGENTS.map((agent) => {
+            const Icon = agent.icon;
+            const isSelected = selected === agent.id;
+            return (
+              <button
+                key={agent.id}
+                type="button"
+                data-testid={`agent-card-${agent.id}`}
+                onClick={() => handleSelect(agent.id)}
                 className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1',
+                  'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors',
                   isSelected
-                    ? cn(agent.bgColor, agent.color)
-                    : 'bg-muted ring-border text-muted-foreground',
+                    ? cn('bg-muted/50', agent.color)
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                 )}
               >
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className={cn('text-sm font-semibold', isSelected && agent.color)}>
-                  {agent.name}
+                <div
+                  className={cn(
+                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ring-1',
+                    isSelected
+                      ? cn(agent.bgColor, agent.color)
+                      : 'bg-muted ring-border',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
-                <div className="truncate text-xs opacity-70">
-                  {t(agent.description)}
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      'font-semibold leading-none',
+                      isSelected && agent.color,
+                    )}
+                  >
+                    {agent.name}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs opacity-70">
+                    {t(agent.description)}
+                  </p>
                 </div>
-              </div>
-              {isSelected && (
-                <div className={cn('h-2 w-2 rounded-full', agent.color.replace('text-', 'bg-'))} />
-              )}
-            </button>
-          );
-        })}
-      </div>
+                {isSelected && (
+                  <Check className={cn('h-3.5 w-3.5 shrink-0', agent.color)} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

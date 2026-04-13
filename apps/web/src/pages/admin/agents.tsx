@@ -191,10 +191,7 @@ function AgentCard({ agentId }: { agentId: AgentId }) {
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-3 animate-pulse rounded bg-muted"
-                />
+                <div key={i} className="h-3 animate-pulse rounded bg-muted" />
               ))}
             </div>
           ) : agent ? (
@@ -287,9 +284,7 @@ function AgentCard({ agentId }: { agentId: AgentId }) {
                       <DocumentRow
                         key={doc.id}
                         doc={doc}
-                        onDelete={() =>
-                          deleteDoc({ agentId, docId: doc.id })
-                        }
+                        onDelete={() => deleteDoc({ agentId, docId: doc.id })}
                         isDeleting={isDeleting}
                       />
                     ))}
@@ -343,18 +338,13 @@ export function AdminAgentsPage() {
   return (
     <div ref={containerRef}>
       <div className="mb-4">
-        <p className="text-sm text-muted-foreground">
-          {t('agents.pageDesc')}
-        </p>
+        <p className="text-sm text-muted-foreground">{t('agents.pageDesc')}</p>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {agentIds.map((id) => (
-            <div
-              key={id}
-              className="h-16 animate-pulse rounded-xl bg-muted"
-            />
+            <div key={id} className="h-16 animate-pulse rounded-xl bg-muted" />
           ))}
         </div>
       ) : (

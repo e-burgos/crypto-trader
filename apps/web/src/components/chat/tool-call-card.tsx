@@ -27,6 +27,7 @@ export function ToolCallCard({
         'rounded-xl border border-orange-500/30 bg-orange-500/5 p-4 space-y-3',
         className,
       )}
+      data-testid="tool-call-card"
     >
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/15 ring-1 ring-orange-500/30">
@@ -36,7 +37,12 @@ export function ToolCallCard({
           <p className="text-sm font-semibold text-orange-400">
             {t('agents.toolCall')}
           </p>
-          <code className="text-xs text-muted-foreground">{tool}</code>
+          <code
+            className="text-xs text-muted-foreground"
+            data-testid="tool-name"
+          >
+            {tool}
+          </code>
         </div>
       </div>
 
@@ -58,6 +64,7 @@ export function ToolCallCard({
               type="button"
               disabled={isPending}
               onClick={onConfirm}
+              data-testid="tool-confirm-btn"
               className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/30 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
             >
               <CheckCircle className="h-3.5 w-3.5" />
@@ -69,6 +76,7 @@ export function ToolCallCard({
               type="button"
               disabled={isPending}
               onClick={onCancel}
+              data-testid="tool-cancel-btn"
               className="flex items-center gap-1.5 rounded-lg bg-muted/50 px-3 py-1.5 text-xs font-medium text-muted-foreground ring-1 ring-border hover:bg-muted transition-colors disabled:opacity-50"
             >
               <XCircle className="h-3.5 w-3.5" />

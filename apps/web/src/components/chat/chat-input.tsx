@@ -67,6 +67,7 @@ export function ChatInput({
         >
           <textarea
             ref={textareaRef}
+            data-testid="chat-input"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}

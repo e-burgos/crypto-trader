@@ -82,12 +82,17 @@ export function ChatWidget() {
     handleOrchestratingEvent,
     handleStreamDone,
   } = useChatAgent();
-  const { streamingContent, isStreaming, startStream, stopStream } =
-    useChatStream(activeSessionId ?? '', {
-      onRouting: handleRoutingEvent,
-      onOrchestrating: handleOrchestratingEvent,
-      onDone: handleStreamDone,
-    });
+  const {
+    streamingContent,
+    isStreaming,
+    streamError,
+    startStream,
+    stopStream,
+  } = useChatStream(activeSessionId ?? '', {
+    onRouting: handleRoutingEvent,
+    onOrchestrating: handleOrchestratingEvent,
+    onDone: handleStreamDone,
+  });
 
   const handleSend = async (content: string, capability?: ChatCapability) => {
     if (!activeSessionId) {
@@ -232,6 +237,14 @@ export function ChatWidget() {
             />
           ) : (
             <>
+              {/* Agent selector — pick which sub-agent to use */}
+              <div className="px-3 py-2 border-b border-border/50">
+                <AgentSelector
+                  selected={selectedAgentId}
+                  onSelect={selectAgent}
+                />
+              </div>
+
               {/* Agent header inside the chat area */}
               {activeAgentId && (
                 <div className="px-4 py-2 border-b border-border/50">
@@ -249,6 +262,7 @@ export function ChatWidget() {
                   streamingContent={streamingContent}
                   isStreaming={isStreaming}
                   provider={session?.provider}
+                  streamError={streamError}
                 />
               </div>
               {isOrchestrating && (

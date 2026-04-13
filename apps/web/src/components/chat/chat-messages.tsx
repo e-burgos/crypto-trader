@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { Bot, User, Copy, Check } from 'lucide-react';
+import { Bot, User, Copy, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ChatMessageItem } from '../../hooks/use-chat';
+import { ChatMessageItem, type StreamError } from '../../hooks/use-chat';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
@@ -15,6 +15,7 @@ interface ChatMessagesProps {
   streamingContent?: string;
   isStreaming?: boolean;
   provider?: string;
+  streamError?: StreamError | null;
 }
 
 const PROVIDER_GLOW: Record<string, { avatar: string; glow: string }> = {
@@ -110,7 +111,7 @@ function MessageBubble({
 
   if (isUser) {
     return (
-      <div ref={ref} className="flex justify-end gap-2">
+      <div ref={ref} className="flex justify-end gap-2" data-role="user">
         <div className="max-w-[80%]">
           <div className="rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary to-primary/70 px-4 py-2.5 text-sm text-primary-foreground shadow-[0_0_16px_hsl(var(--primary)/0.3)]">
             {message.content}
@@ -129,7 +130,7 @@ function MessageBubble({
   const { glow } = PROVIDER_GLOW[provider ?? ''] ?? DEFAULT_GLOW;
 
   return (
-    <div ref={ref} className="flex gap-2.5">
+    <div ref={ref} className="flex gap-2.5" data-role="assistant">
       <ProviderAvatar provider={provider} />
       <div className="max-w-[85%]">
         <div
@@ -186,6 +187,44 @@ function MessageBubble({
   );
 }
 
+function ErrorBubble({ error }: { error: StreamError }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      if (!ref.current) return;
+      gsap.fromTo(
+        ref.current,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' },
+      );
+    },
+    { scope: ref },
+  );
+
+  const isRateLimit = error.errorCode === 'RATE_LIMIT';
+  const isInvalidKey = error.errorCode === 'INVALID_API_KEY';
+
+  return (
+    <div ref={ref} className="flex gap-2.5">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-destructive/15 ring-1 ring-destructive/30">
+        <AlertTriangle className="h-4 w-4 text-destructive" />
+      </div>
+      <div className="max-w-[85%]">
+        <div className="rounded-2xl rounded-tl-sm bg-destructive/10 px-4 py-3 text-sm ring-1 ring-destructive/30">
+          <p className="font-medium text-destructive mb-0.5">
+            {isRateLimit ? '⏳' : isInvalidKey ? '🔑' : '⚠️'}&nbsp;
+            {error.message}
+          </p>
+          {isInvalidKey && (
+            <p className="text-xs text-muted-foreground mt-1">Settings → AI</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TypingBubble({ provider }: { provider?: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -226,6 +265,7 @@ export function ChatMessages({
   streamingContent,
   isStreaming,
   provider,
+  streamError,
 }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const { glow } = PROVIDER_GLOW[provider ?? ''] ?? DEFAULT_GLOW;
@@ -245,7 +285,10 @@ export function ChatMessages({
     lastMsg?.content === streamingContent;
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 py-4 scroll-smooth">
+    <div
+      className="flex h-full flex-col gap-3 overflow-y-auto px-4 py-4 scroll-smooth"
+      data-testid="chat-messages"
+    >
       {visibleMessages.map((msg) => (
         <MessageBubble key={msg.id} message={msg} provider={provider} />
       ))}
@@ -269,7 +312,11 @@ export function ChatMessages({
 
       {isStreaming && !streamingContent && <TypingBubble provider={provider} />}
       {isStreaming && streamingContent && (
-        <div className="flex gap-2.5">
+        <div
+          className="flex gap-2.5"
+          data-role="assistant"
+          data-streaming="true"
+        >
           <ProviderAvatar provider={provider} />
           <div className="max-w-[85%]">
             <div
@@ -283,6 +330,9 @@ export function ChatMessages({
           </div>
         </div>
       )}
+
+      {/* Error bubble — shown after stream ends with an LLM error */}
+      {!isStreaming && streamError && <ErrorBubble error={streamError} />}
 
       <div ref={bottomRef} />
     </div>

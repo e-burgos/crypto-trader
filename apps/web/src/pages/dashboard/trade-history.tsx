@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Filter, Eye, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useTradeHistory, type Trade } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
+import { usePlatformMode } from '../../hooks/use-user';
 
-type FilterType = 'ALL' | 'BUY' | 'SELL' | 'LIVE' | 'PAPER';
+type FilterType = 'ALL' | 'BUY' | 'SELL' | 'LIVE' | 'TESTNET' | 'SANDBOX' | 'PAPER';
 
 // ── Trade Detail Modal ───────────────────────────────────────────────────────
 function TradeDetailModal({
@@ -371,15 +372,23 @@ function TradeRow({
 
 export function TradeHistoryPage() {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<FilterType>('ALL');
+  const { mode: platformMode } = usePlatformMode();
+  const [filter, setFilter] = useState<FilterType>(() => platformMode);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const { data: trades = [], isLoading } = useTradeHistory(100);
+
+  // Sincronizar filtro con el modo global cuando cambia
+  useEffect(() => {
+    setFilter(platformMode);
+  }, [platformMode]);
 
   const filtered = trades.filter((tr) => {
     if (filter === 'ALL') return true;
     if (filter === 'BUY') return tr.type === 'BUY';
     if (filter === 'SELL') return tr.type === 'SELL';
     if (filter === 'LIVE') return tr.mode === 'LIVE';
+    if (filter === 'TESTNET') return tr.mode === 'TESTNET';
+    if (filter === 'SANDBOX') return tr.mode === 'SANDBOX' || tr.mode === 'PAPER';
     if (filter === 'PAPER') return tr.mode === 'PAPER';
     return true;
   });
@@ -388,8 +397,9 @@ export function TradeHistoryPage() {
     { value: 'ALL', label: t('tradeHistory.all') },
     { value: 'BUY', label: t('tradeHistory.buys') },
     { value: 'SELL', label: t('tradeHistory.sells') },
+    { value: 'SANDBOX', label: 'Sandbox' },
+    { value: 'TESTNET', label: 'Testnet' },
     { value: 'LIVE', label: t('tradeHistory.live') },
-    { value: 'PAPER', label: t('tradeHistory.paper') },
   ];
 
   const COLUMNS = [

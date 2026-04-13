@@ -34,6 +34,7 @@ import {
   type AgentDecisionConfigDetails,
 } from '../../hooks/use-analytics';
 import { useCountdown } from './bot-analysis';
+import { usePlatformMode } from '../../hooks/use-user';
 
 gsap.registerPlugin(useGSAP);
 
@@ -1029,6 +1030,7 @@ function DecisionDetailModal({
 export function AgentLogPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { mode: platformMode } = usePlatformMode();
 
   const PAGE_SIZE = 10;
   const { data: allDecisions = [], isLoading } = useAgentDecisions(200);
@@ -1039,6 +1041,19 @@ export function AgentLogPage() {
   const [selectedDecision, setSelectedDecision] =
     useState<AgentDecision | null>(null);
   const [page, setPage] = useState(1);
+
+  // Resetear página al cambiar modo global
+  useEffect(() => {
+    setPage(1);
+  }, [platformMode]);
+
+  // Filtrar por modo de plataforma activo
+  const modeFilteredDecisions = useMemo(() => {
+    return allDecisions.filter((d) => {
+      if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX' || d.mode === 'PAPER';
+      return d.mode === platformMode;
+    });
+  }, [allDecisions, platformMode]);
 
   const setDecisionFilterAndReset = (v: DecisionFilter) => {
     setDecisionFilter(v);
@@ -1058,7 +1073,7 @@ export function AgentLogPage() {
     const opts: { key: string; label: string }[] = [
       { key: 'ALL', label: 'All' },
     ];
-    allDecisions.forEach((d) => {
+    modeFilteredDecisions.forEach((d) => {
       const key = `${d.asset}/${d.pair}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -1066,24 +1081,24 @@ export function AgentLogPage() {
       }
     });
     return opts;
-  }, [allDecisions]);
+  }, [modeFilteredDecisions]);
 
   const agentOptions = useMemo(() => {
     const seen = new Set<string>();
     const opts: { key: string; label: string }[] = [
       { key: 'ALL', label: 'All' },
     ];
-    allDecisions.forEach((d) => {
+    modeFilteredDecisions.forEach((d) => {
       if (d.configId && !seen.has(d.configId)) {
         seen.add(d.configId);
         opts.push({ key: d.configId, label: d.configName ?? d.configId });
       }
     });
     return opts;
-  }, [allDecisions]);
+  }, [modeFilteredDecisions]);
 
   const filtered = useMemo(() => {
-    return allDecisions.filter((d) => {
+    return modeFilteredDecisions.filter((d) => {
       if (decisionFilter !== 'ALL' && d.decision !== decisionFilter)
         return false;
       if (assetFilter !== 'ALL' && `${d.asset}/${d.pair}` !== assetFilter)
@@ -1091,7 +1106,7 @@ export function AgentLogPage() {
       if (agentFilter !== 'ALL' && d.configId !== agentFilter) return false;
       return true;
     });
-  }, [allDecisions, decisionFilter, assetFilter, agentFilter]);
+  }, [modeFilteredDecisions, decisionFilter, assetFilter, agentFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = useMemo(() => {

@@ -45,7 +45,7 @@ import {
   type TradingPair,
   type IntervalMode,
 } from '../../hooks/use-trading';
-import { useTestnetBinanceKeyStatus } from '../../hooks/use-user';
+import { useTestnetBinanceKeyStatus, usePlatformMode } from '../../hooks/use-user';
 import {
   StrategyPresets,
   PRESETS,
@@ -486,9 +486,11 @@ function StepperSlider({
 function NewAgentStepperModal({
   onClose,
   onCreated,
+  defaultMode = 'SANDBOX',
 }: {
   onClose: () => void;
   onCreated: () => void;
+  defaultMode?: TradingMode;
 }) {
   const { t } = useTranslation();
   const [stepIdx, setStepIdx] = useState(0);
@@ -498,6 +500,7 @@ function NewAgentStepperModal({
   const [form, setForm] = useState<ConfigForm>({
     ...DEFAULT_FORM,
     ...PRESETS.balanced,
+    mode: defaultMode,
   });
   const { mutate: createConfig, isPending } = useCreateConfig();
   const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
@@ -1630,6 +1633,7 @@ function DeleteAgentModal({
 
 export function ConfigPage() {
   const { t } = useTranslation();
+  const { mode: platformMode } = usePlatformMode();
   const [selectedConfig, setSelectedConfig] = useState<TradingConfig | null>(
     null,
   );
@@ -1879,6 +1883,7 @@ export function ConfigPage() {
         <NewAgentStepperModal
           onClose={() => setStepperOpen(false)}
           onCreated={() => setStepperOpen(false)}
+          defaultMode={platformMode}
         />
       )}
 

@@ -23,6 +23,7 @@ import {
 } from '../../hooks/use-trading';
 import { useLivePrices, calcUnrealizedPnl } from '../../hooks/use-live-prices';
 import { useMarketStore } from '../../store/market.store';
+import { usePlatformMode } from '../../hooks/use-user';
 import { InfoTooltip } from '../../components/ui/info-tooltip';
 
 const PAGE_SIZE = 20;
@@ -598,6 +599,7 @@ function LivePnlCell({ pos }: { pos: TradingPosition }) {
 
 export function PositionsPage() {
   const { t } = useTranslation();
+  const { mode: platformMode } = usePlatformMode();
   const [page, setPage] = useState(1);
   const [tab, setTab] = useState<StatusTab>('OPEN');
   const [confirmPos, setConfirmPos] = useState<TradingPosition | null>(null);
@@ -605,9 +607,20 @@ export function PositionsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { data, isLoading } = usePositions(page, PAGE_SIZE, tab);
   const closePosition = useClosePosition();
-  const positions = data?.positions ?? [];
+
+  // Resetear página al cambiar modo global
+  useEffect(() => {
+    setPage(1);
+  }, [platformMode]);
+
+  const allPositions = data?.positions ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  // Filtrar posiciones por modo global activo
+  const positions = allPositions.filter((p) => {
+    return p.mode === platformMode;
+  });
 
   // Collect unique symbols from open positions and keep prices fresh
   const openSymbols =

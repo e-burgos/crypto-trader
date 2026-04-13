@@ -3,13 +3,18 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import axios from 'axios';
 import { Observable, Subject } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
-import { LLMProvider, ChatRole } from '../../generated/prisma/enums';
+import { LLMProvider, ChatRole, AgentId } from '../../generated/prisma/enums';
 import { CreateSessionDto, SendMessageDto } from './dto/chat.dto';
+import { ExecuteToolDto } from './dto/execute-tool.dto';
+import { OrchestratorService } from '../orchestrator/orchestrator.service';
+import { SubAgentService } from '../orchestrator/sub-agent.service';
+import { RagService } from '../orchestrator/rag.service';
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
@@ -41,7 +46,21 @@ interface ConversationMessage {
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  // Destructive tools that require explicit confirmation
+  private readonly DESTRUCTIVE_TOOLS = new Set([
+    'start_agent',
+    'stop_agent',
+    'create_config',
+    'delete_config',
+    'place_order',
+  ]);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly orchestratorService?: OrchestratorService,
+    @Optional() private readonly subAgentService?: SubAgentService,
+    @Optional() private readonly ragService?: RagService,
+  ) {}
 
   // ── Sessions ────────────────────────────────────────────────────────────────
 
@@ -54,6 +73,7 @@ export class ChatService {
         title: true,
         provider: true,
         model: true,
+        agentId: true,
         createdAt: true,
         updatedAt: true,
         _count: { select: { messages: true } },
@@ -98,6 +118,7 @@ export class ChatService {
         provider: dto.provider,
         model: dto.model,
         title: dto.title ?? 'New Chat',
+        agentId: dto.agentId,
       },
     });
   }
@@ -194,6 +215,104 @@ export class ChatService {
       return;
     }
 
+    // ── C.2: Intent routing on first message ──────────────────────────────────
+    let activeAgentId: AgentId | null = session.agentId ?? null;
+
+    if (!activeAgentId && this.orchestratorService) {
+      try {
+        const msgCount = await this.prisma.chatMessage.count({
+          where: { sessionId, role: ChatRole.USER },
+        });
+        // Only classify on the first user message (before this one is saved)
+        if (msgCount <= 1) {
+          const classification = await this.orchestratorService.classifyIntent(
+            content,
+            userId,
+          );
+          activeAgentId = classification.agentId as AgentId;
+
+          // Persist routing in session
+          await this.prisma.chatSession.update({
+            where: { id: sessionId },
+            data: { agentId: activeAgentId },
+          });
+
+          // Emit routing SSE event
+          subject.next(
+            new MessageEvent('message', {
+              data: JSON.stringify({
+                type: 'routing',
+                agentId: activeAgentId,
+                greeting: classification.suggestedGreeting || undefined,
+              }),
+            }),
+          );
+        }
+      } catch (err) {
+        this.logger.warn(`Intent classification failed, falling back: ${err}`);
+      }
+    }
+
+    // ── C.2: RAG context injection ────────────────────────────────────────────
+    let ragContext = '';
+    if (activeAgentId && this.ragService) {
+      try {
+        const chunks = await this.ragService.search(
+          activeAgentId,
+          content,
+          5,
+        );
+        ragContext = this.ragService.buildRagContext(chunks);
+      } catch (err) {
+        this.logger.warn(`RAG search failed, continuing without context: ${err}`);
+      }
+    }
+
+    // ── C.2: Cross-agent synthesis (null agentId after classification) ────────
+    if (!activeAgentId && this.orchestratorService) {
+      try {
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              type: 'orchestrating',
+              subAgents: ['market', 'risk', 'blockchain'],
+              step: 'Consultando múltiples agentes…',
+            }),
+          }),
+        );
+        const synthesis = await this.orchestratorService.synthesizeCrossAgent(
+          [],
+          content,
+          userId,
+        );
+        const assistantMsg = await this.prisma.chatMessage.create({
+          data: {
+            sessionId,
+            role: ChatRole.ASSISTANT,
+            content: synthesis,
+            metadata: { orchestrated: true },
+          },
+        });
+        await this.prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { updatedAt: new Date() },
+        });
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              done: true,
+              messageId: assistantMsg.id,
+              fullContent: synthesis,
+            }),
+          }),
+        );
+        subject.complete();
+        return;
+      } catch (err) {
+        this.logger.warn(`Cross-agent synthesis failed, using standard flow: ${err}`);
+      }
+    }
+
     const cred = await this.prisma.lLMCredential.findFirst({
       where: { userId, provider: session.provider, isActive: true },
     });
@@ -224,7 +343,7 @@ export class ChatService {
       }));
 
     const context = await this.buildContext(userId, capability);
-    const systemPrompt = this.buildSystemPrompt(context, capability);
+    const systemPrompt = this.buildSystemPrompt(context, capability, ragContext);
 
     let fullContent = '';
     try {
@@ -278,7 +397,12 @@ export class ChatService {
     }
 
     const assistantMsg = await this.prisma.chatMessage.create({
-      data: { sessionId, role: ChatRole.ASSISTANT, content: fullContent },
+      data: {
+        sessionId,
+        role: ChatRole.ASSISTANT,
+        content: fullContent,
+        metadata: activeAgentId ? { agentId: activeAgentId } : undefined,
+      },
     });
     await this.prisma.chatSession.update({
       where: { id: sessionId },
@@ -294,6 +418,82 @@ export class ChatService {
       }),
     );
     subject.complete();
+  }
+
+  // ── Tool execution (C.4) ───────────────────────────────────────────────────
+
+  async executeTool(
+    userId: string,
+    sessionId: string,
+    dto: ExecuteToolDto,
+  ): Promise<{ result: unknown; tool: string }> {
+    const session = await this.prisma.chatSession.findFirst({
+      where: { id: sessionId, userId },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+
+    // Require explicit confirmation for destructive tools
+    if (
+      this.DESTRUCTIVE_TOOLS.has(dto.tool) &&
+      dto.confirmation !== 'confirmed'
+    ) {
+      return {
+        tool: dto.tool,
+        result: {
+          requiresConfirmation: true,
+          message: `Tool "${dto.tool}" requires explicit confirmation. Set confirmation: "confirmed" to proceed.`,
+        },
+      };
+    }
+
+    // Execute the tool
+    let result: unknown;
+    switch (dto.tool) {
+      case 'start_agent': {
+        const configId = dto.params?.configId as string;
+        if (!configId) throw new BadRequestException('configId is required for start_agent');
+        const config = await this.prisma.tradingConfig.findFirst({
+          where: { id: configId, userId },
+        });
+        if (!config) throw new NotFoundException('Trading config not found');
+        await this.prisma.tradingConfig.update({
+          where: { id: configId },
+          data: { isRunning: true },
+        });
+        result = { started: true, configId };
+        break;
+      }
+      case 'stop_agent': {
+        const configId = dto.params?.configId as string;
+        if (!configId) throw new BadRequestException('configId is required for stop_agent');
+        const config = await this.prisma.tradingConfig.findFirst({
+          where: { id: configId, userId },
+        });
+        if (!config) throw new NotFoundException('Trading config not found');
+        await this.prisma.tradingConfig.update({
+          where: { id: configId },
+          data: { isRunning: false },
+        });
+        result = { stopped: true, configId };
+        break;
+      }
+      default:
+        throw new BadRequestException(
+          `Unknown tool: "${dto.tool}". Available tools: start_agent, stop_agent, create_config, place_order`,
+        );
+    }
+
+    // Persist tool result as assistant message
+    await this.prisma.chatMessage.create({
+      data: {
+        sessionId,
+        role: ChatRole.ASSISTANT,
+        content: `Tool \`${dto.tool}\` executed successfully.`,
+        metadata: { tool_result: { tool: dto.tool, result } } as any,
+      },
+    });
+
+    return { tool: dto.tool, result };
   }
 
   // ── LLM Options ────────────────────────────────────────────────────────────
@@ -362,6 +562,7 @@ export class ChatService {
   private buildSystemPrompt(
     context: Awaited<ReturnType<typeof this.buildContext>>,
     capability?: string,
+    ragContext?: string,
   ): string {
     const { recentDecisions, configs, openPositions } = context;
 
@@ -466,7 +667,11 @@ ${positionsText}
 ## Behavioral Guidelines
 ${capabilityHint}
 
-Always respond in the same language the user writes to you. Be direct and confident but not arrogant. When giving market analysis, always cite specific indicator values when you have them. When assisting with trade creation, guide the user step-by-step through the platform UI. Format responses with markdown for readability.`;
+Always respond in the same language the user writes to you. Be direct and confident but not arrogant. When giving market analysis, always cite specific indicator values when you have them. When assisting with trade creation, guide the user step-by-step through the platform UI. Format responses with markdown for readability.${
+      ragContext
+        ? `\n\n## Knowledge Base Context\n${ragContext}`
+        : ''
+    }`;
   }
 
   private getCapabilityHint(capability?: string): string {

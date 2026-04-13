@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
@@ -286,27 +287,6 @@ export function useNewsSourcesStatus() {
 
 // ── Platform operation mode ────────────────────────────────────────────────
 
-export function usePlatformMode() {
-  const { data: profile, isLoading } = useUserProfile();
-  const { data: liveKeyStatus } = useBinanceKeyStatus();
-  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
-
-  const mode: TradingMode = profile?.platformOperationMode ?? 'SANDBOX';
-
-  const availableModes: TradingMode[] = ['SANDBOX'];
-  if (testnetKeyStatus?.hasKeys) availableModes.push('TESTNET');
-  if (liveKeyStatus?.hasKeys) availableModes.push('LIVE');
-
-  return {
-    mode,
-    isSandbox: mode === 'SANDBOX',
-    isTestnet: mode === 'TESTNET',
-    isLive: mode === 'LIVE',
-    availableModes,
-    isLoading,
-  };
-}
-
 export function useUpdatePlatformMode() {
   const qc = useQueryClient();
   return useMutation({
@@ -321,4 +301,40 @@ export function useUpdatePlatformMode() {
     onError: (err: { message?: string }) =>
       toast.error(err?.message || 'Error al cambiar el modo de operación'),
   });
+}
+
+export function usePlatformMode() {
+  const { data: profile, isLoading } = useUserProfile();
+  const { data: liveKeyStatus } = useBinanceKeyStatus();
+  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
+  const updateMode = useUpdatePlatformMode();
+
+  const mode: TradingMode = profile?.platformOperationMode ?? 'SANDBOX';
+
+  const availableModes: TradingMode[] = ['SANDBOX'];
+  if (testnetKeyStatus?.hasKeys) availableModes.push('TESTNET');
+  if (liveKeyStatus?.hasKeys) availableModes.push('LIVE');
+
+  // Fallback automático a SANDBOX si el modo activo ya no tiene keys configuradas
+  useEffect(() => {
+    if (!isLoading && mode !== 'SANDBOX' && !availableModes.includes(mode)) {
+      updateMode.mutate('SANDBOX', {
+        onSuccess: () => {
+          toast.warning(
+            `Modo ${mode} no disponible. Cambiado a Sandbox automáticamente.`,
+          );
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isLoading, availableModes.join(',')]);
+
+  return {
+    mode,
+    isSandbox: mode === 'SANDBOX',
+    isTestnet: mode === 'TESTNET',
+    isLive: mode === 'LIVE',
+    availableModes,
+    isLoading,
+  };
 }

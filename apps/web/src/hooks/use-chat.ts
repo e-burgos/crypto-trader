@@ -3,7 +3,11 @@ import { useRef, useState, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
-import type { AgentId, RoutingEvent, OrchestratingEvent } from './use-chat-agent';
+import type {
+  AgentId,
+  RoutingEvent,
+  OrchestratingEvent,
+} from './use-chat-agent';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -141,6 +145,7 @@ export function useChatStream(
     onRouting?: (event: RoutingEvent) => void;
     onOrchestrating?: (event: OrchestratingEvent) => void;
     onDone?: () => void;
+    onError?: (msg: string) => void;
   },
 ) {
   const [streamingContent, setStreamingContent] = useState('');
@@ -194,12 +199,19 @@ export function useChatStream(
             setIsStreaming(false);
             es.close();
             esRef.current = null;
+            options?.onDone?.();
+            options?.onError?.(data.error);
+            toast.error(data.error);
+            qc.invalidateQueries({ queryKey: chatKeys.session(sessionId) });
             return;
           }
 
           // New SSE event types (Spec 28 Fase C)
           if (data.type === 'routing' && data.agentId) {
-            options?.onRouting?.({ agentId: data.agentId, greeting: data.greeting });
+            options?.onRouting?.({
+              agentId: data.agentId,
+              greeting: data.greeting,
+            });
             return;
           }
 
@@ -230,10 +242,14 @@ export function useChatStream(
       };
 
       es.onerror = () => {
-        setError('Connection error. Please try again.');
+        const msg = 'Connection error. Please try again.';
+        setError(msg);
         setIsStreaming(false);
         es.close();
         esRef.current = null;
+        options?.onDone?.();
+        options?.onError?.(msg);
+        toast.error(msg);
       };
     },
     [sessionId, accessToken, qc, options],

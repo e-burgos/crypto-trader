@@ -7,6 +7,7 @@ const mockPrisma = {
   trade: { findMany: jest.fn() },
   tradingConfig: { findMany: jest.fn() },
   agentDecision: { findMany: jest.fn() },
+  lLMCredential: { findFirst: jest.fn() },
 };
 
 jest.mock('../../generated/prisma/client', () => ({

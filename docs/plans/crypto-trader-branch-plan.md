@@ -17,6 +17,8 @@
 | 11  | feature/frontend-integration | 11-frontend-integration.md | 10,06      |
 | 12  | feature/devops               | 12-devops.md               | 11         |
 | 13  | feature/e2e-tests            | 13-e2e-tests.md            | 12         |
+| 28  | feature/multi-agent-chat-rag | 28-multi-agent-chat-rag.md | 17         |
+| 29  | feature/adaptive-agents      | 29-adaptive-agents.md      | 28         |
 
 ## Flujo recomendado
 

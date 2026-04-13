@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { MarketService } from './market.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { OrchestratorService } from '../orchestrator/orchestrator.service';
 
 const TICK_MS = 60 * 1000; // check every 1 minute
 
@@ -21,6 +22,7 @@ export class NewsAnalysisScheduler implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly marketService: MarketService,
     private readonly prisma: PrismaService,
+    private readonly orchestratorService: OrchestratorService,
   ) {}
 
   onModuleInit() {
@@ -53,8 +55,13 @@ export class NewsAnalysisScheduler implements OnModuleInit, OnModuleDestroy {
 
         if (due) {
           try {
-            await this.marketService.runKeywordAnalysis(cfg.userId);
+            const analysis = await this.marketService.runKeywordAnalysis(
+              cfg.userId,
+            );
             this.logger.debug(`Keyword analysis run for user ${cfg.userId}`);
+
+            // Enrich high-relevance news via OrchestratorService (Spec 28 Phase A)
+            await this.enrichHighScoreNews(cfg.userId, analysis.id);
           } catch (err) {
             this.logger.warn(
               `Keyword analysis failed for user ${cfg.userId}: ${err instanceof Error ? err.message : String(err)}`,
@@ -65,6 +72,83 @@ export class NewsAnalysisScheduler implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.error(
         `Scheduler tick error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  /**
+   * Runs orchestrated news enrichment (SIGMA + CIPHER in parallel) for all
+   * headlines in the given analysis that have score > 0.5 (positive sentiment).
+   * Results are persisted back to the NewsAnalysis record.
+   */
+  private async enrichHighScoreNews(
+    userId: string,
+    analysisId: string,
+  ): Promise<void> {
+    const analysis = await this.prisma.newsAnalysis.findUnique({
+      where: { id: analysisId },
+      select: { score: true, headlines: true },
+    });
+    if (!analysis) return;
+
+    // Only enrich when overall score > 50 (newsCount-scaled score)
+    if (analysis.score <= 50) return;
+
+    const headlines = analysis.headlines as Array<{
+      id: string;
+      headline: string;
+      summary?: string | null;
+    }>;
+    if (!headlines?.length) return;
+
+    // Enrich only the top 3 headlines to limit LLM cost
+    const topHeadlines = headlines.slice(0, 3);
+
+    try {
+      const enrichments = await Promise.allSettled(
+        topHeadlines.map((h) =>
+          this.orchestratorService.enrichNews(
+            { id: h.id, headline: h.headline, summary: h.summary },
+            userId,
+          ),
+        ),
+      );
+
+      const avgRelevance =
+        enrichments
+          .filter((r) => r.status === 'fulfilled')
+          .reduce(
+            (sum, r) =>
+              sum + (r.status === 'fulfilled' ? r.value.technicalRelevance : 0),
+            0,
+          ) / Math.max(enrichments.filter((r) => r.status === 'fulfilled').length, 1);
+
+      const allTags = enrichments
+        .filter((r) => r.status === 'fulfilled')
+        .flatMap((r) =>
+          r.status === 'fulfilled' ? r.value.orchestratedTags : [],
+        );
+
+      const ecosystemSummary = enrichments
+        .filter((r) => r.status === 'fulfilled' && r.value.ecosystemImpact !== 'none')
+        .map((r) => (r.status === 'fulfilled' ? r.value.ecosystemImpact : ''))
+        .join(' | ');
+
+      await this.prisma.newsAnalysis.update({
+        where: { id: analysisId },
+        data: {
+          technicalRelevance: avgRelevance,
+          ecosystemImpact: ecosystemSummary || null,
+          orchestratedTags: allTags as any,
+        },
+      });
+
+      this.logger.debug(
+        `News enriched for user=${userId} analysis=${analysisId} relevance=${avgRelevance.toFixed(2)}`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `News enrichment failed for user=${userId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

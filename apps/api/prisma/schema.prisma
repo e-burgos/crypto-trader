@@ -249,6 +249,8 @@ model AgentDecision {
   indicators    Json
   newsHeadlines Json
   waitMinutes   Int
+  /// Orchestration metadata: { orchestrated: boolean, subAgentResults: SubAgentResult[] }
+  metadata      Json?
   createdAt     DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -316,6 +318,11 @@ model NewsAnalysis {
   aiSummary          String?
   /// JSON array of {id,sentiment,reasoning}
   aiHeadlines        Json?
+
+  // Orchestration enrichment (Phase 28 — OrchestratorService.enrichNews)
+  technicalRelevance  Float?
+  ecosystemImpact     String?
+  orchestratedTags    Json?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

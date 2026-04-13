@@ -398,7 +398,7 @@ model ChatSession {
   provider  LLMProvider
   model     String
   /// Agent assigned to this session. null = KRYPTO classifies on first message.
-  agentId   AgentId?
+  agentId   AgentId? @map("agent_id")
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 

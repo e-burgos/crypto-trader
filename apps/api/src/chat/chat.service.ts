@@ -257,14 +257,12 @@ export class ChatService {
     let ragContext = '';
     if (activeAgentId && this.ragService) {
       try {
-        const chunks = await this.ragService.search(
-          activeAgentId,
-          content,
-          5,
-        );
+        const chunks = await this.ragService.search(activeAgentId, content, 5);
         ragContext = this.ragService.buildRagContext(chunks);
       } catch (err) {
-        this.logger.warn(`RAG search failed, continuing without context: ${err}`);
+        this.logger.warn(
+          `RAG search failed, continuing without context: ${err}`,
+        );
       }
     }
 
@@ -309,7 +307,9 @@ export class ChatService {
         subject.complete();
         return;
       } catch (err) {
-        this.logger.warn(`Cross-agent synthesis failed, using standard flow: ${err}`);
+        this.logger.warn(
+          `Cross-agent synthesis failed, using standard flow: ${err}`,
+        );
       }
     }
 
@@ -343,7 +343,11 @@ export class ChatService {
       }));
 
     const context = await this.buildContext(userId, capability);
-    const systemPrompt = this.buildSystemPrompt(context, capability, ragContext);
+    const systemPrompt = this.buildSystemPrompt(
+      context,
+      capability,
+      ragContext,
+    );
 
     let fullContent = '';
     try {
@@ -451,7 +455,8 @@ export class ChatService {
     switch (dto.tool) {
       case 'start_agent': {
         const configId = dto.params?.configId as string;
-        if (!configId) throw new BadRequestException('configId is required for start_agent');
+        if (!configId)
+          throw new BadRequestException('configId is required for start_agent');
         const config = await this.prisma.tradingConfig.findFirst({
           where: { id: configId, userId },
         });
@@ -465,7 +470,8 @@ export class ChatService {
       }
       case 'stop_agent': {
         const configId = dto.params?.configId as string;
-        if (!configId) throw new BadRequestException('configId is required for stop_agent');
+        if (!configId)
+          throw new BadRequestException('configId is required for stop_agent');
         const config = await this.prisma.tradingConfig.findFirst({
           where: { id: configId, userId },
         });
@@ -668,9 +674,7 @@ ${positionsText}
 ${capabilityHint}
 
 Always respond in the same language the user writes to you. Be direct and confident but not arrogant. When giving market analysis, always cite specific indicator values when you have them. When assisting with trade creation, guide the user step-by-step through the platform UI. Format responses with markdown for readability.${
-      ragContext
-        ? `\n\n## Knowledge Base Context\n${ragContext}`
-        : ''
+      ragContext ? `\n\n## Knowledge Base Context\n${ragContext}` : ''
     }`;
   }
 

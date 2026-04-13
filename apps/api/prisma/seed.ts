@@ -102,7 +102,9 @@ async function main() {
         });
         console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
       } else {
-        console.log(`Sandbox trading config already exists for ${t.email} (BTC/USDT)`);
+        console.log(
+          `Sandbox trading config already exists for ${t.email} (BTC/USDT)`,
+        );
       }
     }
 

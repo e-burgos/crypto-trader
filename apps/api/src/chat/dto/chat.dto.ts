@@ -25,7 +25,8 @@ export class CreateSessionDto {
 
   @ApiPropertyOptional({
     enum: AgentId,
-    description: 'Agent to use for this session. If omitted, KRYPTO routes on first message.',
+    description:
+      'Agent to use for this session. If omitted, KRYPTO routes on first message.',
   })
   @IsOptional()
   @IsEnum(AgentId)

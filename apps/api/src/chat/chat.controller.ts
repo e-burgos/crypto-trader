@@ -170,10 +170,14 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   @ApiParam({ name: 'id', description: 'Session ID' })
   @ApiOperation({
-    summary: 'Execute a FORGE tool on behalf of the agent (requires confirmation for destructive tools)',
+    summary:
+      'Execute a FORGE tool on behalf of the agent (requires confirmation for destructive tools)',
   })
   @ApiResponse({ status: 200, description: 'Tool executed successfully' })
-  @ApiResponse({ status: 400, description: 'Missing confirmation or unknown tool' })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing confirmation or unknown tool',
+  })
   @ApiResponse({ status: 404, description: 'Session not found' })
   executeTool(
     @CurrentUser() user: RequestUser,

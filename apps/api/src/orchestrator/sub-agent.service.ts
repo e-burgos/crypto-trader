@@ -193,7 +193,11 @@ export class SubAgentService {
     let systemPrompt = await this.resolveSystemPrompt(agentId);
 
     // Inject RAG context when searching by user message content
-    if (this.ragService && context.message && typeof context.message === 'string') {
+    if (
+      this.ragService &&
+      context.message &&
+      typeof context.message === 'string'
+    ) {
       try {
         const chunks = await this.ragService.search(agentId, context.message);
         const ragContext = this.ragService.buildRagContext(chunks);

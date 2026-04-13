@@ -62,9 +62,9 @@ export class EmbeddingService {
       throw new Error('Voyage AI returned empty embeddings');
     }
 
-    return (
-      response.data as Array<{ embedding: number[] }>
-    ).map((d) => d.embedding);
+    return (response.data as Array<{ embedding: number[] }>).map(
+      (d) => d.embedding,
+    );
   }
 
   // ── OpenAI ────────────────────────────────────────────────────────────────

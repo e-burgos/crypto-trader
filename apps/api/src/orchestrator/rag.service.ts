@@ -104,7 +104,14 @@ export class RagService {
     // Fallback: load JSON embeddings and compute cosine similarity in-memory
     const chunks = await this.prisma.agentDocumentChunk.findMany({
       where: { agentId: agentId as any },
-      select: { id: true, documentId: true, agentId: true, content: true, chunkIndex: true, embedding: true },
+      select: {
+        id: true,
+        documentId: true,
+        agentId: true,
+        content: true,
+        chunkIndex: true,
+        embedding: true,
+      },
     });
 
     if (chunks.length === 0) return [];
@@ -135,9 +142,7 @@ export class RagService {
   buildRagContext(chunks: ChunkResult[]): string {
     if (chunks.length === 0) return '';
 
-    const parts = chunks.map(
-      (c, i) => `[Documento ${i + 1}]:\n${c.content}`,
-    );
+    const parts = chunks.map((c, i) => `[Documento ${i + 1}]:\n${c.content}`);
 
     return `\n\n--- Documentos relevantes de la base de conocimiento ---\n${parts.join('\n\n')}\n--- Fin de documentos ---\n`;
   }

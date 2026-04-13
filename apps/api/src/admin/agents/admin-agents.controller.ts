@@ -52,23 +52,27 @@ export class AdminAgentsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: '[ADMIN] Actualizar system prompt o estado del agente' })
-  updateAgent(
-    @Param('id') id: string,
-    @Body() dto: UpdateAgentDto,
-  ) {
+  @ApiOperation({
+    summary: '[ADMIN] Actualizar system prompt o estado del agente',
+  })
+  updateAgent(@Param('id') id: string, @Body() dto: UpdateAgentDto) {
     return this.adminAgentsService.updateAgent(id, dto);
   }
 
   @Post(':id/documents')
-  @ApiOperation({ summary: '[ADMIN] Subir documento de conocimiento al agente' })
+  @ApiOperation({
+    summary: '[ADMIN] Subir documento de conocimiento al agente',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        title: { type: 'string', description: 'Título descriptivo del documento' },
+        title: {
+          type: 'string',
+          description: 'Título descriptivo del documento',
+        },
       },
       required: ['file'],
     },
@@ -96,10 +100,7 @@ export class AdminAgentsController {
   @Delete(':id/documents/:docId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '[ADMIN] Eliminar documento de conocimiento' })
-  deleteDocument(
-    @Param('id') agentId: string,
-    @Param('docId') docId: string,
-  ) {
+  deleteDocument(@Param('id') agentId: string, @Param('docId') docId: string) {
     return this.adminAgentsService.deleteDocument(agentId, docId);
   }
 

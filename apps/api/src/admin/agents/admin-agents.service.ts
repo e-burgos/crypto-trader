@@ -91,9 +91,7 @@ export class AdminAgentsService {
       );
     }
     if (file.size > MAX_SIZE_BYTES) {
-      throw new BadRequestException(
-        `File too large. Maximum size is 10 MB`,
-      );
+      throw new BadRequestException(`File too large. Maximum size is 10 MB`);
     }
 
     const agent = await this.prisma.agentDefinition.findUnique({

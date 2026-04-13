@@ -138,9 +138,7 @@ export class DocumentProcessor {
       this.logger.log(`Document ${documentId} READY`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `Embedding failed for document ${documentId}: ${msg}`,
-      );
+      this.logger.error(`Embedding failed for document ${documentId}: ${msg}`);
       await this.prisma.agentDocument.update({
         where: { id: documentId },
         data: { status: 'ERROR', errorMsg: msg.slice(0, 500) },
@@ -157,10 +155,7 @@ export class DocumentProcessor {
   ): Promise<string> {
     const lowerName = fileName.toLowerCase();
 
-    if (
-      mimeType === 'application/pdf' ||
-      lowerName.endsWith('.pdf')
-    ) {
+    if (mimeType === 'application/pdf' || lowerName.endsWith('.pdf')) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse');
       const result = await pdfParse(buffer);

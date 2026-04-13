@@ -367,10 +367,35 @@ export class ChatService {
     } catch (err) {
       this.logger.error(`LLM streaming failed for session ${sessionId}`, err);
       const partialNote = fullContent ? ' [generation stopped]' : '';
+
+      // Classify the error so the frontend can show a meaningful, translatable message
+      const axiosStatus = (err as { response?: { status?: number } })?.response
+        ?.status;
+      let errorCode: string;
+      let retryAfter: number | undefined;
+
+      if (axiosStatus === 429) {
+        errorCode = 'RATE_LIMIT';
+        const ra = (
+          err as {
+            response?: { headers?: { 'retry-after'?: string } };
+          }
+        )?.response?.headers?.['retry-after'];
+        retryAfter = ra ? Math.ceil(Number(ra) / 60) : undefined;
+      } else if (axiosStatus === 401 || axiosStatus === 403) {
+        errorCode = 'INVALID_API_KEY';
+      } else if (axiosStatus && axiosStatus >= 500) {
+        errorCode = 'PROVIDER_UNAVAILABLE';
+      } else {
+        errorCode = 'PROVIDER_ERROR';
+      }
+
       subject.next(
         new MessageEvent('message', {
           data: JSON.stringify({
             error: `Provider error. Check your API key.${partialNote}`,
+            errorCode,
+            ...(retryAfter !== undefined ? { retryAfter } : {}),
           }),
         }),
       );

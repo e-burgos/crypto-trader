@@ -1,14 +1,10 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsObject,
-  IsOptional,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsObject, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ExecuteToolDto {
   @ApiProperty({
-    description: 'Tool name to execute (e.g. start_agent, stop_agent, create_config)',
+    description:
+      'Tool name to execute (e.g. start_agent, stop_agent, create_config)',
     example: 'start_agent',
   })
   @IsString()

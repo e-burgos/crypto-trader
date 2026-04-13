@@ -1,13 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
 // eslint-disable-next-line @nx/enforce-module-boundaries
-import {
-  createLLMProvider,
-  LLMProviderClient,
-} from '@crypto-trader/analysis';
+import { createLLMProvider, LLMProviderClient } from '@crypto-trader/analysis';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { LLMProvider } from '@crypto-trader/shared';
+import { RagService } from './rag.service';
 
 export type SubAgentId =
   | 'platform'
@@ -154,11 +152,34 @@ Consulta original del usuario: "${context.originalQuery}"`;
 export class SubAgentService {
   private readonly logger = new Logger(SubAgentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly ragService?: RagService,
+  ) {}
+
+  /**
+   * Resolves the system prompt for an agent.
+   * Phase B: reads from DB (AgentDefinition) with fallback to hardcoded prompts.
+   */
+  private async resolveSystemPrompt(agentId: SubAgentId): Promise<string> {
+    try {
+      const definition = await this.prisma.agentDefinition.findUnique({
+        where: { id: agentId as any },
+        select: { systemPrompt: true, isActive: true },
+      });
+      if (definition?.isActive && definition.systemPrompt) {
+        return definition.systemPrompt;
+      }
+    } catch {
+      // DB not available yet (migration pending) — use hardcoded
+    }
+    return AGENT_SYSTEM_PROMPTS[agentId];
+  }
 
   /**
    * Synchronous LLM call to a specific sub-agent.
    * Returns raw text response (caller is responsible for JSON parsing).
+   * Phase B: injects RAG context into system prompt when userMessage is provided.
    */
   async call(
     agentId: SubAgentId,
@@ -169,7 +190,23 @@ export class SubAgentService {
     preferCheap = false,
   ): Promise<string> {
     const provider = await this.getProvider(userId, preferCheap);
-    const systemPrompt = AGENT_SYSTEM_PROMPTS[agentId];
+    let systemPrompt = await this.resolveSystemPrompt(agentId);
+
+    // Inject RAG context when searching by user message content
+    if (this.ragService && context.message && typeof context.message === 'string') {
+      try {
+        const chunks = await this.ragService.search(agentId, context.message);
+        const ragContext = this.ragService.buildRagContext(chunks);
+        if (ragContext) {
+          systemPrompt = systemPrompt + ragContext;
+        }
+      } catch (err) {
+        this.logger.warn(
+          `RAG search failed for agent ${agentId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
     const userPrompt = buildTaskUserPrompt(task, context);
 
     try {

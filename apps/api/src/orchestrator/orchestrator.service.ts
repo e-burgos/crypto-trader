@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  SubAgentService,
-  SubAgentId,
-} from './sub-agent.service';
+import { SubAgentService, SubAgentId } from './sub-agent.service';
 import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
@@ -85,9 +82,11 @@ export class OrchestratorService {
 
     return {
       agentId,
-      confidence: typeof result.confidence === 'number' ? result.confidence : 0.7,
+      confidence:
+        typeof result.confidence === 'number' ? result.confidence : 0.7,
       reason: result.reason ?? 'Clasificación automática',
-      suggestedGreeting: result.suggestedGreeting ?? 'Hola, estoy aquí para ayudarte.',
+      suggestedGreeting:
+        result.suggestedGreeting ?? 'Hola, estoy aquí para ayudarte.',
     };
   }
 
@@ -102,7 +101,11 @@ export class OrchestratorService {
     userId: string,
     configId: string,
     indicators: IndicatorSnapshot,
-    news: Array<{ headline: string; sentiment: string; summary?: string | null }>,
+    news: Array<{
+      headline: string;
+      sentiment: string;
+      summary?: string | null;
+    }>,
   ): Promise<DecisionPayload> {
     // Load config + open positions for FORGE and AEGIS context
     const [config, openPositions] = await Promise.all([
@@ -136,52 +139,54 @@ export class OrchestratorService {
     }
 
     // Parallel sub-agent calls
-    const [techRaw, sentimentRaw, forgeRaw, aegisRaw] = await Promise.allSettled([
-      this.subAgent.call(
-        'market',
-        'technical_signal',
-        { indicators },
-        userId,
-      ),
-      this.subAgent.call(
-        'market',
-        'news_sentiment',
-        { news: news.slice(0, 10) },
-        userId,
-      ),
-      this.subAgent.call(
-        'operations',
-        'sizing_suggestion',
-        {
-          config: {
-            maxTradePct: config.maxTradePct,
-            maxConcurrentPositions: config.maxConcurrentPositions,
-            buyThreshold: config.buyThreshold,
-            sellThreshold: config.sellThreshold,
+    const [techRaw, sentimentRaw, forgeRaw, aegisRaw] =
+      await Promise.allSettled([
+        this.subAgent.call(
+          'market',
+          'technical_signal',
+          { indicators },
+          userId,
+        ),
+        this.subAgent.call(
+          'market',
+          'news_sentiment',
+          { news: news.slice(0, 10) },
+          userId,
+        ),
+        this.subAgent.call(
+          'operations',
+          'sizing_suggestion',
+          {
+            config: {
+              maxTradePct: config.maxTradePct,
+              maxConcurrentPositions: config.maxConcurrentPositions,
+              buyThreshold: config.buyThreshold,
+              sellThreshold: config.sellThreshold,
+            },
+            openPositionsCount: openPositions.length,
           },
-          openPositionsCount: openPositions.length,
-        },
-        userId,
-      ),
-      this.subAgent.call(
-        'risk',
-        'risk_gate',
-        {
-          portfolio: openPositions,
-          indicators: {
-            rsi: (indicators as unknown as Record<string, unknown>).rsi,
-            price: (indicators as unknown as Record<string, unknown>).close,
-            asset: config.asset,
+          userId,
+        ),
+        this.subAgent.call(
+          'risk',
+          'risk_gate',
+          {
+            portfolio: openPositions,
+            indicators: {
+              rsi: (indicators as unknown as Record<string, unknown>).rsi,
+              price: (indicators as unknown as Record<string, unknown>).close,
+              asset: config.asset,
+            },
           },
-        },
-        userId,
-      ),
-    ]);
+          userId,
+        ),
+      ]);
 
     const subAgentResults: SubAgentResult[] = [];
 
     const techOutput = techRaw.status === 'fulfilled' ? techRaw.value : '{}';
-    const sentimentOutput = sentimentRaw.status === 'fulfilled' ? sentimentRaw.value : '{}';
+    const sentimentOutput =
+      sentimentRaw.status === 'fulfilled' ? sentimentRaw.value : '{}';
     const forgeOutput = forgeRaw.status === 'fulfilled' ? forgeRaw.value : '{}';
     const aegisOutput = aegisRaw.status === 'fulfilled' ? aegisRaw.value : '{}';
 
@@ -271,8 +276,20 @@ export class OrchestratorService {
     };
 
     const [techRaw, ecoRaw] = await Promise.allSettled([
-      this.subAgent.call('market', 'news_technical_relevance', context, userId, true),
-      this.subAgent.call('blockchain', 'ecosystem_impact', context, userId, true),
+      this.subAgent.call(
+        'market',
+        'news_technical_relevance',
+        context,
+        userId,
+        true,
+      ),
+      this.subAgent.call(
+        'blockchain',
+        'ecosystem_impact',
+        context,
+        userId,
+        true,
+      ),
     ]);
 
     const techResult = safeParseJson<{
@@ -293,7 +310,8 @@ export class OrchestratorService {
       tags.push(...techResult.affectedIndicators);
     if (techResult.timeframe) tags.push(`timeframe:${techResult.timeframe}`);
     if (ecoResult.category) tags.push(`category:${ecoResult.category}`);
-    if (ecoResult.chains) tags.push(...ecoResult.chains.map((c) => `chain:${c}`));
+    if (ecoResult.chains)
+      tags.push(...ecoResult.chains.map((c) => `chain:${c}`));
 
     return {
       technicalRelevance:

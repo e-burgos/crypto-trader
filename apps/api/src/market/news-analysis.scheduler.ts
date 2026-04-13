@@ -121,7 +121,8 @@ export class NewsAnalysisScheduler implements OnModuleInit, OnModuleDestroy {
             (sum, r) =>
               sum + (r.status === 'fulfilled' ? r.value.technicalRelevance : 0),
             0,
-          ) / Math.max(enrichments.filter((r) => r.status === 'fulfilled').length, 1);
+          ) /
+        Math.max(enrichments.filter((r) => r.status === 'fulfilled').length, 1);
 
       const allTags = enrichments
         .filter((r) => r.status === 'fulfilled')
@@ -130,7 +131,9 @@ export class NewsAnalysisScheduler implements OnModuleInit, OnModuleDestroy {
         );
 
       const ecosystemSummary = enrichments
-        .filter((r) => r.status === 'fulfilled' && r.value.ecosystemImpact !== 'none')
+        .filter(
+          (r) => r.status === 'fulfilled' && r.value.ecosystemImpact !== 'none',
+        )
         .map((r) => (r.status === 'fulfilled' ? r.value.ecosystemImpact : ''))
         .join(' | ');
 

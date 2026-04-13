@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
+import { AGENT_SEEDS } from './seed/agents';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
@@ -104,6 +105,29 @@ async function main() {
         },
       });
       console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
+    }
+
+    // ── Agent Definitions (Spec 28) ──────────────────────────────────────────
+    for (const agent of AGENT_SEEDS) {
+      await prisma.agentDefinition.upsert({
+        where: { id: agent.id },
+        update: {
+          displayName: agent.displayName,
+          description: agent.description,
+          skills: agent.skills,
+          isActive: agent.isActive,
+          // systemPrompt is NOT updated on re-seed to preserve Admin customizations
+        },
+        create: {
+          id: agent.id,
+          displayName: agent.displayName,
+          description: agent.description,
+          systemPrompt: agent.systemPrompt,
+          skills: agent.skills,
+          isActive: agent.isActive,
+        },
+      });
+      console.log(`Agent: ${agent.displayName} (${agent.id})`);
     }
 
     console.log('\n✅ Seed completado!');

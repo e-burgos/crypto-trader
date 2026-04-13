@@ -3,11 +3,14 @@ import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
 
+export type TradingMode = 'SANDBOX' | 'TESTNET' | 'LIVE';
+
 export interface UserProfile {
   id: string;
   email: string;
   role: string;
   isActive: boolean;
+  platformOperationMode: TradingMode;
   createdAt: string;
 }
 
@@ -278,5 +281,44 @@ export function useNewsSourcesStatus() {
     queryFn: () => api.get<NewsSourceStatus[]>('/market/news-sources/status'),
     staleTime: 60_000,
     enabled: isAuthenticated,
+  });
+}
+
+// ── Platform operation mode ────────────────────────────────────────────────
+
+export function usePlatformMode() {
+  const { data: profile, isLoading } = useUserProfile();
+  const { data: liveKeyStatus } = useBinanceKeyStatus();
+  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
+
+  const mode: TradingMode = profile?.platformOperationMode ?? 'SANDBOX';
+
+  const availableModes: TradingMode[] = ['SANDBOX'];
+  if (testnetKeyStatus?.hasKeys) availableModes.push('TESTNET');
+  if (liveKeyStatus?.hasKeys) availableModes.push('LIVE');
+
+  return {
+    mode,
+    isSandbox: mode === 'SANDBOX',
+    isTestnet: mode === 'TESTNET',
+    isLive: mode === 'LIVE',
+    availableModes,
+    isLoading,
+  };
+}
+
+export function useUpdatePlatformMode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mode: TradingMode) =>
+      api.patch<{ platformOperationMode: TradingMode }>(
+        '/users/me/operation-mode',
+        { mode },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'profile'] });
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al cambiar el modo de operación'),
   });
 }

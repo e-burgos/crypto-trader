@@ -1459,6 +1459,29 @@ const es = {
     currentState: 'Estado actual',
     noDecisionsYet: 'El agente aún no ha tomado ninguna decisión.',
   },
+  modeSelector: {
+    label: 'Modo de operación',
+    sandbox: 'Sandbox',
+    testnet: 'Testnet',
+    live: 'En Vivo',
+    sandboxDesc: 'Simulación con fondos virtuales. Sin riesgo real.',
+    testnetDesc: 'Órdenes reales en red de prueba de Binance. Sin dinero real.',
+    liveDesc: '⚠️ Dinero real. Órdenes reales en Binance.',
+    liveWarningShort: 'Dinero real',
+    switchConfirmTitle: 'Cambiar a modo En Vivo',
+    switchConfirmDesc:
+      'Estás a punto de cambiar al modo EN VIVO. Las operaciones afectarán fondos reales en Binance.',
+    confirmLive: 'Sí, cambiar a En Vivo',
+    switchedSuccess: 'Modo cambiado a {{mode}}',
+    fallbackNotice: 'Modo {{mode}} no disponible. Cambiado a Sandbox automáticamente.',
+    credentialsModalTitle: 'Modo {{mode}} no configurado',
+    credentialsModalTestnetDesc:
+      'Para operar en modo Testnet necesitás configurar tus claves API de Binance Testnet. Obtenelas gratis en testnet.binance.vision (sin dinero real).',
+    credentialsModalLiveDesc:
+      'Para operar en modo En Vivo necesitás configurar tus claves API de Binance. ⚠️ Este modo opera con fondos reales.',
+    credentialsModalCancel: 'Cancelar',
+    credentialsModalCta: 'Agregar Credenciales',
+  },
 };
 
 export default es;

@@ -28,6 +28,7 @@ import { NotificationsPage } from '../pages/dashboard/notifications';
 import { AdminLayout } from '../pages/admin/index';
 import { AdminStatsPage } from '../pages/admin/stats';
 import { AdminUsersPage } from '../pages/admin/users';
+import { AdminAgentsPage } from '../pages/admin/agents';
 import { useWebSocket } from '../hooks/use-websocket';
 import { useAuthStore } from '../store/auth.store';
 
@@ -144,6 +145,7 @@ export function App() {
             <Route path="" element={<AdminLayout />}>
               <Route index element={<AdminStatsPage />} />
               <Route path="users" element={<AdminUsersPage />} />
+              <Route path="agents" element={<AdminAgentsPage />} />
             </Route>
           </Route>
         </Routes>

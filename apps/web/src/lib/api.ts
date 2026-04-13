@@ -107,9 +107,47 @@ async function request<T>(
   return res.json();
 }
 
+async function requestFormData<T>(
+  path: string,
+  body: FormData,
+  _retry = true,
+): Promise<T> {
+  const token = localStorage.getItem('accessToken');
+  // Do NOT set Content-Type — browser sets it with the boundary for FormData
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers,
+    body,
+  });
+
+  if (res.status === 401 && _retry) {
+    const newToken = await refreshToken();
+    if (newToken) return requestFormData<T>(path, body, false);
+    throw { message: 'Session expired.', statusCode: 401 } as ApiError;
+  }
+
+  if (!res.ok) {
+    const err = await res
+      .json()
+      .catch(() => ({ message: 'Error en la solicitud' }));
+    const errorMessage = Array.isArray(err.message)
+      ? err.message.join('\n')
+      : err.message || 'Error en la solicitud';
+    throw { message: errorMessage, statusCode: res.status } as ApiError;
+  }
+
+  if (res.status === 204) return undefined as unknown as T;
+  return res.json();
+}
+
 export const api = {
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  postForm: <T>(path: string, body: FormData) =>
+    requestFormData<T>(path, body),
   get: <T>(path: string) => request<T>(path),
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),

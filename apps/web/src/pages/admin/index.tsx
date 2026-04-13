@@ -24,6 +24,7 @@ export function AdminLayout() {
         {[
           { to: '/admin', label: t('admin.tabStats'), end: true },
           { to: '/admin/users', label: t('admin.tabUsers') },
+          { to: '/admin/agents', label: t('admin.tabAgents') },
         ].map(({ to, label, end }) => (
           <NavLink
             key={to}

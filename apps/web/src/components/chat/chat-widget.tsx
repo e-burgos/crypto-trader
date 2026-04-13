@@ -8,10 +8,14 @@ import {
   useChatStream,
   ChatCapability,
 } from '../../hooks/use-chat';
+import { useChatAgent } from '../../hooks/use-chat-agent';
 import { ChatMessages } from './chat-messages';
 import { ChatInput } from './chat-input';
 import { CapabilityButtons } from './capability-buttons';
 import { NewSessionModal } from './llm-selector';
+import { AgentSelector } from './agent-selector';
+import { AgentHeader } from './agent-header';
+import { OrchestratingIndicator } from './orchestrating-indicator';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
@@ -67,8 +71,23 @@ export function ChatWidget() {
 
   const { data: session } = useChatSession(activeSessionId ?? '');
   const saveMessage = useSaveUserMessage(activeSessionId ?? '');
+  const {
+    selectedAgentId,
+    routedAgentId,
+    isOrchestrating,
+    orchestratingStep,
+    activeAgentId,
+    selectAgent,
+    handleRoutingEvent,
+    handleOrchestratingEvent,
+    handleStreamDone,
+  } = useChatAgent();
   const { streamingContent, isStreaming, startStream, stopStream } =
-    useChatStream(activeSessionId ?? '');
+    useChatStream(activeSessionId ?? '', {
+      onRouting: handleRoutingEvent,
+      onOrchestrating: handleOrchestratingEvent,
+      onDone: handleStreamDone,
+    });
 
   const handleSend = async (content: string, capability?: ChatCapability) => {
     if (!activeSessionId) {
@@ -213,6 +232,17 @@ export function ChatWidget() {
             />
           ) : (
             <>
+              {/* Agent header inside the chat area */}
+              {activeAgentId && (
+                <div className="px-4 py-2 border-b border-border/50">
+                  <AgentHeader
+                    agentId={activeAgentId}
+                    routedByKrypto={!!routedAgentId && !selectedAgentId}
+                    provider={session?.provider}
+                    model={session?.model}
+                  />
+                </div>
+              )}
               <div className="chat-grid-bg flex-1 overflow-hidden">
                 <ChatMessages
                   messages={session?.messages ?? []}
@@ -221,11 +251,16 @@ export function ChatWidget() {
                   provider={session?.provider}
                 />
               </div>
+              {isOrchestrating && (
+                <div className="px-3 pb-2">
+                  <OrchestratingIndicator step={orchestratingStep} />
+                </div>
+              )}
               <div className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
               <ChatInput
                 onSend={handleSend}
                 onStop={stopStream}
-                isStreaming={isStreaming}
+                isStreaming={isStreaming || isOrchestrating}
                 hasMessages={(session?.messages.length ?? 0) > 0}
               />
             </>

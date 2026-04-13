@@ -3,6 +3,7 @@ import { useRef, useState, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
+import type { AgentId, RoutingEvent, OrchestratingEvent } from './use-chat-agent';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -22,6 +23,7 @@ export interface ChatSessionSummary {
   title: string;
   provider: string;
   model: string;
+  agentId?: string | null;
   createdAt: string;
   updatedAt: string;
   _count: { messages: number };
@@ -43,6 +45,7 @@ export interface CreateSessionDto {
   provider: string;
   model: string;
   title?: string;
+  agentId?: string | null;
 }
 
 export interface SendMessageDto {
@@ -132,7 +135,14 @@ export function useSaveUserMessage(sessionId: string) {
 
 // ── SSE Streaming Hook ─────────────────────────────────────────────────────
 
-export function useChatStream(sessionId: string | null) {
+export function useChatStream(
+  sessionId: string | null,
+  options?: {
+    onRouting?: (event: RoutingEvent) => void;
+    onOrchestrating?: (event: OrchestratingEvent) => void;
+    onDone?: () => void;
+  },
+) {
   const [streamingContent, setStreamingContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,6 +177,11 @@ export function useChatStream(sessionId: string | null) {
       es.onmessage = (event: MessageEvent<string>) => {
         try {
           const data = JSON.parse(event.data) as {
+            type?: string;
+            agentId?: AgentId;
+            greeting?: string;
+            subAgents?: AgentId[];
+            step?: string;
             delta?: string;
             done?: boolean;
             messageId?: string;
@@ -182,6 +197,20 @@ export function useChatStream(sessionId: string | null) {
             return;
           }
 
+          // New SSE event types (Spec 28 Fase C)
+          if (data.type === 'routing' && data.agentId) {
+            options?.onRouting?.({ agentId: data.agentId, greeting: data.greeting });
+            return;
+          }
+
+          if (data.type === 'orchestrating') {
+            options?.onOrchestrating?.({
+              subAgents: data.subAgents ?? [],
+              step: data.step ?? '',
+            });
+            return;
+          }
+
           if (data.delta) {
             setStreamingContent((prev) => prev + data.delta);
           }
@@ -190,6 +219,7 @@ export function useChatStream(sessionId: string | null) {
             setIsStreaming(false);
             es.close();
             esRef.current = null;
+            options?.onDone?.();
             // Refresh session data to persist the new assistant message
             qc.invalidateQueries({ queryKey: chatKeys.session(sessionId) });
             qc.invalidateQueries({ queryKey: chatKeys.sessions });
@@ -206,7 +236,7 @@ export function useChatStream(sessionId: string | null) {
         esRef.current = null;
       };
     },
-    [sessionId, accessToken, qc],
+    [sessionId, accessToken, qc, options],
   );
 
   const stopStream = useCallback(() => {
@@ -224,4 +254,25 @@ export function useChatStream(sessionId: string | null) {
   }, [streamingContent, sessionId, qc]);
 
   return { streamingContent, isStreaming, error, startStream, stopStream };
+}
+
+// ── Tool Execution ─────────────────────────────────────────────────────────
+
+export interface ExecuteToolDto {
+  tool: string;
+  params?: Record<string, unknown>;
+  confirmation?: string;
+}
+
+export function useExecuteTool(sessionId: string | null) {
+  return useMutation({
+    mutationFn: (dto: ExecuteToolDto) =>
+      api.post<{ tool: string; result: unknown }>(
+        `/chat/sessions/${sessionId}/tools/execute`,
+        dto,
+      ),
+    onError: () => {
+      toast.error('Tool execution failed');
+    },
+  });
 }

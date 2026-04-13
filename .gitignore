@@ -12,7 +12,8 @@ dist/
 .claude/worktrees
 .claude/settings.local.json
 vite.config.*.timestamp*
-vitest.config.*.timestamp*e2e/.auth/
+vitest.config.*.timestamp*
+e2e/.auth/
 nohup.out
 playwright-report/
 test-results/

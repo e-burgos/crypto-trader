@@ -80,31 +80,30 @@ async function main() {
     // ── Trading configs (for all trader users) ────────────────────────────────
 
     for (const t of [trader, traderShort]) {
-      await prisma.tradingConfig.upsert({
-        where: {
-          userId_asset_pair: {
+      const existingConfig = await prisma.tradingConfig.findFirst({
+        where: { userId: t.id, asset: 'BTC', pair: 'USDT' },
+      });
+      if (!existingConfig) {
+        await prisma.tradingConfig.create({
+          data: {
             userId: t.id,
             asset: 'BTC',
             pair: 'USDT',
+            buyThreshold: 70,
+            sellThreshold: 70,
+            stopLossPct: 0.03,
+            takeProfitPct: 0.05,
+            maxTradePct: 0.05,
+            maxConcurrentPositions: 2,
+            minIntervalMinutes: 15,
+            mode: 'SANDBOX',
+            isRunning: false,
           },
-        },
-        update: {},
-        create: {
-          userId: t.id,
-          asset: 'BTC',
-          pair: 'USDT',
-          buyThreshold: 70,
-          sellThreshold: 70,
-          stopLossPct: 0.03,
-          takeProfitPct: 0.05,
-          maxTradePct: 0.05,
-          maxConcurrentPositions: 2,
-          minIntervalMinutes: 15,
-          mode: 'SANDBOX',
-          isRunning: false,
-        },
-      });
-      console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
+        });
+        console.log(`Sandbox trading config created for ${t.email} (BTC/USDT)`);
+      } else {
+        console.log(`Sandbox trading config already exists for ${t.email} (BTC/USDT)`);
+      }
     }
 
     // ── Agent Definitions (Spec 28) ──────────────────────────────────────────

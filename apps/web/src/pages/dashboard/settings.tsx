@@ -42,12 +42,15 @@ import {
   useDeleteNewsApiKey,
   useTestNewsApiKey,
 } from '../../hooks/use-user';
+import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
+import { AIUsageDashboard } from '../../components/settings/ai-usage-dashboard';
 
 const LLM_PROVIDERS = [
   {
     value: 'CLAUDE',
     label: 'Anthropic Claude',
     models: [
+      'claude-sonnet-4-20250514',
       'claude-opus-4-5',
       'claude-3-5-sonnet-20241022',
       'claude-3-haiku-20240307',
@@ -56,12 +59,26 @@ const LLM_PROVIDERS = [
   {
     value: 'OPENAI',
     label: 'OpenAI',
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+    models: ['gpt-4o', 'gpt-4o-mini'],
   },
   {
     value: 'GROQ',
     label: 'Groq',
     models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  },
+  {
+    value: 'GEMINI',
+    label: 'Google Gemini',
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
+  },
+  {
+    value: 'MISTRAL',
+    label: 'Mistral AI',
+    models: [
+      'mistral-small-latest',
+      'mistral-medium-latest',
+      'mistral-large-latest',
+    ],
   },
 ];
 
@@ -591,163 +608,163 @@ export function SettingsPage() {
 
         {/* ── AI Models (LLM) ──────────────────────────── */}
         {activeTab === 'ai' && (
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center gap-2">
-              <BotMessageSquare className="h-4 w-4 text-primary" />
-              <h2 className="font-semibold">{t('settings.llmKeys')}</h2>
-            </div>
-            <div className="space-y-4">
-              {LLM_PROVIDERS.map((provider) => {
-                const status = getLLMKeyStatus(provider.value);
-                const form = getLLMForm(provider.value);
-                return (
-                  <div
-                    key={provider.value}
-                    className="rounded-lg border border-border p-4"
-                  >
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="font-medium text-sm">
-                        {provider.label}
-                      </span>
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-semibold',
-                          status?.isActive
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-muted text-muted-foreground',
-                        )}
-                      >
-                        {status?.isActive
-                          ? t('settings.active')
-                          : t('settings.inactive')}
-                      </span>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium">
-                          API Key
-                        </label>
-                        <PasswordInput
-                          placeholder="sk-..."
-                          value={form.apiKey}
-                          onChange={(e) =>
-                            setLlmForms((f) => ({
-                              ...f,
-                              [provider.value]: {
-                                ...(f[provider.value] ?? {
-                                  model: provider.models[0],
-                                }),
-                                apiKey: e.target.value,
-                              },
-                            }))
-                          }
-                          className="px-2 py-1.5"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium">
-                          {t('settings.model')}
-                        </label>
-                        <select
-                          value={form.model}
-                          onChange={(e) =>
-                            setLlmForms((f) => ({
-                              ...f,
-                              [provider.value]: {
-                                ...(f[provider.value] ?? { apiKey: '' }),
-                                model: e.target.value,
-                              },
-                            }))
-                          }
-                          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+          <>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <BotMessageSquare className="h-4 w-4 text-primary" />
+                <h2 className="font-semibold">{t('settings.llmKeys')}</h2>
+              </div>
+              <div className="space-y-4">
+                {LLM_PROVIDERS.map((provider) => {
+                  const status = getLLMKeyStatus(provider.value);
+                  const form = getLLMForm(provider.value);
+                  return (
+                    <div
+                      key={provider.value}
+                      className="rounded-lg border border-border p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="font-medium text-sm">
+                          {provider.label}
+                        </span>
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-xs font-semibold',
+                            status?.isActive
+                              ? 'bg-emerald-500/10 text-emerald-500'
+                              : 'bg-muted text-muted-foreground',
+                          )}
                         >
-                          {provider.models.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </select>
+                          {status?.isActive
+                            ? t('settings.active')
+                            : t('settings.inactive')}
+                        </span>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-medium">
+                            API Key
+                          </label>
+                          <PasswordInput
+                            placeholder="sk-..."
+                            value={form.apiKey}
+                            onChange={(e) =>
+                              setLlmForms((f) => ({
+                                ...f,
+                                [provider.value]: {
+                                  ...(f[provider.value] ?? {
+                                    model: provider.models[0],
+                                  }),
+                                  apiKey: e.target.value,
+                                },
+                              }))
+                            }
+                            className="px-2 py-1.5"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium">
+                            {t('settings.model')}
+                          </label>
+                          <DynamicModelSelect
+                            provider={provider.value}
+                            value={form.model}
+                            onChange={(model) =>
+                              setLlmForms((f) => ({
+                                ...f,
+                                [provider.value]: {
+                                  ...(f[provider.value] ?? { apiKey: '' }),
+                                  model,
+                                },
+                              }))
+                            }
+                            fallbackModels={provider.models}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          disabled={savingLLM || !form.apiKey}
+                          onClick={() =>
+                            saveLLMKey(
+                              {
+                                provider: provider.value,
+                                apiKey: form.apiKey,
+                                selectedModel: form.model,
+                              },
+                              {
+                                onSuccess: () => {
+                                  setLlmForms((f) => ({
+                                    ...f,
+                                    [provider.value]: {
+                                      apiKey: '',
+                                      model: provider.models[0],
+                                    },
+                                  }));
+                                  resetLLMTest();
+                                },
+                              },
+                            )
+                          }
+                        >
+                          {savingLLM && (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          )}
+                          {t('common.save')}
+                        </Button>
+                        {status?.isActive && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={testingLLM}
+                              onClick={() => testLLM(provider.value)}
+                            >
+                              {testingLLM &&
+                                llmTestProvider === provider.value && (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                )}
+                              {testingLLM && llmTestProvider === provider.value
+                                ? t('settings.testing')
+                                : t('settings.testConnection')}
+                            </Button>
+                            {llmTestResult &&
+                              llmTestProvider === provider.value && (
+                                <span
+                                  className={cn(
+                                    'text-xs font-medium',
+                                    llmTestResult.connected
+                                      ? 'text-emerald-500'
+                                      : 'text-red-500',
+                                  )}
+                                >
+                                  {llmTestResult.connected
+                                    ? t('settings.testSuccess')
+                                    : `${t('settings.testFailed')}: ${llmTestResult.error}`}
+                                </span>
+                              )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1.5 text-red-500 hover:text-red-600"
+                              onClick={() => deleteLLMKey(provider.value)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              {t('settings.remove')}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Button
-                        size="sm"
-                        disabled={savingLLM || !form.apiKey}
-                        onClick={() =>
-                          saveLLMKey(
-                            {
-                              provider: provider.value,
-                              apiKey: form.apiKey,
-                              selectedModel: form.model,
-                            },
-                            {
-                              onSuccess: () => {
-                                setLlmForms((f) => ({
-                                  ...f,
-                                  [provider.value]: {
-                                    apiKey: '',
-                                    model: provider.models[0],
-                                  },
-                                }));
-                                resetLLMTest();
-                              },
-                            },
-                          )
-                        }
-                      >
-                        {savingLLM && (
-                          <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                        )}
-                        {t('common.save')}
-                      </Button>
-                      {status?.isActive && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={testingLLM}
-                            onClick={() => testLLM(provider.value)}
-                          >
-                            {testingLLM &&
-                              llmTestProvider === provider.value && (
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              )}
-                            {testingLLM && llmTestProvider === provider.value
-                              ? t('settings.testing')
-                              : t('settings.testConnection')}
-                          </Button>
-                          {llmTestResult &&
-                            llmTestProvider === provider.value && (
-                              <span
-                                className={cn(
-                                  'text-xs font-medium',
-                                  llmTestResult.connected
-                                    ? 'text-emerald-500'
-                                    : 'text-red-500',
-                                )}
-                              >
-                                {llmTestResult.connected
-                                  ? t('settings.testSuccess')
-                                  : `${t('settings.testFailed')}: ${llmTestResult.error}`}
-                              </span>
-                            )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="gap-1.5 text-red-500 hover:text-red-600"
-                            onClick={() => deleteLLMKey(provider.value)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            {t('settings.remove')}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+
+            {/* ── AI Usage Dashboard ── */}
+            <AIUsageDashboard />
+          </>
         )}
 
         {/* ── News Sources ─────────────────────────────── */}

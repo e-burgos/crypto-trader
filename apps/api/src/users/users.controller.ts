@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Patch,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -17,6 +18,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
@@ -35,13 +37,20 @@ import {
   CurrentUser,
   RequestUser,
 } from '../auth/decorators/current-user.decorator';
+import { LLMModelsService } from '../llm/llm-models.service';
+import { LLMUsageService } from '../llm/llm-usage.service';
+import { LLMProvider } from '../../generated/prisma/enums';
 
 @ApiTags('users')
 @ApiBearerAuth('access-token')
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly llmModelsService: LLMModelsService,
+    private readonly llmUsageService: LLMUsageService,
+  ) {}
 
   // ── /users/me ────────────────────────────────────────────────────────────
 
@@ -246,6 +255,46 @@ export class UsersController {
     @Param('provider') provider: string,
   ) {
     return this.usersService.testNewsApiKey(user.userId, provider);
+  }
+
+  // ── /users/me/llm ─────────────────────────────────────────────────────────
+
+  @Get('users/me/llm/:provider/models')
+  @ApiOperation({ summary: 'Listar modelos disponibles de un proveedor LLM' })
+  @ApiParam({
+    name: 'provider',
+    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL'],
+  })
+  @ApiResponse({ status: 200, description: 'Modelos del proveedor' })
+  @ApiResponse({ status: 404, description: 'Sin API key para este proveedor' })
+  @ApiResponse({ status: 502, description: 'Proveedor no responde' })
+  getProviderModels(
+    @CurrentUser() user: RequestUser,
+    @Param('provider') provider: string,
+  ) {
+    return this.llmModelsService.getModels(
+      user.userId,
+      provider as LLMProvider,
+    );
+  }
+
+  @Get('users/me/llm/usage')
+  @ApiOperation({ summary: 'Estadísticas de uso de LLM del usuario' })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['7d', '30d', '90d', 'all'],
+  })
+  @ApiResponse({ status: 200, description: 'Estadísticas de uso' })
+  getLLMUsage(
+    @CurrentUser() user: RequestUser,
+    @Query('period') period?: string,
+  ) {
+    const validPeriods = ['7d', '30d', '90d', 'all'] as const;
+    const p = validPeriods.includes(period as any)
+      ? (period as '7d' | '30d' | '90d' | 'all')
+      : '30d';
+    return this.llmUsageService.getStats(user.userId, p);
   }
 
   // ── /admin/users ──────────────────────────────────────────────────────────

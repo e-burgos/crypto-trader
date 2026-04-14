@@ -1,7 +1,12 @@
 import { parseLLMResponse, buildAnalysisPrompt } from './llm-types';
 import { LLMAnalyzer } from './llm-analyzer';
 import { createLLMProvider } from './llm-factory';
-import { LLMProvider, Asset, QuoteCurrency, TradingMode } from '@crypto-trader/shared';
+import {
+  LLMProvider,
+  Asset,
+  QuoteCurrency,
+  TradingMode,
+} from '@crypto-trader/shared';
 import type { LLMProviderClient } from './llm-types';
 import type { LLMAnalysisInput } from '@crypto-trader/shared';
 
@@ -23,7 +28,8 @@ describe('parseLLMResponse', () => {
   });
 
   it('should handle markdown-wrapped JSON', () => {
-    const raw = '```json\n{"decision":"HOLD","confidence":0.5,"reasoning":"Neutral","suggestedWaitMinutes":10}\n```';
+    const raw =
+      '```json\n{"decision":"HOLD","confidence":0.5,"reasoning":"Neutral","suggestedWaitMinutes":10}\n```';
     const result = parseLLMResponse(raw);
     expect(result.decision).toBe('HOLD');
   });
@@ -80,15 +86,45 @@ describe('buildAnalysisPrompt', () => {
       pair: QuoteCurrency.USDT,
       indicatorSnapshot: {
         rsi: { value: 55, signal: 'NEUTRAL' as const },
-        macd: { macd: 10, signal: 8, histogram: 2, crossover: 'BULLISH' as const },
-        bollingerBands: { upper: 70000, middle: 65000, lower: 60000, bandwidth: 10000, position: 'INSIDE' as const },
-        emaCross: { ema9: 65500, ema21: 65000, ema50: 64000, ema200: 60000, trend: 'BULLISH' as const },
-        volume: { current: 100, average: 80, ratio: 1.25, signal: 'NORMAL' as const },
+        macd: {
+          macd: 10,
+          signal: 8,
+          histogram: 2,
+          crossover: 'BULLISH' as const,
+        },
+        bollingerBands: {
+          upper: 70000,
+          middle: 65000,
+          lower: 60000,
+          bandwidth: 10000,
+          position: 'INSIDE' as const,
+        },
+        emaCross: {
+          ema9: 65500,
+          ema21: 65000,
+          ema50: 64000,
+          ema200: 60000,
+          trend: 'BULLISH' as const,
+        },
+        volume: {
+          current: 100,
+          average: 80,
+          ratio: 1.25,
+          signal: 'NORMAL' as const,
+        },
         supportResistance: { support: [60000], resistance: [70000] },
         timestamp: Date.now(),
       },
       recentCandles: [
-        { openTime: 1, open: 65000, high: 65500, low: 64500, close: 65200, volume: 100, closeTime: 2 },
+        {
+          openTime: 1,
+          open: 65000,
+          high: 65500,
+          low: 64500,
+          close: 65200,
+          volume: 100,
+          closeTime: 2,
+        },
       ],
       newsItems: [],
       recentTrades: [],
@@ -120,12 +156,17 @@ describe('buildAnalysisPrompt', () => {
 });
 
 describe('LLMAnalyzer', () => {
-  const validResponse = JSON.stringify({
+  const validResponseText = JSON.stringify({
     decision: 'BUY',
     confidence: 0.8,
     reasoning: 'Bullish momentum',
     suggestedWaitMinutes: 10,
   });
+
+  const validResponse = {
+    text: validResponseText,
+    usage: { inputTokens: 100, outputTokens: 50 },
+  };
 
   const mockInput: LLMAnalysisInput = {
     asset: Asset.BTC,
@@ -133,9 +174,26 @@ describe('LLMAnalyzer', () => {
     indicatorSnapshot: {
       rsi: { value: 55, signal: 'NEUTRAL' as const },
       macd: { macd: 10, signal: 8, histogram: 2, crossover: 'NONE' as const },
-      bollingerBands: { upper: 70000, middle: 65000, lower: 60000, bandwidth: 10000, position: 'INSIDE' as const },
-      emaCross: { ema9: 65000, ema21: 65000, ema50: 64000, ema200: 60000, trend: 'NEUTRAL' as const },
-      volume: { current: 100, average: 80, ratio: 1.25, signal: 'NORMAL' as const },
+      bollingerBands: {
+        upper: 70000,
+        middle: 65000,
+        lower: 60000,
+        bandwidth: 10000,
+        position: 'INSIDE' as const,
+      },
+      emaCross: {
+        ema9: 65000,
+        ema21: 65000,
+        ema50: 64000,
+        ema200: 60000,
+        trend: 'NEUTRAL' as const,
+      },
+      volume: {
+        current: 100,
+        average: 80,
+        ratio: 1.25,
+        signal: 'NORMAL' as const,
+      },
       supportResistance: { support: [], resistance: [] },
       timestamp: Date.now(),
     },
@@ -143,10 +201,19 @@ describe('LLMAnalyzer', () => {
     newsItems: [],
     recentTrades: [],
     userConfig: {
-      id: 'cfg', userId: 'u', asset: Asset.BTC, pair: QuoteCurrency.USDT,
-      buyThreshold: 70, sellThreshold: 70, stopLossPct: 0.03, takeProfitPct: 0.05,
-      maxTradePct: 0.05, maxConcurrentPositions: 2, minIntervalMinutes: 5,
-      mode: TradingMode.SANDBOX, isRunning: true,
+      id: 'cfg',
+      userId: 'u',
+      asset: Asset.BTC,
+      pair: QuoteCurrency.USDT,
+      buyThreshold: 70,
+      sellThreshold: 70,
+      stopLossPct: 0.03,
+      takeProfitPct: 0.05,
+      maxTradePct: 0.05,
+      maxConcurrentPositions: 2,
+      minIntervalMinutes: 5,
+      mode: TradingMode.SANDBOX,
+      isRunning: true,
     },
   };
 
@@ -159,8 +226,10 @@ describe('LLMAnalyzer', () => {
 
     const result = await analyzer.analyze(mockInput);
 
-    expect(result.decision).toBe('BUY');
-    expect(result.confidence).toBe(0.8);
+    expect(result.decision.decision).toBe('BUY');
+    expect(result.decision.confidence).toBe(0.8);
+    expect(result.usage.inputTokens).toBe(100);
+    expect(result.usage.outputTokens).toBe(50);
     expect(provider.complete).toHaveBeenCalledOnce();
   });
 
@@ -169,21 +238,30 @@ describe('LLMAnalyzer', () => {
       name: 'mock',
       complete: vi
         .fn()
-        .mockResolvedValueOnce('not json')
+        .mockResolvedValueOnce({
+          text: 'not json',
+          usage: { inputTokens: 10, outputTokens: 5 },
+        })
         .mockResolvedValueOnce(validResponse),
     };
     const analyzer = new LLMAnalyzer(provider, { maxRetries: 2 });
 
     const result = await analyzer.analyze(mockInput);
 
-    expect(result.decision).toBe('BUY');
+    expect(result.decision.decision).toBe('BUY');
+    expect(result.usage.inputTokens).toBe(110);
     expect(provider.complete).toHaveBeenCalledTimes(2);
   });
 
   it('should throw after max retries exceeded', async () => {
     const provider: LLMProviderClient = {
       name: 'mock',
-      complete: vi.fn().mockResolvedValue('bad json every time'),
+      complete: vi
+        .fn()
+        .mockResolvedValue({
+          text: 'bad json every time',
+          usage: { inputTokens: 10, outputTokens: 5 },
+        }),
     };
     const analyzer = new LLMAnalyzer(provider, { maxRetries: 1 });
 
@@ -199,7 +277,9 @@ describe('LLMAnalyzer', () => {
     };
     const analyzer = new LLMAnalyzer(provider, { maxRetries: 3 });
 
-    await expect(analyzer.analyze(mockInput)).rejects.toThrow('API rate limited');
+    await expect(analyzer.analyze(mockInput)).rejects.toThrow(
+      'API rate limited',
+    );
     expect(provider.complete).toHaveBeenCalledOnce();
   });
 });
@@ -218,6 +298,16 @@ describe('createLLMProvider', () => {
   it('should create Groq provider', () => {
     const provider = createLLMProvider(LLMProvider.GROQ, 'key');
     expect(provider.name).toBe('groq');
+  });
+
+  it('should create Gemini provider', () => {
+    const provider = createLLMProvider(LLMProvider.GEMINI, 'key');
+    expect(provider.name).toBe('gemini');
+  });
+
+  it('should create Mistral provider', () => {
+    const provider = createLLMProvider(LLMProvider.MISTRAL, 'key');
+    expect(provider.name).toBe('mistral');
   });
 
   it('should throw for unknown provider', () => {

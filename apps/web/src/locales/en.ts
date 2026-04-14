@@ -479,6 +479,16 @@ const en = {
     testSuccess: 'Connected ✔',
     testFailed: 'Connection failed',
     testing: 'Testing…',
+    aiUsage: 'AI Usage & Costs',
+    noUsageData:
+      'No usage data yet. Start using AI features to see stats here.',
+    totalCost: 'Total Cost',
+    requests: 'Requests',
+    inputTokens: 'Input Tokens',
+    outputTokens: 'Output Tokens',
+    tokensLabel: 'Tokens',
+    cost: 'Cost',
+    dailyCosts: 'Daily Costs',
   },
   notifications: {
     title: 'Notifications',

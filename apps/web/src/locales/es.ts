@@ -484,6 +484,16 @@ const es = {
     testSuccess: 'Conectado ✔',
     testFailed: 'Fallo de conexión',
     testing: 'Probando…',
+    aiUsage: 'Uso de IA y Costos',
+    noUsageData:
+      'Sin datos de uso aún. Usa las funciones de IA para ver estadísticas aquí.',
+    totalCost: 'Costo Total',
+    requests: 'Solicitudes',
+    inputTokens: 'Tokens de Entrada',
+    outputTokens: 'Tokens de Salida',
+    tokensLabel: 'Tokens',
+    cost: 'Costo',
+    dailyCosts: 'Costos Diarios',
   },
   notifications: {
     title: 'Notificaciones',

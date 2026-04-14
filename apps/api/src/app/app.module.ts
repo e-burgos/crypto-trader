@@ -12,6 +12,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { TradingModule } from '../trading/trading.module';
 import { MarketModule } from '../market/market.module';
 import { ChatModule } from '../chat/chat.module';
+import { LlmModule } from '../llm/llm.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ChatModule } from '../chat/chat.module';
     TradingModule,
     MarketModule,
     ChatModule,
+    LlmModule,
   ],
   controllers: [AppController],
   providers: [AppService],

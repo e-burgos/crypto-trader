@@ -1,21 +1,21 @@
 import axios from 'axios';
 import { LLMProviderClient, LLMResponse } from './llm-types';
 
-export interface ClaudeProviderConfig {
+export interface MistralProviderConfig {
   apiKey: string;
   model?: string;
   maxTokens?: number;
 }
 
-export class ClaudeProvider implements LLMProviderClient {
-  readonly name = 'claude';
+export class MistralProvider implements LLMProviderClient {
+  readonly name = 'mistral';
   private readonly apiKey: string;
   private readonly model: string;
   private readonly maxTokens: number;
 
-  constructor(config: ClaudeProviderConfig) {
+  constructor(config: MistralProviderConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model ?? 'claude-sonnet-4-20250514';
+    this.model = config.model ?? 'mistral-small-latest';
     this.maxTokens = config.maxTokens ?? 1024;
   }
 
@@ -24,28 +24,29 @@ export class ClaudeProvider implements LLMProviderClient {
     userPrompt: string,
   ): Promise<LLMResponse> {
     const { data } = await axios.post(
-      'https://api.anthropic.com/v1/messages',
+      'https://api.mistral.ai/v1/chat/completions',
       {
         model: this.model,
         max_tokens: this.maxTokens,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
       },
       {
         headers: {
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
         },
         timeout: 30000,
       },
     );
 
     return {
-      text: data.content?.[0]?.text ?? '',
+      text: data.choices?.[0]?.message?.content ?? '',
       usage: {
-        inputTokens: data.usage?.input_tokens ?? 0,
-        outputTokens: data.usage?.output_tokens ?? 0,
+        inputTokens: data.usage?.prompt_tokens ?? 0,
+        outputTokens: data.usage?.completion_tokens ?? 0,
       },
     };
   }

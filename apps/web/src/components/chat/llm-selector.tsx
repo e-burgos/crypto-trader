@@ -19,6 +19,8 @@ const PROVIDER_COLORS: Record<string, string> = {
   CLAUDE: 'text-orange-400',
   OPENAI: 'text-emerald-400',
   GROQ: 'text-violet-400',
+  GEMINI: 'text-blue-400',
+  MISTRAL: 'text-orange-500',
 };
 
 function providerColor(provider: string) {

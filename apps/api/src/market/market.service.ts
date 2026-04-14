@@ -322,8 +322,8 @@ ${numbered}`;
 
     let parsed: { index: number; sentiment: string; reasoning: string }[] = [];
     try {
-      const raw = await llm.complete(system, user);
-      const cleaned = raw.replace(/```json|```/g, '').trim();
+      const response = await llm.complete(system, user);
+      const cleaned = response.text.replace(/```json|```/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch (e) {
       throw new Error(

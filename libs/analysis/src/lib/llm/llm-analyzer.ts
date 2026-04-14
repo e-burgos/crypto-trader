@@ -2,6 +2,8 @@ import { LLMAnalysisInput, LLMDecision } from '@crypto-trader/shared';
 import {
   LLMProviderClient,
   LLMAnalyzerConfig,
+  LLMAnalysisResult,
+  LLMUsage,
   buildAnalysisPrompt,
   parseLLMResponse,
 } from './llm-types';
@@ -23,21 +25,30 @@ export class LLMAnalyzer {
   }
 
   /**
-   * Analyze market data and return a trading decision.
+   * Analyze market data and return a trading decision with token usage.
    * Retries on parse failures up to maxRetries times.
    */
-  async analyze(input: LLMAnalysisInput): Promise<LLMDecision> {
+  async analyze(input: LLMAnalysisInput): Promise<LLMAnalysisResult> {
     const { system, user } = buildAnalysisPrompt(input);
     let lastError: Error | null = null;
+    let lastUsage: LLMUsage = { inputTokens: 0, outputTokens: 0 };
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
-        const raw = await this.provider.complete(system, user);
-        return parseLLMResponse(raw);
+        const response = await this.provider.complete(system, user);
+        lastUsage = {
+          inputTokens: lastUsage.inputTokens + response.usage.inputTokens,
+          outputTokens: lastUsage.outputTokens + response.usage.outputTokens,
+        };
+        const decision = parseLLMResponse(response.text);
+        return { decision, usage: lastUsage };
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         // Only retry on parse errors, not API errors
-        if (lastError.message.includes('Invalid') || lastError.message.includes('JSON')) {
+        if (
+          lastError.message.includes('Invalid') ||
+          lastError.message.includes('JSON')
+        ) {
           continue;
         }
         throw lastError;

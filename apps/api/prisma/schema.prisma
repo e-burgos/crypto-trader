@@ -88,6 +88,14 @@ enum LLMProvider {
   CLAUDE
   OPENAI
   GROQ
+  GEMINI
+  MISTRAL
+}
+
+enum LLMSource {
+  TRADING
+  CHAT
+  ANALYSIS
 }
 
 enum ChatRole {
@@ -127,6 +135,7 @@ model User {
   sandboxWallets    SandboxWallet[]
   newsConfig        NewsConfig?
   newsAnalyses      NewsAnalysis[]
+  llmUsageLogs      LlmUsageLog[]
 
   @@map("users")
 }
@@ -458,6 +467,24 @@ model AgentDocument {
 
   @@index([agentId, status])
   @@map("agent_documents")
+}
+
+model LlmUsageLog {
+  id           String      @id @default(cuid())
+  userId       String
+  provider     LLMProvider
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Float
+  source       LLMSource
+  createdAt    DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, provider])
+  @@map("llm_usage_logs")
 }
 
 model AgentDocumentChunk {

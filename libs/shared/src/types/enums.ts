@@ -61,6 +61,8 @@ export enum LLMProvider {
   CLAUDE = 'CLAUDE',
   OPENAI = 'OPENAI',
   GROQ = 'GROQ',
+  GEMINI = 'GEMINI',
+  MISTRAL = 'MISTRAL',
 }
 
 // ── News ─────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LLMProviderClient } from './llm-types';
+import { LLMProviderClient, LLMResponse } from './llm-types';
 
 export interface OpenAIProviderConfig {
   apiKey: string;
@@ -19,7 +19,10 @@ export class OpenAIProvider implements LLMProviderClient {
     this.maxTokens = config.maxTokens ?? 1024;
   }
 
-  async complete(systemPrompt: string, userPrompt: string): Promise<string> {
+  async complete(
+    systemPrompt: string,
+    userPrompt: string,
+  ): Promise<LLMResponse> {
     const { data } = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -39,6 +42,12 @@ export class OpenAIProvider implements LLMProviderClient {
       },
     );
 
-    return data.choices?.[0]?.message?.content ?? '';
+    return {
+      text: data.choices?.[0]?.message?.content ?? '',
+      usage: {
+        inputTokens: data.usage?.prompt_tokens ?? 0,
+        outputTokens: data.usage?.completion_tokens ?? 0,
+      },
+    };
   }
 }

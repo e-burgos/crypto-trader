@@ -214,7 +214,8 @@ export class SubAgentService {
     const userPrompt = buildTaskUserPrompt(task, context);
 
     try {
-      return await provider.complete(systemPrompt, userPrompt);
+      const response = await provider.complete(systemPrompt, userPrompt);
+      return response.text;
     } catch (err) {
       this.logger.warn(
         `SubAgent[${agentId}] task=${task} failed: ${err instanceof Error ? err.message : String(err)}`,

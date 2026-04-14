@@ -1,13 +1,37 @@
 import { LLMAnalysisInput, LLMDecision } from '@crypto-trader/shared';
 
 /**
+ * Token usage metadata from an LLM call.
+ */
+export interface LLMUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
+ * Response from an LLM provider including text and token usage.
+ */
+export interface LLMResponse {
+  text: string;
+  usage: LLMUsage;
+}
+
+/**
  * Interface for LLM provider implementations.
  */
 export interface LLMProviderClient {
   /** Unique provider name */
   readonly name: string;
-  /** Send prompt and get raw text response */
-  complete(systemPrompt: string, userPrompt: string): Promise<string>;
+  /** Send prompt and get response with text + usage */
+  complete(systemPrompt: string, userPrompt: string): Promise<LLMResponse>;
+}
+
+/**
+ * Result of LLM analysis including the decision and token usage.
+ */
+export interface LLMAnalysisResult {
+  decision: LLMDecision;
+  usage: LLMUsage;
 }
 
 /**

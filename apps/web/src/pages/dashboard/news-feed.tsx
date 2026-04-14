@@ -61,8 +61,9 @@ const LLM_PROVIDERS: LLMProviderOption[] = [
     label: 'Claude (Anthropic)',
     models: [
       { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-      { value: 'claude-haiku-3-5-20241022', label: 'Claude Haiku 3.5' },
-      { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+      { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
+      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+      { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
     ],
   },
   {
@@ -71,7 +72,6 @@ const LLM_PROVIDERS: LLMProviderOption[] = [
     models: [
       { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
       { value: 'gpt-4o', label: 'GPT-4o' },
-      { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
     ],
   },
   {
@@ -80,7 +80,24 @@ const LLM_PROVIDERS: LLMProviderOption[] = [
     models: [
       { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
       { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (rápido)' },
-      { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B' },
+    ],
+  },
+  {
+    value: 'GEMINI',
+    label: 'Google Gemini',
+    models: [
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+      { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
+    ],
+  },
+  {
+    value: 'MISTRAL',
+    label: 'Mistral AI',
+    models: [
+      { value: 'mistral-small-latest', label: 'Mistral Small' },
+      { value: 'mistral-medium-latest', label: 'Mistral Medium' },
+      { value: 'mistral-large-latest', label: 'Mistral Large' },
     ],
   },
 ];

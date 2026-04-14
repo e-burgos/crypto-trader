@@ -20,6 +20,8 @@ const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
   [LLMProvider.OPENAI]: 'OpenAI',
   [LLMProvider.GROQ]: 'Groq',
+  [LLMProvider.GEMINI]: 'Google Gemini',
+  [LLMProvider.MISTRAL]: 'Mistral AI',
 };
 
 const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
@@ -29,11 +31,17 @@ const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
     'claude-3-5-sonnet-20241022',
     'claude-3-haiku-20240307',
   ],
-  [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
-  [LLMProvider.GROQ]: [
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
-    'mixtral-8x7b-32768',
+  [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini'],
+  [LLMProvider.GROQ]: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  [LLMProvider.GEMINI]: [
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-2.5-flash-lite',
+  ],
+  [LLMProvider.MISTRAL]: [
+    'mistral-small-latest',
+    'mistral-medium-latest',
+    'mistral-large-latest',
   ],
 };
 
@@ -747,6 +755,22 @@ Always respond in the same language the user writes to you. Be direct and confid
         );
       case LLMProvider.GROQ:
         return this.streamGroq(apiKey, model, systemPrompt, messages, onDelta);
+      case LLMProvider.GEMINI:
+        return this.streamGemini(
+          apiKey,
+          model,
+          systemPrompt,
+          messages,
+          onDelta,
+        );
+      case LLMProvider.MISTRAL:
+        return this.streamMistral(
+          apiKey,
+          model,
+          systemPrompt,
+          messages,
+          onDelta,
+        );
       default:
         throw new BadRequestException(`Unsupported provider: ${provider}`);
     }
@@ -876,6 +900,115 @@ Always respond in the same language the user writes to you. Be direct and confid
     // Groq uses OpenAI-compatible streaming format
     const resp = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model,
+        stream: true,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
+        max_tokens: 2048,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'content-type': 'application/json',
+        },
+        responseType: 'stream',
+        timeout: 120_000,
+      },
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      let buffer = '';
+      resp.data.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(raw) as {
+              choices?: { delta?: { content?: string } }[];
+            };
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text) onDelta(text);
+          } catch {
+            // ignore
+          }
+        }
+      });
+      resp.data.on('end', resolve);
+      resp.data.on('error', reject);
+    });
+  }
+
+  private async streamGemini(
+    apiKey: string,
+    model: string,
+    systemPrompt: string,
+    messages: ConversationMessage[],
+    onDelta: (delta: string) => void,
+  ): Promise<void> {
+    // Gemini uses its own streaming format via streamGenerateContent
+    const contents = messages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const resp = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`,
+      {
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: { maxOutputTokens: 2048 },
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        responseType: 'stream',
+        timeout: 120_000,
+      },
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      let buffer = '';
+      resp.data.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw) as {
+              candidates?: { content?: { parts?: { text?: string }[] } }[];
+            };
+            const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) onDelta(text);
+          } catch {
+            // ignore
+          }
+        }
+      });
+      resp.data.on('end', resolve);
+      resp.data.on('error', reject);
+    });
+  }
+
+  private async streamMistral(
+    apiKey: string,
+    model: string,
+    systemPrompt: string,
+    messages: ConversationMessage[],
+    onDelta: (delta: string) => void,
+  ): Promise<void> {
+    // Mistral uses OpenAI-compatible streaming format
+    const resp = await axios.post(
+      'https://api.mistral.ai/v1/chat/completions',
       {
         model,
         stream: true,

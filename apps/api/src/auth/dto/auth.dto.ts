@@ -4,6 +4,7 @@ import {
   MinLength,
   IsOptional,
   IsBoolean,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -109,4 +110,14 @@ export class NewsApiKeyDto {
   @ApiProperty({ description: 'API Key del proveedor de noticias' })
   @IsString()
   apiKey!: string;
+}
+
+export class UpdateOperationModeDto {
+  @ApiProperty({
+    enum: ['SANDBOX', 'TESTNET', 'LIVE'],
+    example: 'SANDBOX',
+    description: 'Modo de operación global de la plataforma',
+  })
+  @IsEnum(['SANDBOX', 'TESTNET', 'LIVE'])
+  mode!: 'SANDBOX' | 'TESTNET' | 'LIVE';
 }

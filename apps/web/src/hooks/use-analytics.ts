@@ -17,7 +17,7 @@ export interface Trade {
   quantity: number;
   fee: number;
   executedAt: string;
-  mode: 'LIVE' | 'PAPER' | 'SANDBOX';
+  mode: 'LIVE' | 'PAPER' | 'SANDBOX' | 'TESTNET';
   position?: {
     asset: string;
     pair: string;

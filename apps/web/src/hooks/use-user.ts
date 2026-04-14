@@ -1,13 +1,17 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
+
+export type TradingMode = 'SANDBOX' | 'TESTNET' | 'LIVE';
 
 export interface UserProfile {
   id: string;
   email: string;
   role: string;
   isActive: boolean;
+  platformOperationMode: TradingMode;
   createdAt: string;
 }
 
@@ -279,4 +283,58 @@ export function useNewsSourcesStatus() {
     staleTime: 60_000,
     enabled: isAuthenticated,
   });
+}
+
+// ── Platform operation mode ────────────────────────────────────────────────
+
+export function useUpdatePlatformMode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mode: TradingMode) =>
+      api.patch<{ platformOperationMode: TradingMode }>(
+        '/users/me/operation-mode',
+        { mode },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'profile'] });
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al cambiar el modo de operación'),
+  });
+}
+
+export function usePlatformMode() {
+  const { data: profile, isLoading } = useUserProfile();
+  const { data: liveKeyStatus } = useBinanceKeyStatus();
+  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
+  const updateMode = useUpdatePlatformMode();
+
+  const mode: TradingMode = profile?.platformOperationMode ?? 'SANDBOX';
+
+  const availableModes: TradingMode[] = ['SANDBOX'];
+  if (testnetKeyStatus?.hasKeys) availableModes.push('TESTNET');
+  if (liveKeyStatus?.hasKeys) availableModes.push('LIVE');
+
+  // Fallback automático a SANDBOX si el modo activo ya no tiene keys configuradas
+  useEffect(() => {
+    if (!isLoading && mode !== 'SANDBOX' && !availableModes.includes(mode)) {
+      updateMode.mutate('SANDBOX', {
+        onSuccess: () => {
+          toast.warning(
+            `Modo ${mode} no disponible. Cambiado a Sandbox automáticamente.`,
+          );
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, isLoading, availableModes.join(',')]);
+
+  return {
+    mode,
+    isSandbox: mode === 'SANDBOX',
+    isTestnet: mode === 'TESTNET',
+    isLive: mode === 'LIVE',
+    availableModes,
+    isLoading,
+  };
 }

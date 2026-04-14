@@ -6,6 +6,7 @@ import { useSidebarStore } from '../store/sidebar.store';
 import { AvatarDropdown } from './avatar-dropdown';
 import { Link } from 'react-router-dom';
 import { ConnectionStatusDropdown } from './connection-status-dropdown';
+import { ModeSelector } from './mode-selector';
 
 export function DashboardHeader() {
   const unreadCount = useUnreadCount();
@@ -34,6 +35,9 @@ export function DashboardHeader() {
       <div className="flex items-center gap-1.5">
         {/* Connection status */}
         <ConnectionStatusDropdown />
+
+        {/* Operation mode selector */}
+        <ModeSelector />
 
         {/* Notifications bell */}
         <div className="relative border border-border rounded-md">

@@ -26,6 +26,7 @@ import {
   LLMKeyDto,
   NewsApiKeyDto,
   UpdateUserStatusDto,
+  UpdateOperationModeDto,
 } from '../auth/dto/auth.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -58,6 +59,28 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'Email ya en uso' })
   updateMe(@CurrentUser() user: RequestUser, @Body() dto: UpdateUserDto) {
     return this.usersService.updateMe(user.userId, dto);
+  }
+
+  // ── /users/me/operation-mode ──────────────────────────────────────────────
+
+  @Patch('users/me/operation-mode')
+  @ApiOperation({
+    summary:
+      'Actualizar el modo de operación global de la plataforma (SANDBOX / TESTNET / LIVE)',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: { example: { platformOperationMode: 'SANDBOX' } },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Claves API no configuradas para el modo solicitado',
+  })
+  updateOperationMode(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: UpdateOperationModeDto,
+  ) {
+    return this.usersService.updateOperationMode(user.userId, dto);
   }
 
   // ── /users/me/binance-keys ────────────────────────────────────────────────

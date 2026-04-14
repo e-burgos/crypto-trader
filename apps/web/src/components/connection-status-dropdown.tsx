@@ -219,13 +219,24 @@ export function ConnectionStatusDropdown() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)}>
             <div
               className="absolute z-50 w-72 rounded-xl border border-border bg-card shadow-xl"
-              style={{
-                top:
-                  (buttonRef.current?.getBoundingClientRect().bottom ?? 0) + 6,
-                right:
-                  window.innerWidth -
-                  (buttonRef.current?.getBoundingClientRect().right ?? 0),
-              }}
+              style={
+                window.innerWidth < 640
+                  ? {
+                      top:
+                        (buttonRef.current?.getBoundingClientRect().bottom ??
+                          0) + 6,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                    }
+                  : {
+                      top:
+                        (buttonRef.current?.getBoundingClientRect().bottom ??
+                          0) + 6,
+                      right:
+                        window.innerWidth -
+                        (buttonRef.current?.getBoundingClientRect().right ?? 0),
+                    }
+              }
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}

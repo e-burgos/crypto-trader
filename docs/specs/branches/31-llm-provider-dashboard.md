@@ -1,15 +1,16 @@
 # Spec 31 — LLM Provider Dashboard: Modelos Dinámicos + Consumo y Costos
 
 **Fecha:** 2026-04-13  
-**Versión:** 1.1  
+**Versión:** 1.2  
 **Estado:** Propuesto  
 **Branch:** `feature/llm-provider-dashboard`  
 **Dependencias:** Spec 23 (settings-page), Spec 17 (ai-chatbot)
 
-| Versión | Fecha      | Cambios                                                       |
-| ------- | ---------- | ------------------------------------------------------------- |
-| 1.0     | 2026-04-13 | Versión inicial (Claude / OpenAI / Groq)                      |
-| 1.1     | 2026-04-13 | Agrega Google Gemini y Mistral AI como proveedores soportados |
+| Versión | Fecha      | Cambios                                                                                                                                                                                    |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.0     | 2026-04-13 | Versión inicial (Claude / OpenAI / Groq)                                                                                                                                                   |
+| 1.1     | 2026-04-13 | Agrega Google Gemini y Mistral AI como proveedores soportados                                                                                                                              |
+| 1.2     | 2026-04-13 | Auditoría de código actual: corrige callers reales, documenta inconsistencias de modelos, añade SubAgentService como caller, corrige ChatService (streaming directo, no LLMProviderClient) |
 
 ---
 
@@ -56,15 +57,24 @@ Frontend (Settings > AI tab)
 ### 2.2 Flujo de tracking de uso
 
 ```
-Cualquier llamada LLM (trading / chat / news analysis)
+Llamadas LLM sincrónicas (trading / analysis / orchestrator sub-agents)
   │
   └─ LLMProviderClient.complete(system, user)
        └─ Retorna { text: string, usage: LLMUsage }
-            └─ LLMUsageService.log(userId, provider, model, usage, source)
-                 └─ INSERT INTO llm_usage_logs
-                      └─ costUsd = inputTokens * MODEL_PRICING[model].input
-                                  + outputTokens * MODEL_PRICING[model].output
+            └─ El caller invoca LLMUsageService.log(userId, provider, model, usage, source)
+
+Llamadas LLM streaming (chat)
+  │
+  └─ ChatService.streamClaude/streamOpenAI/streamGroq (axios directo, SSE)
+       └─ Extraer usage del evento final del stream (message_stop / [DONE])
+            └─ LLMUsageService.log(userId, provider, model, usage, 'CHAT')
 ```
+
+> **Nota importante**: `ChatService` NO usa `LLMProviderClient.complete()`. Tiene métodos privados
+> (`streamClaude`, `streamOpenAI`, `streamGroq`) que hacen llamadas axios directas con `stream: true`.
+> El tracking para chat requiere parsear el evento final del stream para extraer usage metadata.
+> Para streaming, Claude envía `message_delta` con `usage` al final, OpenAI/Groq incluyen `usage`
+> en el último chunk cuando se usa `stream_options: { include_usage: true }`.
 
 ### 2.3 Componentes nuevos
 
@@ -83,6 +93,13 @@ Cualquier llamada LLM (trading / chat / news analysis)
 ## 3. Modelos de datos
 
 ### 3.1 Nueva tabla: `LlmUsageLog` + actualización del enum `LLMProvider`
+
+> **⚠️ El enum `LLMProvider` existe en DOS ubicaciones** que deben actualizarse simultáneamente:
+>
+> 1. `apps/api/prisma/schema.prisma` — fuente de verdad para la DB (actualmente: `CLAUDE | OPENAI | GROQ`)
+> 2. `libs/shared/src/types/enums.ts` — usado por la lib `@crypto-trader/shared` (actualmente: `CLAUDE | OPENAI | GROQ`)
+>
+> Además, el enum generado por Prisma en `apps/api/generated/prisma/enums` se regenera automáticamente con `prisma generate`.
 
 ```prisma
 // Extender el enum existente con los nuevos proveedores
@@ -342,6 +359,15 @@ export const MODEL_PRICING: Record<
 > Los precios de Gemini reflejan el tier Paid (prompts ≤ 200k tokens) según pricing page de Google AI Studio (2026-04-09).  
 > Los precios de Mistral reflejan el tier de API pública según la plateforme de Mistral AI.
 
+> **⚠️ Nota v1.2 — Modelos default actuales en providers**:
+>
+> - `ClaudeProvider` default: `claude-sonnet-4-20250514` (no `claude-sonnet-4-6`)
+> - `OpenAIProvider` default: `gpt-4o-mini`
+> - `GroqProvider` default: `llama-3.3-70b-versatile`
+>
+> El `MODEL_PRICING` incluye modelos actuales Y los propuestos como actualización.
+> Al implementar, actualizar también los defaults de cada provider constructor si se quiere migrar a modelos más nuevos.
+
 ---
 
 ## 4. API Endpoints
@@ -587,15 +613,40 @@ export class MistralProvider implements LLMProviderClient {
 
 ## 6. Integración de tracking en callers existentes
 
-Los servicios que llaman a `complete()` deben desestructurar la respuesta y pasar el usage al `LLMUsageService`. El `LLMUsageService` se inyecta via DI donde sea necesario.
+Los servicios que llaman a LLMs deben registrar el usage. Hay dos patrones distintos:
 
-### Callers a actualizar
+### 6.1 Callers que usan `LLMProviderClient.complete()` (sincrónico)
 
-| Servicio                                 | Source label           | Archivo                                     |
-| ---------------------------------------- | ---------------------- | ------------------------------------------- |
-| `LLMAnalyzer.analyze()`                  | `ANALYSIS` / `TRADING` | `libs/analysis/src/lib/llm/llm-analyzer.ts` |
-| `ChatService` (mensajes de chat)         | `CHAT`                 | `apps/api/src/chat/chat.service.ts`         |
-| `NewsFeedService` (análisis de noticias) | `NEWS`                 | `apps/api/src/news/`                        |
+Estos desestructuran `{ text, usage }` de la respuesta y pasan el usage al `LLMUsageService`.
+
+| Servicio                 | Source label           | Archivo                                             | Notas                                                                                      |
+| ------------------------ | ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `LLMAnalyzer.analyze()`  | `ANALYSIS` / `TRADING` | `libs/analysis/src/lib/llm/llm-analyzer.ts`         | Lib pura (sin DI). Retornar `LLMAnalysisResult { decision, usage }` para que el caller log |
+| `SubAgentService.call()` | `CHAT` / `TRADING`     | `apps/api/src/orchestrator/sub-agent.service.ts`    | Usa `provider.complete()` directamente. Cambiar retorno de `string` a `LLMResponse`        |
+| `OrchestratorService`    | `CHAT` / `TRADING`     | `apps/api/src/orchestrator/orchestrator.service.ts` | Llama a `SubAgentService.call()` — recibirá el usage transitivamente                       |
+
+### 6.2 Callers que usan streaming directo (axios SSE)
+
+Estos NO usan `LLMProviderClient` y requieren cambios en los métodos de streaming.
+
+| Servicio                                    | Source label | Archivo                             | Notas                                                                                                              |
+| ------------------------------------------- | ------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `ChatService.streamClaude()`                | `CHAT`       | `apps/api/src/chat/chat.service.ts` | Parsear evento `message_delta` con `usage` del stream de Anthropic                                                 |
+| `ChatService.streamOpenAI()`                | `CHAT`       | `apps/api/src/chat/chat.service.ts` | Agregar `stream_options: { include_usage: true }` al request; parsear `usage` del último chunk                     |
+| `ChatService.streamGroq()`                  | `CHAT`       | `apps/api/src/chat/chat.service.ts` | Mismo patrón que OpenAI (formato compatible)                                                                       |
+| Nuevos: `streamGemini()`, `streamMistral()` | `CHAT`       | `apps/api/src/chat/chat.service.ts` | Crear métodos de streaming para los nuevos providers. Mistral: formato OpenAI. Gemini: formato nativo (SSE propio) |
+
+> **⚠️ Corrección v1.2**: La spec v1.1 asumía que `ChatService` usaba `LLMProviderClient.complete()`. En realidad,
+> `ChatService` tiene métodos privados `streamClaude()`, `streamOpenAI()`, `streamGroq()` que hacen llamadas
+> axios directas con `stream: true` y `responseType: 'stream'` para SSE. El tracking de chat requiere:
+>
+> 1. Extraer usage tokens del evento final de cada stream provider
+> 2. Crear `streamGemini()` y `streamMistral()` como nuevos métodos de streaming
+> 3. Agregar los nuevos providers al switch de `ChatService` (actualmente solo 3 cases)
+
+> **Nota**: No existe `NewsFeedService` en la API. El análisis de noticias lo maneja `news-analysis.scheduler.ts`
+> a través del `OrchestratorService` → `SubAgentService`, por lo que se trackea como `ANALYSIS` transitivamente.
+> Se elimina la referencia a `NewsFeedService` y source `NEWS` de la tabla para esta versión.
 
 ---
 
@@ -678,15 +729,22 @@ Sección nueva debajo de la lista de proveedores en el tab "Modelos IA".
 ### Fase A — Backend core (providers + tracking)
 
 1. Migración Prisma: nuevo modelo `LlmUsageLog` + enum `LLMSource` + extender `LLMProvider` con `GEMINI` y `MISTRAL`
-2. Actualizar `LLMProviderClient` interface: `complete()` → `LLMResponse`
-3. Actualizar `ClaudeProvider`, `OpenAIProvider`, `GroqProvider` para retornar usage
-4. Crear `GeminiProvider` (nuevo, API nativa)
-5. Crear `MistralProvider` (nuevo, compatible OpenAI)
-6. Actualizar `llm-factory.ts` para incluir `GEMINI` y `MISTRAL`
-7. Actualizar `LLMAnalyzer` (desestructurar `{ text }`)
-8. Crear `LLMUsageService` con método `log()` y `getStats()`
-9. Crear `MODEL_PRICING` constante (con los 5 proveedores)
-10. Integrar `LLMUsageService.log()` en `LLMAnalyzer`, `ChatService`, `NewsFeedService` (si existe)
+2. Actualizar enum `LLMProvider` en `libs/shared/src/types/enums.ts` (espejo del enum Prisma)
+3. Actualizar `LLMProviderClient` interface: `complete()` → `LLMResponse`
+4. Actualizar `ClaudeProvider`, `OpenAIProvider`, `GroqProvider` para retornar usage
+5. Crear `GeminiProvider` (nuevo, API nativa)
+6. Crear `MistralProvider` (nuevo, compatible OpenAI)
+7. Actualizar `llm-factory.ts` para incluir `GEMINI` y `MISTRAL`
+8. Actualizar `LLMAnalyzer.analyze()` — retornar `{ decision, usage }` en vez de solo `LLMDecision`
+9. Actualizar `SubAgentService.call()` — desestructurar `{ text, usage }` del `provider.complete()` (actualmente retorna `string`)
+10. Crear `LLMUsageService` con método `log()` y `getStats()`
+11. Crear `MODEL_PRICING` constante (con los 5 proveedores)
+12. Integrar `LLMUsageService.log()` en `SubAgentService` y callers de `LLMAnalyzer`
+13. Agregar tracking en métodos de streaming de `ChatService`:
+    - Modificar `streamClaude()` para capturar `message_delta.usage` al final del stream
+    - Modificar `streamOpenAI()` y `streamGroq()` para enviar `stream_options: { include_usage: true }` y capturar usage del último chunk
+    - Crear `streamGemini()` y `streamMistral()` para streaming con los nuevos providers
+    - Agregar cases `GEMINI` y `MISTRAL` al switch de `ChatService`
 
 ### Fase B — Backend API endpoints
 
@@ -697,13 +755,26 @@ Sección nueva debajo de la lista de proveedores en el tab "Modelos IA".
 
 ### Fase C — Frontend dynamic models
 
+> **⚠️ Estado actual de inconsistencias de modelos (v1.2)**:
+> Los 4 archivos que listan modelos tienen listas **diferentes** entre sí:
+>
+> - `settings.tsx`: Claude usa `claude-opus-4-5`, `claude-3-5-sonnet-20241022`, `claude-3-haiku-20240307` (más viejos)
+> - `news-feed.tsx`: Claude usa `claude-sonnet-4-20250514`, `claude-opus-4-20250514` (más nuevos); OpenAI incluye `gpt-4.1-mini`
+> - `onboarding.tsx`: Claude usa `claude-3-5-sonnet-20241022`, `claude-3-haiku-20240307` (legacy)
+> - `chat.service.ts` (backend): incluye `gpt-4-turbo` (deprecated) y `mixtral-8x7b-32768` (deprecated)
+>
+> El `DynamicModelSelect` resuelve esto: la fuente de verdad pasan a ser las APIs de los providers.
+> Los fallback estáticos sólo se usan si la API falla, y deben unificarse.
+
 1. Hook `useLLMProviderModels(provider)` → React Query
 2. Hook `useLLMUsageStats(period)` → React Query
 3. Componente `DynamicModelSelect` para Settings
-4. Actualizar `LLM_PROVIDERS` en `settings.tsx` — agregar Gemini y Mistral con modelos de fallback
-5. Actualizar `PROVIDER_MODELS` y `PROVIDER_LABELS` en `chat.service.ts`
-6. Actualizar `news-feed.tsx` y `onboarding.tsx` con nuevos providers y modelos
-7. Agregar colores de provider en `llm-selector.tsx` para Gemini (azul) y Mistral (naranja)
+4. Actualizar `LLM_PROVIDERS` en `settings.tsx` — agregar Gemini y Mistral con modelos de fallback **actualizados**
+5. Actualizar `PROVIDER_MODELS` y `PROVIDER_LABELS` en `chat.service.ts` (backend) — agregar `GEMINI` y `MISTRAL`, remover deprecated
+6. Actualizar `LLM_PROVIDERS` en `news-feed.tsx` — agregar Gemini y Mistral (nota: este archivo usa formato `{ value, label }` por modelo, no strings planos)
+7. Actualizar `LLM_PROVIDERS` en `onboarding.tsx` — agregar Gemini y Mistral con `helpLink` y `helpLinkText`
+8. Agregar colores de provider en `llm-selector.tsx` `PROVIDER_COLORS`: `GEMINI: 'text-blue-400'` y `MISTRAL: 'text-orange-400'`
+9. Actualizar `LLMKeyDto` en `apps/api/src/auth/dto/auth.dto.ts` — agregar `GEMINI` y `MISTRAL` al array del decorator `@ApiProperty`
 
 ### Fase D — Frontend usage dashboard
 
@@ -779,3 +850,48 @@ Basado en relevancia para desarrolladores y el sector financiero/fintech:
 | **xAI (Grok)**              | Prometedor pero uso limitado en enterprise fintech. API aún maturing.                                                                            |
 | **Amazon Bedrock**          | Proxy/gateway para otros modelos (Claude, Llama). Complejidad de autenticación AWS distinta. Evaluar como provider independiente en spec futura. |
 | **Together AI / Fireworks** | Plataformas de inference para open-weight models. Válidos como alternativa a Groq pero redundantes dado que ya tenemos Groq.                     |
+
+---
+
+## 13. Estado actual del código (auditoría v1.2)
+
+Referencia rápida del estado actual de los archivos que esta spec modifica, para evitar suposiciones incorrectas durante la implementación.
+
+### 13.1 Archivos LLM en `libs/analysis/`
+
+| Archivo              | Estado actual                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `llm-types.ts`       | `complete()` retorna `Promise<string>`. No tiene `LLMUsage` ni `LLMResponse`.                                 |
+| `claude.provider.ts` | Default model: `claude-sonnet-4-20250514`. Retorna `string`.                                                  |
+| `openai.provider.ts` | Default model: `gpt-4o-mini`. Retorna `string`.                                                               |
+| `groq.provider.ts`   | Default model: `llama-3.3-70b-versatile`. Retorna `string`.                                                   |
+| `llm-factory.ts`     | Switch con 3 cases: `CLAUDE`, `OPENAI`, `GROQ`. Importa de `@crypto-trader/shared`.                           |
+| `llm-analyzer.ts`    | `analyze()` retorna `Promise<LLMDecision>`. Llama `provider.complete()` y parsea con `parseLLMResponse(raw)`. |
+| `index.ts`           | Exporta los 3 providers, `LLMAnalyzer`, `createLLMProvider`.                                                  |
+
+### 13.2 Archivos backend API
+
+| Archivo                | Estado actual                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `chat.service.ts`      | `PROVIDER_LABELS` y `PROVIDER_MODELS` con 3 providers. Streaming con `streamClaude()`, `streamOpenAI()`, `streamGroq()` (métodos privados, axios directo con `responseType: 'stream'`). NO usa `LLMProviderClient`. |
+| `sub-agent.service.ts` | `call()` retorna `Promise<string>`. Usa `provider.complete(systemPrompt, userPrompt)` directamente.                                                                                                                 |
+| `auth.dto.ts`          | `LLMKeyDto` con `@ApiProperty({ enum: ['CLAUDE', 'OPENAI', 'GROQ'] })`.                                                                                                                                             |
+| `schema.prisma`        | `enum LLMProvider { CLAUDE OPENAI GROQ }`. No existe `LlmUsageLog`.                                                                                                                                                 |
+
+### 13.3 Archivos frontend con listas de modelos (inconsistentes entre sí)
+
+| Archivo            | Formato                              | Claude models                                                       | OpenAI models                           | Groq models                                           |
+| ------------------ | ------------------------------------ | ------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------------------- |
+| `settings.tsx`     | `string[]`                           | `claude-opus-4-5`, `claude-3-5-sonnet-*`, `claude-3-haiku-*`        | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`  | `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`     |
+| `news-feed.tsx`    | `{ value, label }[]`                 | `claude-sonnet-4-20250514`, `claude-haiku-3-5-*`, `claude-opus-4-*` | `gpt-4o-mini`, `gpt-4o`, `gpt-4.1-mini` | `llama-3.3-70b-*`, `llama-3.1-8b-*`, `mixtral-8x7b-*` |
+| `onboarding.tsx`   | `string[]` + `helpLink/helpLinkText` | `claude-3-5-sonnet-*`, `claude-3-haiku-*`                           | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`  | `llama-3.3-70b-*`, `llama-3.1-8b-*`                   |
+| `llm-selector.tsx` | `PROVIDER_COLORS` map                | N/A (solo colores)                                                  | N/A                                     | N/A — solo CLAUDE/OPENAI/GROQ                         |
+
+### 13.4 Directorio `apps/api/src/llm/` — NO EXISTE
+
+Debe crearse como nuevo módulo NestJS con:
+
+- `llm.module.ts`
+- `llm-usage.service.ts`
+- `llm-models.service.ts`
+- `model-pricing.ts`

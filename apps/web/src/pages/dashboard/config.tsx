@@ -786,71 +786,39 @@ function NewAgentStepperModal({
                 </div>
               </div>
 
-              {/* Mode */}
+              {/* Mode (auto-configured from platform mode — read-only) */}
               <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
                 <label className="mb-1 block text-sm font-semibold">
                   {t('trading.mode')}
                 </label>
                 <p className="mb-3 text-xs text-muted-foreground">
-                  {t('config.stepper.modeHint')}
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['SANDBOX', 'TESTNET', 'LIVE'] as TradingMode[]).map(
-                    (m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => update({ mode: m })}
-                        className={cn(
-                          'rounded-xl border px-2 py-3 text-center text-xs font-bold transition-all',
-                          form.mode === m
-                            ? m === 'LIVE'
-                              ? 'border-red-500 bg-red-500/10 text-red-400'
-                              : m === 'TESTNET'
-                                ? 'border-sky-500 bg-sky-500/10 text-sky-400'
-                                : 'border-primary bg-primary/10 text-primary'
-                            : 'border-border text-muted-foreground hover:border-primary/30',
-                        )}
-                      >
-                        {m === 'SANDBOX' ? (
-                          <div>
-                            <div>🧪</div>
-                            <div className="mt-0.5">{t('trading.sandbox')}</div>
-                            <div className="mt-0.5 text-[9px] font-normal opacity-70">
-                              {t('config.stepper.modeSandboxSub')}
-                            </div>
-                          </div>
-                        ) : m === 'TESTNET' ? (
-                          <div>
-                            <div>
-                              <TestTube2 className="mx-auto h-3.5 w-3.5" />
-                            </div>
-                            <div className="mt-0.5">Testnet</div>
-                            <div className="mt-0.5 text-[9px] font-normal opacity-70">
-                              {t('config.stepper.modeTestnetSub')}
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div>🔴</div>
-                            <div className="mt-0.5">{t('trading.live')}</div>
-                            <div className="mt-0.5 text-[9px] font-normal opacity-70">
-                              {t('config.stepper.modeLiveSub')}
-                            </div>
-                          </div>
-                        )}
-                      </button>
-                    ),
+                  {t(
+                    'config.stepper.modeAutoConfigured',
+                    'El modo se configura automáticamente según el modo de operación global seleccionado en el header.',
                   )}
+                </p>
+                <div
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl border px-4 py-3',
+                    form.mode === 'LIVE'
+                      ? 'border-red-500/40 bg-red-500/10 text-red-400'
+                      : form.mode === 'TESTNET'
+                        ? 'border-sky-500/40 bg-sky-500/10 text-sky-400'
+                        : 'border-primary/40 bg-primary/10 text-primary',
+                  )}
+                >
+                  <span className="text-sm font-bold">{form.mode}</span>
+                  <span className="text-xs opacity-70">
+                    {form.mode === 'SANDBOX'
+                      ? t('config.stepper.modeSandboxSub')
+                      : form.mode === 'TESTNET'
+                        ? t('config.stepper.modeTestnetSub')
+                        : t('config.stepper.modeLiveSub')}
+                  </span>
                 </div>
                 {form.mode === 'LIVE' && (
                   <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs text-red-400">
-                    ⚠️ {t('trading.realFundsWarning')}
-                  </p>
-                )}
-                {form.mode === 'TESTNET' && !hasTestnetKeys && (
-                  <p className="mt-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2 text-xs text-sky-400">
-                    {t('onboarding.testnetRequiresKeys')}
+                    {t('trading.realFundsWarning')}
                   </p>
                 )}
               </div>
@@ -1653,6 +1621,12 @@ export function ConfigPage() {
   const { data: configs = [], isLoading } = useTradingConfigs();
   useAgentStatus();
 
+  // Solo mostrar agentes del modo activo
+  const modeConfigs = configs.filter((c) => {
+    if (platformMode === 'SANDBOX') return c.mode === 'SANDBOX';
+    return c.mode === platformMode;
+  });
+
   useGSAP(
     () => {
       gsap.fromTo(
@@ -1665,7 +1639,7 @@ export function ConfigPage() {
   );
 
   function getAgentIsRunning(configId: string) {
-    return configs.find((c) => c.id === configId)?.isRunning ?? false;
+    return modeConfigs.find((c) => c.id === configId)?.isRunning ?? false;
   }
 
   return (
@@ -1714,10 +1688,10 @@ export function ConfigPage() {
       <div className="config-card rounded-2xl border border-border bg-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="font-semibold">{t('trading.activeAgents')}</h2>
-          {configs.length > 0 && (
+          {modeConfigs.length > 0 && (
             <span className="text-xs text-muted-foreground">
-              {configs.length}{' '}
-              {configs.length === 1
+              {modeConfigs.length}{' '}
+              {modeConfigs.length === 1
                 ? t('config.agentSingular')
                 : t('config.agentPlural')}
             </span>
@@ -1737,7 +1711,7 @@ export function ConfigPage() {
         )}
 
         {/* Empty state */}
-        {!isLoading && configs.length === 0 && (
+        {!isLoading && modeConfigs.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-4 px-5">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-muted/30">
               <Bot className="h-7 w-7 text-muted-foreground/50" />
@@ -1762,9 +1736,9 @@ export function ConfigPage() {
         )}
 
         {/* Agent cards */}
-        {!isLoading && configs.length > 0 && (
+        {!isLoading && modeConfigs.length > 0 && (
           <div className="divide-y divide-border">
-            {configs.map((cfg) => {
+            {modeConfigs.map((cfg) => {
               const isRunning = getAgentIsRunning(cfg.id);
               const modeColor =
                 cfg.mode === 'TESTNET'

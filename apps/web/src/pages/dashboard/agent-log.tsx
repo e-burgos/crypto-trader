@@ -1050,8 +1050,7 @@ export function AgentLogPage() {
   // Filtrar por modo de plataforma activo
   const modeFilteredDecisions = useMemo(() => {
     return allDecisions.filter((d) => {
-      if (platformMode === 'SANDBOX')
-        return d.mode === 'SANDBOX' || d.mode === 'PAPER';
+      if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX';
       return d.mode === platformMode;
     });
   }, [allDecisions, platformMode]);
@@ -1243,9 +1242,9 @@ export function AgentLogPage() {
                 <span className="font-semibold tabular-nums">
                   {filtered.length}
                 </span>
-                {allDecisions.length !== filtered.length && (
+                {modeFilteredDecisions.length !== filtered.length && (
                   <span className="text-muted-foreground/60">
-                    / {allDecisions.length}
+                    / {modeFilteredDecisions.length}
                   </span>
                 )}
               </div>
@@ -1352,9 +1351,9 @@ export function AgentLogPage() {
                 <span className="font-semibold">
                   {t('botAnalysis.agentDecisions', { count: filtered.length })}
                 </span>
-                {allDecisions.length !== filtered.length && (
+                {modeFilteredDecisions.length !== filtered.length && (
                   <span className="text-muted-foreground/60">
-                    ({allDecisions.length})
+                    ({modeFilteredDecisions.length})
                   </span>
                 )}
               </div>

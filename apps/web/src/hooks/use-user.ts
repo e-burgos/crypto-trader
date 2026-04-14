@@ -297,6 +297,9 @@ export function useUpdatePlatformMode() {
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'profile'] });
+      qc.invalidateQueries({ queryKey: ['analytics'] });
+      qc.invalidateQueries({ queryKey: ['trading'] });
+      qc.invalidateQueries({ queryKey: ['positions'] });
     },
     onError: (err: { message?: string }) =>
       toast.error(err?.message || 'Error al cambiar el modo de operación'),

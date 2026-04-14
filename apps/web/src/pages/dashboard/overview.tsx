@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -46,6 +46,7 @@ import {
 import {
   useBinanceKeyStatus,
   useTestnetBinanceKeyStatus,
+  usePlatformMode,
 } from '../../hooks/use-user';
 import { InfoTooltip } from '../../components/ui/info-tooltip';
 import { useThemeStore } from '../../store/theme.store';
@@ -178,10 +179,12 @@ export function OverviewPage() {
   const chartRef = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.15)';
   const chartCursor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
 
-  const { data, isLoading } = usePortfolioSummary();
-  const { data: summary } = useAnalyticsSummary();
-  const { data: pnlChart = [] } = usePnlChart();
-  const { data: assetBreakdown = [] } = useAssetBreakdown();
+  const { mode: platformMode } = usePlatformMode();
+
+  const { data, isLoading } = usePortfolioSummary(platformMode);
+  const { data: summary } = useAnalyticsSummary(platformMode);
+  const { data: pnlChart = [] } = usePnlChart(platformMode);
+  const { data: assetBreakdown = [] } = useAssetBreakdown(platformMode);
   const { data: wallets, isLoading: walletsLoading } = useSandboxWallet();
   const { data: agentStatuses } = useAgentStatus();
   const { data: liveKeyStatus } = useBinanceKeyStatus();
@@ -189,17 +192,6 @@ export function OverviewPage() {
 
   const hasLiveKeys = liveKeyStatus?.hasKeys ?? false;
   const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
-
-  const activeMode = useMemo(() => {
-    if (agentStatuses?.length) {
-      const running = agentStatuses.find((a) => a.isRunning);
-      const mode = running?.mode ?? agentStatuses[0]?.mode;
-      if (mode) return mode as 'SANDBOX' | 'LIVE' | 'TESTNET';
-    }
-    if (hasLiveKeys) return 'LIVE';
-    if (hasTestnetKeys) return 'TESTNET';
-    return 'SANDBOX';
-  }, [agentStatuses, hasLiveKeys, hasTestnetKeys]);
 
   const {
     data: liveBalance,
@@ -524,7 +516,7 @@ export function OverviewPage() {
 
       {/* Balance Widget */}
       <div>
-        {activeMode === 'SANDBOX' && (
+        {platformMode === 'SANDBOX' && (
           <>
             <div className="mb-3 flex items-center gap-2">
               <Wallet className="h-5 w-5 text-muted-foreground" />
@@ -611,7 +603,7 @@ export function OverviewPage() {
           </>
         )}
 
-        {activeMode === 'TESTNET' && (
+        {platformMode === 'TESTNET' && (
           <>
             <div className="mb-3 flex items-center gap-2">
               <TestTube2 className="h-5 w-5 text-sky-400" />
@@ -691,7 +683,7 @@ export function OverviewPage() {
           </>
         )}
 
-        {activeMode === 'LIVE' && (
+        {platformMode === 'LIVE' && (
           <>
             <div className="mb-3 flex items-center gap-2">
               <Zap className="h-5 w-5 text-emerald-400" />

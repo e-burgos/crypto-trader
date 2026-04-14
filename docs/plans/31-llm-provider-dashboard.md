@@ -21,9 +21,11 @@
 
 - `LLMProviderClient.complete()` retorna `{ text, usage }` en los **cinco** providers
 - Tabla `llm_usage_logs` existe en DB con los índices correctos
-- Enum `LLMProvider` incluye `GEMINI` y `MISTRAL`
+- Enum `LLMProvider` incluye `GEMINI` y `MISTRAL` (en Prisma schema Y en `libs/shared/src/types/enums.ts`)
 - `LLMUsageService.log()` persiste un registro por llamada LLM
-- `LLMAnalyzer` funciona sin regresiones (usa `text` de la respuesta)
+- `LLMAnalyzer` funciona sin regresiones (retorna `{ decision, usage }`)
+- `SubAgentService.call()` desestructura `{ text, usage }` del `provider.complete()`
+- `ChatService` tiene `streamGemini()` y `streamMistral()` + tracking de usage en todos los streams
 - Tests unitarios de `LLMUsageService` pasan
 
 ### A.1 — Migración Prisma
@@ -68,6 +70,18 @@ enum LLMSource {
 pnpm nx run api:prisma-migrate -- --name add-llm-usage-log-and-new-providers
 # o
 cd apps/api && npx prisma migrate dev --name add-llm-usage-log-and-new-providers
+```
+
+**También actualizar `libs/shared/src/types/enums.ts`** (espejo manual del enum Prisma):
+
+```typescript
+export enum LLMProvider {
+  CLAUDE = 'CLAUDE',
+  OPENAI = 'OPENAI',
+  GROQ = 'GROQ',
+  GEMINI = 'GEMINI', // nuevo
+  MISTRAL = 'MISTRAL', // nuevo
+}
 ```
 
 ### A.2 — Actualizar `LLMProviderClient` interface
@@ -209,9 +223,40 @@ export interface LLMAnalysisResult {
 
 El caller (SubAgentService / TradingEngine) es quien llama a `LLMUsageService.log()` con el `userId` disponible.
 
+**`apps/api/src/orchestrator/sub-agent.service.ts`:**
+
+`SubAgentService.call()` actualmente retorna `Promise<string>` y llama `provider.complete(systemPrompt, userPrompt)`.
+Debe desestructurar `{ text, usage }` del nuevo `LLMResponse`, inyectar `LLMUsageService`, y hacer log.
+
+```typescript
+// Antes:
+return await provider.complete(systemPrompt, userPrompt);
+
+// Después:
+const { text, usage } = await provider.complete(systemPrompt, userPrompt);
+await this.llmUsageService.log({
+  userId,
+  provider: /* del credential */,
+  model: /* del credential */,
+  usage,
+  source: /* CHAT | TRADING según contexto */,
+});
+return text; // mantener retorno string para no romper callers del orchestrator
+```
+
 **`apps/api/src/chat/chat.service.ts`:**
 
-Inyectar `LLMUsageService`. Después de cada llamada a `provider.complete()`, invocar `usageService.log()` con `source: LLMSource.CHAT`.
+> **⚠️ IMPORTANTE**: `ChatService` NO usa `LLMProviderClient.complete()`. Tiene métodos privados
+> `streamClaude()`, `streamOpenAI()`, `streamGroq()` que hacen llamadas axios directas con
+> `responseType: 'stream'` para SSE. El tracking requiere:
+
+1. Inyectar `LLMUsageService` en el constructor
+2. Modificar `streamClaude()`: parsear evento `message_delta` con `usage.output_tokens` del stream de Anthropic
+3. Modificar `streamOpenAI()` y `streamGroq()`: agregar `stream_options: { include_usage: true }` al request body; parsear `usage` del último chunk
+4. Crear `streamGemini()`: streaming nativo de Gemini (SSE con `generateContent?alt=sse`)
+5. Crear `streamMistral()`: mismo formato que OpenAI (endpoint `https://api.mistral.ai/v1/chat/completions` con `stream: true`)
+6. Agregar cases `GEMINI` y `MISTRAL` en el switch de provider del método de routing
+7. Agregar `GEMINI` y `MISTRAL` a `PROVIDER_LABELS` y `PROVIDER_MODELS`
 
 ---
 
@@ -403,13 +448,16 @@ const LLM_PROVIDERS = [
 
 ### C.4 — Actualizar modelos en otros archivos
 
+> **⚠️ Nota v1.2**: Los arrays actuales son inconsistentes entre archivos (ver Spec 31 §13.3).
+> Aprovechar esta tarea para **unificar** todos los arrays con los mismos modelos actualizados.
+
 Actualizar los arrays hardcodeados en:
 
-- `apps/api/src/chat/chat.service.ts` → `PROVIDER_MODELS` y `PROVIDER_LABELS` (agregar `GEMINI` y `MISTRAL`)
-- `apps/web/src/pages/dashboard/news-feed.tsx` → `LLM_PROVIDERS` (5 providers)
-- `apps/web/src/pages/onboarding.tsx` → `LLM_PROVIDERS` (5 providers)
+- `apps/api/src/chat/chat.service.ts` → `PROVIDER_MODELS` y `PROVIDER_LABELS` (agregar `GEMINI` y `MISTRAL`, remover `gpt-4-turbo` y `mixtral-8x7b-32768` deprecated)
+- `apps/web/src/pages/dashboard/news-feed.tsx` → `LLM_PROVIDERS` (5 providers, formato `{ value, label }[]` por modelo)
+- `apps/web/src/pages/onboarding.tsx` → `LLM_PROVIDERS` (5 providers, agregar `helpLink` y `helpLinkText` para Gemini y Mistral)
 - `apps/web/src/components/chat/llm-selector.tsx` → `PROVIDER_COLORS` agregar `GEMINI: 'text-blue-400'` y `MISTRAL: 'text-orange-400'`
-- `apps/api/src/auth/dto/auth.dto.ts` → `LLMKeyDto` enum actualizar a `['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL']`
+- `apps/api/src/auth/dto/auth.dto.ts` → `LLMKeyDto` `@ApiProperty` enum actualizar a `['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL']`
 
 ---
 

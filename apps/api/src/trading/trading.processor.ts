@@ -514,6 +514,55 @@ export class TradingProcessor {
         return;
       }
 
+      // LLM provider errors (rate-limit, server errors, timeouts)
+      // These are transient — retry instead of stopping the agent.
+      const isLlmError =
+        message.includes('Request failed with status code 429') ||
+        message.includes('Request failed with status code 500') ||
+        message.includes('Request failed with status code 502') ||
+        message.includes('Request failed with status code 503') ||
+        message.includes('Request failed with status code 529') ||
+        message.includes('rate limit') ||
+        message.includes('Rate limit') ||
+        message.includes('quota') ||
+        message.includes('too many requests') ||
+        message.includes('timeout') ||
+        message.includes('ETIMEDOUT');
+
+      if (isLlmError) {
+        const retryMinutes = 10;
+        const retryDelay = retryMinutes * 60 * 1000;
+        this.logger.warn(
+          `LLM error for user=${userId} config=${configId}. Retrying in ${retryMinutes} min: ${message.slice(0, 150)}`,
+        );
+        const stillRunning = await this.prisma.tradingConfig
+          .findUnique({
+            where: { id: configId },
+            select: { isRunning: true },
+          })
+          .catch(() => null);
+        if (stillRunning?.isRunning) {
+          await job.queue
+            .add(
+              'run-cycle',
+              { userId, configId },
+              { delay: retryDelay, removeOnComplete: true },
+            )
+            .catch(() => null);
+        }
+        await this.notificationsService
+          .create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({
+              key: 'agentLlmError',
+              retryMinutes: String(retryMinutes),
+            }),
+          )
+          .catch(() => null);
+        return;
+      }
+
       this.logger.error(`Agent cycle error for user=${userId}: ${message}`);
       await this.prisma.tradingConfig
         .update({

@@ -1162,6 +1162,8 @@ const en = {
       'Agent paused: Binance rate limit reached. Retrying in {{retryMinutes}} min.',
     agentNetworkError:
       'Agent paused: cannot reach Binance (network error). Retrying in {{retryMinutes}} min.',
+    agentLlmError:
+      'Agent paused: AI provider error (rate limit). Retrying in {{retryMinutes}} min.',
     agentError: 'Agent error: {{message}}',
     tradeBuy: 'BUY {{qty}} {{asset}} @ ${{price}} ({{mode}})',
     tradeSell:
@@ -1451,8 +1453,8 @@ const en = {
     live: 'Live',
     sandboxDesc: 'Paper trading with virtual funds. No real risk.',
     testnetDesc: 'Real orders on Binance Testnet. No real money involved.',
-    liveDesc: '⚠️ Real money. Real orders on Binance.',
-    liveWarningShort: 'Real money',
+    liveDesc: 'Real money. Real orders on Binance.',
+    liveWarningShort: 'Uses real money',
     switchConfirmTitle: 'Switch to Live mode',
     switchConfirmDesc:
       'You are about to switch to LIVE mode. All operations will affect real funds on Binance.',
@@ -1464,9 +1466,16 @@ const en = {
     credentialsModalTestnetDesc:
       'To operate in Testnet mode you need to configure your Binance Testnet API keys. Get them for free at testnet.binance.vision (no real money).',
     credentialsModalLiveDesc:
-      'To operate in Live mode you need to configure your Binance API keys. ⚠️ This mode uses real funds.',
+      'To operate in Live mode you need to configure your Binance API keys. This mode operates with real funds on Binance.',
     credentialsModalCancel: 'Cancel',
     credentialsModalCta: 'Add Credentials',
+    pauseAgentsTitle: '{{count}} active agent(s) in {{mode}}',
+    pauseAgentsDesc:
+      'You have {{count}} agent(s) running in {{fromMode}} mode. Switching to {{toMode}} will stop them automatically.',
+    pauseAgentsLiveWarning:
+      'Live mode agents have open positions that will be left unmonitored when stopped.',
+    pauseAgentsCta: 'Stop and switch',
+    pauseAgentsStopping: 'Stopping...',
   },
 };
 

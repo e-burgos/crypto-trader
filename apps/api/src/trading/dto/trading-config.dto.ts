@@ -320,3 +320,12 @@ export class StopAgentDto {
   @IsString()
   configId!: string;
 }
+
+export class StopAgentsByModeDto {
+  @ApiProperty({
+    enum: TradingModeEnum,
+    description: 'Modo cuyos agentes se detendrán',
+  })
+  @IsEnum(TradingModeEnum)
+  mode!: TradingModeEnum;
+}

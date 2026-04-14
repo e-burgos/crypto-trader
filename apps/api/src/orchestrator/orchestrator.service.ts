@@ -216,20 +216,50 @@ export class OrchestratorService {
     }
 
     // Synthesis call via orchestrator
-    const synthesisRaw = await this.subAgent.call(
-      'orchestrator',
-      'decision_synthesis',
-      {
-        technicalSignal: techOutput,
-        newsSentiment: sentimentOutput,
-        sizingSuggestion: forgeOutput,
-        aegisVerdict: aegisOutput,
-        buyThreshold: config.buyThreshold,
-        sellThreshold: config.sellThreshold,
-      },
-      userId,
-      false,
-    );
+    let synthesisRaw: string;
+    try {
+      synthesisRaw = await this.subAgent.call(
+        'orchestrator',
+        'decision_synthesis',
+        {
+          technicalSignal: techOutput,
+          newsSentiment: sentimentOutput,
+          sizingSuggestion: forgeOutput,
+          aegisVerdict: aegisOutput,
+          buyThreshold: config.buyThreshold,
+          sellThreshold: config.sellThreshold,
+        },
+        userId,
+        false,
+      );
+    } catch (synthErr) {
+      this.logger.warn(
+        `Synthesis LLM call failed for user=${userId} config=${configId}: ${
+          synthErr instanceof Error ? synthErr.message : String(synthErr)
+        }`,
+      );
+
+      // All sub-agents failed + synthesis failed → propagate as LLM error
+      // so the processor can retry instead of stopping the agent
+      const allSubsFailed = [techRaw, sentimentRaw, forgeRaw, aegisRaw].every(
+        (r) => r.status === 'rejected',
+      );
+      if (allSubsFailed) {
+        // Re-throw so the processor's LLM error handler catches it
+        throw synthErr;
+      }
+
+      // Partial data available — return HOLD with explanation
+      return {
+        decision: 'HOLD' as const,
+        confidence: 0.3,
+        reasoning:
+          'LLM no disponible para síntesis. Sub-agentes parciales disponibles. Se recomienda esperar.',
+        waitMinutes: 15,
+        orchestrated: true,
+        subAgentResults,
+      };
+    }
 
     const synthesis = safeParseJson<{
       decision?: string;

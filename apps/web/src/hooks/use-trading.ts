@@ -46,10 +46,13 @@ export interface TradingConfigDto {
 }
 
 export interface AgentStatus {
+  id: string;
   asset: string;
   pair: string;
   isRunning: boolean;
   mode: TradingMode;
+  jobQueued: boolean;
+  nextRunAt: number | null;
 }
 
 export interface TradingPosition {
@@ -190,6 +193,19 @@ export function useStopAgent() {
     },
     onError: (err: { message?: string }) =>
       toast.error(err?.message || 'Error al detener el agente'),
+  });
+}
+
+export function useStopAgentsByMode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mode: TradingMode) =>
+      api.post<{ stopped: number }>('/trading/stop-by-mode', { mode }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trading'] });
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al detener los agentes'),
   });
 }
 

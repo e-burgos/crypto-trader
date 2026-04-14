@@ -1183,6 +1183,8 @@ const es = {
       'Agente en espera: límite de requests de Binance alcanzado. Reintentando en {{retryMinutes}} min.',
     agentNetworkError:
       'Agente en espera: sin conexión a Binance. Reintentando en {{retryMinutes}} min.',
+    agentLlmError:
+      'Agente en espera: error del proveedor de IA (límite de requests). Reintentando en {{retryMinutes}} min.',
     agentError: 'Error del agente: {{message}}',
     tradeBuy: 'COMPRA {{qty}} {{asset}} @ ${{price}} ({{mode}})',
     tradeSell:
@@ -1476,8 +1478,8 @@ const es = {
     live: 'En Vivo',
     sandboxDesc: 'Simulación con fondos virtuales. Sin riesgo real.',
     testnetDesc: 'Órdenes reales en red de prueba de Binance. Sin dinero real.',
-    liveDesc: '⚠️ Dinero real. Órdenes reales en Binance.',
-    liveWarningShort: 'Dinero real',
+    liveDesc: 'Dinero real. Órdenes reales en Binance.',
+    liveWarningShort: 'Opera con dinero real',
     switchConfirmTitle: 'Cambiar a modo En Vivo',
     switchConfirmDesc:
       'Estás a punto de cambiar al modo EN VIVO. Las operaciones afectarán fondos reales en Binance.',
@@ -1489,9 +1491,16 @@ const es = {
     credentialsModalTestnetDesc:
       'Para operar en modo Testnet necesitás configurar tus claves API de Binance Testnet. Obtenelas gratis en testnet.binance.vision (sin dinero real).',
     credentialsModalLiveDesc:
-      'Para operar en modo En Vivo necesitás configurar tus claves API de Binance. ⚠️ Este modo opera con fondos reales.',
+      'Para operar en modo En Vivo necesitás configurar tus claves API de Binance. Este modo opera con fondos reales en Binance.',
     credentialsModalCancel: 'Cancelar',
     credentialsModalCta: 'Agregar Credenciales',
+    pauseAgentsTitle: '{{count}} agente(s) activo(s) en {{mode}}',
+    pauseAgentsDesc:
+      'Tenés {{count}} agente(s) corriendo en modo {{fromMode}}. Al cambiar a {{toMode}} se detendrán automáticamente.',
+    pauseAgentsLiveWarning:
+      'Los agentes en modo En Vivo tienen posiciones abiertas que quedarán sin cobertura al detenerlos.',
+    pauseAgentsCta: 'Detener y cambiar',
+    pauseAgentsStopping: 'Deteniendo...',
   },
 };
 

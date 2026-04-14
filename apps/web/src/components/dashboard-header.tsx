@@ -33,11 +33,11 @@ export function DashboardHeader() {
 
       {/* Right actions */}
       <div className="flex items-center gap-1.5">
-        {/* Connection status */}
-        <ConnectionStatusDropdown />
-
         {/* Operation mode selector */}
         <ModeSelector />
+
+        {/* Connection status */}
+        <ConnectionStatusDropdown />
 
         {/* Notifications bell */}
         <div className="relative border border-border rounded-md">

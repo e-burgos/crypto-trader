@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { TradingMode } from '../../generated/prisma/enums';
+
+function modeFilter(mode?: TradingMode) {
+  if (!mode) return {};
+  return { mode };
+}
 
 @Injectable()
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getPortfolioSummary(userId: string) {
+  async getPortfolioSummary(userId: string, mode?: TradingMode) {
+    const mf = modeFilter(mode);
     const [openPositions, closedPositions, tradingConfigs] = await Promise.all([
       this.prisma.position.findMany({
-        where: { userId, status: 'OPEN' },
+        where: { userId, status: 'OPEN', ...mf },
         select: {
           asset: true,
           pair: true,
@@ -18,11 +25,11 @@ export class AnalyticsService {
         },
       }),
       this.prisma.position.findMany({
-        where: { userId, status: 'CLOSED' },
+        where: { userId, status: 'CLOSED', ...mf },
         select: { pnl: true, fees: true, mode: true },
       }),
       this.prisma.tradingConfig.findMany({
-        where: { userId },
+        where: { userId, ...mf },
         select: { asset: true, pair: true, mode: true, isRunning: true },
       }),
     ]);
@@ -47,9 +54,9 @@ export class AnalyticsService {
     };
   }
 
-  async getTradeHistory(userId: string, limit = 50) {
+  async getTradeHistory(userId: string, limit = 50, mode?: TradingMode) {
     return this.prisma.trade.findMany({
-      where: { userId },
+      where: { userId, ...modeFilter(mode) },
       orderBy: { executedAt: 'desc' },
       take: limit,
       select: {
@@ -88,10 +95,15 @@ export class AnalyticsService {
     });
   }
 
-  async getAgentDecisionHistory(userId: string, limit = 20) {
+  async getAgentDecisionHistory(
+    userId: string,
+    limit = 20,
+    mode?: TradingMode,
+  ) {
+    const mf = modeFilter(mode);
     const [decisions, activeLlm] = await Promise.all([
       this.prisma.agentDecision.findMany({
-        where: { userId },
+        where: { userId, ...mf },
         orderBy: { createdAt: 'desc' },
         take: limit,
         select: {
@@ -180,9 +192,9 @@ export class AnalyticsService {
     });
   }
 
-  async getSummary(userId: string) {
+  async getSummary(userId: string, mode?: TradingMode) {
     const closedPositions = await this.prisma.position.findMany({
-      where: { userId, status: 'CLOSED' },
+      where: { userId, status: 'CLOSED', ...modeFilter(mode) },
       select: {
         pnl: true,
         asset: true,
@@ -281,7 +293,7 @@ export class AnalyticsService {
     };
   }
 
-  async getPnlChart(userId: string) {
+  async getPnlChart(userId: string, mode?: TradingMode) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -290,6 +302,7 @@ export class AnalyticsService {
         userId,
         status: 'CLOSED',
         exitAt: { gte: thirtyDaysAgo },
+        ...modeFilter(mode),
       },
       select: { pnl: true, exitAt: true },
       orderBy: { exitAt: 'asc' },
@@ -307,9 +320,9 @@ export class AnalyticsService {
     }));
   }
 
-  async getAssetBreakdown(userId: string) {
+  async getAssetBreakdown(userId: string, mode?: TradingMode) {
     const positions = await this.prisma.position.findMany({
-      where: { userId, status: 'CLOSED' },
+      where: { userId, status: 'CLOSED', ...modeFilter(mode) },
       select: { asset: true, pnl: true },
     });
 

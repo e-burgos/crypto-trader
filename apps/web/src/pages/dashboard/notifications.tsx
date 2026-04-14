@@ -51,6 +51,7 @@ function getNotificationRoute(type: string, message: string): string {
       key === 'agentNoTestnetKeys' ||
       key === 'agentNetworkError' ||
       key === 'agentRateLimit' ||
+      key === 'agentLlmError' ||
       key === 'orderError'
     ) {
       return '/dashboard/config';
@@ -102,7 +103,8 @@ function NotifIcon({ type, message }: { type: string; message: string }) {
     key === 'agentNoLLM' ||
     key === 'agentNoTestnetKeys' ||
     key === 'agentNetworkError' ||
-    key === 'agentRateLimit'
+    key === 'agentRateLimit' ||
+    key === 'agentLlmError'
   ) {
     return <ShieldAlert className="h-5 w-5 text-amber-500" />;
   }
@@ -137,7 +139,8 @@ function iconBg(type: string, message: string): string {
     key === 'agentNoLLM' ||
     key === 'agentNoTestnetKeys' ||
     key === 'agentNetworkError' ||
-    key === 'agentRateLimit'
+    key === 'agentRateLimit' ||
+    key === 'agentLlmError'
   )
     return 'bg-amber-500/10';
   switch (type) {
@@ -261,7 +264,10 @@ function NotifRow({
         {!n.read && (
           <button
             title={t('notifications.markRead')}
-            onClick={(e) => { e.stopPropagation(); onMarkRead(n.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkRead(n.id);
+            }}
             className="flex h-6 w-6 items-center justify-center rounded-md bg-card border border-border text-muted-foreground hover:text-emerald-500 hover:border-emerald-500/40 transition-colors"
           >
             <Check className="h-3 w-3" />
@@ -269,14 +275,20 @@ function NotifRow({
         )}
         <button
           title={t('notifications.goTo')}
-          onClick={(e) => { e.stopPropagation(); onNavigate(route, n.id, n.read); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate(route, n.id, n.read);
+          }}
           className="flex h-6 w-6 items-center justify-center rounded-md bg-card border border-border text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
         >
           <ExternalLink className="h-3 w-3" />
         </button>
         <button
           title={t('notifications.delete')}
-          onClick={(e) => { e.stopPropagation(); onDelete(n.id); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(n.id);
+          }}
           className="flex h-6 w-6 items-center justify-center rounded-md bg-card border border-border text-muted-foreground hover:text-red-500 hover:border-red-500/40 transition-colors"
         >
           <Trash2 className="h-3 w-3" />
@@ -310,6 +322,7 @@ const AGENT_KEYS = new Set([
   'agentNoTestnetKeys',
   'agentNetworkError',
   'agentRateLimit',
+  'agentLlmError',
   'orderError',
 ]);
 

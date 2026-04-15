@@ -369,7 +369,6 @@ export function usePlatformMode() {
         },
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, isLoading, availableModes.join(',')]);
 
   return {

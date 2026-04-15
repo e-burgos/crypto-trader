@@ -18,6 +18,7 @@ import {
 } from '../auth/dto/auth.dto';
 import { encrypt, decrypt } from './utils/encryption.util';
 import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
+import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import { recordCall } from '../llm/provider-health.service';
 
 @Injectable()
@@ -190,7 +191,6 @@ export class UsersService {
     if (!cred)
       return { connected: false, error: 'No testnet credentials saved' };
     try {
-      const { BinanceRestClient } = await import('@crypto-trader/data-fetcher');
       const client = new BinanceRestClient({
         apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
         apiSecret: decrypt(cred.secretEncrypted, cred.secretIv),
@@ -289,7 +289,6 @@ export class UsersService {
     });
     if (!cred) return { connected: false, error: 'No credentials saved' };
     try {
-      const { BinanceRestClient } = await import('@crypto-trader/data-fetcher');
       const client = new BinanceRestClient({
         apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
         apiSecret: decrypt(cred.secretEncrypted, cred.secretIv),

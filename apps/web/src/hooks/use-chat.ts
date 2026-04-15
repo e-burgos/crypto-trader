@@ -96,6 +96,19 @@ export function useChatSession(sessionId: string | null) {
     queryFn: () => api.get(`/chat/sessions/${sessionId}`),
     staleTime: 0,
     enabled: isAuthenticated && !!sessionId,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 — session was deleted or stale localStorage ID
+      if (
+        (error as any)?.statusCode === 404 ||
+        (error as any)?.status === 404 ||
+        (error as any)?.response?.status === 404
+      ) {
+        // Clear stale session from store + localStorage
+        useChatStore.getState().setActiveSession(null);
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 }
 

@@ -818,6 +818,7 @@ export function SettingsPage() {
                               </a>
                             </p>
                           </div>
+                          {status?.isActive ? (
                           <div>
                             <label className="mb-1 block text-xs font-medium">
                               {t('settings.model')}
@@ -837,6 +838,13 @@ export function SettingsPage() {
                               fallbackModels={provider.models}
                             />
                           </div>
+                          ) : (
+                          <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
+                            {t('settings.activateProviderFirst', {
+                              defaultValue: 'Guarda tu API key para seleccionar un modelo',
+                            })}
+                          </div>
+                          )}
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <Button

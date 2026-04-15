@@ -21,7 +21,7 @@ import i18n from '../lib/i18n';
 
 // ── Step Types ────────────────────────────────────────────────────────────────
 type TradingMode = 'LIVE' | 'SANDBOX' | 'TESTNET';
-type LLMProvider = 'CLAUDE' | 'OPENAI' | 'GROQ';
+type LLMProvider = 'CLAUDE' | 'OPENAI' | 'GROQ' | 'GEMINI' | 'MISTRAL' | 'TOGETHER';
 
 interface OnboardingState {
   // Step 1: Binance Keys (Live)
@@ -34,11 +34,12 @@ interface OnboardingState {
   skipTestnet: boolean;
   // Step 2: LLM Provider
   llmProvider: LLMProvider;
-  llmApiKey: string;
-  llmModel: string;
+  llmApiKeys: Record<string, string>;
+  llmModels: Record<string, string>;
   // Step 3: Trading Mode
   mode: TradingMode;
   initialCapital: string;
+  initialCapitalUsdc: string;
 }
 
 const LLM_PROVIDERS: {
@@ -261,6 +262,9 @@ function StepLLM({
     LLM_PROVIDERS.find((p) => p.value === state.llmProvider) ||
     LLM_PROVIDERS[0];
 
+  const currentKey = state.llmApiKeys[state.llmProvider] ?? '';
+  const filledCount = Object.values(state.llmApiKeys).filter((k) => k.length > 0).length;
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -268,32 +272,60 @@ function StepLLM({
       </p>
 
       <div className="grid grid-cols-3 gap-3">
-        {LLM_PROVIDERS.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            onClick={() =>
-              onChange({ llmProvider: p.value, llmModel: p.models[0] })
-            }
-            className={cn(
-              'rounded-lg border p-3 text-center text-sm font-medium transition-colors',
-              state.llmProvider === p.value
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border hover:border-primary/40',
-            )}
-          >
-            {p.label}
-          </button>
-        ))}
+        {LLM_PROVIDERS.map((p) => {
+          const hasKey = !!(state.llmApiKeys[p.value]?.length);
+          return (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() =>
+                onChange({
+                  llmProvider: p.value as LLMProvider,
+                  llmModels: {
+                    ...state.llmModels,
+                    [p.value]: state.llmModels[p.value] || p.models[0],
+                  },
+                })
+              }
+              className={cn(
+                'relative rounded-lg border p-3 text-center text-sm font-medium transition-colors',
+                state.llmProvider === p.value
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:border-primary/40',
+              )}
+            >
+              {p.label}
+              {hasKey && (
+                <CheckCircle className="absolute top-1 right-1 h-3.5 w-3.5 text-emerald-500" />
+              )}
+            </button>
+          );
+        })}
       </div>
+
+      {filledCount > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {t('onboarding.keysConfigured', {
+            defaultValue: '{{count}} proveedor(es) configurado(s)',
+            count: filledCount,
+          })}
+        </p>
+      )}
 
       <div>
         <label className="mb-1.5 block text-sm font-medium">
-          {t('onboarding.apiKey')}
+          {t('onboarding.apiKey')} — {provider.label}
         </label>
         <PasswordInput
-          value={state.llmApiKey}
-          onChange={(e) => onChange({ llmApiKey: e.target.value })}
+          value={currentKey}
+          onChange={(e) =>
+            onChange({
+              llmApiKeys: {
+                ...state.llmApiKeys,
+                [state.llmProvider]: e.target.value,
+              },
+            })
+          }
           required
           placeholder={t('onboarding.apiKeyPlaceholder', {
             provider: provider.label,
@@ -423,19 +455,35 @@ function StepMode({
       </div>
 
       {state.mode === 'SANDBOX' && (
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            {t('onboarding.initialCapitalSandbox')}
-          </label>
-          <input
-            type="number"
-            min="10"
-            step="10"
-            value={state.initialCapital}
-            onChange={(e) => onChange({ initialCapital: e.target.value })}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
-            placeholder="1000"
-          />
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('onboarding.initialCapitalUsdt', { defaultValue: 'Capital inicial (USDT)' })}
+            </label>
+            <input
+              type="number"
+              min="10"
+              step="10"
+              value={state.initialCapital}
+              onChange={(e) => onChange({ initialCapital: e.target.value })}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="1000"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              {t('onboarding.initialCapitalUsdc', { defaultValue: 'Capital inicial (USDC)' })}
+            </label>
+            <input
+              type="number"
+              min="10"
+              step="10"
+              value={state.initialCapitalUsdc}
+              onChange={(e) => onChange({ initialCapitalUsdc: e.target.value })}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="10000"
+            />
+          </div>
           <p className="mt-1 text-xs text-muted-foreground">
             {t('onboarding.initialCapitalNote')}
           </p>
@@ -461,10 +509,11 @@ export function OnboardingPage() {
     binanceTestnetApiSecret: '',
     skipTestnet: true,
     llmProvider: 'CLAUDE',
-    llmApiKey: '',
-    llmModel: 'claude-3-5-sonnet-20241022',
+    llmApiKeys: {},
+    llmModels: {},
     mode: 'SANDBOX',
     initialCapital: '1000',
+    initialCapitalUsdc: '10000',
   });
 
   function update(patch: Partial<OnboardingState>) {
@@ -492,7 +541,7 @@ export function OnboardingPage() {
       return (
         state.skipBinance || (!!state.binanceApiKey && !!state.binanceApiSecret)
       );
-    if (step === 1) return !!state.llmApiKey;
+    if (step === 1) return Object.values(state.llmApiKeys).some((k) => k.length > 0);
     if (state.mode === 'SANDBOX')
       return !!state.initialCapital && Number(state.initialCapital) >= 10;
     return true; // LIVE mode — capital field not shown
@@ -518,12 +567,17 @@ export function OnboardingPage() {
         });
       }
 
-      // Save LLM key
-      await api.post('/users/me/llm-keys', {
-        provider: state.llmProvider,
-        apiKey: state.llmApiKey,
-        selectedModel: state.llmModel,
-      });
+      // Save all LLM keys that were provided
+      const keysToSave = Object.entries(state.llmApiKeys).filter(
+        ([, key]) => key.length > 0,
+      );
+      for (const [provider, apiKey] of keysToSave) {
+        await api.post('/users/me/llm-keys', {
+          provider,
+          apiKey,
+          selectedModel: state.llmModels[provider] || undefined,
+        });
+      }
 
       // Create initial trading config with safe defaults
       await api
@@ -540,6 +594,16 @@ export function OnboardingPage() {
           minIntervalMinutes: 60,
         })
         .catch(() => null); // Non-blocking — user can configure later
+
+      // Initialize sandbox wallets with user-chosen capital
+      if (state.mode === 'SANDBOX') {
+        await api
+          .post('/trading/sandbox-wallet/init', {
+            capitalUsdt: Number(state.initialCapital) || 10_000,
+            capitalUsdc: Number(state.initialCapitalUsdc) || 10_000,
+          })
+          .catch(() => null);
+      }
 
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {

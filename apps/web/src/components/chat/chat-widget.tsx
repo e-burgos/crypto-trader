@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BotMessageSquare, Maximize2, X, Sparkles, Plus } from 'lucide-react';
+import { BotMessageSquare, Maximize2, X, Sparkles, Plus, Settings } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useChatStore } from '../../store/chat.store';
 import {
@@ -9,6 +9,8 @@ import {
   ChatCapability,
 } from '../../hooks/use-chat';
 import { useChatAgent } from '../../hooks/use-chat-agent';
+import { useLLMKeys } from '../../hooks/use-user';
+import { useAuthStore } from '../../store/auth.store';
 import { ChatMessages } from './chat-messages';
 import { ChatInput } from './chat-input';
 import { CapabilityButtons } from './capability-buttons';
@@ -34,9 +36,13 @@ export function ChatWidget() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { isOpen, activeSessionId, toggle, close, setActiveSession } =
     useChatStore();
   const [showNewSession, setShowNewSession] = useState(false);
+
+  // B1: Don't render chat widget for unauthenticated users
+  if (!isAuthenticated) return null;
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -321,7 +327,10 @@ function WelcomeState({
   onNewSession: () => void;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { data: llmKeys = [] } = useLLMKeys();
+  const hasActiveKeys = llmKeys.some((k) => k.isActive);
 
   useGSAP(
     () => {
@@ -373,17 +382,40 @@ function WelcomeState({
         />
       </div>
 
-      <button
-        onClick={onNewSession}
-        className={cn(
-          'welcome-el w-full rounded-xl px-5 py-3 text-sm font-semibold',
-          'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground',
-          'shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_28px_hsl(var(--primary)/0.6)]',
-          'transition-all duration-200 hover:scale-[1.02] active:scale-95',
-        )}
-      >
-        {t('chat.newSession', { defaultValue: 'Start new chat' })}
-      </button>
+      {!hasActiveKeys ? (
+        <div className="welcome-el w-full space-y-3">
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-400">
+            {t('chat.noLlmKeysWarning', {
+              defaultValue:
+                'Configura al menos un proveedor LLM en Ajustes para poder chatear.',
+            })}
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/settings?tab=modelos')}
+            className={cn(
+              'w-full rounded-xl px-5 py-3 text-sm font-semibold',
+              'bg-gradient-to-r from-amber-500 to-amber-500/80 text-white',
+              'shadow-[0_0_20px_hsl(38,92%,50%,0.3)]',
+              'transition-all duration-200 hover:scale-[1.02] active:scale-95',
+            )}
+          >
+            <Settings className="inline h-4 w-4 mr-1.5 -mt-0.5" />
+            {t('chat.goToSettings', { defaultValue: 'Ir a Ajustes' })}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={onNewSession}
+          className={cn(
+            'welcome-el w-full rounded-xl px-5 py-3 text-sm font-semibold',
+            'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground',
+            'shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_28px_hsl(var(--primary)/0.6)]',
+            'transition-all duration-200 hover:scale-[1.02] active:scale-95',
+          )}
+        >
+          {t('chat.newSession', { defaultValue: 'Start new chat' })}
+        </button>
+      )}
 
       {/* Spacer inferior para centrado vertical cuando no hay overflow */}
       <div className="flex-1 min-h-4" />

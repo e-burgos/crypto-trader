@@ -63,6 +63,21 @@ export class TradingController {
     return this.tradingService.createConfig(user.userId, dto);
   }
 
+  @Post('sandbox-wallet/init')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Inicializar wallets sandbox con capital custom' })
+  @ApiResponse({ status: 200, description: 'Wallets inicializadas' })
+  initSandboxWallet(
+    @CurrentUser() user: RequestUser,
+    @Body() body: { capitalUsdt?: number; capitalUsdc?: number },
+  ) {
+    return this.tradingService.initSandboxWallets(
+      user.userId,
+      body.capitalUsdt ?? 10_000,
+      body.capitalUsdc ?? 10_000,
+    );
+  }
+
   @Delete('config/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Eliminar una configuración y detener su agente' })

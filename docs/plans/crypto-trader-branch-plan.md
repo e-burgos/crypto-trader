@@ -22,6 +22,7 @@
 | 30  | feature/multi-agent-e2e-qa         | 30-multi-agent-e2e-qa.md      | 28         |
 | 31  | feature/llm-provider-dashboard     | 31-llm-provider-dashboard.md  | 23,17      |
 | 32  | feature/32-operation-mode-selector | 32-operation-mode-selector.md | 20,02,09   |
+| 33  | feature/33-bugfix-batch-ux-data    | 33-bugfix-batch-ux-data.md    | 31,32,28   |
 
 ## Flujo recomendado
 

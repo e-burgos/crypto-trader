@@ -180,6 +180,11 @@ export class TradingService implements OnModuleInit {
         minIntervalMinutes: incoming.minIntervalMinutes,
         intervalMode: incoming.intervalMode as any,
         orderPriceOffsetPct: incoming.orderPriceOffsetPct,
+        primaryProvider: dto.primaryProvider ?? null,
+        primaryModel: dto.primaryModel ?? null,
+        fallbackProvider: dto.fallbackProvider ?? null,
+        fallbackModel: dto.fallbackModel ?? null,
+        riskProfile: (dto.riskProfile ?? 'MODERATE') as any,
       },
     });
   }
@@ -198,6 +203,34 @@ export class TradingService implements OnModuleInit {
       where: { id: configId },
       data: { ...dto } as any,
     });
+  }
+
+  async initSandboxWallets(
+    userId: string,
+    capitalUsdt = 10_000,
+    capitalUsdc = 10_000,
+  ) {
+    const [walletUsdt, walletUsdc] = await Promise.all([
+      this.prisma.sandboxWallet.upsert({
+        where: { userId_currency: { userId, currency: 'USDT' } },
+        create: {
+          userId,
+          currency: 'USDT' as any,
+          balance: capitalUsdt,
+        },
+        update: { balance: capitalUsdt },
+      }),
+      this.prisma.sandboxWallet.upsert({
+        where: { userId_currency: { userId, currency: 'USDC' } },
+        create: {
+          userId,
+          currency: 'USDC' as any,
+          balance: capitalUsdc,
+        },
+        update: { balance: capitalUsdc },
+      }),
+    ]);
+    return { usdt: walletUsdt.balance, usdc: walletUsdc.balance };
   }
 
   async deleteConfig(userId: string, configId: string) {

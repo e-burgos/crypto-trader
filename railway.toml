@@ -1,6 +1,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "apps/api/Dockerfile"
+dockerContextPath = "."
 watchPatterns = ["apps/api/**", "libs/**", "package.json", "pnpm-lock.yaml"]
 
 [deploy]

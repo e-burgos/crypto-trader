@@ -93,6 +93,20 @@
         "cwd": "{workspaceRoot}"
       }
     },
+    "lint:api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx lint api",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "lint:web": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx lint web",
+        "cwd": "{workspaceRoot}"
+      }
+    },
     "lint:fix": {
       "executor": "nx:run-commands",
       "options": {

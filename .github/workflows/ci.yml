@@ -66,6 +66,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: ../../node_modules/.bin/prisma generate
+
       - name: Run Prisma migrations (test DB)
         working-directory: apps/api
         run: ../../node_modules/.bin/prisma db push --accept-data-loss
@@ -96,6 +100,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: ../../node_modules/.bin/prisma generate
 
       - name: Build API
         run: pnpm nx build api --skip-nx-cache

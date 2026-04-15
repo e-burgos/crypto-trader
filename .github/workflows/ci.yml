@@ -104,6 +104,8 @@ jobs:
       - name: Generate Prisma client
         working-directory: apps/api
         run: ../../node_modules/.bin/prisma generate
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
 
       - name: Build API
         run: pnpm nx build api --skip-nx-cache

@@ -26,12 +26,14 @@ ENV NODE_ENV=production
 COPY --from=builder /app/node_modules ./node_modules
 # Copy compiled bundle
 COPY --from=builder /app/dist/apps/api ./dist/apps/api
-# Copy Prisma schema & migrations
+# Copy Prisma schema, migrations and config (prisma.config.ts needed by CLI)
 COPY --from=builder /app/apps/api/prisma apps/api/prisma
+COPY --from=builder /app/apps/api/prisma.config.ts apps/api/prisma.config.ts
 # Copy generated Prisma client
 COPY --from=builder /app/apps/api/generated ./apps/api/generated
 
 EXPOSE 3000
 
-# Run migrations then start the server
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma 2>/dev/null || true && node dist/apps/api/main.js"]
+# Run migrations then start the app
+# Use --schema flag to bypass prisma.config.ts (avoids tsx dependency in runner)
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma && node dist/apps/api/main.js"]

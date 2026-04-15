@@ -6,6 +6,7 @@ export type TradingMode = 'SANDBOX' | 'LIVE' | 'TESTNET';
 export type TradingAsset = 'BTC' | 'ETH';
 export type TradingPair = 'USDT' | 'USDC';
 export type IntervalMode = 'AGENT' | 'CUSTOM';
+export type RiskProfile = 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE';
 
 export interface TradingConfig {
   id: string;
@@ -25,6 +26,11 @@ export interface TradingConfig {
   orderPriceOffsetPct: number;
   isActive: boolean;
   isRunning: boolean;
+  primaryProvider: string | null;
+  primaryModel: string | null;
+  fallbackProvider: string | null;
+  fallbackModel: string | null;
+  riskProfile: RiskProfile;
   createdAt: string;
 }
 
@@ -43,6 +49,11 @@ export interface TradingConfigDto {
   minIntervalMinutes: number;
   intervalMode: IntervalMode;
   orderPriceOffsetPct: number;
+  primaryProvider?: string | null;
+  primaryModel?: string | null;
+  fallbackProvider?: string | null;
+  fallbackModel?: string | null;
+  riskProfile?: RiskProfile;
 }
 
 export interface AgentStatus {

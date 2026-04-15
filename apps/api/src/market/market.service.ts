@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import {
   CoinGeckoNewsFetcher,
@@ -7,13 +7,22 @@ import {
   NewsDataFetcher,
   NewsAggregator,
 } from '@crypto-trader/data-fetcher';
-import { CandleInterval } from '@crypto-trader/shared';
+import {
+  CandleInterval,
+  LLMProvider as SharedLLMProvider,
+} from '@crypto-trader/shared';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
 import { createLLMProvider } from '@crypto-trader/analysis';
 import { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
-import { NewsApiProvider } from '../../generated/prisma/enums';
-import { LLMProvider } from '@crypto-trader/shared';
+import {
+  NewsApiProvider,
+  LLMSource,
+  LLMProvider,
+} from '../../generated/prisma/enums';
+import { LLMUsageService } from '../llm/llm-usage.service';
+import { recordCall } from '../llm/provider-health.service';
+import { suggestModel } from '../llm/model-ranking';
 
 const VALID_ASSETS = ['BTC', 'ETH'];
 const VALID_INTERVALS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -106,7 +115,10 @@ const OPTIONAL_NEWS_SOURCES = [
 export class MarketService {
   private readonly binance = new BinanceRestClient();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly llmUsageService?: LLMUsageService,
+  ) {}
 
   // ── News Config ────────────────────────────────────────────────────────────
 
@@ -135,6 +147,10 @@ export class MarketService {
       onlySummary?: boolean;
       botEnabled?: boolean;
       newsWeight?: number;
+      primaryProvider?: LLMProvider | null;
+      primaryModel?: string | null;
+      fallbackProvider?: LLMProvider | null;
+      fallbackModel?: string | null;
     },
   ) {
     return this.prisma.newsConfig.upsert({
@@ -147,6 +163,10 @@ export class MarketService {
         onlySummary: data.onlySummary ?? true,
         botEnabled: data.botEnabled ?? true,
         newsWeight: data.newsWeight ?? 15,
+        primaryProvider: data.primaryProvider ?? undefined,
+        primaryModel: data.primaryModel ?? undefined,
+        fallbackProvider: data.fallbackProvider ?? undefined,
+        fallbackModel: data.fallbackModel ?? undefined,
       },
       update: data,
     });
@@ -265,6 +285,59 @@ export class MarketService {
     });
   }
 
+  // ── Resolve LLM for News (3-level fallback) ───────────────────────────────
+
+  async resolveLLMForNews(
+    userId: string,
+  ): Promise<{ provider: LLMProvider; model: string; apiKey: string } | null> {
+    const cfg = await this.getNewsConfig(userId);
+
+    // 1. Primary configured
+    if (cfg.primaryProvider && cfg.primaryModel) {
+      const cred = await this.prisma.lLMCredential.findFirst({
+        where: { userId, provider: cfg.primaryProvider, isActive: true },
+      });
+      if (cred) {
+        return {
+          provider: cfg.primaryProvider,
+          model: cfg.primaryModel,
+          apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+        };
+      }
+    }
+
+    // 2. Fallback configured
+    if (cfg.fallbackProvider && cfg.fallbackModel) {
+      const cred = await this.prisma.lLMCredential.findFirst({
+        where: { userId, provider: cfg.fallbackProvider, isActive: true },
+      });
+      if (cred) {
+        return {
+          provider: cfg.fallbackProvider,
+          model: cfg.fallbackModel,
+          apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+        };
+      }
+    }
+
+    // 3. Global ranking suggestion (cheapest for NEWS)
+    const activeCreds = await this.prisma.lLMCredential.findMany({
+      where: { userId, isActive: true },
+    });
+    const activeProviders = [...new Set(activeCreds.map((c) => c.provider))];
+    const suggested = suggestModel(activeProviders, 'NEWS', true);
+    if (!suggested) return null;
+
+    const cred = activeCreds.find((c) => c.provider === suggested.provider);
+    if (!cred) return null;
+
+    return {
+      provider: suggested.provider,
+      model: suggested.model,
+      apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+    };
+  }
+
   // ── AI Sentiment Analysis → updates latest DB record ──────────────────────
 
   async analyzeSentiment(userId: string, provider: string, model?: string) {
@@ -293,7 +366,11 @@ export class MarketService {
 
     const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
     const usedModel = model || cred.selectedModel || undefined;
-    const llm = createLLMProvider(provider as LLMProvider, apiKey, usedModel);
+    const llm = createLLMProvider(
+      provider as SharedLLMProvider,
+      apiKey,
+      usedModel,
+    );
 
     const system = `You are a financial news sentiment classifier for cryptocurrency markets.
 Analyze each news item and classify its sentiment toward crypto markets.
@@ -323,9 +400,34 @@ ${numbered}`;
     let parsed: { index: number; sentiment: string; reasoning: string }[] = [];
     try {
       const response = await llm.complete(system, user);
+
+      // Track call for health monitoring
+      recordCall(userId, provider, true);
+
+      // Log usage for news analysis
+      if (this.llmUsageService) {
+        this.llmUsageService
+          .log({
+            userId,
+            provider: provider as any,
+            model: usedModel ?? 'unknown',
+            usage: response.usage,
+            source: LLMSource.ANALYSIS,
+          })
+          .catch(() => {
+            /* fire-and-forget */
+          });
+      }
+
       const cleaned = response.text.replace(/```json|```/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch (e) {
+      recordCall(
+        userId,
+        provider,
+        false,
+        e instanceof Error ? e.message : String(e),
+      );
       throw new Error(
         `Failed to parse LLM sentiment response: ${e instanceof Error ? e.message : String(e)}`,
       );

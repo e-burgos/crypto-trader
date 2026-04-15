@@ -12,6 +12,9 @@ import {
   BotMessageSquare,
   TrendingUp,
   TestTube2,
+  ExternalLink,
+  TableConfig,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { InfoTooltip } from '../../components/ui/info-tooltip';
@@ -36,6 +39,7 @@ import {
   useUpdateProfile,
   useTestBinanceConnection,
   useTestLLMKey,
+  useValidateAllLLMKeys,
   useNewsSourcesStatus,
   useNewsApiKeys,
   useSetNewsApiKey,
@@ -44,6 +48,10 @@ import {
 } from '../../hooks/use-user';
 import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
 import { AIUsageDashboard } from '../../components/settings/ai-usage-dashboard';
+import { ProviderStatusGrid } from '../../components/settings/provider-status-grid';
+import { NewsConfigPanel } from '../../components/settings/news-config-panel';
+import { useNewsConfig, useUpdateNewsConfig } from '../../hooks/use-market';
+import { toast } from 'sonner';
 
 const LLM_PROVIDERS = [
   {
@@ -55,21 +63,29 @@ const LLM_PROVIDERS = [
       'claude-3-5-sonnet-20241022',
       'claude-3-haiku-20240307',
     ],
+    helpLink: 'https://console.anthropic.com/settings/keys',
+    helpLinkText: 'console.anthropic.com',
   },
   {
     value: 'OPENAI',
     label: 'OpenAI',
     models: ['gpt-4o', 'gpt-4o-mini'],
+    helpLink: 'https://platform.openai.com/api-keys',
+    helpLinkText: 'platform.openai.com',
   },
   {
     value: 'GROQ',
     label: 'Groq',
     models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+    helpLink: 'https://console.groq.com/keys',
+    helpLinkText: 'console.groq.com',
   },
   {
     value: 'GEMINI',
     label: 'Google Gemini',
     models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite'],
+    helpLink: 'https://aistudio.google.com/apikey',
+    helpLinkText: 'aistudio.google.com',
   },
   {
     value: 'MISTRAL',
@@ -79,10 +95,24 @@ const LLM_PROVIDERS = [
       'mistral-medium-latest',
       'mistral-large-latest',
     ],
+    helpLink: 'https://console.mistral.ai/api-keys/',
+    helpLinkText: 'console.mistral.ai',
+  },
+  {
+    value: 'TOGETHER',
+    label: 'Together AI',
+    models: [
+      'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
+      'meta-llama/Llama-4-Scout-17B-16E-Instruct',
+      'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    ],
+    helpLink: 'https://api.together.xyz/settings/api-keys',
+    helpLinkText: 'api.together.xyz',
   },
 ];
 
 type Tab = 'profile' | 'exchange' | 'ai' | 'news';
+type AISubTab = 'keys' | 'analytics';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -94,6 +124,7 @@ export function SettingsPage() {
       ? tab
       : 'profile';
   });
+  const [aiSubTab, setAiSubTab] = useState<AISubTab>('keys');
 
   // Sync tab when URL param changes
   useEffect(() => {
@@ -139,6 +170,13 @@ export function SettingsPage() {
     Record<string, { apiKey: string; model: string }>
   >({});
 
+  // Auto-validate all LLM keys when AI tab is active
+  const {
+    data: llmValidation,
+    isLoading: validatingLLMKeys,
+    refetch: revalidateLLMKeys,
+  } = useValidateAllLLMKeys(activeTab === 'ai' && llmKeys.length > 0);
+
   // News Sources
   const {
     data: newsSources = [],
@@ -157,6 +195,11 @@ export function SettingsPage() {
     reset: resetNewsTest,
   } = useTestNewsApiKey();
   const [newsKeyForms, setNewsKeyForms] = useState<Record<string, string>>({});
+
+  // News Config
+  const { data: newsConfig } = useNewsConfig();
+  const updateNewsConfig = useUpdateNewsConfig();
+
   const qc = useQueryClient();
 
   // Connection tests
@@ -223,8 +266,23 @@ export function SettingsPage() {
       icon: <BotMessageSquare className="h-4 w-4" />,
       badge:
         llmKeys.length > 0 ? (
-          <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500">
-            {llmKeys.length}
+          <span
+            className={cn(
+              'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+              validatingLLMKeys
+                ? 'bg-amber-500/20 text-amber-500'
+                : llmValidation
+                  ? llmValidation.active > 0
+                    ? 'bg-emerald-500/20 text-emerald-500'
+                    : 'bg-red-500/20 text-red-500'
+                  : 'bg-emerald-500/20 text-emerald-500',
+            )}
+          >
+            {validatingLLMKeys
+              ? '...'
+              : llmValidation
+                ? `${llmValidation.active}/${llmValidation.total}`
+                : llmKeys.length}
           </span>
         ) : null,
     },
@@ -243,10 +301,13 @@ export function SettingsPage() {
   ];
 
   return (
-    <div ref={containerRef} className="p-6 max-w-3xl space-y-6">
+    <div ref={containerRef} className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
+      <div className="mb-6">
+        <div className="flex items-center gap-2">
+          <TableConfig className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
+        </div>
         <p className="text-sm text-muted-foreground">
           {t('settings.subtitle')}
         </p>
@@ -609,165 +670,280 @@ export function SettingsPage() {
         {/* ── AI Models (LLM) ──────────────────────────── */}
         {activeTab === 'ai' && (
           <>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <BotMessageSquare className="h-4 w-4 text-primary" />
-                <h2 className="font-semibold">{t('settings.llmKeys')}</h2>
-              </div>
-              <div className="space-y-4">
-                {LLM_PROVIDERS.map((provider) => {
-                  const status = getLLMKeyStatus(provider.value);
-                  const form = getLLMForm(provider.value);
-                  return (
-                    <div
-                      key={provider.value}
-                      className="rounded-lg border border-border p-4"
-                    >
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="font-medium text-sm">
-                          {provider.label}
-                        </span>
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-xs font-semibold',
-                            status?.isActive
-                              ? 'bg-emerald-500/10 text-emerald-500'
-                              : 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {status?.isActive
-                            ? t('settings.active')
-                            : t('settings.inactive')}
-                        </span>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-xs font-medium">
-                            API Key
-                          </label>
-                          <PasswordInput
-                            placeholder="sk-..."
-                            value={form.apiKey}
-                            onChange={(e) =>
-                              setLlmForms((f) => ({
-                                ...f,
-                                [provider.value]: {
-                                  ...(f[provider.value] ?? {
-                                    model: provider.models[0],
-                                  }),
-                                  apiKey: e.target.value,
-                                },
-                              }))
-                            }
-                            className="px-2 py-1.5"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-medium">
-                            {t('settings.model')}
-                          </label>
-                          <DynamicModelSelect
-                            provider={provider.value}
-                            value={form.model}
-                            onChange={(model) =>
-                              setLlmForms((f) => ({
-                                ...f,
-                                [provider.value]: {
-                                  ...(f[provider.value] ?? { apiKey: '' }),
-                                  model,
-                                },
-                              }))
-                            }
-                            fallbackModels={provider.models}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Button
-                          size="sm"
-                          disabled={savingLLM || !form.apiKey}
-                          onClick={() =>
-                            saveLLMKey(
-                              {
-                                provider: provider.value,
-                                apiKey: form.apiKey,
-                                selectedModel: form.model,
-                              },
-                              {
-                                onSuccess: () => {
-                                  setLlmForms((f) => ({
-                                    ...f,
-                                    [provider.value]: {
-                                      apiKey: '',
-                                      model: provider.models[0],
-                                    },
-                                  }));
-                                  resetLLMTest();
-                                },
-                              },
-                            )
-                          }
-                        >
-                          {savingLLM && (
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                          )}
-                          {t('common.save')}
-                        </Button>
-                        {status?.isActive && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={testingLLM}
-                              onClick={() => testLLM(provider.value)}
-                            >
-                              {testingLLM &&
-                                llmTestProvider === provider.value && (
-                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                )}
-                              {testingLLM && llmTestProvider === provider.value
-                                ? t('settings.testing')
-                                : t('settings.testConnection')}
-                            </Button>
-                            {llmTestResult &&
-                              llmTestProvider === provider.value && (
-                                <span
-                                  className={cn(
-                                    'text-xs font-medium',
-                                    llmTestResult.connected
-                                      ? 'text-emerald-500'
-                                      : 'text-red-500',
-                                  )}
-                                >
-                                  {llmTestResult.connected
-                                    ? t('settings.testSuccess')
-                                    : `${t('settings.testFailed')}: ${llmTestResult.error}`}
-                                </span>
-                              )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="gap-1.5 text-red-500 hover:text-red-600"
-                              onClick={() => deleteLLMKey(provider.value)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              {t('settings.remove')}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            {/* ── AI Subtab Navigation ── */}
+            <div className="mb-4 flex gap-1 rounded-lg bg-muted/50 p-1">
+              <button
+                onClick={() => setAiSubTab('keys')}
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  aiSubTab === 'keys'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Key className="h-4 w-4" />
+                {t('settings.aiSubTabs.apiKeys')}
+              </button>
+              <button
+                onClick={() => setAiSubTab('analytics')}
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  aiSubTab === 'analytics'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <BarChart3 className="h-4 w-4" />
+                {t('settings.aiSubTabs.analytics')}
+              </button>
             </div>
 
-            {/* ── AI Usage Dashboard ── */}
-            <AIUsageDashboard />
+            {aiSubTab === 'keys' && (
+              <div className="rounded-xl border border-border bg-card p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BotMessageSquare className="h-4 w-4 text-primary" />
+                    <h2 className="font-semibold">{t('settings.llmKeys')}</h2>
+                    {llmValidation && (
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-0.5 text-xs font-semibold',
+                          llmValidation.active > 0
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-red-500/10 text-red-500',
+                        )}
+                      >
+                        {llmValidation.active}/{llmValidation.total}{' '}
+                        {t('settings.available')}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={validatingLLMKeys}
+                    onClick={() => revalidateLLMKeys()}
+                  >
+                    {validatingLLMKeys ? (
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-1 h-3 w-3" />
+                    )}
+                    {validatingLLMKeys
+                      ? t('settings.validating')
+                      : t('settings.revalidate')}
+                  </Button>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {LLM_PROVIDERS.map((provider) => {
+                    const status = getLLMKeyStatus(provider.value);
+                    const form = getLLMForm(provider.value);
+                    const validation = llmValidation?.results.find(
+                      (r) => r.provider === provider.value,
+                    );
+                    // Priority: manual test > auto-validation > DB isActive flag
+                    const manualTestFailed =
+                      status?.isActive &&
+                      llmTestResult &&
+                      llmTestProvider === provider.value &&
+                      !llmTestResult.connected;
+                    const resolvedStatus = manualTestFailed
+                      ? 'INVALID'
+                      : (validation?.status ??
+                        (status?.isActive ? 'ACTIVE' : 'INACTIVE'));
+                    return (
+                      <div
+                        key={provider.value}
+                        className="rounded-lg border border-border p-4"
+                      >
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="font-medium text-sm">
+                            {provider.label}
+                          </span>
+                          {validatingLLMKeys && status?.isActive ? (
+                            <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-500">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {t('settings.validating')}
+                            </span>
+                          ) : (
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-xs font-semibold',
+                                resolvedStatus === 'ACTIVE'
+                                  ? 'bg-emerald-500/10 text-emerald-500'
+                                  : resolvedStatus === 'INVALID'
+                                    ? 'bg-red-500/10 text-red-500'
+                                    : 'bg-muted text-muted-foreground',
+                              )}
+                            >
+                              {resolvedStatus === 'ACTIVE'
+                                ? t('settings.active')
+                                : resolvedStatus === 'INVALID'
+                                  ? t('settings.invalid')
+                                  : t('settings.inactive')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-1">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium">
+                              API Key
+                            </label>
+                            <PasswordInput
+                              placeholder="sk-..."
+                              value={form.apiKey}
+                              onChange={(e) =>
+                                setLlmForms((f) => ({
+                                  ...f,
+                                  [provider.value]: {
+                                    ...(f[provider.value] ?? {
+                                      model: provider.models[0],
+                                    }),
+                                    apiKey: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="px-2 py-2"
+                            />
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              {t('settings.getApiKeyAt')}{' '}
+                              <a
+                                href={provider.helpLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+                              >
+                                {provider.helpLinkText}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </p>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium">
+                              {t('settings.model')}
+                            </label>
+                            <DynamicModelSelect
+                              provider={provider.value}
+                              value={form.model}
+                              onChange={(model) =>
+                                setLlmForms((f) => ({
+                                  ...f,
+                                  [provider.value]: {
+                                    ...(f[provider.value] ?? { apiKey: '' }),
+                                    model,
+                                  },
+                                }))
+                              }
+                              fallbackModels={provider.models}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <Button
+                            size="sm"
+                            disabled={savingLLM || !form.apiKey}
+                            onClick={() =>
+                              saveLLMKey(
+                                {
+                                  provider: provider.value,
+                                  apiKey: form.apiKey,
+                                  selectedModel: form.model,
+                                },
+                                {
+                                  onSuccess: () => {
+                                    setLlmForms((f) => ({
+                                      ...f,
+                                      [provider.value]: {
+                                        apiKey: '',
+                                        model: provider.models[0],
+                                      },
+                                    }));
+                                    resetLLMTest();
+                                  },
+                                },
+                              )
+                            }
+                          >
+                            {savingLLM && (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            )}
+                            {t('common.save')}
+                          </Button>
+                          {status?.isActive && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={testingLLM}
+                                onClick={() => testLLM(provider.value)}
+                              >
+                                {testingLLM &&
+                                  llmTestProvider === provider.value && (
+                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  )}
+                                {testingLLM &&
+                                llmTestProvider === provider.value
+                                  ? t('settings.testing')
+                                  : t('settings.testConnection')}
+                              </Button>
+                              {llmTestResult &&
+                                llmTestProvider === provider.value && (
+                                  <span
+                                    className={cn(
+                                      'text-xs font-medium',
+                                      llmTestResult.connected
+                                        ? 'text-emerald-500'
+                                        : 'text-red-500',
+                                    )}
+                                  >
+                                    {llmTestResult.connected
+                                      ? t('settings.testSuccess')
+                                      : `${t('settings.testFailed')}: ${llmTestResult.error}`}
+                                  </span>
+                                )}
+                              {validation?.status === 'INVALID' &&
+                                validation.error &&
+                                !(
+                                  llmTestResult &&
+                                  llmTestProvider === provider.value
+                                ) && (
+                                  <span className="text-xs font-medium text-red-500">
+                                    {t('settings.autoValidationFailed')}:{' '}
+                                    {validation.error}
+                                  </span>
+                                )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="gap-1.5 text-red-500 hover:text-red-600"
+                                onClick={() => deleteLLMKey(provider.value)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                {t('settings.remove')}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {aiSubTab === 'analytics' && (
+              <div className="space-y-6">
+                {/* ── Provider Status Dashboard ── */}
+                <ProviderStatusGrid />
+
+                {/* ── AI Usage Dashboard ── */}
+                <AIUsageDashboard />
+              </div>
+            )}
           </>
         )}
 
-        {/* ── News Sources ─────────────────────────────── */}
+        {/* ── News Config + Sources ─────────────────────────────── */}
         {activeTab === 'news' &&
           (() => {
             const TOOLTIP_MAP: Record<string, string> = {
@@ -784,6 +960,19 @@ export function SettingsPage() {
             const optionalSources = newsSources.filter((s) => s.requiresApiKey);
             return (
               <div className="space-y-4">
+                {/* News Configuration */}
+                <NewsConfigPanel
+                  config={newsConfig}
+                  onSave={(data) =>
+                    updateNewsConfig.mutate(data, {
+                      onSuccess: () => toast.success('Configuración guardada'),
+                      onError: () =>
+                        toast.error('Error al guardar configuración'),
+                    })
+                  }
+                  isSaving={updateNewsConfig.isPending}
+                />
+
                 {/* Free always-on sources */}
                 <div className="rounded-xl border border-border bg-card p-5">
                   <div className="mb-1 flex items-center justify-between">

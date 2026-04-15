@@ -197,12 +197,15 @@ export function OverviewPage() {
     data: liveBalance,
     isLoading: liveLoading,
     error: liveBalanceError,
-  } = useBinanceBalance('LIVE', hasLiveKeys);
+  } = useBinanceBalance('LIVE', hasLiveKeys && platformMode === 'LIVE');
   const {
     data: testnetBalance,
     isLoading: testnetLoading,
     error: testnetBalanceError,
-  } = useBinanceBalance('TESTNET', hasTestnetKeys);
+  } = useBinanceBalance(
+    'TESTNET',
+    hasTestnetKeys && platformMode === 'TESTNET',
+  );
 
   useEffect(() => {
     if (liveBalanceError)

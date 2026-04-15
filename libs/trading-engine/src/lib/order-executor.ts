@@ -46,6 +46,11 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     this.currentPrices.set(symbol, price);
   }
 
+  /** Seed a balance for paper-trading (e.g. base asset before a SELL). */
+  setBalance(asset: string, free: number): void {
+    this.balances.set(asset, { asset, free, locked: 0 });
+  }
+
   async getPrice(symbol: string): Promise<number> {
     const price = this.currentPrices.get(symbol);
     if (!price) throw new Error(`No sandbox price set for ${symbol}`);

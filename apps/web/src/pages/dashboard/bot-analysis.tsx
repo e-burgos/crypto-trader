@@ -464,7 +464,7 @@ function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
           )}
           {/* Configure button */}
           <Link
-            to="/dashboard/news#config"
+            to="/dashboard/settings?tab=news"
             className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/60 transition-colors"
             title={t('botAnalysis.configureNews')}
           >
@@ -514,7 +514,7 @@ function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
                 {t('botAnalysis.newsNotUsedByBot')}
               </span>
               <Link
-                to="/dashboard/news#config"
+                to="/dashboard/settings?tab=news"
                 className="ml-auto text-[10px] text-primary hover:underline font-semibold"
               >
                 {t('botAnalysis.configureNews')}
@@ -1454,7 +1454,7 @@ function NextDecisionBanner({
           {t('botAnalysis.inputAgentRunning', { count: runningConfigs.length })}
         </span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {runningConfigs.map((cfg) => {
           const lastDec =
             decisions.find(

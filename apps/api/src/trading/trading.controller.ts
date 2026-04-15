@@ -28,6 +28,7 @@ import {
   StopAgentDto,
   StopAgentsByModeDto,
 } from './dto/trading-config.dto';
+import { generateAgentName } from './trading-agent-utils';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -86,6 +87,29 @@ export class TradingController {
     @Body() dto: UpdateTradingConfigDto,
   ) {
     return this.tradingService.updateConfig(user.userId, configId, dto);
+  }
+
+  @Post('config/auto-name')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generar nombre automático para un agente' })
+  @ApiResponse({ status: 200, description: 'Nombre generado' })
+  autoName(
+    @Body()
+    body: {
+      asset: string;
+      riskProfile: string;
+      primaryProvider?: string;
+      primaryModel?: string;
+    },
+  ) {
+    return {
+      name: generateAgentName({
+        asset: body.asset,
+        riskProfile: body.riskProfile ?? 'MODERATE',
+        primaryProvider: body.primaryProvider,
+        primaryModel: body.primaryModel,
+      }),
+    };
   }
 
   // ── Agent lifecycle ───────────────────────────────────────────────────────

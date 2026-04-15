@@ -27,7 +27,11 @@ import {
   TradeType,
   NotificationType,
 } from '@crypto-trader/shared';
-import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
+import {
+  SUPPORTED_PAIRS,
+  TRADE_FEE_PCT,
+  MAX_ACTIVE_AGENTS_PER_USER,
+} from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 
 const DEFAULTS = {
@@ -225,6 +229,16 @@ export class TradingService implements OnModuleInit {
     if (config.isRunning) {
       throw new BadRequestException(
         `Agent for config ${dto.configId} is already running`,
+      );
+    }
+
+    // ── Enforce global active-agent limit per user ───────────────────────
+    const activeCount = await this.prisma.tradingConfig.count({
+      where: { userId, isRunning: true },
+    });
+    if (activeCount >= MAX_ACTIVE_AGENTS_PER_USER) {
+      throw new BadRequestException(
+        `Maximum ${MAX_ACTIVE_AGENTS_PER_USER} active agents allowed. Stop an existing agent before starting a new one.`,
       );
     }
 

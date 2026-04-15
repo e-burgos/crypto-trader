@@ -48,11 +48,22 @@ export interface LLMUsageResponse {
   dailySeries: LLMUsageDaily[];
 }
 
+interface LLMModelsResponse {
+  provider: string;
+  models: LLMModel[];
+  fetchedAt: string;
+}
+
 export function useLLMProviderModels(provider: string, enabled = true) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery<LLMModel[]>({
     queryKey: ['llm', 'models', provider],
-    queryFn: () => api.get(`/users/me/llm/${provider}/models`),
+    queryFn: async () => {
+      const res = await api.get<LLMModelsResponse>(
+        `/users/me/llm/${provider}/models`,
+      );
+      return res.models;
+    },
     staleTime: 300_000,
     enabled: isAuthenticated && enabled && !!provider,
   });
@@ -64,6 +75,63 @@ export function useLLMUsageStats(period: '7d' | '30d' | '90d' = '30d') {
     queryKey: ['llm', 'usage', period],
     queryFn: () => api.get(`/users/me/llm/usage?period=${period}`),
     staleTime: 60_000,
+    enabled: isAuthenticated,
+  });
+}
+
+// ── Provider Status ────────────────────────────────────────────────────────
+
+export interface ProviderRateLimits {
+  tokensRemaining: number | null;
+  tokensLimit: number | null;
+  requestsRemaining: number | null;
+  requestsLimit: number | null;
+  resetAt: string | null;
+  capturedAt: string;
+}
+
+export interface ProviderUsageBySource {
+  source: string;
+  tokensIn: number;
+  tokensOut: number;
+  calls: number;
+  costUsd: number;
+}
+
+export interface ProviderUsageDaily {
+  date: string;
+  costUsd: number;
+  tokens: number;
+  calls: number;
+}
+
+export interface ProviderStatus {
+  provider: string;
+  availability: 'AVAILABLE' | 'LIMITED' | 'UNAVAILABLE';
+  availabilityScore: number;
+  reason?: string;
+  rateLimits: ProviderRateLimits | null;
+  usage: {
+    totalTokensIn: number;
+    totalTokensOut: number;
+    totalCalls: number;
+    totalErrors: number;
+    estimatedCostUsd: number;
+    bySource: ProviderUsageBySource[];
+    dailySeries: ProviderUsageDaily[];
+  };
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  keyStatus: 'ACTIVE' | 'INVALID' | 'INACTIVE';
+}
+
+export function useProviderStatuses() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return useQuery<ProviderStatus[]>({
+    queryKey: ['llm', 'providers', 'status'],
+    queryFn: () => api.get('/users/me/llm/providers/status'),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
     enabled: isAuthenticated,
   });
 }

@@ -203,6 +203,7 @@ function ErrorBubble({ error }: { error: StreamError }) {
   );
 
   const isRateLimit = error.errorCode === 'RATE_LIMIT';
+  const isCreditLimit = error.errorCode === 'CREDIT_LIMIT';
   const isInvalidKey = error.errorCode === 'INVALID_API_KEY';
 
   return (
@@ -213,11 +214,22 @@ function ErrorBubble({ error }: { error: StreamError }) {
       <div className="max-w-[85%]">
         <div className="rounded-2xl rounded-tl-sm bg-destructive/10 px-4 py-3 text-sm ring-1 ring-destructive/30">
           <p className="font-medium text-destructive mb-0.5">
-            {isRateLimit ? '⏳' : isInvalidKey ? '🔑' : '⚠️'}&nbsp;
+            {isRateLimit
+              ? '⏳'
+              : isCreditLimit
+                ? '💳'
+                : isInvalidKey
+                  ? '🔑'
+                  : '⚠️'}
+            &nbsp;
             {error.message}
           </p>
-          {isInvalidKey && (
-            <p className="text-xs text-muted-foreground mt-1">Settings → AI</p>
+          {(isInvalidKey || isCreditLimit) && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {isCreditLimit
+                ? 'Add credits at provider billing page'
+                : 'Settings → AI'}
+            </p>
           )}
         </div>
       </div>

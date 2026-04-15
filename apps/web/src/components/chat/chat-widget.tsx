@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { BotMessageSquare, Maximize2, X, Sparkles } from 'lucide-react';
+import { BotMessageSquare, Maximize2, X, Sparkles, Plus } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useChatStore } from '../../store/chat.store';
 import {
@@ -16,6 +16,7 @@ import { NewSessionModal } from './llm-selector';
 import { AgentSelector } from './agent-selector';
 import { AgentHeader } from './agent-header';
 import { OrchestratingIndicator } from './orchestrating-indicator';
+import { ChatLLMOverride } from './chat-llm-override';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
@@ -33,7 +34,8 @@ export function ChatWidget() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { isOpen, activeSessionId, toggle, close } = useChatStore();
+  const { isOpen, activeSessionId, toggle, close, setActiveSession } =
+    useChatStore();
   const [showNewSession, setShowNewSession] = useState(false);
 
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,13 @@ export function ChatWidget() {
     }
     try {
       await saveMessage.mutateAsync({ content, capability });
-      startStream(content, capability);
+      const { sessionProvider, sessionModel } = useChatStore.getState();
+      startStream(
+        content,
+        capability,
+        sessionProvider ?? undefined,
+        sessionModel ?? undefined,
+      );
     } catch {
       // error handled by mutation
     }
@@ -207,6 +215,17 @@ export function ChatWidget() {
             <div className="relative flex items-center gap-0.5">
               <button
                 onClick={() => {
+                  setActiveSession(null);
+                }}
+                className="rounded-lg p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-colors"
+                title={t('chat.newSession', {
+                  defaultValue: 'New session',
+                })}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => {
                   navigate('/dashboard/chat');
                   close();
                 }}
@@ -271,6 +290,10 @@ export function ChatWidget() {
                 </div>
               )}
               <div className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
+              <ChatLLMOverride
+                sessionProvider={session?.provider ?? ''}
+                sessionModel={session?.model ?? ''}
+              />
               <ChatInput
                 onSend={handleSend}
                 onStop={stopStream}

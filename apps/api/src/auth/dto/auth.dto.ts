@@ -87,7 +87,7 @@ export class SetTestnetBinanceKeysDto {
 
 export class LLMKeyDto {
   @ApiProperty({
-    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL'],
+    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL', 'TOGETHER'],
     example: 'CLAUDE',
   })
   @IsString()

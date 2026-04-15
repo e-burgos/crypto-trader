@@ -17,6 +17,7 @@ import { NewSessionModal } from '../../components/chat/llm-selector';
 import { AgentSelector } from '../../components/chat/agent-selector';
 import { AgentHeader } from '../../components/chat/agent-header';
 import { OrchestratingIndicator } from '../../components/chat/orchestrating-indicator';
+import { ChatLLMOverride } from '../../components/chat/chat-llm-override';
 import { useTranslation } from 'react-i18next';
 
 export function ChatPage() {
@@ -56,7 +57,13 @@ export function ChatPage() {
       return;
     }
     await saveMessage.mutateAsync({ content, capability });
-    startStream(content, capability);
+    const { sessionProvider, sessionModel } = useChatStore.getState();
+    startStream(
+      content,
+      capability,
+      sessionProvider ?? undefined,
+      sessionModel ?? undefined,
+    );
   };
 
   const hasMessages = (session?.messages.length ?? 0) > 0;
@@ -163,6 +170,10 @@ export function ChatPage() {
               </div>
             )}
             {/* Input */}
+            <ChatLLMOverride
+              sessionProvider={session?.provider ?? ''}
+              sessionModel={session?.model ?? ''}
+            />
             <ChatInput
               onSend={handleSend}
               onStop={stopStream}

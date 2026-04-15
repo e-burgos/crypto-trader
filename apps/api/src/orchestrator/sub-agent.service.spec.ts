@@ -49,14 +49,16 @@ describe('SubAgentService', () => {
         mockCredential,
       );
 
-      const provider = await service.getProvider('user-1', true);
+      const result = await service.getProvider('user-1', true);
 
       expect(mockPrismaService.lLMCredential.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ provider: 'GROQ' }),
         }),
       );
-      expect(provider).toBe(mockLLMProvider);
+      expect(result.client).toBe(mockLLMProvider);
+      expect(result.provider).toBe('GROQ');
+      expect(result.model).toBe('llama-3.3-70b-versatile');
     });
 
     it('should fallback to any active credential if Groq not available', async () => {
@@ -65,8 +67,8 @@ describe('SubAgentService', () => {
         .mockResolvedValueOnce(null) // no OPENAI
         .mockResolvedValueOnce(mockCredential); // fallback to latest
 
-      const provider = await service.getProvider('user-1', true);
-      expect(provider).toBe(mockLLMProvider);
+      const result = await service.getProvider('user-1', true);
+      expect(result.client).toBe(mockLLMProvider);
     });
 
     it('should throw if no active credentials found', async () => {
@@ -86,9 +88,10 @@ describe('SubAgentService', () => {
     });
 
     it('should call LLM with correct system prompt for market agent', async () => {
-      mockLLMProvider.complete.mockResolvedValue(
-        '{"signal":"BUY","confidence":0.8,"reasoning":"RSI oversold"}',
-      );
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"RSI oversold"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
 
       const result = await service.call(
         'market',
@@ -105,9 +108,10 @@ describe('SubAgentService', () => {
     });
 
     it('should call LLM with correct system prompt for risk agent', async () => {
-      mockLLMProvider.complete.mockResolvedValue(
-        '{"riskScore":30,"verdict":"PASS","positionSizeMultiplier":1.0,"reason":"ok","alerts":[]}',
-      );
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"riskScore":30,"verdict":"PASS","positionSizeMultiplier":1.0,"reason":"ok","alerts":[]}',
+        usage: { inputTokens: 200, outputTokens: 80 },
+      });
 
       const result = await service.call(
         'risk',

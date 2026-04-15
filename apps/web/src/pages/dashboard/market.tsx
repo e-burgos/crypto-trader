@@ -1233,7 +1233,10 @@ function ChartTab({
       low: kline.low,
       close: kline.close,
     });
-  }, [kline]);
+    // When a candle closes, refetch full history so the closed candle is
+    // persisted correctly and indicators recalculate.
+    if (kline.isClosed) refetch();
+  }, [kline, refetch]);
 
   // Apply/remove price lines whenever overlays or snapshot change
   useEffect(() => {

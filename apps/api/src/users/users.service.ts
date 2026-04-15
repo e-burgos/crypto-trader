@@ -18,6 +18,7 @@ import {
 } from '../auth/dto/auth.dto';
 import { encrypt, decrypt } from './utils/encryption.util';
 import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
+import { recordCall } from '../llm/provider-health.service';
 
 @Injectable()
 export class UsersService {
@@ -323,14 +324,52 @@ export class UsersService {
           headers: { Authorization: `Bearer ${apiKey}` },
           timeout: 8000,
         });
+      } else if (provider === 'GEMINI') {
+        await axios.get(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+          { timeout: 8000 },
+        );
+      } else if (provider === 'MISTRAL') {
+        await axios.get('https://api.mistral.ai/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
+      } else if (provider === 'TOGETHER') {
+        await axios.get('https://api.together.xyz/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
       } else {
         return { connected: false, error: 'Unknown provider' };
       }
+      recordCall(userId, provider, true);
       return { connected: true };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      recordCall(userId, provider, false, msg);
       return { connected: false, error: msg };
     }
+  }
+
+  async validateAllLLMKeys(userId: string) {
+    const credentials = await this.prisma.lLMCredential.findMany({
+      where: { userId },
+      select: { provider: true, isActive: true },
+    });
+    const results = await Promise.all(
+      credentials.map(async (cred) => {
+        if (!cred.isActive)
+          return { provider: cred.provider, status: 'INACTIVE' as const };
+        const result = await this.testLLMKey(userId, cred.provider);
+        return {
+          provider: cred.provider,
+          status: result.connected ? ('ACTIVE' as const) : ('INVALID' as const),
+          error: result.error,
+        };
+      }),
+    );
+    const active = results.filter((r) => r.status === 'ACTIVE').length;
+    return { results, active, total: results.length };
   }
 
   async testNewsApiKey(userId: string, provider: string) {

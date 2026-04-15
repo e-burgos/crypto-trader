@@ -22,6 +22,7 @@ import {
   Clock,
   ListChecks,
   Bot,
+  Brain,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
@@ -44,15 +45,67 @@ import {
   type TradingAsset,
   type TradingPair,
   type IntervalMode,
+  type RiskProfile,
 } from '../../hooks/use-trading';
 import {
   useTestnetBinanceKeyStatus,
   usePlatformMode,
+  useLLMKeys,
 } from '../../hooks/use-user';
 import {
   StrategyPresets,
   PRESETS,
 } from '../../components/agent/strategy-presets';
+import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
+import { CustomSelect } from '../../components/ui/custom-select';
+
+// ── Fallback LLM providers (used when dynamic API is unavailable) ─────────
+
+interface LLMProviderOption {
+  value: string;
+  label: string;
+  models: string[];
+}
+
+const LLM_PROVIDERS: LLMProviderOption[] = [
+  {
+    value: 'CLAUDE',
+    label: 'Claude (Anthropic)',
+    models: [
+      'claude-sonnet-4-20250514',
+      'claude-opus-4-5',
+      'claude-3-5-sonnet-20241022',
+    ],
+  },
+  { value: 'OPENAI', label: 'OpenAI', models: ['gpt-4o-mini', 'gpt-4o'] },
+  {
+    value: 'GROQ',
+    label: 'Groq (Llama)',
+    models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  },
+  {
+    value: 'GEMINI',
+    label: 'Google Gemini',
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro'],
+  },
+  {
+    value: 'MISTRAL',
+    label: 'Mistral AI',
+    models: [
+      'mistral-small-latest',
+      'mistral-medium-latest',
+      'mistral-large-latest',
+    ],
+  },
+  {
+    value: 'TOGETHER',
+    label: 'Together AI',
+    models: [
+      'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
+      'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    ],
+  },
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,6 +124,11 @@ interface ConfigForm {
   intervalMode: IntervalMode;
   minIntervalMinutes: string;
   orderPriceOffsetPct: string;
+  riskProfile: RiskProfile;
+  primaryProvider: string;
+  primaryModel: string;
+  fallbackProvider: string;
+  fallbackModel: string;
 }
 
 const DEFAULT_FORM: ConfigForm = {
@@ -79,6 +137,11 @@ const DEFAULT_FORM: ConfigForm = {
   pair: 'USDT',
   mode: 'SANDBOX',
   intervalMode: 'AGENT',
+  riskProfile: 'MODERATE',
+  primaryProvider: '',
+  primaryModel: '',
+  fallbackProvider: '',
+  fallbackModel: '',
   ...PRESETS.balanced,
 };
 
@@ -234,6 +297,13 @@ function AgentDetailModal({
     },
   ];
 
+  const providerLabel = cfg.primaryProvider
+    ? LLM_PROVIDERS.find((p) => p.value === cfg.primaryProvider)?.label ?? cfg.primaryProvider
+    : null;
+  const fallbackLabel = cfg.fallbackProvider
+    ? LLM_PROVIDERS.find((p) => p.value === cfg.fallbackProvider)?.label ?? cfg.fallbackProvider
+    : null;
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -335,6 +405,33 @@ function AgentDetailModal({
               </div>
             ))}
           </dl>
+
+          {/* AI Model info */}
+          {(providerLabel || fallbackLabel) && (
+            <div className="mt-3 rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Brain className="h-3.5 w-3.5 text-primary" />
+                <span className="text-xs font-semibold">{t('config.editModal.aiModel')}</span>
+              </div>
+              {providerLabel && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground">{t('config.stepper.primaryLabel')}</span>
+                  <span className="text-[11px] font-semibold">{providerLabel}{cfg.primaryModel ? ` · ${cfg.primaryModel}` : ''}</span>
+                </div>
+              )}
+              {fallbackLabel && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground">{t('config.stepper.fallbackLabel')}</span>
+                  <span className="text-[11px] font-semibold">{fallbackLabel}{cfg.fallbackModel ? ` · ${cfg.fallbackModel}` : ''}</span>
+                </div>
+              )}
+            </div>
+          )}
+          {!providerLabel && !fallbackLabel && (
+            <p className="mt-3 text-[10px] text-muted-foreground/70 italic text-center">
+              {t('config.stepper.autoSuggestion')}
+            </p>
+          )}
         </div>
 
         {/* Footer */}
@@ -375,6 +472,7 @@ function AgentDetailModal({
 type StepId =
   | 'preset'
   | 'identity'
+  | 'aiModel'
   | 'thresholds'
   | 'risk'
   | 'timing'
@@ -383,6 +481,7 @@ type StepId =
 const STEPS: { id: StepId; icon: typeof Bot }[] = [
   { id: 'preset', icon: Zap },
   { id: 'identity', icon: Bot },
+  { id: 'aiModel', icon: Brain },
   { id: 'thresholds', icon: Target },
   { id: 'risk', icon: Shield },
   { id: 'timing', icon: Clock },
@@ -508,6 +607,15 @@ function NewAgentStepperModal({
   const { mutate: createConfig, isPending } = useCreateConfig();
   const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
   const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
+  const { data: llmKeys = [] } = useLLMKeys();
+
+  const activeProviders = LLM_PROVIDERS.filter((p) =>
+    llmKeys.some((k) => k.provider === p.value && k.isActive),
+  );
+  const activeProviderOptions = activeProviders.map((p) => ({
+    value: p.value,
+    label: p.label,
+  }));
 
   const totalSteps = STEPS.length;
   const currentStep = STEPS[stepIdx].id;
@@ -530,6 +638,17 @@ function NewAgentStepperModal({
     setForm((f) => ({ ...f, ...PRESETS[key] }));
   }
 
+  function handleProviderChange(
+    role: 'primary' | 'fallback',
+    provider: string,
+  ) {
+    if (role === 'primary') {
+      update({ primaryProvider: provider, primaryModel: '' });
+    } else {
+      update({ fallbackProvider: provider, fallbackModel: '' });
+    }
+  }
+
   function handleSubmit() {
     const dto: TradingConfigDto = {
       name: form.name || undefined,
@@ -546,6 +665,11 @@ function NewAgentStepperModal({
       intervalMode: form.intervalMode,
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
       orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
+      riskProfile: form.riskProfile,
+      primaryProvider: form.primaryProvider || undefined,
+      primaryModel: form.primaryModel || undefined,
+      fallbackProvider: form.fallbackProvider || undefined,
+      fallbackModel: form.fallbackModel || undefined,
     };
     createConfig(dto, { onSuccess: onCreated });
   }
@@ -560,6 +684,10 @@ function NewAgentStepperModal({
     identity: {
       title: t('config.stepper.stepIdentity'),
       subtitle: t('config.stepper.stepIdentityHint'),
+    },
+    aiModel: {
+      title: t('config.stepper.stepAiModel'),
+      subtitle: t('config.stepper.stepAiModelHint'),
     },
     thresholds: {
       title: t('config.stepper.stepThresholds'),
@@ -822,6 +950,103 @@ function NewAgentStepperModal({
                   </p>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ── STEP: AI MODEL ── */}
+          {currentStep === 'aiModel' && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border/60 bg-primary/5 p-3.5">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  🧠 {t('config.stepper.aiModelCallout')}
+                </p>
+              </div>
+
+              {activeProviderOptions.length === 0 ? (
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                  <p className="text-xs text-amber-400">
+                    {t('config.stepper.noActiveProviders')}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Primary */}
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-3.5 w-3.5 text-primary" />
+                      <p className="text-sm font-semibold">
+                        {t('config.stepper.primaryLlm')}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('config.stepper.primaryLlmHint')}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <CustomSelect
+                        options={[
+                          { value: '', label: t('config.stepper.autoSelect') },
+                          ...activeProviderOptions,
+                        ]}
+                        value={form.primaryProvider}
+                        onChange={(v) => handleProviderChange('primary', v)}
+                      />
+                      {form.primaryProvider && (
+                        <DynamicModelSelect
+                          provider={form.primaryProvider}
+                          value={form.primaryModel}
+                          onChange={(m) => update({ primaryModel: m })}
+                          fallbackModels={
+                            LLM_PROVIDERS.find(
+                              (p) => p.value === form.primaryProvider,
+                            )?.models ?? []
+                          }
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fallback */}
+                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-3.5 w-3.5 text-muted-foreground" />
+                      <p className="text-sm font-semibold">
+                        {t('config.stepper.fallbackLlm')}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('config.stepper.fallbackLlmHint')}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <CustomSelect
+                        options={[
+                          { value: '', label: t('config.stepper.noFallback') },
+                          ...activeProviderOptions,
+                        ]}
+                        value={form.fallbackProvider}
+                        onChange={(v) => handleProviderChange('fallback', v)}
+                      />
+                      {form.fallbackProvider && (
+                        <DynamicModelSelect
+                          provider={form.fallbackProvider}
+                          value={form.fallbackModel}
+                          onChange={(m) => update({ fallbackModel: m })}
+                          fallbackModels={
+                            LLM_PROVIDERS.find(
+                              (p) => p.value === form.fallbackProvider,
+                            )?.models ?? []
+                          }
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {!form.primaryProvider && !form.fallbackProvider && (
+                    <p className="text-[10px] text-muted-foreground/70 italic text-center">
+                      💡 {t('config.stepper.autoSuggestion')}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -1107,6 +1332,56 @@ function NewAgentStepperModal({
                 ))}
               </div>
 
+              {/* AI Model review */}
+              {(form.primaryProvider || form.fallbackProvider) && (
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Brain className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-semibold">
+                      {t('config.stepper.aiModelReview')}
+                    </span>
+                  </div>
+                  {form.primaryProvider && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('config.stepper.primaryLabel')}:{' '}
+                      <span className="font-semibold text-foreground">
+                        {LLM_PROVIDERS.find(
+                          (p) => p.value === form.primaryProvider,
+                        )?.label ?? form.primaryProvider}
+                      </span>
+                      {form.primaryModel && (
+                        <>
+                          {' '}
+                          ·{' '}
+                          <span className="font-medium text-foreground">
+                            {form.primaryModel}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  )}
+                  {form.fallbackProvider && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t('config.stepper.fallbackLabel')}:{' '}
+                      <span className="font-semibold text-foreground">
+                        {LLM_PROVIDERS.find(
+                          (p) => p.value === form.fallbackProvider,
+                        )?.label ?? form.fallbackProvider}
+                      </span>
+                      {form.fallbackModel && (
+                        <>
+                          {' '}
+                          ·{' '}
+                          <span className="font-medium text-foreground">
+                            {form.fallbackModel}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground text-center">
                 {t('config.stepper.reviewNote')}
               </p>
@@ -1173,6 +1448,15 @@ function EditAgentModal({
   const { mutate: updateConfig, isPending } = useUpdateConfig();
   const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
   const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
+  const { data: llmKeys = [] } = useLLMKeys();
+
+  const activeProviders = LLM_PROVIDERS.filter((p) =>
+    llmKeys.some((k) => k.provider === p.value && k.isActive),
+  );
+  const activeProviderOptions = activeProviders.map((p) => ({
+    value: p.value,
+    label: p.label,
+  }));
 
   const toForm = (c: TradingConfig): ConfigForm => ({
     name: c.name ?? '',
@@ -1189,6 +1473,11 @@ function EditAgentModal({
     intervalMode: c.intervalMode,
     minIntervalMinutes: String(c.minIntervalMinutes),
     orderPriceOffsetPct: String((c.orderPriceOffsetPct * 100).toFixed(1)),
+    riskProfile: c.riskProfile ?? 'MODERATE',
+    primaryProvider: c.primaryProvider ?? '',
+    primaryModel: c.primaryModel ?? '',
+    fallbackProvider: c.fallbackProvider ?? '',
+    fallbackModel: c.fallbackModel ?? '',
   });
 
   const [form, setForm] = useState<ConfigForm>(() => toForm(cfg));
@@ -1205,6 +1494,17 @@ function EditAgentModal({
     setForm((f) => ({ ...f, ...patch }));
   }
 
+  function handleProviderChange(
+    role: 'primary' | 'fallback',
+    provider: string,
+  ) {
+    if (role === 'primary') {
+      update({ primaryProvider: provider, primaryModel: '' });
+    } else {
+      update({ fallbackProvider: provider, fallbackModel: '' });
+    }
+  }
+
   function handleSave() {
     const dto: Partial<TradingConfigDto> = {
       name: form.name || undefined,
@@ -1219,6 +1519,11 @@ function EditAgentModal({
       intervalMode: form.intervalMode,
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
       orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
+      riskProfile: form.riskProfile,
+      primaryProvider: form.primaryProvider || undefined,
+      primaryModel: form.primaryModel || undefined,
+      fallbackProvider: form.fallbackProvider || undefined,
+      fallbackModel: form.fallbackModel || undefined,
     };
     updateConfig({ id: cfg.id, data: dto }, { onSuccess: onClose });
   }
@@ -1310,6 +1615,82 @@ function EditAgentModal({
               <p className="mt-2 text-xs text-sky-400">
                 {t('onboarding.testnetRequiresKeys')}
               </p>
+            )}
+          </div>
+
+          {/* AI Model */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">
+                {t('config.editModal.aiModel')}
+              </p>
+            </div>
+
+            {activeProviderOptions.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {t('config.stepper.noActiveProviders')}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {/* Primary */}
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    {t('config.stepper.primaryLabel')}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <CustomSelect
+                      options={[
+                        { value: '', label: t('config.stepper.autoSelect') },
+                        ...activeProviderOptions,
+                      ]}
+                      value={form.primaryProvider}
+                      onChange={(v) => handleProviderChange('primary', v)}
+                    />
+                    {form.primaryProvider && (
+                      <DynamicModelSelect
+                        provider={form.primaryProvider}
+                        value={form.primaryModel}
+                        onChange={(m) => update({ primaryModel: m })}
+                        fallbackModels={
+                          LLM_PROVIDERS.find(
+                            (p) => p.value === form.primaryProvider,
+                          )?.models ?? []
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Fallback */}
+                <div>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    {t('config.stepper.fallbackLabel')}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <CustomSelect
+                      options={[
+                        { value: '', label: t('config.stepper.noFallback') },
+                        ...activeProviderOptions,
+                      ]}
+                      value={form.fallbackProvider}
+                      onChange={(v) => handleProviderChange('fallback', v)}
+                    />
+                    {form.fallbackProvider && (
+                      <DynamicModelSelect
+                        provider={form.fallbackProvider}
+                        value={form.fallbackModel}
+                        onChange={(m) => update({ fallbackModel: m })}
+                        fallbackModels={
+                          LLM_PROVIDERS.find(
+                            (p) => p.value === form.fallbackProvider,
+                          )?.models ?? []
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

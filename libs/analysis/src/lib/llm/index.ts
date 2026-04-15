@@ -22,6 +22,9 @@ export type { GeminiProviderConfig } from './gemini.provider';
 export { MistralProvider } from './mistral.provider';
 export type { MistralProviderConfig } from './mistral.provider';
 
+export { TogetherProvider } from './together.provider';
+export type { TogetherProviderConfig } from './together.provider';
+
 export { LLMAnalyzer } from './llm-analyzer';
 
 export { createLLMProvider } from './llm-factory';

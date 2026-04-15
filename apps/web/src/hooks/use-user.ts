@@ -155,6 +155,8 @@ export function useSetLLMKey() {
     }) => api.post('/users/me/llm-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      qc.invalidateQueries({ queryKey: ['llm-keys-validation'] });
+      qc.invalidateQueries({ queryKey: ['llm', 'providers', 'status'] });
       toast.success('Clave API de LLM guardada');
     },
     onError: (err: { message?: string }) =>
@@ -169,6 +171,8 @@ export function useDeleteLLMKey() {
       api.delete(`/users/me/llm-keys/${provider}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      qc.invalidateQueries({ queryKey: ['llm-keys-validation'] });
+      qc.invalidateQueries({ queryKey: ['llm', 'providers', 'status'] });
       toast.success('Clave LLM eliminada');
     },
     onError: (err: { message?: string }) =>
@@ -249,10 +253,46 @@ export function useTestBinanceConnection() {
   });
 }
 
+export interface LLMValidationResult {
+  provider: string;
+  status: 'ACTIVE' | 'INVALID' | 'INACTIVE';
+  error?: string;
+}
+
+export interface LLMValidationResponse {
+  results: LLMValidationResult[];
+  active: number;
+  total: number;
+}
+
+export function useValidateAllLLMKeys(enabled: boolean) {
+  const qc = useQueryClient();
+  return useQuery<LLMValidationResponse>({
+    queryKey: ['llm-keys-validation'],
+    queryFn: async () => {
+      const data = await api.get<LLMValidationResponse>(
+        '/users/me/llm-keys/validate-all',
+      );
+      // Invalidate related queries so ProviderStatusGrid + llmKeys refresh
+      qc.invalidateQueries({ queryKey: ['llm', 'providers', 'status'] });
+      qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      return data;
+    },
+    enabled,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useTestLLMKey() {
+  const qc = useQueryClient();
   return useMutation<TestResult, Error, string>({
     mutationFn: (provider: string) =>
       api.get(`/users/me/llm-keys/${provider}/test`),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['llm', 'providers', 'status'] });
+      qc.invalidateQueries({ queryKey: ['llm-keys-validation'] });
+    },
   });
 }
 

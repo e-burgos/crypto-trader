@@ -91,6 +91,17 @@ const LLM_PROVIDERS: {
     helpLink: 'https://console.mistral.ai/api-keys/',
     helpLinkText: 'console.mistral.ai',
   },
+  {
+    value: 'TOGETHER',
+    label: 'Together AI',
+    models: [
+      'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
+      'meta-llama/Llama-4-Scout-17B-16E-Instruct',
+      'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    ],
+    helpLink: 'https://api.together.xyz/settings/api-keys',
+    helpLinkText: 'api.together.xyz',
+  },
 ];
 
 const BINANCE_API_URL = 'https://www.binance.com/en/my/settings/api-management';

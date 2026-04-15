@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubAgentService, SubAgentId } from './sub-agent.service';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { LLMProvider } from '@crypto-trader/shared';
 import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
@@ -106,6 +108,7 @@ export class OrchestratorService {
       sentiment: string;
       summary?: string | null;
     }>,
+    llmOverride?: { provider: string; model: string },
   ): Promise<DecisionPayload> {
     // Load config + open positions for FORGE and AEGIS context
     const [config, openPositions] = await Promise.all([
@@ -138,6 +141,14 @@ export class OrchestratorService {
       throw new Error(`Config ${configId} not found for user ${userId}`);
     }
 
+    // Cast override to typed LLMProvider if present
+    const typedOverride = llmOverride
+      ? {
+          provider: llmOverride.provider as LLMProvider,
+          model: llmOverride.model,
+        }
+      : undefined;
+
     // Parallel sub-agent calls
     const [techRaw, sentimentRaw, forgeRaw, aegisRaw] =
       await Promise.allSettled([
@@ -146,12 +157,16 @@ export class OrchestratorService {
           'technical_signal',
           { indicators },
           userId,
+          false,
+          typedOverride,
         ),
         this.subAgent.call(
           'market',
           'news_sentiment',
           { news: news.slice(0, 10) },
           userId,
+          false,
+          typedOverride,
         ),
         this.subAgent.call(
           'operations',
@@ -166,6 +181,8 @@ export class OrchestratorService {
             openPositionsCount: openPositions.length,
           },
           userId,
+          false,
+          typedOverride,
         ),
         this.subAgent.call(
           'risk',
@@ -177,8 +194,17 @@ export class OrchestratorService {
               price: (indicators as unknown as Record<string, unknown>).close,
               asset: config.asset,
             },
+            config: {
+              asset: config.asset,
+              pair: config.pair,
+              stopLossPct: config.stopLossPct,
+              takeProfitPct: config.takeProfitPct,
+              maxConcurrentPositions: config.maxConcurrentPositions,
+            },
           },
           userId,
+          false,
+          typedOverride,
         ),
       ]);
 
@@ -231,6 +257,7 @@ export class OrchestratorService {
         },
         userId,
         false,
+        typedOverride,
       );
     } catch (synthErr) {
       this.logger.warn(

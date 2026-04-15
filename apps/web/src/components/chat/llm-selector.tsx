@@ -21,6 +21,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   GROQ: 'text-violet-400',
   GEMINI: 'text-blue-400',
   MISTRAL: 'text-orange-500',
+  TOGETHER: 'text-cyan-400',
 };
 
 function providerColor(provider: string) {

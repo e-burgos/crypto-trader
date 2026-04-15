@@ -5,7 +5,7 @@ test.describe('Landing Page', () => {
     await page.goto('/');
     await expect(page.locator('h1')).toBeVisible();
     await expect(
-      page.getByRole('link', { name: /get started|start trading/i }).first(),
+      page.getByRole('link', { name: /get started|start trading|start for free|empezar gratis/i }).first(),
     ).toBeVisible();
   });
 

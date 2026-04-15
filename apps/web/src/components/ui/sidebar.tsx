@@ -22,6 +22,7 @@ import {
   User,
   X,
   ListChecks,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../store/auth.store';
@@ -222,6 +223,11 @@ function NavContent({
           to: '/dashboard/chat',
           label: t('sidebar.chat'),
           icon: BotMessageSquare,
+        },
+        {
+          to: '/dashboard/agents',
+          label: t('sidebar.agents'),
+          icon: Sparkles,
         },
         {
           to: '/dashboard/config',

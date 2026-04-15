@@ -9,12 +9,20 @@ import axios from 'axios';
 import { Observable, Subject } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
-import { LLMProvider, ChatRole, AgentId } from '../../generated/prisma/enums';
+import { recordCall } from '../llm/provider-health.service';
+import {
+  LLMProvider,
+  ChatRole,
+  AgentId,
+  LLMSource,
+} from '../../generated/prisma/enums';
 import { CreateSessionDto, SendMessageDto } from './dto/chat.dto';
 import { ExecuteToolDto } from './dto/execute-tool.dto';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
 import { SubAgentService } from '../orchestrator/sub-agent.service';
 import { RagService } from '../orchestrator/rag.service';
+import { LLMModelsService } from '../llm/llm-models.service';
+import { LLMUsageService } from '../llm/llm-usage.service';
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
@@ -22,20 +30,27 @@ const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.GROQ]: 'Groq',
   [LLMProvider.GEMINI]: 'Google Gemini',
   [LLMProvider.MISTRAL]: 'Mistral AI',
+  [LLMProvider.TOGETHER]: 'Together AI',
 };
 
 const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
   [LLMProvider.CLAUDE]: [
-    'claude-sonnet-4-20250514',
-    'claude-opus-4-5',
-    'claude-3-5-sonnet-20241022',
-    'claude-3-haiku-20240307',
+    'claude-sonnet-4-6',
+    'claude-opus-4-6',
+    'claude-haiku-4-5-20251001',
   ],
-  [LLMProvider.OPENAI]: ['gpt-4o', 'gpt-4o-mini'],
-  [LLMProvider.GROQ]: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  [LLMProvider.OPENAI]: ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano'],
+  [LLMProvider.GROQ]: [
+    'llama-3.3-70b-versatile',
+    'llama-3.1-8b-instant',
+    'openai/gpt-oss-120b',
+  ],
   [LLMProvider.GEMINI]: [
-    'gemini-2.5-flash',
+    'gemini-3.1-pro-preview',
+    'gemini-3-flash-preview',
+    'gemini-3.1-flash-lite-preview',
     'gemini-2.5-pro',
+    'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
   ],
   [LLMProvider.MISTRAL]: [
@@ -43,11 +58,23 @@ const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
     'mistral-medium-latest',
     'mistral-large-latest',
   ],
+  [LLMProvider.TOGETHER]: [
+    'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
+    'meta-llama/Llama-4-Scout-17B-16E-Instruct',
+    'deepseek-ai/DeepSeek-R1',
+    'Qwen/Qwen3-235B-A22B-fp8',
+    'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+  ],
 };
 
 interface ConversationMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface StreamUsage {
+  inputTokens: number;
+  outputTokens: number;
 }
 
 @Injectable()
@@ -68,6 +95,8 @@ export class ChatService {
     @Optional() private readonly orchestratorService?: OrchestratorService,
     @Optional() private readonly subAgentService?: SubAgentService,
     @Optional() private readonly ragService?: RagService,
+    @Optional() private readonly llmModelsService?: LLMModelsService,
+    @Optional() private readonly llmUsageService?: LLMUsageService,
   ) {}
 
   // ── Sessions ────────────────────────────────────────────────────────────────
@@ -139,6 +168,25 @@ export class ChatService {
     await this.prisma.chatSession.delete({ where: { id: sessionId } });
   }
 
+  async updateSession(
+    userId: string,
+    sessionId: string,
+    data: { provider?: LLMProvider; model?: string },
+  ) {
+    const session = await this.prisma.chatSession.findFirst({
+      where: { id: sessionId, userId },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    return this.prisma.chatSession.update({
+      where: { id: sessionId },
+      data: {
+        ...(data.provider ? { provider: data.provider } : {}),
+        ...(data.model ? { model: data.model } : {}),
+        updatedAt: new Date(),
+      },
+    });
+  }
+
   // ── Step 1: persist user message ─────────────────────────────────────────
 
   async saveUserMessage(
@@ -185,21 +233,29 @@ export class ChatService {
     sessionId: string,
     content: string,
     capability?: string,
+    providerOverride?: LLMProvider,
+    modelOverride?: string,
   ): Observable<MessageEvent> {
     const subject = new Subject<MessageEvent>();
-    this.runStreamAsync(userId, sessionId, content, capability, subject).catch(
-      (err) => {
-        this.logger.error(`Stream error for session ${sessionId}`, err);
-        subject.next(
-          new MessageEvent('message', {
-            data: JSON.stringify({
-              error: 'An unexpected error occurred. Please try again.',
-            }),
+    this.runStreamAsync(
+      userId,
+      sessionId,
+      content,
+      capability,
+      subject,
+      providerOverride,
+      modelOverride,
+    ).catch((err) => {
+      this.logger.error(`Stream error for session ${sessionId}`, err);
+      subject.next(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            error: 'An unexpected error occurred. Please try again.',
           }),
-        );
-        subject.complete();
-      },
-    );
+        }),
+      );
+      subject.complete();
+    });
     return subject.asObservable();
   }
 
@@ -209,6 +265,8 @@ export class ChatService {
     content: string,
     capability: string | undefined,
     subject: Subject<MessageEvent>,
+    providerOverride?: LLMProvider,
+    modelOverride?: string,
   ) {
     const session = await this.prisma.chatSession.findFirst({
       where: { id: sessionId, userId },
@@ -222,6 +280,11 @@ export class ChatService {
       subject.complete();
       return;
     }
+
+    // ── H: Effective provider / model (override > session default) ────────────
+    const effectiveProvider = providerOverride ?? session.provider;
+    const effectiveModel = modelOverride ?? session.model;
+    const generatedBy = `${effectiveProvider}:${effectiveModel}`;
 
     // ── C.2: Intent routing on first message ──────────────────────────────────
     let activeAgentId: AgentId | null = session.agentId ?? null;
@@ -296,6 +359,7 @@ export class ChatService {
             sessionId,
             role: ChatRole.ASSISTANT,
             content: synthesis,
+            generatedBy,
             metadata: { orchestrated: true },
           },
         });
@@ -322,13 +386,13 @@ export class ChatService {
     }
 
     const cred = await this.prisma.lLMCredential.findFirst({
-      where: { userId, provider: session.provider, isActive: true },
+      where: { userId, provider: effectiveProvider, isActive: true },
     });
     if (!cred) {
       subject.next(
         new MessageEvent('message', {
           data: JSON.stringify({
-            error: `No active credentials for ${session.provider}. Check Settings.`,
+            error: `No active credentials for ${effectiveProvider}. Check Settings.`,
           }),
         }),
       );
@@ -359,9 +423,9 @@ export class ChatService {
 
     let fullContent = '';
     try {
-      await this.callLLMStream(
-        session.provider,
-        session.model,
+      const streamUsage = await this.callLLMStream(
+        effectiveProvider,
+        effectiveModel,
         apiKey,
         systemPrompt,
         history,
@@ -372,8 +436,35 @@ export class ChatService {
           );
         },
       );
+
+      // Log usage asynchronously (fire-and-forget)
+      recordCall(userId, effectiveProvider, true);
+      if (
+        this.llmUsageService &&
+        (streamUsage.inputTokens > 0 || streamUsage.outputTokens > 0)
+      ) {
+        this.llmUsageService
+          .log({
+            userId,
+            provider: effectiveProvider,
+            model: effectiveModel,
+            usage: streamUsage,
+            source: LLMSource.CHAT,
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Chat usage log failed: ${err instanceof Error ? err.message : String(err)}`,
+            ),
+          );
+      }
     } catch (err) {
       this.logger.error(`LLM streaming failed for session ${sessionId}`, err);
+      recordCall(
+        userId,
+        effectiveProvider,
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
       const partialNote = fullContent ? ' [generation stopped]' : '';
 
       // Classify the error so the frontend can show a meaningful, translatable message
@@ -390,6 +481,8 @@ export class ChatService {
           }
         )?.response?.headers?.['retry-after'];
         retryAfter = ra ? Math.ceil(Number(ra) / 60) : undefined;
+      } else if (axiosStatus === 402) {
+        errorCode = 'CREDIT_LIMIT';
       } else if (axiosStatus === 401 || axiosStatus === 403) {
         errorCode = 'INVALID_API_KEY';
       } else if (axiosStatus && axiosStatus >= 500) {
@@ -413,6 +506,7 @@ export class ChatService {
             sessionId,
             role: ChatRole.ASSISTANT,
             content: fullContent + ' [...]',
+            generatedBy,
           },
         });
         await this.prisma.chatSession.update({
@@ -438,6 +532,7 @@ export class ChatService {
         sessionId,
         role: ChatRole.ASSISTANT,
         content: fullContent,
+        generatedBy,
         metadata: activeAgentId ? { agentId: activeAgentId } : undefined,
       },
     });
@@ -528,6 +623,7 @@ export class ChatService {
         sessionId,
         role: ChatRole.ASSISTANT,
         content: `Tool \`${dto.tool}\` executed successfully.`,
+        generatedBy: `${session.provider}:${session.model}`,
         metadata: { tool_result: { tool: dto.tool, result } } as any,
       },
     });
@@ -543,12 +639,34 @@ export class ChatService {
       select: { provider: true, selectedModel: true },
     });
 
-    return credentials.map((cred) => ({
-      provider: cred.provider,
-      label: PROVIDER_LABELS[cred.provider] ?? cred.provider,
-      model: cred.selectedModel,
-      models: PROVIDER_MODELS[cred.provider] ?? [cred.selectedModel],
-    }));
+    const results = await Promise.all(
+      credentials.map(async (cred) => {
+        let models: string[] = PROVIDER_MODELS[cred.provider] ?? [
+          cred.selectedModel,
+        ];
+        try {
+          if (this.llmModelsService) {
+            const dynamic = await this.llmModelsService.getModels(
+              userId,
+              cred.provider,
+            );
+            if (dynamic.models.length > 0) {
+              models = dynamic.models.map((m) => m.id);
+            }
+          }
+        } catch {
+          // fallback to static list
+        }
+        return {
+          provider: cred.provider,
+          label: PROVIDER_LABELS[cred.provider] ?? cred.provider,
+          model: cred.selectedModel,
+          models,
+        };
+      }),
+    );
+
+    return results;
   }
 
   // ── Context Building ────────────────────────────────────────────────────────
@@ -735,7 +853,7 @@ Always respond in the same language the user writes to you. Be direct and confid
     systemPrompt: string,
     messages: ConversationMessage[],
     onDelta: (delta: string) => void,
-  ): Promise<void> {
+  ): Promise<StreamUsage> {
     switch (provider) {
       case LLMProvider.CLAUDE:
         return this.streamClaude(
@@ -771,6 +889,14 @@ Always respond in the same language the user writes to you. Be direct and confid
           messages,
           onDelta,
         );
+      case LLMProvider.TOGETHER:
+        return this.streamTogether(
+          apiKey,
+          model,
+          systemPrompt,
+          messages,
+          onDelta,
+        );
       default:
         throw new BadRequestException(`Unsupported provider: ${provider}`);
     }
@@ -782,7 +908,7 @@ Always respond in the same language the user writes to you. Be direct and confid
     systemPrompt: string,
     messages: ConversationMessage[],
     onDelta: (delta: string) => void,
-  ): Promise<void> {
+  ): Promise<StreamUsage> {
     const resp = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
@@ -803,8 +929,9 @@ Always respond in the same language the user writes to you. Be direct and confid
       },
     );
 
-    await new Promise<void>((resolve, reject) => {
+    return new Promise<StreamUsage>((resolve, reject) => {
       let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
       resp.data.on('data', (chunk: Buffer) => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -817,6 +944,10 @@ Always respond in the same language the user writes to you. Be direct and confid
             const parsed = JSON.parse(raw) as {
               type: string;
               delta?: { type: string; text?: string };
+              message?: {
+                usage?: { input_tokens?: number; output_tokens?: number };
+              };
+              usage?: { output_tokens?: number };
             };
             if (
               parsed.type === 'content_block_delta' &&
@@ -825,12 +956,20 @@ Always respond in the same language the user writes to you. Be direct and confid
             ) {
               onDelta(parsed.delta.text);
             }
+            // Capture usage from message_start
+            if (parsed.type === 'message_start' && parsed.message?.usage) {
+              usage.inputTokens = parsed.message.usage.input_tokens ?? 0;
+            }
+            // Capture output tokens from message_delta
+            if (parsed.type === 'message_delta' && parsed.usage) {
+              usage.outputTokens = parsed.usage.output_tokens ?? 0;
+            }
           } catch {
             // incomplete chunk — ignore
           }
         }
       });
-      resp.data.on('end', resolve);
+      resp.data.on('end', () => resolve(usage));
       resp.data.on('error', reject);
     });
   }
@@ -841,12 +980,13 @@ Always respond in the same language the user writes to you. Be direct and confid
     systemPrompt: string,
     messages: ConversationMessage[],
     onDelta: (delta: string) => void,
-  ): Promise<void> {
+  ): Promise<StreamUsage> {
     const resp = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model,
         stream: true,
+        stream_options: { include_usage: true },
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -864,8 +1004,9 @@ Always respond in the same language the user writes to you. Be direct and confid
       },
     );
 
-    await new Promise<void>((resolve, reject) => {
+    return new Promise<StreamUsage>((resolve, reject) => {
       let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
       resp.data.on('data', (chunk: Buffer) => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -877,15 +1018,21 @@ Always respond in the same language the user writes to you. Be direct and confid
           try {
             const parsed = JSON.parse(raw) as {
               choices?: { delta?: { content?: string } }[];
+              usage?: { prompt_tokens?: number; completion_tokens?: number };
             };
             const text = parsed.choices?.[0]?.delta?.content;
             if (text) onDelta(text);
+            // Last chunk contains usage when stream_options.include_usage is true
+            if (parsed.usage) {
+              usage.inputTokens = parsed.usage.prompt_tokens ?? 0;
+              usage.outputTokens = parsed.usage.completion_tokens ?? 0;
+            }
           } catch {
             // ignore
           }
         }
       });
-      resp.data.on('end', resolve);
+      resp.data.on('end', () => resolve(usage));
       resp.data.on('error', reject);
     });
   }
@@ -896,13 +1043,14 @@ Always respond in the same language the user writes to you. Be direct and confid
     systemPrompt: string,
     messages: ConversationMessage[],
     onDelta: (delta: string) => void,
-  ): Promise<void> {
+  ): Promise<StreamUsage> {
     // Groq uses OpenAI-compatible streaming format
     const resp = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
         model,
         stream: true,
+        stream_options: { include_usage: true },
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -920,8 +1068,9 @@ Always respond in the same language the user writes to you. Be direct and confid
       },
     );
 
-    await new Promise<void>((resolve, reject) => {
+    return new Promise<StreamUsage>((resolve, reject) => {
       let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
       resp.data.on('data', (chunk: Buffer) => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -933,15 +1082,25 @@ Always respond in the same language the user writes to you. Be direct and confid
           try {
             const parsed = JSON.parse(raw) as {
               choices?: { delta?: { content?: string } }[];
+              x_groq?: {
+                usage?: { prompt_tokens?: number; completion_tokens?: number };
+              };
+              usage?: { prompt_tokens?: number; completion_tokens?: number };
             };
             const text = parsed.choices?.[0]?.delta?.content;
             if (text) onDelta(text);
+            // Groq puts usage in x_groq.usage or usage
+            const u = parsed.x_groq?.usage ?? parsed.usage;
+            if (u) {
+              usage.inputTokens = u.prompt_tokens ?? 0;
+              usage.outputTokens = u.completion_tokens ?? 0;
+            }
           } catch {
             // ignore
           }
         }
       });
-      resp.data.on('end', resolve);
+      resp.data.on('end', () => resolve(usage));
       resp.data.on('error', reject);
     });
   }
@@ -952,7 +1111,7 @@ Always respond in the same language the user writes to you. Be direct and confid
     systemPrompt: string,
     messages: ConversationMessage[],
     onDelta: (delta: string) => void,
-  ): Promise<void> {
+  ): Promise<StreamUsage> {
     // Gemini uses its own streaming format via streamGenerateContent
     const contents = messages.map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
@@ -973,8 +1132,9 @@ Always respond in the same language the user writes to you. Be direct and confid
       },
     );
 
-    await new Promise<void>((resolve, reject) => {
+    return new Promise<StreamUsage>((resolve, reject) => {
       let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
       resp.data.on('data', (chunk: Buffer) => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -986,15 +1146,25 @@ Always respond in the same language the user writes to you. Be direct and confid
           try {
             const parsed = JSON.parse(raw) as {
               candidates?: { content?: { parts?: { text?: string }[] } }[];
+              usageMetadata?: {
+                promptTokenCount?: number;
+                candidatesTokenCount?: number;
+              };
             };
             const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
             if (text) onDelta(text);
+            // Gemini sends usageMetadata in the last chunk
+            if (parsed.usageMetadata) {
+              usage.inputTokens = parsed.usageMetadata.promptTokenCount ?? 0;
+              usage.outputTokens =
+                parsed.usageMetadata.candidatesTokenCount ?? 0;
+            }
           } catch {
             // ignore
           }
         }
       });
-      resp.data.on('end', resolve);
+      resp.data.on('end', () => resolve(usage));
       resp.data.on('error', reject);
     });
   }
@@ -1005,13 +1175,14 @@ Always respond in the same language the user writes to you. Be direct and confid
     systemPrompt: string,
     messages: ConversationMessage[],
     onDelta: (delta: string) => void,
-  ): Promise<void> {
+  ): Promise<StreamUsage> {
     // Mistral uses OpenAI-compatible streaming format
     const resp = await axios.post(
       'https://api.mistral.ai/v1/chat/completions',
       {
         model,
         stream: true,
+        stream_options: { include_usage: true },
         messages: [
           { role: 'system', content: systemPrompt },
           ...messages.map((m) => ({ role: m.role, content: m.content })),
@@ -1029,8 +1200,9 @@ Always respond in the same language the user writes to you. Be direct and confid
       },
     );
 
-    await new Promise<void>((resolve, reject) => {
+    return new Promise<StreamUsage>((resolve, reject) => {
       let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
       resp.data.on('data', (chunk: Buffer) => {
         buffer += chunk.toString();
         const lines = buffer.split('\n');
@@ -1042,15 +1214,83 @@ Always respond in the same language the user writes to you. Be direct and confid
           try {
             const parsed = JSON.parse(raw) as {
               choices?: { delta?: { content?: string } }[];
+              usage?: { prompt_tokens?: number; completion_tokens?: number };
             };
             const text = parsed.choices?.[0]?.delta?.content;
             if (text) onDelta(text);
+            if (parsed.usage) {
+              usage.inputTokens = parsed.usage.prompt_tokens ?? 0;
+              usage.outputTokens = parsed.usage.completion_tokens ?? 0;
+            }
           } catch {
             // ignore
           }
         }
       });
-      resp.data.on('end', resolve);
+      resp.data.on('end', () => resolve(usage));
+      resp.data.on('error', reject);
+    });
+  }
+
+  private async streamTogether(
+    apiKey: string,
+    model: string,
+    systemPrompt: string,
+    messages: ConversationMessage[],
+    onDelta: (delta: string) => void,
+  ): Promise<StreamUsage> {
+    // Together AI uses OpenAI-compatible streaming format
+    const resp = await axios.post(
+      'https://api.together.xyz/v1/chat/completions',
+      {
+        model,
+        stream: true,
+        stream_options: { include_usage: true },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
+        max_tokens: 2048,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'content-type': 'application/json',
+        },
+        responseType: 'stream',
+        timeout: 120_000,
+      },
+    );
+
+    return new Promise<StreamUsage>((resolve, reject) => {
+      let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
+      resp.data.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(raw) as {
+              choices?: { delta?: { content?: string } }[];
+              usage?: { prompt_tokens?: number; completion_tokens?: number };
+            };
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text) onDelta(text);
+            if (parsed.usage) {
+              usage.inputTokens = parsed.usage.prompt_tokens ?? 0;
+              usage.outputTokens = parsed.usage.completion_tokens ?? 0;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      });
+      resp.data.on('end', () => resolve(usage));
       resp.data.on('error', reject);
     });
   }

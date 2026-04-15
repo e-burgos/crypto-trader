@@ -23,12 +23,12 @@ const es = {
     positions: 'Posiciones',
     news: 'Análisis de Noticias',
     chat: 'KRYPTO IA',
+    agents: 'Agentes',
     admin: 'Admin',
     help: 'Ayuda y Guía',
     groupTrading: 'Trading',
     groupAgente: 'Agente',
     groupSystem: 'Sistema',
-    agentLog: 'Registro del Agente',
   },
   dashboard: {
     overview: 'Resumen',
@@ -315,6 +315,14 @@ const es = {
     neutral: 'Neutral',
     apiKeyRequired:
       'Cargando noticias de fuentes gratuitas: CoinGecko, CoinDesk, CoinTelegraph, Reddit.',
+    llmConfig: 'Modelo de IA para Análisis',
+    primaryProvider: 'Primario',
+    fallbackProvider: 'Secundario (fallback)',
+    selectProvider: 'Seleccionar proveedor',
+    selectModel: 'Seleccionar modelo',
+    noProviders: 'Sin proveedores configurados',
+    autoSuggestion:
+      'Sin configurar — el sistema elegirá automáticamente del ranking global',
   },
   admin: {
     title: 'Panel de Administración',
@@ -353,7 +361,9 @@ const es = {
     binanceTestnet: 'Binance Testnet',
     binanceTestnetSub: 'Claves API de testnet',
     llm: 'Proveedor LLM',
+    llmProviders: 'Proveedores LLM',
     llmSub: 'Sin proveedor configurado',
+    llmConnectedCount: '{{count}} conectado(s)',
     statusOk: 'Todo OK',
     statusWarning: 'Atención',
     statusError: 'Con errores',
@@ -394,6 +404,17 @@ const es = {
     createConfig: 'Crear Configuración',
     agentName: 'Nombre del Agente',
     agentNamePlaceholder: 'ej: BTC Agresivo',
+    autoName: 'Auto',
+    riskProfile: 'Perfil de Riesgo',
+    riskConservative: 'Conservador',
+    riskConservativeDesc: 'Menor frecuencia, modelos premium',
+    riskModerate: 'Moderado',
+    riskModerateDesc: 'Balance entre costo y calidad',
+    riskAggressive: 'Agresivo',
+    riskAggressiveDesc: 'Mayor frecuencia, acepta más riesgo',
+    llmConfig: 'Modelo de IA del Agente',
+    primaryLLM: 'Primario',
+    fallbackLLM: 'Secundario (fallback)',
     deleteConfig: 'Eliminar Configuración',
     confirmDelete:
       '¿Eliminar este agente y su configuración? Esta acción no se puede deshacer.',
@@ -461,11 +482,16 @@ const es = {
     connected: 'Conectado',
     disconnected: 'No conectado',
     llmKeys: 'Claves API de LLM',
+    aiSubTabs: {
+      apiKeys: 'Claves API',
+      analytics: 'Analíticas de Proveedores',
+    },
     provider: 'Proveedor',
     model: 'Modelo',
     remove: 'Eliminar',
     active: 'Activo',
     inactive: 'Inactivo',
+    invalid: 'Inválido',
     newsSources: 'Fuentes de Noticias',
     freeSource: 'Gratis · Sin clave API requerida',
     reachable: 'Alcanzable',
@@ -484,6 +510,10 @@ const es = {
     testSuccess: 'Conectado ✔',
     testFailed: 'Fallo de conexión',
     testing: 'Probando…',
+    validating: 'Validando…',
+    revalidate: 'Re-validar',
+    available: 'disponibles',
+    autoValidationFailed: 'Validación automática falló',
     aiUsage: 'Uso de IA y Costos',
     noUsageData:
       'Sin datos de uso aún. Usa las funciones de IA para ver estadísticas aquí.',
@@ -494,6 +524,30 @@ const es = {
     tokensLabel: 'Tokens',
     cost: 'Costo',
     dailyCosts: 'Costos Diarios',
+    providerDistribution: 'Distribución por Proveedor',
+    tokensByProvider: 'Tokens por Proveedor',
+    costByProvider: 'Costo por Proveedor',
+  },
+  providerStatus: {
+    title: 'Estado de Proveedores LLM',
+    refresh: 'Actualizar',
+    tokens: 'Tokens',
+    input: 'Entrada',
+    output: 'Salida',
+    estimated: 'Costo Est.',
+    calls: 'llamadas',
+    errors: 'errores',
+    rateLimits: 'Límites de Tasa',
+    noRateLimits: 'Límites de tasa no disponibles',
+    lastSuccess: 'Último éxito',
+    neverUsed: 'Nunca utilizado',
+    justNow: 'hace un momento',
+    minsAgo: 'hace {{count}} min',
+    hoursAgo: 'hace {{count}}h',
+    disclaimer:
+      'Los costos son estimados basados en precios publicados por cada proveedor y pueden diferir de tu factura real.',
+    unavailableToast:
+      '{{provider}} no está disponible. Los agentes que lo usan cambiarán al proveedor secundario.',
   },
   notifications: {
     title: 'Notificaciones',
@@ -581,7 +635,7 @@ const es = {
       },
       {
         q: '¿Qué proveedores de LLM están soportados?',
-        a: 'Actualmente Claude (Anthropic), OpenAI (GPT-4o) y Groq (LLaMA). Puedes usar cualquiera de ellos — cada uno necesita su propia clave API configurada en Ajustes.',
+        a: 'Claude (Anthropic), OpenAI, Groq, Google Gemini, Mistral AI y Together AI — seis proveedores en total. Cada uno necesita su propia clave API configurada en Ajustes.',
       },
       {
         q: '¿Qué pares de criptomonedas están soportados?',
@@ -818,7 +872,7 @@ const es = {
       '¿Querés entender cada parámetro antes de configurar? Consultá la documentación →',
     docsCalloutGuide: 'Ver Guía del Agente',
     docsCalloutConcepts: 'Ver Conceptos',
-    editModal: { title: 'Editar Agente' },
+    editModal: { title: 'Editar Agente', aiModel: 'Modelo de IA' },
     deleteModal: {
       title: 'Eliminar Agente',
       body: '¿Estás seguro que querés eliminar este agente? Esta acción no se puede deshacer.',
@@ -868,6 +922,26 @@ const es = {
         'El agente esperará este tiempo entre análisis, independientemente de lo que sugiera el LLM.',
       reviewNote:
         'Estos parámetros se pueden editar desde la lista de agentes activos.',
+      stepAiModel: 'Modelo de IA',
+      stepAiModelHint:
+        'Elegí qué proveedor y modelo LLM usará este agente para analizar. Dejalo en Auto para que el sistema elija el mejor disponible.',
+      aiModelCallout:
+        'Seleccioná el modelo de IA para este agente. Solo se muestran proveedores con API key activa. Podés omitir este paso para que el sistema elija automáticamente.',
+      primaryLlm: 'Modelo primario',
+      primaryLlmHint:
+        'El modelo principal usado para análisis de mercado y decisiones de trading.',
+      fallbackLlm: 'Modelo de respaldo (opcional)',
+      fallbackLlmHint:
+        'Se usa si el modelo primario no está disponible o tiene límite de uso.',
+      autoSelect: 'Auto (el sistema elige)',
+      noFallback: 'Sin respaldo',
+      noActiveProviders:
+        'No se encontraron proveedores LLM activos. Configurá tus API keys en Configuración → Modelos IA primero.',
+      autoSuggestion:
+        'Dejá ambos en Auto y el sistema elegirá el mejor modelo según tu perfil de riesgo.',
+      primaryLabel: 'Primario',
+      fallbackLabel: 'Respaldo',
+      aiModelReview: 'Modelo de IA',
     },
     guide: {
       flowTitle: 'Cómo toma decisiones el Agente',
@@ -1111,6 +1185,10 @@ const es = {
     loadingProviders: 'Cargando proveedores de IA...',
     startSession: 'Iniciar sesión',
     creating: 'Creando...',
+    llmOverride: {
+      label: 'Modelo',
+      reset: 'Restaurar predeterminado de sesión',
+    },
     capabilities: {
       help: 'Ayuda de plataforma',
       trade: 'Asistente de operaciones',
@@ -1132,6 +1210,8 @@ const es = {
         'Se alcanzó el límite de solicitudes del proveedor de IA. Intentá de nuevo en {{retryAfter}} min.',
       RATE_LIMIT_no_retry:
         'Se alcanzó el límite de solicitudes del proveedor de IA. Intentá de nuevo en unos minutos.',
+      CREDIT_LIMIT:
+        'La cuenta del proveedor no tiene créditos. Agregá fondos en la página de facturación del proveedor.',
       INVALID_API_KEY:
         'La clave de API del proveedor no es válida o expiró. Revisá tu configuración en Ajustes → IA.',
       PROVIDER_UNAVAILABLE:
@@ -1175,7 +1255,97 @@ const es = {
     dropZone: 'Arrastra un PDF, TXT o MD aquí, o haz clic para subir',
     noDocuments: 'No hay documentos subidos aún',
   },
+  agentsShowcase: {
+    badge: 'Sistema Multi-Agente',
+    title: 'Conoce a los Agentes KRYPTO',
+    subtitle:
+      'Cinco agentes de IA especializados trabajando en conjunto — cada uno con su propia identidad, experiencia y marco de toma de decisiones. Juntos, forman una capa completa de inteligencia para trading de criptommonedas.',
+    cta: 'Empezar a chatear',
+    chatWith: 'Chatear con {{name}}',
+    pipeline: {
+      title: 'Cómo orquesta KRYPTO',
+      subtitle:
+        'Cada solicitud fluye a través de un pipeline inteligente que enruta, analiza y sintetiza entre agentes.',
+      step1Title: 'Entrada del usuario',
+      step1Desc: 'Tu pregunta o decisión de trading ingresa al sistema.',
+      step2Title: 'Enrutamiento de intención',
+      step2Desc: 'KRYPTO clasifica la intención y selecciona el agente óptimo.',
+      step3Title: 'Análisis paralelo',
+      step3Desc:
+        'Hasta 4 agentes analizan simultáneamente con datos en tiempo real.',
+      step4Title: 'Síntesis',
+      step4Desc:
+        'Los resultados se combinan en una respuesta unificada y accionable.',
+    },
+    nexus: {
+      role: 'Experto en Plataforma',
+      quote:
+        'Soy NEXUS. Conozco cada rincón de CryptoTrader: cada parámetro, cada pantalla, cada decisión de diseño detrás del sistema.',
+      description:
+        'Tu guía personal a través de la plataforma CryptoTrader. NEXUS entiende cada parámetro de configuración, cada pantalla y cada flujo de trabajo. Desde onboarding de nuevos usuarios hasta explicar configuraciones avanzadas de agentes, NEXUS convierte la complejidad en claridad.',
+      cap1: 'Onboarding paso a paso',
+      cap2: 'Guía de configuración',
+      cap3: 'Enrutamiento entre agentes',
+      tag1: 'Onboarding',
+      tag2: 'Navegación',
+      tag3: 'FAQ',
+    },
+    forge: {
+      role: 'Asistente de Operaciones',
+      quote:
+        'Soy FORGE. No analizo — actúo. Dame un objetivo y construimos el camino operativo para llegar.',
+      description:
+        'El operador práctico de CryptoTrader. FORGE ejecuta acciones: iniciar/detener agentes de trading, configurar estrategias, gestionar posiciones y ajustar parámetros de riesgo. Confirma antes de ejecutar y explica el impacto de cada acción.',
+      cap1: 'Iniciar/detener agentes',
+      cap2: 'Configuración de estrategia',
+      cap3: 'Gestión de posiciones',
+      tag1: 'Ejecución',
+      tag2: 'Config',
+      tag3: 'DeFi',
+    },
+    sigma: {
+      role: 'Analista de Mercado',
+      quote:
+        'Soy SIGMA. Leo el mercado en datos, no en opiniones. Cada señal tiene un número detrás, y ese número cuenta una historia.',
+      description:
+        'Un analista de mercado frío y cuantitativo con acceso en tiempo real a datos de precio, indicadores técnicos y sentimiento de noticias. SIGMA interpreta RSI, MACD, Bandas de Bollinger, patrones de velas y métricas on-chain para entregar perspectivas de mercado objetivas.',
+      cap1: 'Análisis técnico',
+      cap2: 'Indicadores en tiempo real',
+      cap3: 'Scoring de sentimiento',
+      tag1: 'AT',
+      tag2: 'Indicadores',
+      tag3: 'On-Chain',
+    },
+    cipher: {
+      role: 'Experto en Blockchain',
+      quote:
+        'Soy CIPHER. Blockchain no tiene secretos para mí — desde ECDSA hasta ZK Rollups. ¿Tienes una pregunta? La respondo desde cero o desde el nivel que necesites.',
+      description:
+        'La base de conocimiento profundo sobre criptomonedas y tecnología blockchain. CIPHER cubre todo desde criptografía de curvas elípticas hasta rollups Layer 2, protocolos DeFi, patrones de smart contracts, tokenomics y marcos regulatorios — adaptándose a cualquier nivel de experiencia.',
+      cap1: 'Deep-dives de protocolos',
+      cap2: 'Seguridad y criptografía',
+      cap3: 'Educación DeFi',
+      tag1: 'DeFi',
+      tag2: 'L2',
+      tag3: 'Web3',
+    },
+    aegis: {
+      role: 'Gestor de Riesgo',
+      quote:
+        'Soy AEGIS, el gestor de riesgo de tu portfolio. Mi trabajo no es decirte qué va a pasar — es asegurarme de que nada de lo que pase te saque del juego.',
+      description:
+        'El guardián de tu portfolio. AEGIS evalúa cada decisión de trading a través de una lente de riesgo cuantitativa: sizing de posiciones con Kelly Criterion, límites de drawdown, análisis de correlación y cálculos de VaR. Cada BUY/SELL pasa por AEGIS antes de ejecutarse.',
+      cap1: 'Risk scoring (0-100)',
+      cap2: 'Protección de drawdown',
+      cap3: 'Sizing de posiciones',
+      tag1: 'VaR',
+      tag2: 'Kelly',
+      tag3: 'Stop-Loss',
+    },
+  },
   notificationMessages: {
+    agentMaxActive:
+      'Máximo {{max}} agentes activos permitidos. Detén un agente existente antes de iniciar uno nuevo.',
     agentNoLLM: 'Agente pausado: no hay credenciales LLM configuradas',
     agentNoTestnetKeys:
       'Agente pausado: no hay claves API de Binance Testnet configuradas',
@@ -1270,101 +1440,173 @@ const es = {
     setupFailed: 'Configuración fallida. Por favor, inténtalo de nuevo.',
   },
   landing: {
-    badge: 'Trading Autónomo en Crypto · Potenciado por IA',
-    headline1: 'Tu Agente.',
-    headline2: 'Invierte',
-    headline3: 'por ti.',
-    sub: 'Un agente de IA analiza el mercado 24/7, gestiona tu riesgo y ejecuta operaciones en tu nombre. Sin esfuerzo. Sin emociones.',
+    badge: 'Trading Crypto Multi-Agente · Potenciado por IA',
+    headline1: '5 Agentes IA.',
+    headline2: 'Una Misión:',
+    headline3: 'Tu Ganancia.',
+    sub: 'Un sistema multi-agente de IA analiza mercados, lee noticias, gestiona riesgo y ejecuta trades 24/7. Seis proveedores LLM. Tres modos de trading. Cero emociones.',
     startFree: 'Empezar gratis',
-    badge1: 'Paper Trading incluido',
-    badge2: 'Gestión de riesgo integrada',
-    badge3: 'Claude · GPT · Groq',
-    stat1Value: '4',
-    stat1Label: 'Pares de Trading',
-    stat2Value: '3',
-    stat2Label: 'Proveedores IA',
+    badge1: '6 Proveedores IA',
+    badge2: '5 Agentes Especializados',
+    badge3: '3 Modos de Trading',
+    // Stats
+    stat1Value: '5',
+    stat1Label: 'Agentes IA',
+    stat2Value: '6',
+    stat2Label: 'Proveedores LLM',
     stat3Value: '24/7',
-    stat3Label: 'Monitoreo activo',
-    stat4Value: '10+',
-    stat4Label: 'Señales de Análisis',
+    stat3Label: 'Monitoreo Activo',
+    stat4Value: '4',
+    stat4Label: 'Pares de Trading',
+    stat5Value: '3',
+    stat5Label: 'Modos de Trading',
+    stat6Value: '10+',
+    stat6Label: 'Indicadores Técnicos',
+    // Cómo funciona
     howEyebrow: 'Cómo funciona',
-    howTitle: 'Tu agente trabaja mientras tú vives',
-    step1Title: 'Escanea el Mercado',
+    howTitle: 'Tus agentes trabajan mientras vos vivís',
+    step1Title: 'Escanea y Analiza',
     step1Desc:
-      'Monitorea pares BTC y ETH en tiempo real. Analiza volumen, tendencias y señales técnicas como RSI, MACD y Bollinger Bands.',
-    step2Title: 'Analiza con IA',
+      'SIGMA monitorea pares BTC/ETH en tiempo real. RSI, MACD, Bollinger Bands, EMA, análisis de volumen y sentimiento de noticias — todo alimenta el motor de decisiones.',
+    step2Title: 'IA Multi-Agente',
     step2Desc:
-      'Procesa señales con Claude, GPT o Groq. Evalúa contexto, riesgo y oportunidades de trading con razonamiento profundo.',
+      'NEXUS enruta tu intención a FORGE, SIGMA, CIPHER o AEGIS. Cada agente se especializa en un dominio. Analizan en paralelo y sintetizan una respuesta unificada.',
     step3Title: 'Ejecuta y Protege',
     step3Desc:
-      'Opera con stop-loss, take-profit y sizing automático. Kill-switch disponible para detener todo en cualquier momento.',
+      'AEGIS aplica límites de riesgo, position sizing y stop-loss. FORGE ejecuta con disciplina. Kill-switch disponible para detener todo al instante.',
+    // Features (8 cards)
     featEyebrow: 'Plataforma completa',
-    featTitle: 'Todo lo que necesitas para operar mejor',
+    featTitle: 'Todo lo que necesitás para operar mejor',
     featSub:
-      'Desde análisis técnico hasta ejecución automática. Una plataforma construida por traders, para traders.',
+      'Inteligencia multi-agente, análisis de noticias, 6 proveedores LLM y tres modos de trading — todo en una plataforma.',
     featCoreBadge: 'Core',
+    featNewBadge: 'Nuevo',
     featFreeBadge: 'Gratis',
-    feat1Title: 'Agente Autónomo',
+    feat1Title: 'Sistema Multi-Agente',
     feat1Desc:
-      'Opera 24/7 en tu nombre. Configurás la estrategia; el agente ejecuta con disciplina, sin emociones y sin interrupciones.',
-    feat2Title: 'Análisis Técnico',
+      'Cinco agentes especializados — NEXUS, FORGE, SIGMA, CIPHER, AEGIS — trabajando en conjunto para trading, análisis, gestión de riesgo y expertise blockchain.',
+    feat2Title: 'KRYPTO AI Chat',
     feat2Desc:
-      'RSI, MACD, Bollinger Bands, EMA y ATR en tiempo real. Cada indicador alimenta las decisiones del agente.',
-    feat3Title: 'Gestión de Riesgo',
+      'Asistente de IA conversacional con memoria de sesión. Preguntá sobre mercados, estrategias o la plataforma. Cada agente tiene personalidad y expertise únicos.',
+    feat3Title: 'News Intelligence',
     feat3Desc:
-      'Stop-loss, take-profit y position sizing automáticos. Kill-switch para detener toda actividad con un click.',
-    feat4Title: 'Paper Trading',
+      'Noticias crypto en tiempo real de CryptoPanic, NewsData.io y RSS. Análisis de sentimiento por LLM que alimenta directamente las decisiones de trading.',
+    feat4Title: 'Análisis Técnico',
     feat4Desc:
-      'Probá estrategias sin riesgo en modo simulado. Entendé el mercado antes de operar con capital real.',
-    feat5Title: 'News Intelligence',
+      'RSI, MACD, Bollinger Bands, EMA, ATR, volumen y soporte/resistencia en tiempo real. Scoring de confluencia con 10+ indicadores.',
+    feat5Title: 'Panel de Proveedores LLM',
     feat5Desc:
-      'El agente consume noticias crypto en tiempo real para enriquecer sus decisiones con contexto fundamental del mercado.',
-    feat6Title: 'Charts en Vivo',
+      'Configurá y monitoreá 6 proveedores IA desde un solo panel. Tracking de uso, selección de modelos y fallback automático si un proveedor no está disponible.',
+    feat6Title: 'Gestión de Riesgo',
     feat6Desc:
-      'Gráficos avanzados con indicadores superpuestos. Visualizá las operaciones del agente en tiempo real sobre el precio.',
-    aiEyebrow: 'Inteligencia artificial',
-    aiTitle: 'El cerebro detrás del agente',
+      'Stop-loss, take-profit y position sizing automáticos. El agente AEGIS evalúa riesgo 0-100 usando Kelly Criterion, VaR y análisis de drawdown.',
+    feat7Title: 'Tres Modos de Trading',
+    feat7Desc:
+      'Sandbox para paper trading, Binance Testnet para simulación realista, y Live para ejecución real. Cambiá de modo en cualquier momento.',
+    feat8Title: 'Charts y Analytics en Vivo',
+    feat8Desc:
+      'Gráficos de velas estilo TradingView con indicadores superpuestos. Tracking de P&L en tiempo real, win rate y historial de decisiones.',
+    // Multi-Agent section
+    agentsEyebrow: 'Inteligencia Multi-Agente',
+    agentsTitle: 'Conocé a los agentes KRYPTO',
+    agentsSub:
+      'Cinco agentes IA especializados, cada uno con nombre clave, personalidad y expertise únicos. Juntos forman una capa integral de inteligencia crypto.',
+    agentNexus: 'NEXUS',
+    agentNexusRole: 'Experto en Plataforma',
+    agentNexusDesc:
+      'Conoce cada pantalla, parámetro y workflow. Tu guía personal en CryptoTrader.',
+    agentForge: 'FORGE',
+    agentForgeRole: 'Operaciones',
+    agentForgeDesc:
+      'Ejecuta acciones: inicia agentes, configura estrategias, gestiona posiciones y parámetros de riesgo.',
+    agentSigma: 'SIGMA',
+    agentSigmaRole: 'Analista de Mercado',
+    agentSigmaDesc:
+      'Analista cuantitativo con acceso en tiempo real a precios, indicadores, patrones de velas y sentimiento.',
+    agentCipher: 'CIPHER',
+    agentCipherRole: 'Experto Blockchain',
+    agentCipherDesc:
+      'Conocimiento profundo en criptografía, protocolos DeFi, Layer 2, smart contracts y tokenomics.',
+    agentAegis: 'AEGIS',
+    agentAegisRole: 'Gestor de Riesgo',
+    agentAegisDesc:
+      'Evalúa cada trade con Kelly Criterion, VaR, límites de drawdown y position sizing.',
+    // Providers (6)
+    aiEyebrow: '6 Proveedores LLM',
+    aiTitle: 'Elegí tu IA o usalas todas.',
     aiSub:
-      'Elegís el provedor de IA que preferís. El agente se adapta a cada mercado.',
+      'Configurá múltiples proveedores simultáneamente. Fallback automático asegura que tus agentes nunca se detengan.',
     claude: 'Anthropic Claude',
-    claudeModel: 'claude-3-5-sonnet · claude-opus-4',
+    claudeModel: 'claude-sonnet-4 · claude-haiku',
     claudeDesc:
       'Razonamiento profundo y contexto extenso. La opción preferida para análisis matizados de riesgo y estrategias de largo plazo.',
     claudeTag: 'Razonamiento',
     openai: 'OpenAI GPT',
-    openaiModel: 'gpt-4o · gpt-4-turbo',
+    openaiModel: 'gpt-4o · gpt-4o-mini',
     openaiDesc:
       'El estándar de la industria. Versatilidad, velocidad y confiabilidad probada en entornos de producción de alto volumen.',
     openaiTag: 'Versatilidad',
     groq: 'Groq',
-    groqModel: 'llama3-70b · mixtral-8x7b',
+    groqModel: 'llama-3.3-70b · llama-3.1-8b',
     groqDesc:
       'Inferencia ultrarrápida con hardware especializado. Ideal para análisis de alta frecuencia y decisiones de latencia mínima.',
     groqTag: 'Velocidad',
+    gemini: 'Google Gemini',
+    geminiModel: 'gemini-2.5-flash · gemini-2.5-pro',
+    geminiDesc:
+      'Capacidades multimodales con ventanas de contexto masivas. Excelente para cruzar datos de mercado complejos.',
+    geminiTag: 'Multimodal',
+    mistral: 'Mistral AI',
+    mistralModel: 'mistral-large · mistral-medium',
+    mistralDesc:
+      'Excelencia europea en IA. Rendimiento analítico sólido con uso eficiente de recursos y enfoque privacy-first.',
+    mistralTag: 'Eficiente',
+    together: 'Together AI',
+    togetherModel: 'Llama 4 Maverick · Llama 4 Scout',
+    togetherDesc:
+      'Modelos open-source a escala. Accedé a los últimos modelos Llama con infraestructura y pricing enterprise.',
+    togetherTag: 'Open Source',
+    // Trading modes
+    modesEyebrow: 'Tres formas de operar',
+    modesTitle: 'Tu ritmo. Tus reglas.',
+    modesSub:
+      'Empezá seguro en Sandbox, subí de nivel en Testnet, y pasá a Live cuando estés listo.',
+    modeSandbox: 'Sandbox',
+    modeSandboxDesc:
+      'Paper trading con wallet virtual y precios reales del mercado. Riesgo cero, aprendizaje total.',
+    modeTestnet: 'Testnet',
+    modeTestnetDesc:
+      'Órdenes reales en Binance Testnet. Experimentá el flujo completo de trading sin dinero real.',
+    modeLive: 'Live Trading',
+    modeLiveDesc:
+      'Fondos reales en Binance. Controles de riesgo automáticos y protección kill-switch.',
+    // Risk
     riskEyebrow: 'Tu capital protegido',
-    riskTitle: 'Diseñado para proteger primero',
-    risk1Title: 'Stop-Loss automático',
+    riskTitle: 'AEGIS: Diseñado para proteger primero',
+    risk1Title: 'Stop-Loss Automático',
     risk1Desc:
       'Cierra posiciones antes de que las pérdidas sobrepasen tu tolerancia.',
-    risk2Title: 'Take-Profit inteligente',
+    risk2Title: 'Take-Profit Inteligente',
     risk2Desc:
       'Asegura ganancias automáticamente cuando se alcanza el objetivo.',
-    risk3Title: 'Kill-Switch global',
+    risk3Title: 'Kill-Switch Global',
     risk3Desc:
       'Detiene toda actividad del agente con un solo click en cualquier momento.',
     risk4Title: 'Position Sizing',
     risk4Desc:
-      'El riesgo por operación se calcula automáticamente según tu configuración.',
+      'Riesgo por operación calculado con Kelly Criterion y reglas de allocation.',
+    // CTA
     ctaEyebrow: 'Comenzá hoy mismo',
-    ctaTitle1: '¿Listo para que tu portafolio',
-    ctaTitle2: 'trabaje solo?',
+    ctaTitle1: '¿Listo para que 5 agentes IA',
+    ctaTitle2: 'operen por vos?',
     ctaSub:
-      'Creá tu cuenta, configurá tu estrategia y activá tu agente en minutos. No se necesita experiencia previa en trading.',
+      'Creá tu cuenta, elegí tus proveedores, activá tus agentes en minutos. No se necesita experiencia previa en trading.',
     ctaStart: 'Crear cuenta gratis',
     ctaGitHub: 'Ver en GitHub',
     ctaDisclaimer:
       'Paper Trading disponible. Sin tarjeta de crédito. Solo fines educativos.',
-    footerTagline: 'Potenciado por IA',
+    // Footer
+    footerTagline: 'Plataforma Multi-Agente de Trading IA',
     footerBy: 'Desarrollado por',
     footerDisclaimer:
       'Solo fines educativos. El trading de criptomonedas implica riesgo de pérdida.',

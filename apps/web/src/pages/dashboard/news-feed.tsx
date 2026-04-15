@@ -1,5 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Newspaper,
@@ -10,17 +9,13 @@ import {
   Brain,
   Sparkles,
   RefreshCw,
-  ChevronDown,
   AlertCircle,
-  CheckCircle2,
   XCircle,
   X,
   Calendar,
   User,
   Globe,
   Settings,
-  Save,
-  Clock,
   Hash,
   Database,
 } from 'lucide-react';
@@ -32,16 +27,13 @@ import {
   useMarketNews,
   useNewsAnalysis,
   useNewsConfig,
-  useUpdateNewsConfig,
   useRunKeywordAnalysis,
   useRunAiAnalysis,
   type NewsItem,
   type NewsAnalysis,
-  type NewsConfig,
   type AiHeadline,
 } from '../../hooks/use-market';
 import { toast } from 'sonner';
-import { useLLMKeys } from '../../hooks/use-user';
 
 gsap.registerPlugin(useGSAP);
 
@@ -49,63 +41,7 @@ gsap.registerPlugin(useGSAP);
 
 type SentimentFilter = 'ALL' | 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
 
-interface LLMProviderOption {
-  value: string;
-  label: string;
-  models: { value: string; label: string }[];
-}
-
-const LLM_PROVIDERS: LLMProviderOption[] = [
-  {
-    value: 'CLAUDE',
-    label: 'Claude (Anthropic)',
-    models: [
-      { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-      { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
-      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-      { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' },
-    ],
-  },
-  {
-    value: 'OPENAI',
-    label: 'OpenAI',
-    models: [
-      { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { value: 'gpt-4o', label: 'GPT-4o' },
-    ],
-  },
-  {
-    value: 'GROQ',
-    label: 'Groq (Llama)',
-    models: [
-      { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
-      { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B (rápido)' },
-    ],
-  },
-  {
-    value: 'GEMINI',
-    label: 'Google Gemini',
-    models: [
-      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-      { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite' },
-    ],
-  },
-  {
-    value: 'MISTRAL',
-    label: 'Mistral AI',
-    models: [
-      { value: 'mistral-small-latest', label: 'Mistral Small' },
-      { value: 'mistral-medium-latest', label: 'Mistral Medium' },
-      { value: 'mistral-large-latest', label: 'Mistral Large' },
-    ],
-  },
-];
-
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const LAST_PROVIDER_KEY = 'news_ai_last_provider';
-const LAST_MODEL_KEY = 'news_ai_last_model';
 
 const NEWS_COUNTS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
@@ -170,92 +106,22 @@ const SENTIMENT_CONFIG: Record<
 
 function AnalysisSummaryCard({
   analysis,
+  newsConfig,
   onRunKeyword,
   isRunningKeyword,
   onRunAi,
   isRunningAi,
 }: {
   analysis: NewsAnalysis | null | undefined;
+  newsConfig: import('../../hooks/use-market').NewsConfig | undefined;
   onRunKeyword: () => void;
   isRunningKeyword: boolean;
   onRunAi: (provider: string, model: string) => void;
   isRunningAi: boolean;
 }) {
-  const { data: llmKeys = [] } = useLLMKeys();
-  const configuredProviders = LLM_PROVIDERS.filter((p) =>
-    llmKeys.some((k) => k.provider === p.value && k.isActive),
+  const hasAiProvider = !!(
+    newsConfig?.primaryProvider && newsConfig?.primaryModel
   );
-
-  const [showProviderMenu, setShowProviderMenu] = useState(false);
-  const [showModelMenu, setShowModelMenu] = useState(false);
-  const providerDropdownRef = useRef<HTMLDivElement>(null);
-  const modelDropdownRef = useRef<HTMLDivElement>(null);
-
-  const [selectedProvider, setSelectedProvider] = useState(
-    () => localStorage.getItem(LAST_PROVIDER_KEY) ?? 'CLAUDE',
-  );
-  const [selectedModel, setSelectedModel] = useState(
-    () =>
-      localStorage.getItem(LAST_MODEL_KEY) ?? LLM_PROVIDERS[0].models[0].value,
-  );
-
-  // Keep selected provider in sync when configured providers change
-  useEffect(() => {
-    if (configuredProviders.length === 0) return;
-    const isValid = configuredProviders.some(
-      (p) => p.value === selectedProvider,
-    );
-    if (!isValid) {
-      const first = configuredProviders[0];
-      setSelectedProvider(first.value);
-      localStorage.setItem(LAST_PROVIDER_KEY, first.value);
-      const firstModel = first.models[0].value;
-      setSelectedModel(firstModel);
-      localStorage.setItem(LAST_MODEL_KEY, firstModel);
-    }
-  }, [configuredProviders, selectedProvider]);
-
-  // Close dropdowns on click-outside
-  const handleOutsideClick = useCallback((e: MouseEvent) => {
-    if (
-      providerDropdownRef.current &&
-      !providerDropdownRef.current.contains(e.target as Node)
-    ) {
-      setShowProviderMenu(false);
-    }
-    if (
-      modelDropdownRef.current &&
-      !modelDropdownRef.current.contains(e.target as Node)
-    ) {
-      setShowModelMenu(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (showProviderMenu || showModelMenu) {
-      document.addEventListener('mousedown', handleOutsideClick);
-      return () =>
-        document.removeEventListener('mousedown', handleOutsideClick);
-    }
-  }, [showProviderMenu, showModelMenu, handleOutsideClick]);
-
-  const providerObj =
-    configuredProviders.find((p) => p.value === selectedProvider) ??
-    configuredProviders[0] ??
-    LLM_PROVIDERS[0];
-
-  const handleProviderChange = (val: string) => {
-    setSelectedProvider(val);
-    localStorage.setItem(LAST_PROVIDER_KEY, val);
-    const first =
-      LLM_PROVIDERS.find((p) => p.value === val)?.models[0].value ?? '';
-    setSelectedModel(first);
-    localStorage.setItem(LAST_MODEL_KEY, first);
-  };
-  const handleModelChange = (val: string) => {
-    setSelectedModel(val);
-    localStorage.setItem(LAST_MODEL_KEY, val);
-  };
 
   // ── Analysis tabs
   const hasAiAnalysis = !!analysis?.aiAnalyzedAt;
@@ -452,455 +318,105 @@ function AnalysisSummaryCard({
           </div>
         )}
 
-        {/* AI analyzer controls */}
+        {/* Action buttons */}
         {analysis && (
-          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
-            {configuredProviders.length === 0 && (
-              <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border/60 bg-background/40 py-5 text-center">
-                <Sparkles className="h-6 w-6 text-muted-foreground/40" />
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    No hay proveedores de IA configurados
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                    Configura al menos un proveedor para usar el análisis con IA
-                  </p>
-                </div>
-                <a
-                  href="/dashboard/settings"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/20 px-4 py-2 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  Ir a Ajustes › LLM
-                </a>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span className="text-xs font-semibold">Análisis con IA</span>
-                <span className="text-[11px] text-muted-foreground hidden sm:inline">
-                  — reclasifica usando el LLM configurado y persiste en DB
-                </span>
-              </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={onRunKeyword}
+              disabled={isRunningKeyword}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRunningKeyword ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Hash className="h-3.5 w-3.5" />
+              )}
+              Análisis Keyword
+            </button>
+
+            {hasAiProvider ? (
               <button
-                onClick={onRunKeyword}
-                disabled={isRunningKeyword}
-                title="Actualizar análisis keyword"
-                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 shrink-0"
+                onClick={() =>
+                  onRunAi(
+                    newsConfig!.primaryProvider!,
+                    newsConfig!.primaryModel!,
+                  )
+                }
+                disabled={isRunningAi}
+                className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <RefreshCw
-                  className={cn(
-                    'h-3.5 w-3.5',
-                    isRunningKeyword && 'animate-spin',
-                  )}
-                />
-                Actualizar
-              </button>
-            </div>
-
-            {configuredProviders.length > 0 && (
-              <div className="flex flex-col sm:flex-row gap-2">
-                {/* Provider selector */}
-                <div ref={providerDropdownRef} className="relative flex-1">
-                  <button
-                    onClick={() => {
-                      setShowProviderMenu((v) => !v);
-                      setShowModelMenu(false);
-                    }}
-                    className="w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs hover:border-primary/50 transition-colors"
-                  >
-                    <span className="font-medium truncate">
-                      {providerObj.label}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0',
-                        showProviderMenu && 'rotate-180',
-                      )}
-                    />
-                  </button>
-                  {showProviderMenu && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-border bg-card shadow-lg">
-                      {configuredProviders.map((p) => (
-                        <button
-                          key={p.value}
-                          onClick={() => {
-                            handleProviderChange(p.value);
-                            setShowProviderMenu(false);
-                          }}
-                          className={cn(
-                            'w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-muted transition-colors',
-                            selectedProvider === p.value &&
-                              'bg-primary/10 text-primary font-semibold',
-                          )}
-                        >
-                          {selectedProvider === p.value ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                          ) : (
-                            <div className="h-3.5 w-3.5 shrink-0" />
-                          )}
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Model selector */}
-                <div ref={modelDropdownRef} className="relative flex-1">
-                  <button
-                    onClick={() => {
-                      setShowModelMenu((v) => !v);
-                      setShowProviderMenu(false);
-                    }}
-                    className="w-full flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs hover:border-primary/50 transition-colors"
-                  >
-                    <span className="font-medium truncate">
-                      {providerObj.models.find((m) => m.value === selectedModel)
-                        ?.label ?? selectedModel}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        'h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0',
-                        showModelMenu && 'rotate-180',
-                      )}
-                    />
-                  </button>
-                  {showModelMenu && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border border-border bg-card shadow-lg">
-                      {providerObj.models.map((m) => (
-                        <button
-                          key={m.value}
-                          onClick={() => {
-                            handleModelChange(m.value);
-                            setShowModelMenu(false);
-                          }}
-                          className={cn(
-                            'w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-muted transition-colors',
-                            selectedModel === m.value &&
-                              'bg-primary/10 text-primary font-semibold',
-                          )}
-                        >
-                          {selectedModel === m.value ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                          ) : (
-                            <div className="h-3.5 w-3.5 shrink-0" />
-                          )}
-                          {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => onRunAi(selectedProvider, selectedModel)}
-                  disabled={isRunningAi || configuredProviders.length === 0}
-                  className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isRunningAi ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      Analizando…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Analizar con IA
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-
-            {/* Reclassification diff */}
-            {effectiveTab === 'ai' && changed.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {changed.length} reclasificaciones por IA
-                </p>
-                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                  {changed.map((n) => {
-                    const ai = aiMap.get(n.id);
-                    if (!ai) return null;
-                    return (
-                      <div
-                        key={n.id}
-                        className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border/50 px-3 py-2"
-                      >
-                        <XCircle className="h-3 w-3 shrink-0 text-muted-foreground/40" />
-                        <span
-                          className={cn(
-                            'text-[10px] font-bold uppercase shrink-0',
-                            SENTIMENT_CONFIG[
-                              n.sentiment as keyof typeof SENTIMENT_CONFIG
-                            ]?.color ?? 'text-muted-foreground',
-                          )}
-                        >
-                          {n.sentiment.slice(0, 3)}
-                        </span>
-                        <span className="text-muted-foreground/40 text-[10px] shrink-0">
-                          →
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[10px] font-bold uppercase shrink-0',
-                            SENTIMENT_CONFIG[
-                              ai.sentiment as keyof typeof SENTIMENT_CONFIG
-                            ]?.color ?? 'text-muted-foreground',
-                          )}
-                        >
-                          {ai.sentiment.slice(0, 3)}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground truncate flex-1">
-                          {n.headline}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── News Config Panel ─────────────────────────────────────────────────────────
-
-const ALL_SOURCE_IDS = [
-  'coingecko',
-  'rss:coindesk',
-  'rss:cointelegraph',
-  'rss:bitcoinmagazine',
-  'rss:theblock',
-  'rss:beincrypto',
-  'reddit',
-];
-
-function NewsConfigPanel({
-  config,
-  onSave,
-  isSaving,
-}: {
-  config: NewsConfig | undefined;
-  onSave: (data: Partial<NewsConfig>) => void;
-  isSaving: boolean;
-}) {
-  const [interval, setInterval] = useState(config?.intervalMinutes ?? 30);
-  const [count, setCount] = useState(config?.newsCount ?? 40);
-  const [sources, setSources] = useState<string[]>(
-    config?.enabledSources ?? [],
-  );
-  const [onlySummary, setOnlySummary] = useState(config?.onlySummary ?? true);
-  const [botEnabled, setBotEnabled] = useState(config?.botEnabled ?? true);
-  const [newsWeight, setNewsWeight] = useState(config?.newsWeight ?? 15);
-
-  const allEnabled = sources.length === 0;
-
-  const toggleSource = (id: string) => {
-    if (allEnabled) {
-      setSources(ALL_SOURCE_IDS.filter((s) => s !== id));
-    } else if (sources.includes(id)) {
-      const next = sources.filter((s) => s !== id);
-      setSources(next.length === ALL_SOURCE_IDS.length ? [] : next);
-    } else {
-      const next = [...sources, id];
-      setSources(next.length === ALL_SOURCE_IDS.length ? [] : next);
-    }
-  };
-
-  const isEnabled = (id: string) => allEnabled || sources.includes(id);
-
-  const handleSave = () => {
-    onSave({
-      intervalMinutes: interval,
-      newsCount: count,
-      enabledSources: sources,
-      onlySummary,
-      botEnabled,
-      newsWeight,
-    });
-  };
-
-  return (
-    <div className="rounded-2xl border border-border bg-card mb-6">
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/20">
-        <Settings className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">Configuración de Noticias</span>
-      </div>
-      <div className="p-5 space-y-5">
-        {/* Interval & Count */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1.5">
-              <Clock className="h-3 w-3" />
-              Intervalo de análisis (min)
-            </label>
-            <input
-              type="number"
-              min={5}
-              max={120}
-              step={5}
-              value={interval}
-              onChange={(e) => setInterval(Number(e.target.value))}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
-            />
-          </div>
-          <div>
-            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1.5">
-              <Hash className="h-3 w-3" />
-              Cantidad de noticias
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {NEWS_COUNTS.map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setCount(n)}
-                  className={cn(
-                    'rounded-md px-2.5 py-1 text-[11px] font-medium border transition-colors',
-                    count === n
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background border-border hover:border-primary/50',
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Bot enabled toggle */}
-        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold">
-              Agente analiza noticias antes de decidir
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              El bot incluirá el análisis de noticias al tomar decisiones de
-              trading
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={botEnabled}
-            onClick={() => setBotEnabled((v) => !v)}
-            className={cn(
-              'inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
-              botEnabled ? 'bg-primary' : 'bg-muted-foreground/40',
-            )}
-          >
-            <span
-              className={cn(
-                'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200',
-                botEnabled ? 'translate-x-4' : 'translate-x-0',
-              )}
-            />
-          </button>
-        </div>
-
-        {/* News weight slider */}
-        {botEnabled && (
-          <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold">
-                  Peso de noticias en la decisión
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Porcentaje de influencia del sentimiento sobre los indicadores
-                  técnicos
-                </p>
-              </div>
-              <span className="text-sm font-bold text-primary shrink-0 w-10 text-right">
-                {newsWeight}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={newsWeight}
-              onChange={(e) => setNewsWeight(Number(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>0% (solo técnicos)</span>
-              <span>50% (equilibrado)</span>
-              <span>100% (solo noticias)</span>
-            </div>
-          </div>
-        )}
-
-        {/* Only summary toggle */}
-        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold">Solo noticias con resumen</p>
-            <p className="text-[11px] text-muted-foreground">
-              Excluye noticias sin contenido (recomendado)
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={onlySummary}
-            onClick={() => setOnlySummary((v) => !v)}
-            className={cn(
-              'inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
-              onlySummary ? 'bg-primary' : 'bg-muted-foreground/40',
-            )}
-          >
-            <span
-              className={cn(
-                'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200',
-                onlySummary ? 'translate-x-4' : 'translate-x-0',
-              )}
-            />
-          </button>
-        </div>
-
-        {/* Sources */}
-        <div>
-          <p className="text-[11px] text-muted-foreground mb-2">
-            Fuentes habilitadas (todas = vacío)
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {ALL_SOURCE_IDS.map((id) => (
-              <button
-                key={id}
-                onClick={() => toggleSource(id)}
-                className={cn(
-                  'rounded-full border px-3 py-1 text-[11px] font-medium transition-colors',
-                  isEnabled(id)
-                    ? 'bg-primary/10 border-primary/30 text-primary'
-                    : 'bg-muted border-border text-muted-foreground hover:border-primary/30',
+                {isRunningAi ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Analizando…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Análisis IA
+                  </>
                 )}
-              >
-                {sourceLabel(id)}
               </button>
-            ))}
+            ) : (
+              <a
+                href="/dashboard/settings?tab=news"
+                className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all whitespace-nowrap bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Configurar Análisis IA
+              </a>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Save */}
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
-        >
-          {isSaving ? (
-            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Save className="h-3.5 w-3.5" />
-          )}
-          Guardar configuración
-        </button>
+        {/* Reclassification diff */}
+        {effectiveTab === 'ai' && changed.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {changed.length} reclasificaciones por IA
+            </p>
+            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+              {changed.map((n) => {
+                const ai = aiMap.get(n.id);
+                if (!ai) return null;
+                return (
+                  <div
+                    key={n.id}
+                    className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border/50 px-3 py-2"
+                  >
+                    <XCircle className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold uppercase shrink-0',
+                        SENTIMENT_CONFIG[
+                          n.sentiment as keyof typeof SENTIMENT_CONFIG
+                        ]?.color ?? 'text-muted-foreground',
+                      )}
+                    >
+                      {n.sentiment.slice(0, 3)}
+                    </span>
+                    <span className="text-muted-foreground/40 text-[10px] shrink-0">
+                      →
+                    </span>
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold uppercase shrink-0',
+                        SENTIMENT_CONFIG[
+                          ai.sentiment as keyof typeof SENTIMENT_CONFIG
+                        ]?.color ?? 'text-muted-foreground',
+                      )}
+                    >
+                      {ai.sentiment.slice(0, 3)}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground truncate flex-1">
+                      {n.headline}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1132,32 +648,14 @@ function NewsCard({
 
 export function NewsFeedPage() {
   const { t } = useTranslation();
-  const location = useLocation();
   const [filter, setFilter] = useState<SentimentFilter>('ALL');
-  const [showConfig, setShowConfig] = useState(
-    () => location.hash === '#config',
-  );
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-open config and scroll when hash is #config
-  useEffect(() => {
-    if (location.hash === '#config') {
-      setShowConfig(true);
-      // Small delay to let the panel render before scrolling
-      setTimeout(() => {
-        document.getElementById('news-config')?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 150);
-    }
-  }, [location.hash]);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
 
   const { data: config } = useNewsConfig();
   const { data: analysis } = useNewsAnalysis();
   const { data: news = [], isLoading } = useMarketNews(config?.newsCount ?? 40);
-  const updateConfig = useUpdateNewsConfig();
   const runKeyword = useRunKeywordAnalysis();
   const runAi = useRunAiAnalysis();
 
@@ -1224,7 +722,7 @@ export function NewsFeedPage() {
 
   return (
     <div ref={containerRef} className="p-4 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-center gap-4 justify-between">
+      <div className="mb-6 flex flex-wrap items-center gap-4 justify-between">
         <div>
           <div className="flex items-center gap-2">
             <Newspaper className="h-5 w-5 text-primary" />
@@ -1233,65 +731,45 @@ export function NewsFeedPage() {
           <p className="text-sm text-muted-foreground">{t('news.subtitle')}</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowConfig((v) => !v)}
-            aria-label="Configuración de noticias"
-            className={cn(
-              'rounded-lg border p-2 transition-colors',
-              showConfig
-                ? 'bg-primary/10 border-primary/30 text-primary'
-                : 'border-border hover:border-primary/50 text-muted-foreground',
-            )}
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-          <div className="flex items-center gap-1 rounded-lg border border-border p-1">
-            {(
-              ['ALL', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'] as SentimentFilter[]
-            ).map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                  filter === s
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {s === 'ALL'
-                  ? t('news.all')
-                  : s === 'POSITIVE'
-                    ? t('news.positive')
-                    : s === 'NEGATIVE'
-                      ? t('news.negative')
-                      : t('news.neutral')}
-              </button>
-            ))}
-          </div>
-        </div>
+        <a
+          href="/dashboard/settings?tab=news"
+          className="rounded-lg border border-border p-2 text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+          title={t('news.configure') ?? 'Configuración de noticias'}
+        >
+          <Settings className="h-4 w-4" />
+        </a>
       </div>
 
-      {/* Config panel (toggleable) */}
-      {showConfig && (
-        <div id="news-config">
-          <NewsConfigPanel
-            config={config}
-            onSave={(data) =>
-              updateConfig.mutate(data, {
-                onSuccess: () => toast.success('Configuración guardada'),
-                onError: () => toast.error('Error al guardar configuración'),
-              })
-            }
-            isSaving={updateConfig.isPending}
-          />
-        </div>
-      )}
+      {/* Filters */}
+      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-fit">
+        {(['ALL', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'] as SentimentFilter[]).map(
+          (s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={cn(
+                'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+                filter === s
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {s === 'ALL'
+                ? t('news.all')
+                : s === 'POSITIVE'
+                  ? t('news.positive')
+                  : s === 'NEGATIVE'
+                    ? t('news.negative')
+                    : t('news.neutral')}
+            </button>
+          ),
+        )}
+      </div>
 
       {/* Analysis Summary + AI runner */}
       <AnalysisSummaryCard
         analysis={analysis}
+        newsConfig={config}
         onRunKeyword={handleRunKeyword}
         isRunningKeyword={runKeyword.isPending}
         onRunAi={handleRunAi}

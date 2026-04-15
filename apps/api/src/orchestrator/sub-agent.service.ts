@@ -6,6 +6,9 @@ import { createLLMProvider, LLMProviderClient } from '@crypto-trader/analysis';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { LLMProvider } from '@crypto-trader/shared';
 import { RagService } from './rag.service';
+import { LLMUsageService } from '../llm/llm-usage.service';
+import { recordCall } from '../llm/provider-health.service';
+import { LLMSource } from '../../generated/prisma/enums';
 
 export type SubAgentId =
   | 'platform'
@@ -74,10 +77,12 @@ Tono: conservador, cuantitativo, directo. Nunca dices "probablemente esté bien"
 Para evaluaciones de riesgo, responde SOLO con JSON válido:
 { "riskScore": 0, "verdict": "PASS|REDUCE|BLOCK", "positionSizeMultiplier": 1.0, "reason": "...", "alerts": [] }
 Reglas de veredicto:
-- BLOCK si exposición a un solo activo supera el 50% del portfolio
 - BLOCK si drawdown acumulado de la semana supera el umbral configurado
+- BLOCK si el número de posiciones abiertas supera maxConcurrentPositions
 - REDUCE si el ratio riesgo/recompensa calculado es < 1.5
+- REDUCE si el PnL acumulado de posiciones abiertas es menor a -5%
 - PASS en cualquier otro caso
+IMPORTANTE: Este bot opera un par de trading específico (ej: BTC/USDT). Es NORMAL y ESPERADO que todas las posiciones sean del mismo activo. NO bloquees por concentración en un solo activo — eso no aplica en trading de pares individuales.
 Responde siempre en el idioma del usuario.`,
 };
 
@@ -106,6 +111,8 @@ Posiciones abiertas: ${context.openPositionsCount ?? 0}
 ${JSON.stringify(context.portfolio, null, 2)}
 Snapshot de mercado:
 Indicators summary: RSI=${(context.indicators as Record<string, unknown>)?.rsi ?? 'N/A'}, Price=${(context.indicators as Record<string, unknown>)?.price ?? 'N/A'}
+Config del bot:
+Asset=${(context.config as Record<string, unknown>)?.asset ?? 'N/A'}, Par=${(context.config as Record<string, unknown>)?.pair ?? 'N/A'}, MaxPosiciones=${(context.config as Record<string, unknown>)?.maxConcurrentPositions ?? 'N/A'}, StopLoss=${(context.config as Record<string, unknown>)?.stopLossPct ?? 'N/A'}%, TakeProfit=${(context.config as Record<string, unknown>)?.takeProfitPct ?? 'N/A'}%
 Emite tu veredicto de riesgo en JSON.`;
 
     case 'news_technical_relevance':
@@ -155,6 +162,7 @@ export class SubAgentService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly ragService?: RagService,
+    @Optional() private readonly llmUsageService?: LLMUsageService,
   ) {}
 
   /**
@@ -188,8 +196,14 @@ export class SubAgentService {
     userId: string,
     /** Prefer cheap model for lightweight tasks (classification, enrichment) */
     preferCheap = false,
+    /** Override the automatic provider/model resolution */
+    override?: { provider: LLMProvider; model: string },
   ): Promise<string> {
-    const provider = await this.getProvider(userId, preferCheap);
+    const {
+      client,
+      provider: providerEnum,
+      model,
+    } = await this.getProvider(userId, preferCheap, override);
     let systemPrompt = await this.resolveSystemPrompt(agentId);
 
     // Inject RAG context when searching by user message content
@@ -214,9 +228,40 @@ export class SubAgentService {
     const userPrompt = buildTaskUserPrompt(task, context);
 
     try {
-      const response = await provider.complete(systemPrompt, userPrompt);
+      const response = await client.complete(systemPrompt, userPrompt);
+
+      // Track call for health monitoring
+      recordCall(userId, providerEnum, true);
+
+      // Log usage asynchronously (fire-and-forget)
+      if (this.llmUsageService) {
+        const source =
+          task === 'intent_classification' || task === 'cross_agent_synthesis'
+            ? LLMSource.CHAT
+            : LLMSource.TRADING;
+        this.llmUsageService
+          .log({
+            userId,
+            provider: providerEnum as any,
+            model,
+            usage: response.usage,
+            source,
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Usage log failed: ${err instanceof Error ? err.message : String(err)}`,
+            ),
+          );
+      }
+
       return response.text;
     } catch (err) {
+      recordCall(
+        userId,
+        providerEnum,
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
       this.logger.warn(
         `SubAgent[${agentId}] task=${task} failed: ${err instanceof Error ? err.message : String(err)}`,
       );
@@ -227,12 +272,39 @@ export class SubAgentService {
   /**
    * Get an LLMProviderClient from the user's active credentials.
    * If preferCheap=true, prefers Groq (cheapest); otherwise uses most recent active cred.
+   * Returns the client plus provider/model metadata for usage logging.
    */
   async getProvider(
     userId: string,
     preferCheap = false,
-  ): Promise<LLMProviderClient> {
+    override?: { provider: LLMProvider; model: string },
+  ): Promise<{
+    client: LLMProviderClient;
+    provider: LLMProvider;
+    model: string;
+  }> {
     let cred = null;
+
+    // If explicit override, look for that provider's credential
+    if (override) {
+      cred = await this.prisma.lLMCredential.findFirst({
+        where: { userId, provider: override.provider as any, isActive: true },
+      });
+      if (cred) {
+        const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+        const client = createLLMProvider(
+          override.provider,
+          apiKey,
+          override.model,
+        );
+        return {
+          client,
+          provider: override.provider,
+          model: override.model,
+        };
+      }
+      // If override provider not available, fall through to default resolution
+    }
 
     if (preferCheap) {
       cred = await this.prisma.lLMCredential.findFirst({
@@ -259,10 +331,15 @@ export class SubAgentService {
     }
 
     const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-    return createLLMProvider(
+    const client = createLLMProvider(
       cred.provider as LLMProvider,
       apiKey,
       cred.selectedModel,
     );
+    return {
+      client,
+      provider: cred.provider as LLMProvider,
+      model: cred.selectedModel ?? client.name,
+    };
   }
 }

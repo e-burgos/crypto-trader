@@ -5,6 +5,7 @@ import { OpenAIProvider } from './openai.provider';
 import { GroqProvider } from './groq.provider';
 import { GeminiProvider } from './gemini.provider';
 import { MistralProvider } from './mistral.provider';
+import { TogetherProvider } from './together.provider';
 
 /**
  * Factory to create the correct LLM provider given credentials.
@@ -25,6 +26,8 @@ export function createLLMProvider(
       return new GeminiProvider({ apiKey, model });
     case LLMProvider.MISTRAL:
       return new MistralProvider({ apiKey, model });
+    case LLMProvider.TOGETHER:
+      return new TogetherProvider({ apiKey, model });
     default:
       throw new Error(`Unsupported LLM provider: ${provider}`);
   }

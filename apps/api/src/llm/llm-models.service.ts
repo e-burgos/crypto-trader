@@ -95,6 +95,8 @@ export class LLMModelsService {
         return this.fetchGemini(apiKey);
       case LLMProvider.MISTRAL:
         return this.fetchMistral(apiKey);
+      case LLMProvider.TOGETHER:
+        return this.fetchTogether(apiKey);
       default:
         throw new BadGatewayException(`Unsupported provider: ${provider}`);
     }
@@ -239,6 +241,27 @@ export class LLMModelsService {
           name: MODEL_PRICING[m.id]?.label ?? m.id,
           contextWindow: m.max_context_length ?? 131_072,
           maxOutput: m.max_output,
+        }),
+      );
+  }
+
+  private async fetchTogether(apiKey: string): Promise<ProviderModel[]> {
+    const { data } = await axios.get('https://api.together.xyz/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      timeout: 15000,
+    });
+
+    const excluded = ['embed', 'rerank', 'moderation', 'vision'];
+    return (data ?? [])
+      .filter(
+        (m: any) =>
+          m.type === 'chat' && !excluded.some((e) => String(m.id).includes(e)),
+      )
+      .map((m: any) =>
+        this.enrichModel({
+          id: m.id,
+          name: MODEL_PRICING[m.id]?.label ?? m.id,
+          contextWindow: m.context_length ?? 131_072,
         }),
       );
   }

@@ -4,9 +4,10 @@ import { MarketService } from './market.service';
 import { NewsAnalysisScheduler } from './news-analysis.scheduler';
 import { PrismaModule } from '../prisma/prisma.module';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
+import { LlmModule } from '../llm/llm.module';
 
 @Module({
-  imports: [PrismaModule, OrchestratorModule],
+  imports: [PrismaModule, OrchestratorModule, LlmModule],
   controllers: [MarketController],
   providers: [MarketService, NewsAnalysisScheduler],
   exports: [MarketService],

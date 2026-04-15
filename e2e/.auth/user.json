@@ -6,15 +6,15 @@
       "localStorage": [
         {
           "name": "accessToken",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW5wMnU2djcwMDAxMTIxazV4cXV2ZzlrIiwiZW1haWwiOiJ0cmFkZXJAY3J5cHRvdHJhZGVyLmRldiIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3NzU1OTg3OTIsImV4cCI6MTc3NTU5OTY5Mn0.YQditvlU8bOxEtsHetYm7JdfdWPxhYtWy3cszoTHlmA"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW5yb3g5aTUwMDAyNXQxa3pyOHVodHZhIiwiZW1haWwiOiJ0cmFkZXJAY3J5cHRvdHJhZGVyLmRldiIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3NzYxODc2ODcsImV4cCI6MTc3NjE4ODU4N30.-YsPQuD1YM76JIi0FGZrSR5CRzIUioywV_ZKpYlN_MY"
         },
         {
           "name": "crypto-trader-auth",
-          "value": "{\"state\":{\"user\":{\"id\":\"cmnp2u6v70001121k5xquvg9k\",\"email\":\"trader@cryptotrader.dev\",\"role\":\"TRADER\"},\"accessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW5wMnU2djcwMDAxMTIxazV4cXV2ZzlrIiwiZW1haWwiOiJ0cmFkZXJAY3J5cHRvdHJhZGVyLmRldiIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3NzU1OTg3OTIsImV4cCI6MTc3NTU5OTY5Mn0.YQditvlU8bOxEtsHetYm7JdfdWPxhYtWy3cszoTHlmA\",\"isAuthenticated\":true},\"version\":0}"
+          "value": "{\"state\":{\"user\":{\"id\":\"cmnrox9i500025t1kzr8uhtva\",\"email\":\"trader@cryptotrader.dev\",\"role\":\"TRADER\"},\"accessToken\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW5yb3g5aTUwMDAyNXQxa3pyOHVodHZhIiwiZW1haWwiOiJ0cmFkZXJAY3J5cHRvdHJhZGVyLmRldiIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3NzYxODc2ODcsImV4cCI6MTc3NjE4ODU4N30.-YsPQuD1YM76JIi0FGZrSR5CRzIUioywV_ZKpYlN_MY\",\"isAuthenticated\":true},\"version\":0}"
         },
         {
           "name": "refreshToken",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW5wMnU2djcwMDAxMTIxazV4cXV2ZzlrIiwiZW1haWwiOiJ0cmFkZXJAY3J5cHRvdHJhZGVyLmRldiIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3NzU1OTg3OTIsImV4cCI6MTc3NjIwMzU5Mn0.E_UuazANNPHdrakNX64fDTJkMWEsC3tId25BVpZh2Ek"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW5yb3g5aTUwMDAyNXQxa3pyOHVodHZhIiwiZW1haWwiOiJ0cmFkZXJAY3J5cHRvdHJhZGVyLmRldiIsInJvbGUiOiJUUkFERVIiLCJpYXQiOjE3NzYxODc2ODcsImV4cCI6MTc3Njc5MjQ4N30.dVQOVjlBPzIDhzxuxJ-1q4iQSkTvu-702hutYdJ8T-w"
         }
       ]
     }

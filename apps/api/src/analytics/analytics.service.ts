@@ -155,6 +155,8 @@ export class AnalyticsService {
             intervalMode: true,
             orderPriceOffsetPct: true,
             isRunning: true,
+            primaryProvider: true,
+            primaryModel: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -186,8 +188,8 @@ export class AnalyticsService {
               updatedAt: cfg.updatedAt,
             }
           : null,
-        llmProvider: activeLlm?.provider ?? null,
-        llmModel: activeLlm?.selectedModel ?? null,
+        llmProvider: cfg?.primaryProvider ?? activeLlm?.provider ?? null,
+        llmModel: cfg?.primaryModel ?? activeLlm?.selectedModel ?? null,
       };
     });
   }

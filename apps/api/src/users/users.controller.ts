@@ -39,7 +39,10 @@ import {
 } from '../auth/decorators/current-user.decorator';
 import { LLMModelsService } from '../llm/llm-models.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
+import { ProviderHealthService } from '../llm/provider-health.service';
 import { LLMProvider } from '../../generated/prisma/enums';
+import { suggestModels } from '../llm/model-ranking';
+import { PrismaService } from '../prisma/prisma.service';
 
 @ApiTags('users')
 @ApiBearerAuth('access-token')
@@ -50,6 +53,8 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly llmModelsService: LLMModelsService,
     private readonly llmUsageService: LLMUsageService,
+    private readonly providerHealthService: ProviderHealthService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ── /users/me ────────────────────────────────────────────────────────────
@@ -202,6 +207,25 @@ export class UsersController {
     return this.usersService.getLLMKeyStatus(user.userId);
   }
 
+  @Get('users/me/llm-keys/validate-all')
+  @ApiOperation({ summary: 'Validar todas las LLM API keys del usuario' })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        results: [
+          { provider: 'OPENAI', status: 'ACTIVE' },
+          { provider: 'GROQ', status: 'INVALID', error: 'Unauthorized' },
+        ],
+        active: 1,
+        total: 2,
+      },
+    },
+  })
+  validateAllLLMKeys(@CurrentUser() user: RequestUser) {
+    return this.usersService.validateAllLLMKeys(user.userId);
+  }
+
   @Get('users/me/llm-keys/:provider/test')
   @ApiOperation({ summary: 'Probar conexión con un proveedor LLM' })
   @ApiParam({ name: 'provider', enum: ['CLAUDE', 'OPENAI', 'GROQ'] })
@@ -263,7 +287,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Listar modelos disponibles de un proveedor LLM' })
   @ApiParam({
     name: 'provider',
-    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL'],
+    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL', 'TOGETHER'],
   })
   @ApiResponse({ status: 200, description: 'Modelos del proveedor' })
   @ApiResponse({ status: 404, description: 'Sin API key para este proveedor' })
@@ -295,6 +319,77 @@ export class UsersController {
       ? (period as '7d' | '30d' | '90d' | 'all')
       : '30d';
     return this.llmUsageService.getStats(user.userId, p);
+  }
+
+  @Get('users/me/llm/suggested')
+  @ApiOperation({ summary: 'Sugerir mejores modelos según providers activos' })
+  @ApiQuery({
+    name: 'useCase',
+    required: false,
+    enum: ['TRADING', 'NEWS', 'CHAT', 'CLASSIFY'],
+  })
+  @ApiResponse({ status: 200, description: 'Top 3 sugerencias de modelos' })
+  async getLLMSuggested(
+    @CurrentUser() user: RequestUser,
+    @Query('useCase') useCase?: string,
+  ) {
+    const validUseCases = ['TRADING', 'NEWS', 'CHAT', 'CLASSIFY'] as const;
+    const uc = validUseCases.includes(useCase as any)
+      ? (useCase as 'TRADING' | 'NEWS' | 'CHAT' | 'CLASSIFY')
+      : 'TRADING';
+
+    const activeKeys = await this.prisma.lLMCredential.findMany({
+      where: { userId: user.userId, isActive: true },
+      select: { provider: true },
+    });
+    const activeProviders = [
+      ...new Set(activeKeys.map((k) => k.provider as LLMProvider)),
+    ];
+
+    return suggestModels(activeProviders, uc);
+  }
+
+  @Get('users/me/llm/providers/status')
+  @ApiOperation({
+    summary: 'Get availability status of all configured LLM providers',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Array of ProviderStatus with availability, usage, rate limits',
+  })
+  getProvidersStatus(@CurrentUser() user: RequestUser) {
+    return this.providerHealthService.getAllProvidersStatus(user.userId);
+  }
+
+  @Get('users/me/llm/providers/:provider/usage')
+  @ApiOperation({
+    summary: 'Get detailed usage for a specific LLM provider',
+  })
+  @ApiParam({
+    name: 'provider',
+    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL', 'TOGETHER'],
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['7d', '30d', '90d'],
+  })
+  @ApiResponse({ status: 200, description: 'Provider usage detail' })
+  getProviderUsage(
+    @CurrentUser() user: RequestUser,
+    @Param('provider') provider: string,
+    @Query('period') period?: string,
+  ) {
+    const validPeriods = ['7d', '30d', '90d'] as const;
+    const p = validPeriods.includes(period as any)
+      ? (period as '7d' | '30d' | '90d')
+      : '30d';
+    return this.providerHealthService.getProviderUsage(
+      user.userId,
+      provider as LLMProvider,
+      p,
+    );
   }
 
   // ── /admin/users ──────────────────────────────────────────────────────────

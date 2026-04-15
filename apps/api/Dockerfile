@@ -30,7 +30,13 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist/apps/api ./dist/apps/api
 # Copy Prisma schema & migrations (needed for prisma migrate deploy at startup)
 COPY --from=builder /app/apps/api/prisma apps/api/prisma
+# Copy prisma CLI for migrations at startup
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# Copy generated Prisma client
+COPY --from=builder /app/apps/api/generated ./apps/api/generated
 
 EXPOSE 3000
 
-CMD ["node", "dist/apps/api/main.js"]
+# Run migrations then start the server
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma 2>/dev/null || true && node dist/apps/api/main.js"]

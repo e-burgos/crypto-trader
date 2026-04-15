@@ -33,6 +33,13 @@ export default [
     },
   },
   {
+    // Disable dependency-checks for private lib package.json files
+    files: ['libs/*/package.json'],
+    rules: {
+      '@nx/dependency-checks': 'off',
+    },
+  },
+  {
     files: [
       '**/*.ts',
       '**/*.tsx',

@@ -33,6 +33,8 @@ COPY --from=builder /app/apps/api/prisma apps/api/prisma
 # Copy prisma CLI for migrations at startup
 COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+# Copy @prisma/client runtime (required by the webpack bundle at runtime)
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy generated Prisma client
 COPY --from=builder /app/apps/api/generated ./apps/api/generated
 

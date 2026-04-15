@@ -37,4 +37,4 @@ COPY --from=builder /app/apps/api/generated ./apps/api/generated
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "cd apps/api && ../node_modules/.bin/prisma migrate deploy && cd /app && node dist/apps/api/main.js"]
+CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && cd /app && node dist/apps/api/main.js"]

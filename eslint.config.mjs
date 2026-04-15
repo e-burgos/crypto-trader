@@ -28,6 +28,8 @@ export default [
           ],
         },
       ],
+      // All libs are private/internal — dependencies are managed at the root level
+      '@nx/dependency-checks': 'off',
     },
   },
   {

@@ -5,10 +5,5 @@
   "type": "module",
   "main": "./index.js",
   "types": "./index.d.ts",
-  "dependencies": {
-    "shared": "*",
-    "axios": "^1.14.0",
-    "ws": "^8.20.0",
-    "rss-parser": "^3.13.0"
-  }
+  "dependencies": {}
 }

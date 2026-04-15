@@ -1,4 +1,5 @@
 [build]
+builder = "DOCKERFILE"
 dockerfilePath = "apps/api/Dockerfile"
 watchPatterns = ["apps/api/**", "libs/**", "package.json", "pnpm-lock.yaml"]
 

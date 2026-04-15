@@ -3,6 +3,7 @@
     "version": "22.6.3"
   },
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "useDaemonProcess": false,
   "targetDefaults": {
     "build": {
       "cache": true

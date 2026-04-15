@@ -23,7 +23,7 @@
         "cwd": "{workspaceRoot}"
       }
     },
-    "build": {
+    "build:all": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm nx run-many --target=build --all",
@@ -44,10 +44,10 @@
         "cwd": "{workspaceRoot}"
       }
     },
-    "test": {
+    "test:all": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm nx run-many --target=test --all",
+        "command": "pnpm nx run-many --target=test --all --exclude=crypto-trader",
         "cwd": "{workspaceRoot}"
       }
     },
@@ -86,10 +86,10 @@
         "cwd": "{workspaceRoot}"
       }
     },
-    "lint": {
+    "lint:all": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm nx run-many --target=lint --all",
+        "command": "pnpm nx run-many --target=lint --all --exclude=crypto-trader",
         "cwd": "{workspaceRoot}"
       }
     },

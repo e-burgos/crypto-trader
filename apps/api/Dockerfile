@@ -34,6 +34,5 @@ COPY --from=builder /app/apps/api/generated ./apps/api/generated
 
 EXPOSE 3000
 
-# Run migrations then start the app
-# Use --schema flag to bypass prisma.config.ts (avoids tsx dependency in runner)
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy --schema=apps/api/prisma/schema.prisma && node dist/apps/api/main.js"]
+# Run migrations from apps/api dir (prisma.config.ts lives there) then start app
+CMD ["sh", "-c", "cd apps/api && ../node_modules/.bin/prisma migrate deploy && cd /app && node dist/apps/api/main.js"]

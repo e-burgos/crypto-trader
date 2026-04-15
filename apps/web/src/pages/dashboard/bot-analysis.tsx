@@ -501,6 +501,12 @@ function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
               <span className="text-emerald-400 font-semibold">
                 {t('botAnalysis.newsUsedByBot')}
               </span>
+              {hasAi && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-400">
+                  <Sparkles className="h-2.5 w-2.5" />
+                  {t('botAnalysis.aiAnalysisActive', { defaultValue: 'Análisis IA' })}
+                </span>
+              )}
               <span className="ml-auto flex items-center gap-1 text-muted-foreground/70">
                 <span className="font-mono font-bold text-emerald-400/80">
                   {newsWeight}%

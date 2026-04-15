@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings,
   Clock,
@@ -139,6 +139,22 @@ export function NewsConfigPanel({
   const [fallbackModel, setFallbackModel] = useState(
     config?.fallbackModel ?? '',
   );
+
+  // Sync local state when config loads asynchronously
+  useEffect(() => {
+    if (config) {
+      setInterval(config.intervalMinutes ?? 30);
+      setCount(config.newsCount ?? 40);
+      setSources(config.enabledSources ?? []);
+      setOnlySummary(config.onlySummary ?? true);
+      setBotEnabled(config.botEnabled ?? true);
+      setNewsWeight(config.newsWeight ?? 15);
+      setPrimaryProvider(config.primaryProvider ?? '');
+      setPrimaryModel(config.primaryModel ?? '');
+      setFallbackProvider(config.fallbackProvider ?? '');
+      setFallbackModel(config.fallbackModel ?? '');
+    }
+  }, [config]);
 
   const activeProviderOptions = llmKeys
     .filter((k) => k.isActive)

@@ -100,10 +100,15 @@ export class MarketController {
       newsCount?: number;
       enabledSources?: string[];
       onlySummary?: boolean;
+      botEnabled?: boolean;
       newsWeight?: number;
+      primaryProvider?: string | null;
+      primaryModel?: string | null;
+      fallbackProvider?: string | null;
+      fallbackModel?: string | null;
     },
   ) {
-    return this.marketService.updateNewsConfig(user.userId, body);
+    return this.marketService.updateNewsConfig(user.userId, body as any);
   }
 
   @Get('news/analysis')

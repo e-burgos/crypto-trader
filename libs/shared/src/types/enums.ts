@@ -61,8 +61,16 @@ export enum LLMProvider {
   CLAUDE = 'CLAUDE',
   OPENAI = 'OPENAI',
   GROQ = 'GROQ',
+  GEMINI = 'GEMINI',
+  MISTRAL = 'MISTRAL',
+  TOGETHER = 'TOGETHER',
 }
-
+// ── Risk Profile ─────────────────────────────────────────────────
+export enum RiskProfile {
+  CONSERVATIVE = 'CONSERVATIVE',
+  MODERATE = 'MODERATE',
+  AGGRESSIVE = 'AGGRESSIVE',
+}
 // ── News ─────────────────────────────────────────────────
 export enum Sentiment {
   POSITIVE = 'POSITIVE',

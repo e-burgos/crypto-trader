@@ -12,6 +12,7 @@ export const SUPPORTED_PAIRS = [
 export const TRADE_FEE_PCT = 0.001; // 0.1% Binance fee
 
 // ── Agent Defaults ───────────────────────────────────────
+export const MAX_ACTIVE_AGENTS_PER_USER = 4;
 export const DEFAULT_MIN_INTERVAL_MINUTES = 5;
 export const DEFAULT_BUY_THRESHOLD = 70;
 export const DEFAULT_SELL_THRESHOLD = 70;

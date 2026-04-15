@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubAgentService, SubAgentId } from './sub-agent.service';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { LLMProvider } from '@crypto-trader/shared';
 import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
@@ -106,6 +108,7 @@ export class OrchestratorService {
       sentiment: string;
       summary?: string | null;
     }>,
+    llmOverride?: { provider: string; model: string },
   ): Promise<DecisionPayload> {
     // Load config + open positions for FORGE and AEGIS context
     const [config, openPositions] = await Promise.all([
@@ -138,6 +141,14 @@ export class OrchestratorService {
       throw new Error(`Config ${configId} not found for user ${userId}`);
     }
 
+    // Cast override to typed LLMProvider if present
+    const typedOverride = llmOverride
+      ? {
+          provider: llmOverride.provider as LLMProvider,
+          model: llmOverride.model,
+        }
+      : undefined;
+
     // Parallel sub-agent calls
     const [techRaw, sentimentRaw, forgeRaw, aegisRaw] =
       await Promise.allSettled([
@@ -146,12 +157,16 @@ export class OrchestratorService {
           'technical_signal',
           { indicators },
           userId,
+          false,
+          typedOverride,
         ),
         this.subAgent.call(
           'market',
           'news_sentiment',
           { news: news.slice(0, 10) },
           userId,
+          false,
+          typedOverride,
         ),
         this.subAgent.call(
           'operations',
@@ -166,6 +181,8 @@ export class OrchestratorService {
             openPositionsCount: openPositions.length,
           },
           userId,
+          false,
+          typedOverride,
         ),
         this.subAgent.call(
           'risk',
@@ -177,8 +194,17 @@ export class OrchestratorService {
               price: (indicators as unknown as Record<string, unknown>).close,
               asset: config.asset,
             },
+            config: {
+              asset: config.asset,
+              pair: config.pair,
+              stopLossPct: config.stopLossPct,
+              takeProfitPct: config.takeProfitPct,
+              maxConcurrentPositions: config.maxConcurrentPositions,
+            },
           },
           userId,
+          false,
+          typedOverride,
         ),
       ]);
 
@@ -216,20 +242,51 @@ export class OrchestratorService {
     }
 
     // Synthesis call via orchestrator
-    const synthesisRaw = await this.subAgent.call(
-      'orchestrator',
-      'decision_synthesis',
-      {
-        technicalSignal: techOutput,
-        newsSentiment: sentimentOutput,
-        sizingSuggestion: forgeOutput,
-        aegisVerdict: aegisOutput,
-        buyThreshold: config.buyThreshold,
-        sellThreshold: config.sellThreshold,
-      },
-      userId,
-      false,
-    );
+    let synthesisRaw: string;
+    try {
+      synthesisRaw = await this.subAgent.call(
+        'orchestrator',
+        'decision_synthesis',
+        {
+          technicalSignal: techOutput,
+          newsSentiment: sentimentOutput,
+          sizingSuggestion: forgeOutput,
+          aegisVerdict: aegisOutput,
+          buyThreshold: config.buyThreshold,
+          sellThreshold: config.sellThreshold,
+        },
+        userId,
+        false,
+        typedOverride,
+      );
+    } catch (synthErr) {
+      this.logger.warn(
+        `Synthesis LLM call failed for user=${userId} config=${configId}: ${
+          synthErr instanceof Error ? synthErr.message : String(synthErr)
+        }`,
+      );
+
+      // All sub-agents failed + synthesis failed → propagate as LLM error
+      // so the processor can retry instead of stopping the agent
+      const allSubsFailed = [techRaw, sentimentRaw, forgeRaw, aegisRaw].every(
+        (r) => r.status === 'rejected',
+      );
+      if (allSubsFailed) {
+        // Re-throw so the processor's LLM error handler catches it
+        throw synthErr;
+      }
+
+      // Partial data available — return HOLD with explanation
+      return {
+        decision: 'HOLD' as const,
+        confidence: 0.3,
+        reasoning:
+          'LLM no disponible para síntesis. Sub-agentes parciales disponibles. Se recomienda esperar.',
+        waitMinutes: 15,
+        orchestrated: true,
+        subAgentResults,
+      };
+    }
 
     const synthesis = safeParseJson<{
       decision?: string;

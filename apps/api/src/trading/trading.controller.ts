@@ -26,7 +26,9 @@ import {
   UpdateTradingConfigDto,
   StartAgentDto,
   StopAgentDto,
+  StopAgentsByModeDto,
 } from './dto/trading-config.dto';
+import { generateAgentName } from './trading-agent-utils';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -87,6 +89,29 @@ export class TradingController {
     return this.tradingService.updateConfig(user.userId, configId, dto);
   }
 
+  @Post('config/auto-name')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Generar nombre automático para un agente' })
+  @ApiResponse({ status: 200, description: 'Nombre generado' })
+  autoName(
+    @Body()
+    body: {
+      asset: string;
+      riskProfile: string;
+      primaryProvider?: string;
+      primaryModel?: string;
+    },
+  ) {
+    return {
+      name: generateAgentName({
+        asset: body.asset,
+        riskProfile: body.riskProfile ?? 'MODERATE',
+        primaryProvider: body.primaryProvider,
+        primaryModel: body.primaryModel,
+      }),
+    };
+  }
+
   // ── Agent lifecycle ───────────────────────────────────────────────────────
 
   @Post('start')
@@ -111,6 +136,19 @@ export class TradingController {
   @ApiResponse({ status: 200, description: 'Agente detenido' })
   stopAgent(@CurrentUser() user: RequestUser, @Body() dto: StopAgentDto) {
     return this.tradingService.stopAgent(user.userId, dto.configId);
+  }
+
+  @Post('stop-by-mode')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Detener todos los agentes de un modo específico',
+  })
+  @ApiResponse({ status: 200, description: 'Agentes del modo detenidos' })
+  stopAgentsByMode(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: StopAgentsByModeDto,
+  ) {
+    return this.tradingService.stopAgentsByModeForUser(user.userId, dto.mode);
   }
 
   @Post('stop-all')

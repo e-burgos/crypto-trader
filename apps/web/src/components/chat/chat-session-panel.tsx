@@ -113,7 +113,7 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
                             'w-full rounded-lg px-2 py-2 text-left text-xs transition-colors',
                             activeSessionId === session.id
                               ? 'bg-primary/10 text-primary'
-                              : 'text-foreground/70 hover:bg-accent hover:text-foreground',
+                              : 'text-foreground/70 hover:bg-foreground/10 hover:text-foreground',
                           )}
                         >
                           <div className="flex items-center justify-between gap-1">
@@ -141,7 +141,7 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
                             e.stopPropagation();
                             setConfirmDelete(session.id);
                           }}
-                          className="absolute right-1 top-1/2 hidden -translate-y-1/2 rounded p-1 text-muted-foreground/50 hover:text-red-400 group-hover:flex"
+                          className="absolute bottom-1 right-1.5 hidden rounded p-1 text-muted-foreground/50 hover:bg-red-500/10 hover:text-red-400 group-hover:flex"
                           title={t('chat.deleteSession', {
                             defaultValue: 'Delete',
                           })}

@@ -31,6 +31,21 @@ export enum IntervalModeEnum {
   CUSTOM = 'CUSTOM',
 }
 
+export enum RiskProfileEnum {
+  CONSERVATIVE = 'CONSERVATIVE',
+  MODERATE = 'MODERATE',
+  AGGRESSIVE = 'AGGRESSIVE',
+}
+
+export enum LLMProviderEnum {
+  CLAUDE = 'CLAUDE',
+  OPENAI = 'OPENAI',
+  GROQ = 'GROQ',
+  GEMINI = 'GEMINI',
+  MISTRAL = 'MISTRAL',
+  TOGETHER = 'TOGETHER',
+}
+
 export class CreateTradingConfigDto {
   @ApiPropertyOptional({
     example: 'BTC Agresivo',
@@ -190,6 +205,41 @@ export class CreateTradingConfigDto {
   @IsEnum(IntervalModeEnum)
   @IsOptional()
   intervalMode?: IntervalModeEnum;
+
+  @ApiPropertyOptional({
+    enum: LLMProviderEnum,
+    description: 'Primary LLM provider for this agent',
+  })
+  @IsEnum(LLMProviderEnum)
+  @IsOptional()
+  primaryProvider?: LLMProviderEnum;
+
+  @ApiPropertyOptional({ description: 'Primary LLM model ID' })
+  @IsString()
+  @IsOptional()
+  primaryModel?: string;
+
+  @ApiPropertyOptional({
+    enum: LLMProviderEnum,
+    description: 'Fallback LLM provider',
+  })
+  @IsEnum(LLMProviderEnum)
+  @IsOptional()
+  fallbackProvider?: LLMProviderEnum;
+
+  @ApiPropertyOptional({ description: 'Fallback LLM model ID' })
+  @IsString()
+  @IsOptional()
+  fallbackModel?: string;
+
+  @ApiPropertyOptional({
+    enum: RiskProfileEnum,
+    example: RiskProfileEnum.MODERATE,
+    description: 'Risk profile for model selection and prompts',
+  })
+  @IsEnum(RiskProfileEnum)
+  @IsOptional()
+  riskProfile?: RiskProfileEnum;
 }
 
 export class UpdateTradingConfigDto {
@@ -307,6 +357,41 @@ export class UpdateTradingConfigDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    enum: LLMProviderEnum,
+    description: 'Primary LLM provider for this agent',
+  })
+  @IsEnum(LLMProviderEnum)
+  @IsOptional()
+  primaryProvider?: LLMProviderEnum;
+
+  @ApiPropertyOptional({ description: 'Primary LLM model ID' })
+  @IsString()
+  @IsOptional()
+  primaryModel?: string;
+
+  @ApiPropertyOptional({
+    enum: LLMProviderEnum,
+    description: 'Fallback LLM provider',
+  })
+  @IsEnum(LLMProviderEnum)
+  @IsOptional()
+  fallbackProvider?: LLMProviderEnum;
+
+  @ApiPropertyOptional({ description: 'Fallback LLM model ID' })
+  @IsString()
+  @IsOptional()
+  fallbackModel?: string;
+
+  @ApiPropertyOptional({
+    enum: RiskProfileEnum,
+    example: RiskProfileEnum.MODERATE,
+    description: 'Risk profile for model selection and prompts',
+  })
+  @IsEnum(RiskProfileEnum)
+  @IsOptional()
+  riskProfile?: RiskProfileEnum;
 }
 
 export class StartAgentDto {
@@ -319,4 +404,13 @@ export class StopAgentDto {
   @ApiProperty({ description: 'ID de la configuración del agente' })
   @IsString()
   configId!: string;
+}
+
+export class StopAgentsByModeDto {
+  @ApiProperty({
+    enum: TradingModeEnum,
+    description: 'Modo cuyos agentes se detendrán',
+  })
+  @IsEnum(TradingModeEnum)
+  mode!: TradingModeEnum;
 }

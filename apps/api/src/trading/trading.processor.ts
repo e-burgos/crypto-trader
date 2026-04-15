@@ -28,6 +28,7 @@ import {
 } from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
+import { resolveTradingOverride } from './trading-agent-utils';
 
 interface AgentJobData {
   userId: string;
@@ -147,6 +148,19 @@ export class TradingProcessor {
       const publicKlineClient = new BinanceRestClient({ testnet: false });
       const candles = await publicKlineClient.getKlines(pair.symbol, '1h', 200);
 
+      // For SANDBOX & TESTNET: derive market price from the last candle's close.
+      // Klines come from api.binance.com (production) regardless of mode, so the
+      // close price is accurate. This eliminates getTickerPrice() REST calls:
+      //   - SANDBOX: avoids unauthenticated public API call
+      //   - TESTNET: avoids calling testnet.binance.vision (unreliable, aggressive rate limits)
+      // LIVE keeps using real-time ticker for maximum price accuracy.
+      const cachedMarketPrice: number | undefined =
+        (config.mode === TradingMode.SANDBOX ||
+          config.mode === TradingMode.TESTNET) &&
+        candles.length > 0
+          ? candles[candles.length - 1].close
+          : undefined;
+
       // 5. Build indicator snapshot
       const indicatorSnapshot = calculateIndicatorSnapshot(candles);
 
@@ -251,6 +265,7 @@ export class TradingProcessor {
       }));
 
       // 8. Call OrchestratorService (replaces direct LLM call — Spec 28 Phase A)
+      const llmOverride = resolveTradingOverride(config);
       const orchestratedDecision =
         await this.orchestratorService.orchestrateDecision(
           userId,
@@ -261,6 +276,7 @@ export class TradingProcessor {
             sentiment: n.sentiment,
             summary: n.summary ?? null,
           })),
+          llmOverride,
         );
       // Adapt DecisionPayload to the shape expected by the rest of the processor
       const decision = {
@@ -318,6 +334,7 @@ export class TradingProcessor {
             config.mode as TradingMode,
             binanceApiKey,
             binanceSecret,
+            cachedMarketPrice,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -355,6 +372,7 @@ export class TradingProcessor {
             config.mode as TradingMode,
             binanceApiKey,
             binanceSecret,
+            cachedMarketPrice,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -388,6 +406,7 @@ export class TradingProcessor {
         config.mode as TradingMode,
         binanceApiKey,
         binanceSecret,
+        cachedMarketPrice,
       );
 
       // 12. Schedule next cycle
@@ -514,6 +533,55 @@ export class TradingProcessor {
         return;
       }
 
+      // LLM provider errors (rate-limit, server errors, timeouts)
+      // These are transient — retry instead of stopping the agent.
+      const isLlmError =
+        message.includes('Request failed with status code 429') ||
+        message.includes('Request failed with status code 500') ||
+        message.includes('Request failed with status code 502') ||
+        message.includes('Request failed with status code 503') ||
+        message.includes('Request failed with status code 529') ||
+        message.includes('rate limit') ||
+        message.includes('Rate limit') ||
+        message.includes('quota') ||
+        message.includes('too many requests') ||
+        message.includes('timeout') ||
+        message.includes('ETIMEDOUT');
+
+      if (isLlmError) {
+        const retryMinutes = 10;
+        const retryDelay = retryMinutes * 60 * 1000;
+        this.logger.warn(
+          `LLM error for user=${userId} config=${configId}. Retrying in ${retryMinutes} min: ${message.slice(0, 150)}`,
+        );
+        const stillRunning = await this.prisma.tradingConfig
+          .findUnique({
+            where: { id: configId },
+            select: { isRunning: true },
+          })
+          .catch(() => null);
+        if (stillRunning?.isRunning) {
+          await job.queue
+            .add(
+              'run-cycle',
+              { userId, configId },
+              { delay: retryDelay, removeOnComplete: true },
+            )
+            .catch(() => null);
+        }
+        await this.notificationsService
+          .create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({
+              key: 'agentLlmError',
+              retryMinutes: String(retryMinutes),
+            }),
+          )
+          .catch(() => null);
+        return;
+      }
+
       this.logger.error(`Agent cycle error for user=${userId}: ${message}`);
       await this.prisma.tradingConfig
         .update({
@@ -538,6 +606,7 @@ export class TradingProcessor {
     mode: TradingMode,
     apiKey?: string,
     apiSecret?: string,
+    cachedPrice?: number,
   ) {
     const openCount = await this.prisma.position.count({
       where: { userId, status: 'OPEN', asset: config.asset, mode: config.mode },
@@ -549,8 +618,8 @@ export class TradingProcessor {
 
     // ── SANDBOX: use persisted DB balance ────────────────────────────────────
     if (mode === TradingMode.SANDBOX) {
-      const publicClient = new BinanceRestClient({});
-      const marketPrice = await publicClient.getTickerPrice(symbol);
+      const marketPrice =
+        cachedPrice ?? (await new BinanceRestClient({}).getTickerPrice(symbol));
       // Apply order price offset (e.g., -0.01 = simulate buying 1% below market)
       const offsetPct: number = config.orderPriceOffsetPct ?? 0;
       const livePrice = marketPrice * (1 + offsetPct);
@@ -636,7 +705,9 @@ export class TradingProcessor {
         testnet: mode === TradingMode.TESTNET,
       }),
     );
-    const currentPrice = await executor.getPrice(symbol);
+    // TESTNET: use cached kline-close price to avoid calling testnet.binance.vision
+    // (unreliable, aggressive rate limits). LIVE: always fetch real-time price.
+    const currentPrice = cachedPrice ?? (await executor.getPrice(symbol));
     // Apply offset to the reference price used for quantity calculation
     const liveOffsetPct: number = config.orderPriceOffsetPct ?? 0;
     const referencePrice = currentPrice * (1 + liveOffsetPct);
@@ -704,6 +775,7 @@ export class TradingProcessor {
     mode: TradingMode,
     apiKey?: string,
     apiSecret?: string,
+    cachedPrice?: number,
   ) {
     const openPositions = await this.prisma.position.findMany({
       where: { userId, asset: config.asset, status: 'OPEN', mode },
@@ -722,15 +794,30 @@ export class TradingProcessor {
           );
 
     if (mode === TradingMode.SANDBOX) {
-      const publicClient = new BinanceRestClient({});
-      const livePrice = await publicClient
-        .getTickerPrice(symbol)
-        .catch(() => null);
+      const livePrice =
+        cachedPrice ??
+        (await new BinanceRestClient({})
+          .getTickerPrice(symbol)
+          .catch(() => null));
       if (livePrice)
         (executor as SandboxOrderExecutor).setPrice(symbol, livePrice);
+      // Seed base-asset balances so the executor won't reject SELL orders.
+      // The real balance lives in the DB — the executor is only used for
+      // order simulation / price calculation.
+      for (const pos of openPositions) {
+        const { base } = this.parseSymbolForSandbox(symbol);
+        const current = (await executor.getBalance(base)).free;
+        (executor as SandboxOrderExecutor).setBalance(
+          base,
+          current + pos.quantity,
+        );
+      }
     }
 
-    const currentPrice = await executor.getPrice(symbol).catch(() => null);
+    // TESTNET: prefer cached kline-close price to avoid testnet.binance.vision.
+    // LIVE: always fetch real-time price from api.binance.com.
+    const currentPrice =
+      cachedPrice ?? (await executor.getPrice(symbol).catch(() => null));
     if (!currentPrice) return;
 
     const minProfitPct: number = config.minProfitPct ?? 0.003;
@@ -836,6 +923,7 @@ export class TradingProcessor {
     mode: TradingMode,
     apiKey?: string,
     apiSecret?: string,
+    cachedPrice?: number,
   ) {
     const openPositions = await this.prisma.position.findMany({
       where: { userId, asset: config.asset, status: 'OPEN', mode },
@@ -855,15 +943,28 @@ export class TradingProcessor {
 
     // For SANDBOX: inject real market price from Binance public API (no auth needed)
     if (mode === TradingMode.SANDBOX) {
-      const publicClient = new BinanceRestClient({});
-      const livePrice = await publicClient
-        .getTickerPrice(symbol)
-        .catch(() => null);
+      const livePrice =
+        cachedPrice ??
+        (await new BinanceRestClient({})
+          .getTickerPrice(symbol)
+          .catch(() => null));
       if (livePrice)
         (executor as SandboxOrderExecutor).setPrice(symbol, livePrice);
+      // Seed base-asset balances so stop-loss / take-profit SELL orders succeed.
+      for (const pos of openPositions) {
+        const { base } = this.parseSymbolForSandbox(symbol);
+        const current = (await executor.getBalance(base)).free;
+        (executor as SandboxOrderExecutor).setBalance(
+          base,
+          current + pos.quantity,
+        );
+      }
     }
 
-    const currentPrice = await executor.getPrice(symbol).catch(() => null);
+    // TESTNET: prefer cached kline-close price to avoid testnet.binance.vision.
+    // LIVE: always fetch real-time price from api.binance.com.
+    const currentPrice =
+      cachedPrice ?? (await executor.getPrice(symbol).catch(() => null));
     if (!currentPrice) return;
 
     for (const pos of openPositions) {
@@ -966,6 +1067,19 @@ export class TradingProcessor {
         });
       }
     }
+  }
+
+  /** Extract base and quote from a pair symbol (e.g. BTCUSDT → BTC, USDT). */
+  private parseSymbolForSandbox(symbol: string): {
+    base: string;
+    quote: string;
+  } {
+    for (const quote of ['USDT', 'USDC']) {
+      if (symbol.endsWith(quote)) {
+        return { base: symbol.slice(0, -quote.length), quote };
+      }
+    }
+    throw new Error(`Cannot parse symbol: ${symbol}`);
   }
 
   private buildNewsAggregator_unused() {

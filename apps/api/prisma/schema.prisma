@@ -88,6 +88,15 @@ enum LLMProvider {
   CLAUDE
   OPENAI
   GROQ
+  GEMINI
+  MISTRAL
+  TOGETHER
+}
+
+enum LLMSource {
+  TRADING
+  CHAT
+  ANALYSIS
 }
 
 enum ChatRole {
@@ -99,6 +108,12 @@ enum ChatRole {
 enum NewsApiProvider {
   CRYPTOPANIC
   NEWSDATA
+}
+
+enum RiskProfile {
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
 }
 
 // ── Models ───────────────────────────────────────────────
@@ -127,6 +142,7 @@ model User {
   sandboxWallets    SandboxWallet[]
   newsConfig        NewsConfig?
   newsAnalyses      NewsAnalysis[]
+  llmUsageLogs      LlmUsageLog[]
 
   @@map("users")
 }
@@ -198,6 +214,14 @@ model TradingConfig {
   orderPriceOffsetPct    Float         @default(0)
   mode                   TradingMode   @default(SANDBOX)
   isRunning              Boolean       @default(false)
+  /// Primary LLM provider/model for this trading agent
+  primaryProvider        LLMProvider?
+  primaryModel           String?
+  /// Fallback LLM provider/model if primary is unavailable
+  fallbackProvider       LLMProvider?
+  fallbackModel          String?
+  /// Risk profile that influences LLM model selection and prompts
+  riskProfile            RiskProfile   @default(MODERATE)
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -301,6 +325,14 @@ model NewsConfig {
   botEnabled      Boolean  @default(true)
   /// Weight (0-100%) that news sentiment carries in the LLM trading decision
   newsWeight      Int      @default(15)
+
+  /// Primary LLM provider/model for news sentiment analysis
+  primaryProvider  LLMProvider?
+  primaryModel     String?
+  /// Fallback LLM provider/model if primary is unavailable
+  fallbackProvider LLMProvider?
+  fallbackModel    String?
+
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -411,12 +443,14 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  sessionId String
-  role      ChatRole
-  content   String
-  createdAt DateTime @default(now())
-  metadata  Json?
+  id          String   @id @default(cuid())
+  sessionId   String
+  role        ChatRole
+  content     String
+  createdAt   DateTime @default(now())
+  metadata    Json?
+  /// For assistant messages: "PROVIDER:model" that generated this response
+  generatedBy String?
 
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -458,6 +492,24 @@ model AgentDocument {
 
   @@index([agentId, status])
   @@map("agent_documents")
+}
+
+model LlmUsageLog {
+  id           String      @id @default(cuid())
+  userId       String
+  provider     LLMProvider
+  model        String
+  inputTokens  Int
+  outputTokens Int
+  costUsd      Float
+  source       LLMSource
+  createdAt    DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, provider])
+  @@map("llm_usage_logs")
 }
 
 model AgentDocumentChunk {

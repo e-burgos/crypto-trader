@@ -226,7 +226,7 @@ export function LiveChartPage() {
   const isDark = theme === 'dark';
   const [asset, setAsset] = useState<'BTC' | 'ETH'>('BTC');
   const [interval, setInterval] = useState<Interval>('1h');
-  const { data: candles, isLoading } = useOhlcv(asset, interval, 200);
+  const { data: candles, isLoading, refetch } = useOhlcv(asset, interval, 200);
   const symbol = `${asset}USDT`;
   const { ticker } = useBinanceTicker(symbol);
   const { kline } = useBinanceKlineStream(symbol, interval);
@@ -242,7 +242,9 @@ export function LiveChartPage() {
       low: kline.low,
       close: kline.close,
     });
-  }, [kline]);
+    // Refetch full candle history when a candle closes
+    if (kline.isClosed) refetch();
+  }, [kline, refetch]);
 
   useGSAP(
     () => {

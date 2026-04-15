@@ -10,10 +10,12 @@ import {
   DOCUMENT_PROCESSING_QUEUE,
 } from './document-processor.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { LlmModule } from '../llm/llm.module';
 
 @Module({
   imports: [
     PrismaModule,
+    LlmModule,
     BullModule.registerQueue({ name: DOCUMENT_PROCESSING_QUEUE }),
   ],
   providers: [

@@ -1,10 +1,11 @@
 name: E2E Tests
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # E2E requires a full running stack (API + DB + Redis + seeded users).
+  # Run manually only — not on push/PR — to avoid blocking CI with infra failures.
+  # Fix needed before re-enabling automatic runs:
+  #   1. Add /api/health endpoint
+  #   2. Add DB seed step for E2E users (trader@cryptotrader.dev, admin@crypto.com)
   workflow_dispatch:
 
 concurrency:

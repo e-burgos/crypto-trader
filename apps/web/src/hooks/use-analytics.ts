@@ -17,7 +17,7 @@ export interface Trade {
   quantity: number;
   fee: number;
   executedAt: string;
-  mode: 'LIVE' | 'PAPER' | 'SANDBOX' | 'TESTNET';
+  mode: 'LIVE' | 'SANDBOX' | 'TESTNET';
   position?: {
     asset: string;
     pair: string;
@@ -132,50 +132,56 @@ export interface AssetBreakdown {
   tradeCount: number;
 }
 
-export function usePortfolioSummary() {
+export function usePortfolioSummary(mode?: string) {
+  const modeParam = mode ? `?mode=${mode}` : '';
   return useQuery<PortfolioSummary>({
-    queryKey: ['analytics', 'portfolio'],
-    queryFn: () => api.get('/analytics/portfolio'),
+    queryKey: ['analytics', 'portfolio', mode],
+    queryFn: () => api.get(`/analytics/portfolio${modeParam}`),
     refetchInterval: 30_000,
   });
 }
 
-export function useTradeHistory(limit = 50) {
+export function useTradeHistory(limit = 50, mode?: string) {
+  const modeParam = mode ? `&mode=${mode}` : '';
   return useQuery<Trade[]>({
-    queryKey: ['analytics', 'trades', limit],
-    queryFn: () => api.get(`/analytics/trades?limit=${limit}`),
+    queryKey: ['analytics', 'trades', limit, mode],
+    queryFn: () => api.get(`/analytics/trades?limit=${limit}${modeParam}`),
     refetchInterval: 60_000,
   });
 }
 
-export function useAgentDecisions(limit = 20) {
+export function useAgentDecisions(limit = 20, mode?: string) {
+  const modeParam = mode ? `&mode=${mode}` : '';
   return useQuery<AgentDecision[]>({
-    queryKey: ['analytics', 'decisions', limit],
-    queryFn: () => api.get(`/analytics/decisions?limit=${limit}`),
+    queryKey: ['analytics', 'decisions', limit, mode],
+    queryFn: () => api.get(`/analytics/decisions?limit=${limit}${modeParam}`),
     refetchInterval: 60_000,
   });
 }
 
-export function useAnalyticsSummary() {
+export function useAnalyticsSummary(mode?: string) {
+  const modeParam = mode ? `?mode=${mode}` : '';
   return useQuery<AnalyticsSummary>({
-    queryKey: ['analytics', 'summary'],
-    queryFn: () => api.get('/analytics/summary'),
+    queryKey: ['analytics', 'summary', mode],
+    queryFn: () => api.get(`/analytics/summary${modeParam}`),
     refetchInterval: 60_000,
   });
 }
 
-export function usePnlChart() {
+export function usePnlChart(mode?: string) {
+  const modeParam = mode ? `?mode=${mode}` : '';
   return useQuery<PnlChartPoint[]>({
-    queryKey: ['analytics', 'pnl-chart'],
-    queryFn: () => api.get('/analytics/pnl-chart'),
+    queryKey: ['analytics', 'pnl-chart', mode],
+    queryFn: () => api.get(`/analytics/pnl-chart${modeParam}`),
     refetchInterval: 120_000,
   });
 }
 
-export function useAssetBreakdown() {
+export function useAssetBreakdown(mode?: string) {
+  const modeParam = mode ? `?mode=${mode}` : '';
   return useQuery<AssetBreakdown[]>({
-    queryKey: ['analytics', 'asset-breakdown'],
-    queryFn: () => api.get('/analytics/asset-breakdown'),
+    queryKey: ['analytics', 'asset-breakdown', mode],
+    queryFn: () => api.get(`/analytics/asset-breakdown${modeParam}`),
     refetchInterval: 120_000,
   });
 }

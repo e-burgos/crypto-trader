@@ -57,6 +57,7 @@ import {
   type AgentStatus,
 } from '../../hooks/use-trading';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
+import { usePlatformMode } from '../../hooks/use-user';
 
 gsap.registerPlugin(useGSAP);
 
@@ -463,7 +464,7 @@ function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
           )}
           {/* Configure button */}
           <Link
-            to="/dashboard/news#config"
+            to="/dashboard/settings?tab=news"
             className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/60 transition-colors"
             title={t('botAnalysis.configureNews')}
           >
@@ -513,7 +514,7 @@ function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
                 {t('botAnalysis.newsNotUsedByBot')}
               </span>
               <Link
-                to="/dashboard/news#config"
+                to="/dashboard/settings?tab=news"
                 className="ml-auto text-[10px] text-primary hover:underline font-semibold"
               >
                 {t('botAnalysis.configureNews')}
@@ -1273,27 +1274,43 @@ function AgentCurrentStateModal({
 function AgentCountdownCard({
   config,
   lastDecision,
+  nextRunAt: serverNextRunAt,
 }: {
   config: TradingConfig;
   lastDecision: AgentDecision | null;
+  nextRunAt: number | null;
 }) {
   const { t } = useTranslation();
 
+  // Prefer the real nextRunAt from the Bull job (via /trading/status).
+  // Fallback to computing from lastDecision if the server didn't provide it.
   const nextCycleAt = useMemo(() => {
+    if (serverNextRunAt) return serverNextRunAt;
     if (!lastDecision) return null;
     const wait = lastDecision.waitMinutes ?? config.minIntervalMinutes ?? 30;
     return new Date(lastDecision.createdAt).getTime() + wait * 60_000;
-  }, [lastDecision, config.minIntervalMinutes]);
+  }, [serverNextRunAt, lastDecision, config.minIntervalMinutes]);
 
   const countdown = useCountdown(nextCycleAt);
   const isPast = nextCycleAt !== null && nextCycleAt <= Date.now();
   const progress = useMemo(() => {
-    if (!nextCycleAt || !lastDecision) return 0;
+    if (!nextCycleAt) return 0;
+    if (serverNextRunAt) {
+      // When using real job timing, estimate progress from last decision or last 15min window
+      const start = lastDecision
+        ? new Date(lastDecision.createdAt).getTime()
+        : nextCycleAt - 15 * 60_000;
+      const total = nextCycleAt - start;
+      if (total <= 0) return 100;
+      const elapsed = Date.now() - start;
+      return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
+    }
+    if (!lastDecision) return 0;
     const wait =
       (lastDecision.waitMinutes ?? config.minIntervalMinutes ?? 30) * 60_000;
     const elapsed = Date.now() - new Date(lastDecision.createdAt).getTime();
     return Math.min(100, Math.round((elapsed / wait) * 100));
-  }, [nextCycleAt, lastDecision, config.minIntervalMinutes]);
+  }, [nextCycleAt, serverNextRunAt, lastDecision, config.minIntervalMinutes]);
 
   const [showStateModal, setShowStateModal] = useState(false);
 
@@ -1437,7 +1454,7 @@ function NextDecisionBanner({
           {t('botAnalysis.inputAgentRunning', { count: runningConfigs.length })}
         </span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
         {runningConfigs.map((cfg) => {
           const lastDec =
             decisions.find(
@@ -1446,11 +1463,15 @@ function NextDecisionBanner({
                 d.pair === cfg.pair &&
                 (d.configId === cfg.id || !d.configId),
             ) ?? null;
+          const status = agentStatuses.find(
+            (s) => s.asset === cfg.asset && s.pair === cfg.pair && s.isRunning,
+          );
           return (
             <AgentCountdownCard
               key={cfg.id}
               config={cfg}
               lastDecision={lastDec}
+              nextRunAt={status?.nextRunAt ?? null}
             />
           );
         })}
@@ -1864,6 +1885,17 @@ export function BotAnalysisPage() {
   const { data: decisions = [] } = useAgentDecisions(15);
   const { data: tradingConfigs = [] } = useTradingConfigs();
   const { data: agentStatuses = [] } = useAgentStatus();
+  const { mode: platformMode } = usePlatformMode();
+
+  // Filter to current platform mode
+  const modeDecisions = decisions.filter((d) => {
+    if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX';
+    return d.mode === platformMode;
+  });
+  const modeConfigs = tradingConfigs.filter((c) => {
+    if (platformMode === 'SANDBOX') return c.mode === 'SANDBOX';
+    return c.mode === platformMode;
+  });
 
   useGSAP(
     () => {
@@ -1941,7 +1973,7 @@ export function BotAnalysisPage() {
   const sentimentScore =
     total > 0 ? Math.round(((positive - negative) / total) * 100) : 0;
 
-  const lastDecision = decisions[0] ?? null;
+  const lastDecision = modeDecisions[0] ?? null;
 
   const updatedLabel = dataUpdatedAt
     ? t('botAnalysis.updatedAgo', {
@@ -2017,9 +2049,9 @@ export function BotAnalysisPage() {
             lastDecision={lastDecision}
           />
           <NextDecisionBanner
-            configs={tradingConfigs}
+            configs={modeConfigs}
             agentStatuses={agentStatuses}
-            decisions={decisions}
+            decisions={modeDecisions}
           />
           <div className="grid gap-4 lg:grid-cols-2 analysis-section">
             <TechnicalSummary snapshot={snapshot} livePrice={livePrice} />
@@ -2033,7 +2065,7 @@ export function BotAnalysisPage() {
             botNewsEnabled={pageNewsConfig?.botEnabled ?? false}
             newsWeight={pageNewsConfig?.newsWeight ?? 0}
             agentStatuses={agentStatuses}
-            recentDecisions={decisions}
+            recentDecisions={modeDecisions}
           />
         </>
       )}

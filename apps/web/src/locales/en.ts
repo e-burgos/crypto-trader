@@ -23,6 +23,7 @@ const en = {
     positions: 'Positions',
     news: 'News Analysis',
     chat: 'KRYPTO AI',
+    agents: 'Agents',
     admin: 'Admin',
     help: 'Help & Guide',
     groupTrading: 'Trading',
@@ -312,6 +313,14 @@ const en = {
     neutral: 'Neutral',
     apiKeyRequired:
       'Loading news from free sources: CoinGecko, CoinDesk, CoinTelegraph, Reddit.',
+    llmConfig: 'AI Model for Analysis',
+    primaryProvider: 'Primary',
+    fallbackProvider: 'Secondary (fallback)',
+    selectProvider: 'Select provider',
+    selectModel: 'Select model',
+    noProviders: 'No providers configured',
+    autoSuggestion:
+      'Not configured — the system will auto-select from the global ranking',
   },
   admin: {
     title: 'Admin Panel',
@@ -350,7 +359,9 @@ const en = {
     binanceTestnet: 'Binance Testnet',
     binanceTestnetSub: 'Testnet API keys',
     llm: 'LLM Provider',
+    llmProviders: 'LLM Providers',
     llmSub: 'No provider configured',
+    llmConnectedCount: '{{count}} connected',
     statusOk: 'All OK',
     statusWarning: 'Attention',
     statusError: 'Errors',
@@ -391,6 +402,17 @@ const en = {
     createConfig: 'Create Configuration',
     agentName: 'Agent Name',
     agentNamePlaceholder: 'e.g. BTC Aggressive',
+    autoName: 'Auto',
+    riskProfile: 'Risk Profile',
+    riskConservative: 'Conservative',
+    riskConservativeDesc: 'Lower frequency, premium models',
+    riskModerate: 'Moderate',
+    riskModerateDesc: 'Balance between cost and quality',
+    riskAggressive: 'Aggressive',
+    riskAggressiveDesc: 'Higher frequency, accepts more risk',
+    llmConfig: 'Agent AI Model',
+    primaryLLM: 'Primary',
+    fallbackLLM: 'Secondary (fallback)',
     deleteConfig: 'Delete Configuration',
     confirmDelete:
       'Delete this agent and its configuration? This cannot be undone.',
@@ -457,11 +479,16 @@ const en = {
     connected: 'Connected',
     disconnected: 'Not connected',
     llmKeys: 'LLM API Keys',
+    aiSubTabs: {
+      apiKeys: 'API Keys',
+      analytics: 'Provider Analytics',
+    },
     provider: 'Provider',
     model: 'Model',
     remove: 'Remove',
     active: 'Active',
     inactive: 'Inactive',
+    invalid: 'Invalid',
     newsSources: 'News Sources',
     freeSource: 'Free · No API key required',
     reachable: 'Reachable',
@@ -479,6 +506,44 @@ const en = {
     testSuccess: 'Connected ✔',
     testFailed: 'Connection failed',
     testing: 'Testing…',
+    validating: 'Validating…',
+    revalidate: 'Re-validate',
+    available: 'available',
+    autoValidationFailed: 'Auto-validation failed',
+    aiUsage: 'AI Usage & Costs',
+    noUsageData:
+      'No usage data yet. Start using AI features to see stats here.',
+    totalCost: 'Total Cost',
+    requests: 'Requests',
+    inputTokens: 'Input Tokens',
+    outputTokens: 'Output Tokens',
+    tokensLabel: 'Tokens',
+    cost: 'Cost',
+    dailyCosts: 'Daily Costs',
+    providerDistribution: 'Provider Distribution',
+    tokensByProvider: 'Tokens by Provider',
+    costByProvider: 'Cost by Provider',
+  },
+  providerStatus: {
+    title: 'LLM Provider Status',
+    refresh: 'Refresh',
+    tokens: 'Tokens',
+    input: 'Input',
+    output: 'Output',
+    estimated: 'Est. Cost',
+    calls: 'calls',
+    errors: 'errors',
+    rateLimits: 'Rate Limits',
+    noRateLimits: 'Rate limits not available',
+    lastSuccess: 'Last success',
+    neverUsed: 'Never used',
+    justNow: 'just now',
+    minsAgo: '{{count}} min ago',
+    hoursAgo: '{{count}}h ago',
+    disclaimer:
+      'Costs are estimates based on published pricing and may differ from actual billing.',
+    unavailableToast:
+      '{{provider}} is now unavailable. Agents using it will fall back to secondary provider.',
   },
   notifications: {
     title: 'Notifications',
@@ -566,7 +631,7 @@ const en = {
       },
       {
         q: 'What LLM providers are supported?',
-        a: 'Currently Claude (Anthropic), OpenAI (GPT-4o), and Groq (LLaMA). You can use any of them — each needs its own API key configured in Settings.',
+        a: 'Claude (Anthropic), OpenAI, Groq, Google Gemini, Mistral AI, and Together AI — six providers in total. Each needs its own API key configured in Settings.',
       },
       {
         q: 'Which crypto pairs are supported?',
@@ -801,7 +866,7 @@ const en = {
       'Want to understand each parameter before configuring? Check the documentation →',
     docsCalloutGuide: 'View Agent Guide',
     docsCalloutConcepts: 'View Concepts',
-    editModal: { title: 'Edit Agent' },
+    editModal: { title: 'Edit Agent', aiModel: 'AI Model' },
     deleteModal: {
       title: 'Delete Agent',
       body: 'Are you sure you want to delete this agent? This action cannot be undone.',
@@ -850,6 +915,26 @@ const en = {
       customIntervalHint:
         'The agent will wait this long between analyses, regardless of what the LLM suggests.',
       reviewNote: 'These parameters can be edited from the active agents list.',
+      stepAiModel: 'AI Model',
+      stepAiModelHint:
+        'Choose which LLM provider and model this agent will use for analysis. Leave on Auto to let the system pick the best available.',
+      aiModelCallout:
+        'Select the AI model for this agent. Only providers with an active API key are shown. You can skip this step to let the system choose automatically.',
+      primaryLlm: 'Primary model',
+      primaryLlmHint:
+        'The main model used for market analysis and trading decisions.',
+      fallbackLlm: 'Fallback model (optional)',
+      fallbackLlmHint:
+        'Used if the primary model is unavailable or rate-limited.',
+      autoSelect: 'Auto (system picks best)',
+      noFallback: 'No fallback',
+      noActiveProviders:
+        'No active LLM providers found. Configure your API keys in Settings → AI Models first.',
+      autoSuggestion:
+        'Leave both on Auto and the system will choose the best model for your risk profile.',
+      primaryLabel: 'Primary',
+      fallbackLabel: 'Fallback',
+      aiModelReview: 'AI Model',
     },
     guide: {
       flowTitle: 'How the Agent Makes Decisions',
@@ -1087,6 +1172,10 @@ const en = {
     loadingProviders: 'Loading AI providers...',
     startSession: 'Start session',
     creating: 'Creating...',
+    llmOverride: {
+      label: 'Model',
+      reset: 'Reset to session default',
+    },
     capabilities: {
       help: 'Platform Help',
       trade: 'Trade Assistant',
@@ -1108,6 +1197,8 @@ const en = {
         'AI provider rate limit reached. Please try again in {{retryAfter}} min.',
       RATE_LIMIT_no_retry:
         'AI provider rate limit reached. Please try again in a few minutes.',
+      CREDIT_LIMIT:
+        "The provider account has no credits. Please add funds at the provider's billing page.",
       INVALID_API_KEY:
         'The provider API key is invalid or expired. Check your settings in Settings → AI.',
       PROVIDER_UNAVAILABLE:
@@ -1145,13 +1236,103 @@ const en = {
     dropZone: 'Drop a PDF, TXT or MD file here, or click to upload',
     noDocuments: 'No documents uploaded yet',
   },
+  agentsShowcase: {
+    badge: 'Multi-Agent System',
+    title: 'Meet the KRYPTO Agents',
+    subtitle:
+      'Five specialized AI agents working in concert — each with its own identity, expertise, and decision-making framework. Together, they form a comprehensive crypto trading intelligence layer.',
+    cta: 'Start chatting',
+    chatWith: 'Chat with {{name}}',
+    pipeline: {
+      title: 'How KRYPTO Orchestrates',
+      subtitle:
+        'Every request flows through an intelligent pipeline that routes, analyzes, and synthesizes across agents.',
+      step1Title: 'User Input',
+      step1Desc: 'Your question or trading decision enters the system.',
+      step2Title: 'Intent Routing',
+      step2Desc: 'KRYPTO classifies intent and selects the optimal agent.',
+      step3Title: 'Parallel Analysis',
+      step3Desc: 'Up to 4 agents analyze simultaneously with real-time data.',
+      step4Title: 'Synthesis',
+      step4Desc: 'Results are combined into a unified, actionable response.',
+    },
+    nexus: {
+      role: 'Platform Expert',
+      quote:
+        "I'm NEXUS. I know every corner of CryptoTrader: every parameter, every screen, every design decision behind the system.",
+      description:
+        'Your personal guide through the CryptoTrader platform. NEXUS understands every configuration parameter, every screen, and every workflow. From onboarding new users to explaining advanced agent configurations, NEXUS turns complexity into clarity.',
+      cap1: 'Step-by-step onboarding',
+      cap2: 'Configuration guidance',
+      cap3: 'Cross-agent routing',
+      tag1: 'Onboarding',
+      tag2: 'Navigation',
+      tag3: 'FAQ',
+    },
+    forge: {
+      role: 'Operations Assistant',
+      quote:
+        "I'm FORGE. I don't analyze — I act. Give me an objective and we build the operational path to get there.",
+      description:
+        'The hands-on operator of CryptoTrader. FORGE executes actions: starting/stopping trading agents, configuring strategies, managing positions, and fine-tuning risk parameters. It confirms before executing and explains the impact of every action.',
+      cap1: 'Start/stop agents',
+      cap2: 'Strategy configuration',
+      cap3: 'Position management',
+      tag1: 'Execution',
+      tag2: 'Config',
+      tag3: 'DeFi',
+    },
+    sigma: {
+      role: 'Market Analyst',
+      quote:
+        "I'm SIGMA. I read the market in data, not opinions. Every signal has a number behind it, and that number tells a story.",
+      description:
+        'A cold, quantitative market analyst with real-time access to price data, technical indicators, and news sentiment. SIGMA interprets RSI, MACD, Bollinger Bands, candlestick patterns, and on-chain metrics to deliver objective market perspectives.',
+      cap1: 'Technical analysis',
+      cap2: 'Real-time indicators',
+      cap3: 'Sentiment scoring',
+      tag1: 'TA',
+      tag2: 'Indicators',
+      tag3: 'On-Chain',
+    },
+    cipher: {
+      role: 'Blockchain Expert',
+      quote:
+        "I'm CIPHER. Blockchain holds no secrets for me — from ECDSA to ZK Rollups. Got a question? I'll answer it from scratch or from whatever level you need.",
+      description:
+        'The deep knowledge base of cryptocurrency and blockchain technology. CIPHER covers everything from elliptic curve cryptography to Layer 2 rollups, DeFi protocols, smart contract patterns, tokenomics, and regulatory frameworks — adapting to any expertise level.',
+      cap1: 'Protocol deep-dives',
+      cap2: 'Security & cryptography',
+      cap3: 'DeFi education',
+      tag1: 'DeFi',
+      tag2: 'L2',
+      tag3: 'Web3',
+    },
+    aegis: {
+      role: 'Risk Manager',
+      quote:
+        "I'm AEGIS, your portfolio's risk manager. My job isn't to tell you what will happen — it's to make sure nothing that happens takes you out of the game.",
+      description:
+        'The guardian of your portfolio. AEGIS evaluates every trading decision through a quantitative risk lens: position sizing via Kelly Criterion, drawdown limits, correlation analysis, and VaR calculations. Every BUY/SELL goes through AEGIS before execution.',
+      cap1: 'Risk scoring (0-100)',
+      cap2: 'Drawdown protection',
+      cap3: 'Position sizing',
+      tag1: 'VaR',
+      tag2: 'Kelly',
+      tag3: 'Stop-Loss',
+    },
+  },
   notificationMessages: {
+    agentMaxActive:
+      'Maximum {{max}} active agents allowed. Stop an existing agent before starting a new one.',
     agentNoLLM: 'Agent paused: no LLM credentials configured',
     agentNoTestnetKeys: 'Agent paused: no Binance Testnet API keys configured',
     agentRateLimit:
       'Agent paused: Binance rate limit reached. Retrying in {{retryMinutes}} min.',
     agentNetworkError:
       'Agent paused: cannot reach Binance (network error). Retrying in {{retryMinutes}} min.',
+    agentLlmError:
+      'Agent paused: AI provider error (rate limit). Retrying in {{retryMinutes}} min.',
     agentError: 'Agent error: {{message}}',
     tradeBuy: 'BUY {{qty}} {{asset}} @ ${{price}} ({{mode}})',
     tradeSell:
@@ -1238,79 +1419,140 @@ const en = {
     setupFailed: 'Setup failed. Please try again.',
   },
   landing: {
-    badge: 'Autonomous Crypto Trading · AI-Powered',
-    headline1: 'Your Agent.',
-    headline2: 'Invests',
-    headline3: 'for you.',
-    sub: 'An AI agent analyzes the market 24/7, manages your risk and executes trades on your behalf. No effort. No emotions.',
+    badge: 'Multi-Agent Crypto Trading · AI-Powered',
+    headline1: 'Five AI Agents.',
+    headline2: 'One Mission:',
+    headline3: 'Your Profit.',
+    sub: 'A multi-agent AI system analyzes markets, reads news, manages risk and executes trades 24/7. Six LLM providers. Three trading modes. Zero emotions.',
     startFree: 'Start for free',
-    badge1: 'Paper Trading included',
-    badge2: 'Integrated risk management',
-    badge3: 'Claude · GPT · Groq',
-    stat1Value: '4',
-    stat1Label: 'Trading Pairs',
-    stat2Value: '3',
-    stat2Label: 'AI Providers',
+    badge1: '6 AI Providers',
+    badge2: '5 Specialized Agents',
+    badge3: '3 Trading Modes',
+    // Stats
+    stat1Value: '5',
+    stat1Label: 'AI Agents',
+    stat2Value: '6',
+    stat2Label: 'LLM Providers',
     stat3Value: '24/7',
     stat3Label: 'Active Monitoring',
-    stat4Value: '10+',
-    stat4Label: 'Analysis Signals',
+    stat4Value: '4',
+    stat4Label: 'Trading Pairs',
+    stat5Value: '3',
+    stat5Label: 'Trading Modes',
+    stat6Value: '10+',
+    stat6Label: 'Technical Indicators',
+    // How it works
     howEyebrow: 'How it works',
-    howTitle: 'Your agent works while you live',
-    step1Title: 'Scans the Market',
+    howTitle: 'Your agents work while you live',
+    step1Title: 'Scans & Analyzes',
     step1Desc:
-      'Monitors BTC and ETH pairs in real time. Analyzes volume, trends and technical signals like RSI, MACD and Bollinger Bands.',
-    step2Title: 'Analyzes with AI',
+      'SIGMA monitors BTC/ETH pairs in real time. RSI, MACD, Bollinger Bands, EMA, volume analysis and news sentiment — all fed into the decision engine.',
+    step2Title: 'Multi-Agent AI',
     step2Desc:
-      'Processes signals with Claude, GPT or Groq. Evaluates context, risk and trading opportunities with deep reasoning.',
-    step3Title: 'Executes & Protects',
+      'NEXUS routes your intent to FORGE, SIGMA, CIPHER or AEGIS. Each agent specializes in a domain. They analyze in parallel and synthesize a unified response.',
+    step3Title: 'Execute & Protect',
     step3Desc:
-      'Operates with automatic stop-loss, take-profit and position sizing. Kill-switch available to stop everything at any time.',
+      'AEGIS enforces risk limits, position sizing and stop-loss. FORGE executes with discipline. Kill-switch available to halt everything instantly.',
+    // Features (8 cards now)
     featEyebrow: 'Complete platform',
     featTitle: 'Everything you need to trade smarter',
     featSub:
-      'From technical analysis to automatic execution. A platform built by traders, for traders.',
+      'Multi-agent intelligence, news analysis, 6 LLM providers, and three trading modes — all in one platform.',
     featCoreBadge: 'Core',
+    featNewBadge: 'New',
     featFreeBadge: 'Free',
-    feat1Title: 'Autonomous Agent',
+    feat1Title: 'Multi-Agent System',
     feat1Desc:
-      'Operates 24/7 on your behalf. You set the strategy; the agent executes with discipline, without emotions or interruptions.',
-    feat2Title: 'Technical Analysis',
+      'Five specialized agents — NEXUS, FORGE, SIGMA, CIPHER, AEGIS — working in concert for trading, analysis, risk management and blockchain expertise.',
+    feat2Title: 'KRYPTO AI Chat',
     feat2Desc:
-      'RSI, MACD, Bollinger Bands, EMA and ATR in real time. Every indicator feeds the agent decisions.',
-    feat3Title: 'Risk Management',
+      'Conversational AI assistant with session memory. Ask about markets, strategies, or the platform. Each agent has a distinct personality and expertise.',
+    feat3Title: 'News Intelligence',
     feat3Desc:
-      'Automatic stop-loss, take-profit and position sizing. Kill-switch to stop all activity with one click.',
-    feat4Title: 'Paper Trading',
+      'Real-time crypto news from CryptoPanic, NewsData.io and RSS feeds. LLM-powered sentiment analysis that feeds directly into trading decisions.',
+    feat4Title: 'Technical Analysis',
     feat4Desc:
-      'Test strategies risk-free in simulated mode. Understand the market before going live.',
-    feat5Title: 'News Intelligence',
+      'RSI, MACD, Bollinger Bands, EMA, ATR, volume and support/resistance in real time. Confluence scoring across 10+ indicators.',
+    feat5Title: 'LLM Providers Dashboard',
     feat5Desc:
-      'The agent consumes real-time crypto news to enrich decisions with fundamental market context.',
-    feat6Title: 'Live Charts',
+      'Configure and monitor 6 AI providers from one panel. Usage tracking, model selection, and automatic fallback when a provider is unavailable.',
+    feat6Title: 'Risk Management',
     feat6Desc:
-      'Advanced charts with overlaid indicators. Visualize agent operations in real time over price.',
-    aiEyebrow: 'Artificial intelligence',
-    aiTitle: 'The brain behind the agent',
+      'Automatic stop-loss, take-profit and position sizing. AEGIS agent scores risk 0-100 using Kelly Criterion, VaR and drawdown analysis.',
+    feat7Title: 'Three Trading Modes',
+    feat7Desc:
+      'Sandbox for paper trading, Binance Testnet for realistic simulation, and Live for real execution. Switch modes anytime.',
+    feat8Title: 'Live Charts & Analytics',
+    feat8Desc:
+      'TradingView-style candlestick charts with overlaid indicators. Real-time P&L tracking, win rate analytics and decision history.',
+    // Multi-Agent section
+    agentsEyebrow: 'Multi-Agent Intelligence',
+    agentsTitle: 'Meet the KRYPTO agents',
+    agentsSub:
+      'Five specialized AI agents, each with a unique codename, personality and expertise. Together, they form a comprehensive crypto intelligence layer.',
+    agentNexus: 'NEXUS',
+    agentNexusRole: 'Platform Expert',
+    agentNexusDesc: 'Knows every screen, parameter and workflow. Your personal guide through CryptoTrader.',
+    agentForge: 'FORGE',
+    agentForgeRole: 'Operations',
+    agentForgeDesc: 'Executes actions: starts agents, configures strategies, manages positions and risk parameters.',
+    agentSigma: 'SIGMA',
+    agentSigmaRole: 'Market Analyst',
+    agentSigmaDesc: 'Quantitative analyst with real-time access to prices, indicators, candlestick patterns and news sentiment.',
+    agentCipher: 'CIPHER',
+    agentCipherRole: 'Blockchain Expert',
+    agentCipherDesc: 'Deep knowledge in cryptography, DeFi protocols, Layer 2, smart contracts and tokenomics.',
+    agentAegis: 'AEGIS',
+    agentAegisRole: 'Risk Manager',
+    agentAegisDesc: 'Evaluates every trade through Kelly Criterion, VaR, drawdown limits and position sizing.',
+    // Providers (6 now)
+    aiEyebrow: '6 LLM Providers',
+    aiTitle: 'Choose your AI. Or use them all.',
     aiSub:
-      'Choose your preferred AI provider. The agent adapts to each market.',
+      'Configure multiple providers simultaneously. Automatic fallback ensures your agents never stop.',
     claude: 'Anthropic Claude',
-    claudeModel: 'claude-3-5-sonnet · claude-opus-4',
+    claudeModel: 'claude-sonnet-4 · claude-haiku',
     claudeDesc:
       'Deep reasoning and extended context. The preferred choice for nuanced risk analysis and long-term strategies.',
     claudeTag: 'Reasoning',
     openai: 'OpenAI GPT',
-    openaiModel: 'gpt-4o · gpt-4-turbo',
+    openaiModel: 'gpt-4o · gpt-4o-mini',
     openaiDesc:
       'Industry standard. Versatility, speed and proven reliability in high-volume production environments.',
     openaiTag: 'Versatility',
     groq: 'Groq',
-    groqModel: 'llama3-70b · mixtral-8x7b',
+    groqModel: 'llama-3.3-70b · llama-3.1-8b',
     groqDesc:
       'Ultra-fast inference with specialized hardware. Ideal for high-frequency analysis and minimum latency decisions.',
     groqTag: 'Speed',
+    gemini: 'Google Gemini',
+    geminiModel: 'gemini-2.5-flash · gemini-2.5-pro',
+    geminiDesc:
+      'Multimodal capabilities with massive context windows. Excellent for cross-referencing complex market data.',
+    geminiTag: 'Multimodal',
+    mistral: 'Mistral AI',
+    mistralModel: 'mistral-large · mistral-medium',
+    mistralDesc:
+      'European AI excellence. Strong analytical performance with efficient resource usage and privacy-first approach.',
+    mistralTag: 'Efficient',
+    together: 'Together AI',
+    togetherModel: 'Llama 4 Maverick · Llama 4 Scout',
+    togetherDesc:
+      'Open-source models at scale. Access latest Llama models with enterprise-grade infrastructure and pricing.',
+    togetherTag: 'Open Source',
+    // Trading modes
+    modesEyebrow: 'Three ways to trade',
+    modesTitle: 'Your pace. Your rules.',
+    modesSub: 'Start safe in Sandbox, level up to Testnet, and go Live when ready.',
+    modeSandbox: 'Sandbox',
+    modeSandboxDesc: 'Paper trading with virtual wallet and real market prices. Zero risk, full learning.',
+    modeTestnet: 'Testnet',
+    modeTestnetDesc: 'Real orders on Binance Testnet. Experience the full trading flow without real money.',
+    modeLive: 'Live Trading',
+    modeLiveDesc: 'Real funds on Binance. Automatic risk controls and kill-switch protection.',
+    // Risk section
     riskEyebrow: 'Your capital protected',
-    riskTitle: 'Designed to protect first',
+    riskTitle: 'AEGIS: Designed to protect first',
     risk1Title: 'Automatic Stop-Loss',
     risk1Desc: 'Closes positions before losses exceed your tolerance.',
     risk2Title: 'Smart Take-Profit',
@@ -1319,17 +1561,19 @@ const en = {
     risk3Desc: 'Stops all agent activity with a single click at any time.',
     risk4Title: 'Position Sizing',
     risk4Desc:
-      'Risk per trade is automatically calculated per your configuration.',
+      'Risk per trade calculated via Kelly Criterion and portfolio allocation rules.',
+    // CTA
     ctaEyebrow: 'Start today',
-    ctaTitle1: 'Ready for your portfolio',
-    ctaTitle2: 'to work on its own?',
+    ctaTitle1: 'Ready for five AI agents',
+    ctaTitle2: 'to trade for you?',
     ctaSub:
-      'Create your account, set your strategy and activate your agent in minutes. No prior trading experience required.',
+      'Create your account, choose your providers, activate your agents in minutes. No prior trading experience required.',
     ctaStart: 'Create free account',
     ctaGitHub: 'View on GitHub',
     ctaDisclaimer:
       'Paper Trading available. No credit card. Educational purposes only.',
-    footerTagline: 'Powered by AI',
+    // Footer
+    footerTagline: 'Multi-Agent AI Trading Platform',
     footerBy: 'Developed by',
     footerDisclaimer:
       'Educational purposes only. Crypto trading involves risk of loss.',
@@ -1441,8 +1685,8 @@ const en = {
     live: 'Live',
     sandboxDesc: 'Paper trading with virtual funds. No real risk.',
     testnetDesc: 'Real orders on Binance Testnet. No real money involved.',
-    liveDesc: '⚠️ Real money. Real orders on Binance.',
-    liveWarningShort: 'Real money',
+    liveDesc: 'Real money. Real orders on Binance.',
+    liveWarningShort: 'Uses real money',
     switchConfirmTitle: 'Switch to Live mode',
     switchConfirmDesc:
       'You are about to switch to LIVE mode. All operations will affect real funds on Binance.',
@@ -1454,9 +1698,16 @@ const en = {
     credentialsModalTestnetDesc:
       'To operate in Testnet mode you need to configure your Binance Testnet API keys. Get them for free at testnet.binance.vision (no real money).',
     credentialsModalLiveDesc:
-      'To operate in Live mode you need to configure your Binance API keys. ⚠️ This mode uses real funds.',
+      'To operate in Live mode you need to configure your Binance API keys. This mode operates with real funds on Binance.',
     credentialsModalCancel: 'Cancel',
     credentialsModalCta: 'Add Credentials',
+    pauseAgentsTitle: '{{count}} active agent(s) in {{mode}}',
+    pauseAgentsDesc:
+      'You have {{count}} agent(s) running in {{fromMode}} mode. Switching to {{toMode}} will stop them automatically.',
+    pauseAgentsLiveWarning:
+      'Live mode agents have open positions that will be left unmonitored when stopped.',
+    pauseAgentsCta: 'Stop and switch',
+    pauseAgentsStopping: 'Stopping...',
   },
 };
 

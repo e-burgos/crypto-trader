@@ -27,7 +27,11 @@ import {
   TradeType,
   NotificationType,
 } from '@crypto-trader/shared';
-import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
+import {
+  SUPPORTED_PAIRS,
+  TRADE_FEE_PCT,
+  MAX_ACTIVE_AGENTS_PER_USER,
+} from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 
 const DEFAULTS = {
@@ -228,6 +232,16 @@ export class TradingService implements OnModuleInit {
       );
     }
 
+    // ── Enforce global active-agent limit per user ───────────────────────
+    const activeCount = await this.prisma.tradingConfig.count({
+      where: { userId, isRunning: true },
+    });
+    if (activeCount >= MAX_ACTIVE_AGENTS_PER_USER) {
+      throw new BadRequestException(
+        `Maximum ${MAX_ACTIVE_AGENTS_PER_USER} active agents allowed. Stop an existing agent before starting a new one.`,
+      );
+    }
+
     await this.prisma.tradingConfig.update({
       where: { id: config.id },
       data: { isRunning: true },
@@ -286,6 +300,38 @@ export class TradingService implements OnModuleInit {
 
     this.logger.log(`Agent stopped for user ${userId}, config ${config.id}`);
     return { stopped: true, configId: config.id };
+  }
+
+  async stopAgentsByModeForUser(userId: string, mode: string) {
+    const runningConfigs = await this.prisma.tradingConfig.findMany({
+      where: { userId, isRunning: true, mode: mode as any },
+    });
+
+    if (runningConfigs.length === 0) {
+      return { stopped: 0 };
+    }
+
+    await this.prisma.tradingConfig.updateMany({
+      where: { userId, isRunning: true, mode: mode as any },
+      data: { isRunning: false },
+    });
+
+    const configIds = new Set(runningConfigs.map((c) => c.id));
+    const [waitingJobs, delayedJobs] = await Promise.all([
+      this.tradingQueue.getWaiting(),
+      this.tradingQueue.getDelayed(),
+    ]);
+    await Promise.all(
+      [...waitingJobs, ...delayedJobs]
+        .filter((j) => configIds.has(j.data?.configId))
+        .map((j) => j.remove()),
+    );
+
+    this.logger.log(
+      `Stopped ${runningConfigs.length} ${mode} agent(s) for user ${userId}`,
+    );
+
+    return { stopped: runningConfigs.length };
   }
 
   async stopAllAgentsForUser(userId: string) {
@@ -376,16 +422,38 @@ export class TradingService implements OnModuleInit {
       this.tradingQueue.getDelayed(),
       this.tradingQueue.getActive(),
     ]);
-    const scheduledMap = new Map<string, string>();
+    const scheduledMap = new Map<
+      string,
+      { jobId: string; nextRunAt: number | null }
+    >();
     for (const j of [...waitingJobs, ...delayedJobs, ...activeJobs]) {
-      if (j.data?.configId) scheduledMap.set(j.data.configId, String(j.id));
+      if (j.data?.configId) {
+        let nextRunAt: number | null = null;
+        const jobDelay = (j.opts as Record<string, unknown>)?.delay as
+          | number
+          | undefined;
+        const jobTs = j.timestamp;
+        if (jobDelay && jobTs) {
+          nextRunAt = jobTs + jobDelay;
+        } else if (jobTs) {
+          nextRunAt = jobTs;
+        }
+        scheduledMap.set(j.data.configId, {
+          jobId: String(j.id),
+          nextRunAt,
+        });
+      }
     }
 
-    return configs.map((config) => ({
-      ...config,
-      jobQueued: scheduledMap.has(config.id),
-      jobId: scheduledMap.get(config.id) ?? null,
-    }));
+    return configs.map((config) => {
+      const job = scheduledMap.get(config.id);
+      return {
+        ...config,
+        jobQueued: !!job,
+        jobId: job?.jobId ?? null,
+        nextRunAt: job?.nextRunAt ?? null,
+      };
+    });
   }
 
   async getAllAgentsStatus() {

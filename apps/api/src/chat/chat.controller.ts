@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -23,7 +24,11 @@ import {
 import { Observable } from 'rxjs';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
-import { CreateSessionDto, SendMessageDto } from './dto/chat.dto';
+import {
+  CreateSessionDto,
+  SendMessageDto,
+  UpdateSessionDto,
+} from './dto/chat.dto';
 import { ExecuteToolDto } from './dto/execute-tool.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -105,6 +110,20 @@ export class ChatController {
     return this.chatService.deleteSession(user.userId, id);
   }
 
+  @Patch('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiOperation({ summary: 'Update session provider/model mid-conversation' })
+  @ApiResponse({ status: 200, description: 'Session updated' })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  updateSession(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateSessionDto,
+  ) {
+    return this.chatService.updateSession(user.userId, id, dto);
+  }
+
   // ── Messages ────────────────────────────────────────────────────────────────
 
   @Post('sessions/:id/messages')
@@ -137,6 +156,16 @@ export class ChatController {
     description: 'help | trade | market | blockchain',
   })
   @ApiQuery({
+    name: 'providerOverride',
+    required: false,
+    description: 'Override LLM provider for this request only',
+  })
+  @ApiQuery({
+    name: 'modelOverride',
+    required: false,
+    description: 'Override LLM model for this request only',
+  })
+  @ApiQuery({
     name: 'token',
     description:
       'JWT access token (required for SSE — EventSource cannot send headers)',
@@ -146,6 +175,8 @@ export class ChatController {
     @Param('id') id: string,
     @Query('content') content: string,
     @Query('capability') capability?: string,
+    @Query('providerOverride') providerOverride?: string,
+    @Query('modelOverride') modelOverride?: string,
     @Query('token') token?: string,
   ): Observable<MessageEvent> {
     if (!token) throw new UnauthorizedException('Missing token query param');
@@ -161,6 +192,8 @@ export class ChatController {
       id,
       content,
       capability,
+      providerOverride as any,
+      modelOverride,
     );
   }
 

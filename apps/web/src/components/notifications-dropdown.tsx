@@ -69,6 +69,7 @@ function getNotificationRoute(type: string, message: string): string {
       key === 'agentNoTestnetKeys' ||
       key === 'agentNetworkError' ||
       key === 'agentRateLimit' ||
+      key === 'agentLlmError' ||
       key === 'orderError'
     )
       return '/dashboard/config';

@@ -6,6 +6,7 @@ export type TradingMode = 'SANDBOX' | 'LIVE' | 'TESTNET';
 export type TradingAsset = 'BTC' | 'ETH';
 export type TradingPair = 'USDT' | 'USDC';
 export type IntervalMode = 'AGENT' | 'CUSTOM';
+export type RiskProfile = 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE';
 
 export interface TradingConfig {
   id: string;
@@ -25,6 +26,11 @@ export interface TradingConfig {
   orderPriceOffsetPct: number;
   isActive: boolean;
   isRunning: boolean;
+  primaryProvider: string | null;
+  primaryModel: string | null;
+  fallbackProvider: string | null;
+  fallbackModel: string | null;
+  riskProfile: RiskProfile;
   createdAt: string;
 }
 
@@ -43,13 +49,21 @@ export interface TradingConfigDto {
   minIntervalMinutes: number;
   intervalMode: IntervalMode;
   orderPriceOffsetPct: number;
+  primaryProvider?: string | null;
+  primaryModel?: string | null;
+  fallbackProvider?: string | null;
+  fallbackModel?: string | null;
+  riskProfile?: RiskProfile;
 }
 
 export interface AgentStatus {
+  id: string;
   asset: string;
   pair: string;
   isRunning: boolean;
   mode: TradingMode;
+  jobQueued: boolean;
+  nextRunAt: number | null;
 }
 
 export interface TradingPosition {
@@ -190,6 +204,19 @@ export function useStopAgent() {
     },
     onError: (err: { message?: string }) =>
       toast.error(err?.message || 'Error al detener el agente'),
+  });
+}
+
+export function useStopAgentsByMode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (mode: TradingMode) =>
+      api.post<{ stopped: number }>('/trading/stop-by-mode', { mode }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trading'] });
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al detener los agentes'),
   });
 }
 

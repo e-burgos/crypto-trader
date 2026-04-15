@@ -2,7 +2,15 @@
 export class PrismaClient {}
 export const $Enums = {
   UserRole: { ADMIN: 'ADMIN', TRADER: 'TRADER', VIEWER: 'VIEWER' },
-  LLMProvider: { OPENAI: 'OPENAI', CLAUDE: 'CLAUDE', DEEPSEEK: 'DEEPSEEK' },
+  LLMProvider: {
+    OPENAI: 'OPENAI',
+    CLAUDE: 'CLAUDE',
+    GROQ: 'GROQ',
+    GEMINI: 'GEMINI',
+    MISTRAL: 'MISTRAL',
+    TOGETHER: 'TOGETHER',
+  },
+  LLMSource: { TRADING: 'TRADING', CHAT: 'CHAT', ANALYSIS: 'ANALYSIS' },
   OrderSide: { BUY: 'BUY', SELL: 'SELL' },
   OrderType: { MARKET: 'MARKET', LIMIT: 'LIMIT', STOP_LOSS: 'STOP_LOSS' },
   PositionStatus: { OPEN: 'OPEN', CLOSED: 'CLOSED', LIQUIDATED: 'LIQUIDATED' },
@@ -20,6 +28,8 @@ export const $Enums = {
     SYSTEM: 'SYSTEM',
   },
 };
+export const LLMProvider = $Enums.LLMProvider;
+export const LLMSource = $Enums.LLMSource;
 export const TradingMode = {
   LIVE: 'LIVE',
   SANDBOX: 'SANDBOX',
@@ -27,3 +37,8 @@ export const TradingMode = {
   PAPER: 'PAPER',
 };
 export const NotificationType = $Enums.NotificationType;
+export const RiskProfile = {
+  CONSERVATIVE: 'CONSERVATIVE',
+  MODERATE: 'MODERATE',
+  AGGRESSIVE: 'AGGRESSIVE',
+};

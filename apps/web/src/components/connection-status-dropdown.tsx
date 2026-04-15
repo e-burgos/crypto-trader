@@ -124,6 +124,8 @@ export function ConnectionStatusDropdown() {
     return llmKeys.some((k) => k.isActive) ? 'ok' : 'error';
   }
 
+  const activeCount = llmKeys?.filter((k) => k.isActive).length ?? 0;
+
   const connections: Connection[] = [
     {
       id: 'internet',
@@ -144,22 +146,24 @@ export function ConnectionStatusDropdown() {
       label: t('connections.binanceLive'),
       sublabel: t('connections.binanceLiveSub'),
       status: binanceStatus(),
-      href: '/dashboard/settings',
+      href: '/dashboard/settings?tab=exchange',
     },
     {
       id: 'testnet',
       label: t('connections.binanceTestnet'),
       sublabel: t('connections.binanceTestnetSub'),
       status: testnetStatus(),
-      href: '/dashboard/settings',
+      href: '/dashboard/settings?tab=exchange',
     },
     {
       id: 'llm',
-      label: t('connections.llm'),
+      label: t('connections.llmProviders'),
       sublabel:
-        llmKeys?.find((k) => k.isActive)?.provider ?? t('connections.llmSub'),
+        activeCount > 0
+          ? t('connections.llmConnectedCount', { count: activeCount })
+          : t('connections.llmSub'),
       status: llmStatus(),
-      href: '/dashboard/settings',
+      href: '/dashboard/settings?tab=ai',
     },
   ];
 
@@ -219,13 +223,24 @@ export function ConnectionStatusDropdown() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)}>
             <div
               className="absolute z-50 w-72 rounded-xl border border-border bg-card shadow-xl"
-              style={{
-                top:
-                  (buttonRef.current?.getBoundingClientRect().bottom ?? 0) + 6,
-                right:
-                  window.innerWidth -
-                  (buttonRef.current?.getBoundingClientRect().right ?? 0),
-              }}
+              style={
+                window.innerWidth < 640
+                  ? {
+                      top:
+                        (buttonRef.current?.getBoundingClientRect().bottom ??
+                          0) + 6,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                    }
+                  : {
+                      top:
+                        (buttonRef.current?.getBoundingClientRect().bottom ??
+                          0) + 6,
+                      right:
+                        window.innerWidth -
+                        (buttonRef.current?.getBoundingClientRect().right ?? 0),
+                    }
+              }
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}

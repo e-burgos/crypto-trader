@@ -51,14 +51,18 @@ const LLM_PROVIDERS: {
   {
     value: 'CLAUDE',
     label: 'Anthropic Claude',
-    models: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'],
+    models: [
+      'claude-sonnet-4-20250514',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-haiku-20240307',
+    ],
     helpLink: 'https://console.anthropic.com/',
     helpLinkText: 'console.anthropic.com',
   },
   {
     value: 'OPENAI',
     label: 'OpenAI',
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+    models: ['gpt-4o', 'gpt-4o-mini'],
     helpLink: 'https://platform.openai.com/api-keys',
     helpLinkText: 'platform.openai.com',
   },
@@ -68,6 +72,35 @@ const LLM_PROVIDERS: {
     models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
     helpLink: 'https://console.groq.com/keys',
     helpLinkText: 'console.groq.com',
+  },
+  {
+    value: 'GEMINI',
+    label: 'Google Gemini',
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    helpLink: 'https://aistudio.google.com/apikey',
+    helpLinkText: 'aistudio.google.com',
+  },
+  {
+    value: 'MISTRAL',
+    label: 'Mistral AI',
+    models: [
+      'mistral-small-latest',
+      'mistral-medium-latest',
+      'mistral-large-latest',
+    ],
+    helpLink: 'https://console.mistral.ai/api-keys/',
+    helpLinkText: 'console.mistral.ai',
+  },
+  {
+    value: 'TOGETHER',
+    label: 'Together AI',
+    models: [
+      'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
+      'meta-llama/Llama-4-Scout-17B-16E-Instruct',
+      'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+    ],
+    helpLink: 'https://api.together.xyz/settings/api-keys',
+    helpLinkText: 'api.together.xyz',
   },
 ];
 

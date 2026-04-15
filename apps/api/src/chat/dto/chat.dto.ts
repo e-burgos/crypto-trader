@@ -46,6 +46,33 @@ export class SendMessageDto {
   @IsOptional()
   @IsString()
   capability?: string;
+
+  @ApiPropertyOptional({
+    enum: LLMProvider,
+    description: 'Override provider for this message',
+  })
+  @IsOptional()
+  @IsEnum(LLMProvider)
+  providerOverride?: LLMProvider;
+
+  @ApiPropertyOptional({
+    description: 'Override model for this message',
+  })
+  @IsOptional()
+  @IsString()
+  modelOverride?: string;
+}
+
+export class UpdateSessionDto {
+  @ApiPropertyOptional({ enum: LLMProvider })
+  @IsOptional()
+  @IsEnum(LLMProvider)
+  provider?: LLMProvider;
+
+  @ApiPropertyOptional({ example: 'claude-sonnet-4-6' })
+  @IsOptional()
+  @IsString()
+  model?: string;
 }
 
 export class ChatMessageResponse {

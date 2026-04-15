@@ -39,6 +39,7 @@ export interface ChatMessageItem {
   role: 'USER' | 'ASSISTANT' | 'SYSTEM';
   content: string;
   createdAt: string;
+  generatedBy?: string | null;
   metadata?: { capability?: string } | null;
 }
 
@@ -137,6 +138,18 @@ export function useDeleteChatSession() {
   });
 }
 
+export function useUpdateChatSession(sessionId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { provider?: string; model?: string }) =>
+      api.patch(`/chat/sessions/${sessionId}`, dto),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: chatKeys.session(sessionId) });
+      qc.invalidateQueries({ queryKey: chatKeys.sessions });
+    },
+  });
+}
+
 export function useSaveUserMessage(sessionId: string) {
   return useMutation({
     mutationFn: (dto: SendMessageDto) =>
@@ -150,6 +163,7 @@ export function useSaveUserMessage(sessionId: string) {
 // ── Types for stream errors ────────────────────────────────────────────────
 export type LLMErrorCode =
   | 'RATE_LIMIT'
+  | 'CREDIT_LIMIT'
   | 'INVALID_API_KEY'
   | 'PROVIDER_UNAVAILABLE'
   | 'PROVIDER_ERROR'
@@ -182,7 +196,12 @@ export function useChatStream(
   const { t } = useTranslation();
 
   const startStream = useCallback(
-    (content: string, capability?: ChatCapability) => {
+    (
+      content: string,
+      capability?: ChatCapability,
+      providerOverride?: string,
+      modelOverride?: string,
+    ) => {
       if (!sessionId || !accessToken) return;
 
       // Close any existing stream
@@ -200,6 +219,8 @@ export function useChatStream(
         content,
         token: accessToken,
         ...(capability ? { capability } : {}),
+        ...(providerOverride ? { providerOverride } : {}),
+        ...(modelOverride ? { modelOverride } : {}),
       });
 
       const url = `${API_BASE}/chat/sessions/${sessionId}/stream?${params.toString()}`;

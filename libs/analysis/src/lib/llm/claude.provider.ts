@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LLMProviderClient } from './llm-types';
+import { LLMProviderClient, LLMResponse } from './llm-types';
 
 export interface ClaudeProviderConfig {
   apiKey: string;
@@ -19,7 +19,10 @@ export class ClaudeProvider implements LLMProviderClient {
     this.maxTokens = config.maxTokens ?? 1024;
   }
 
-  async complete(systemPrompt: string, userPrompt: string): Promise<string> {
+  async complete(
+    systemPrompt: string,
+    userPrompt: string,
+  ): Promise<LLMResponse> {
     const { data } = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
@@ -38,6 +41,12 @@ export class ClaudeProvider implements LLMProviderClient {
       },
     );
 
-    return data.content?.[0]?.text ?? '';
+    return {
+      text: data.content?.[0]?.text ?? '',
+      usage: {
+        inputTokens: data.usage?.input_tokens ?? 0,
+        outputTokens: data.usage?.output_tokens ?? 0,
+      },
+    };
   }
 }

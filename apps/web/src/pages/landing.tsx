@@ -23,6 +23,9 @@ import {
   HelpCircle,
   UserPlus,
   LogIn,
+  Play,
+  FlaskConical,
+  Radio,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
@@ -228,26 +231,88 @@ function FeatureCard({ icon, title, description, badge }: FeatureCardProps) {
 // ── Provider Card ─────────────────────────────────────────────────────────────
 function ProviderCard({
   name,
-  model,
   description,
   highlight,
 }: {
   name: string;
-  model: string;
   description: string;
   highlight: string;
 }) {
   return (
-    <div className="provider-card flex flex-col rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/8">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
-          <div className="text-lg font-bold text-foreground">{name}</div>
-          {/* <div className="font-mono text-xs text-muted-foreground">{model}</div> */}
-        </div>
-        <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary ring-1 ring-primary/20">
+    <div className="provider-card flex flex-col rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/8">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="text-base font-bold text-foreground">{name}</div>
+        <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-primary/20">
           {highlight}
         </span>
       </div>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+// ── Agent Profile Card ────────────────────────────────────────────────────────
+function AgentProfileCard({
+  codename,
+  role,
+  description,
+  icon,
+  color,
+}: {
+  codename: string;
+  role: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+}) {
+  return (
+    <div className="agent-profile-card group relative flex flex-col items-center text-center rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+      <div
+        className={cn(
+          'mb-4 flex h-16 w-16 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-background transition-transform duration-300 group-hover:scale-110',
+          color,
+        )}
+      >
+        {icon}
+      </div>
+      <h3 className="mb-1 font-mono text-lg font-extrabold tracking-wider text-foreground">
+        {codename}
+      </h3>
+      <p className="mb-2 text-xs font-bold uppercase tracking-widest text-primary">
+        {role}
+      </p>
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+// ── Mode Card ─────────────────────────────────────────────────────────────────
+function ModeCard({
+  icon,
+  title,
+  description,
+  accent,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  accent: string;
+}) {
+  return (
+    <div className="mode-card group relative flex flex-col items-center text-center rounded-xl border border-border bg-card p-8 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5">
+      <div
+        className={cn(
+          'mb-5 flex h-14 w-14 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
+          accent,
+        )}
+      >
+        {icon}
+      </div>
+      <h3 className="mb-2 text-xl font-bold text-foreground">{title}</h3>
       <p className="text-sm leading-relaxed text-muted-foreground">
         {description}
       </p>
@@ -294,7 +359,9 @@ export function LandingPage() {
   const processRef = useRef<HTMLDivElement>(null);
   const featuresRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
+  const agentsRef = useRef<HTMLDivElement>(null);
   const providersRef = useRef<HTMLDivElement>(null);
+  const modesRef = useRef<HTMLDivElement>(null);
   const riskRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
 
@@ -470,6 +537,72 @@ export function LandingPage() {
       });
     },
     { scope: providersRef },
+  );
+
+  // ─ Agents
+  useGSAP(
+    () => {
+      gsap.from(['.agents-eyebrow', '.agents-title', '.agents-sub'], {
+        opacity: 0,
+        y: 18,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: 'power2.out',
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: agentsRef.current,
+          start: 'top 85%',
+          once: true,
+        },
+      });
+      gsap.from('.agent-profile-card', {
+        opacity: 0,
+        y: 45,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: 'back.out(1.4)',
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: agentsRef.current,
+          start: 'top 80%',
+          once: true,
+        },
+      });
+    },
+    { scope: agentsRef },
+  );
+
+  // ─ Trading Modes
+  useGSAP(
+    () => {
+      gsap.from(['.modes-eyebrow', '.modes-title', '.modes-sub'], {
+        opacity: 0,
+        y: 18,
+        duration: 0.6,
+        stagger: 0.08,
+        ease: 'power2.out',
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: modesRef.current,
+          start: 'top 85%',
+          once: true,
+        },
+      });
+      gsap.from('.mode-card', {
+        opacity: 0,
+        y: 40,
+        duration: 0.7,
+        stagger: 0.15,
+        ease: 'back.out(1.4)',
+        immediateRender: false,
+        scrollTrigger: {
+          trigger: modesRef.current,
+          start: 'top 80%',
+          once: true,
+        },
+      });
+    },
+    { scope: modesRef },
   );
 
   // ─ Risk section
@@ -701,6 +834,124 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* ═══════════════════════════════════ SPECIALIZED AGENTS ══════════ */}
+      <section
+        ref={agentsRef}
+        className="relative border-t border-border/40 bg-muted/20 py-28 px-6 overflow-hidden"
+      >
+        <div className="pointer-events-none absolute -z-10 left-1/4 top-0 h-[350px] w-[500px] rounded-full bg-primary/6 blur-[120px]" />
+        <div className="pointer-events-none absolute -z-10 right-1/4 bottom-0 h-[300px] w-[400px] rounded-full bg-primary/4 blur-[100px]" />
+
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-16 text-center">
+            <p className="agents-eyebrow mb-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              {t('landing.agentsEyebrow')}
+            </p>
+            <h2 className="agents-title text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              {t('landing.agentsTitle')}
+            </h2>
+            <p className="agents-sub mx-auto mt-4 max-w-2xl text-muted-foreground">
+              {t('landing.agentsSub')}
+            </p>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <AgentProfileCard
+              codename={t('landing.agentNexus')}
+              role={t('landing.agentNexusRole')}
+              description={t('landing.agentNexusDesc')}
+              icon={<Brain className="h-7 w-7 text-cyan-400" />}
+              color="bg-cyan-500/10 ring-cyan-500/40"
+            />
+            <AgentProfileCard
+              codename={t('landing.agentForge')}
+              role={t('landing.agentForgeRole')}
+              description={t('landing.agentForgeDesc')}
+              icon={<Zap className="h-7 w-7 text-orange-400" />}
+              color="bg-orange-500/10 ring-orange-500/40"
+            />
+            <AgentProfileCard
+              codename={t('landing.agentSigma')}
+              role={t('landing.agentSigmaRole')}
+              description={t('landing.agentSigmaDesc')}
+              icon={<BarChart3 className="h-7 w-7 text-emerald-400" />}
+              color="bg-emerald-500/10 ring-emerald-500/40"
+            />
+            <AgentProfileCard
+              codename={t('landing.agentCipher')}
+              role={t('landing.agentCipherRole')}
+              description={t('landing.agentCipherDesc')}
+              icon={<Lock className="h-7 w-7 text-violet-400" />}
+              color="bg-violet-500/10 ring-violet-500/40"
+            />
+            <AgentProfileCard
+              codename={t('landing.agentAegis')}
+              role={t('landing.agentAegisRole')}
+              description={t('landing.agentAegisDesc')}
+              icon={<ShieldCheck className="h-7 w-7 text-amber-400" />}
+              color="bg-amber-500/10 ring-amber-500/40"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════ RISK & PROTECTION ══════════ */}
+      <section
+        ref={riskRef}
+        className="border-t border-border/40 bg-muted/20 py-24 px-6"
+      >
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-14 text-center">
+            <p className="risk-eyebrow mb-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              {t('landing.riskEyebrow')}
+            </p>
+            <h2 className="risk-title text-3xl font-bold tracking-tight sm:text-4xl">
+              {t('landing.riskTitle')}
+            </h2>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                icon: <ShieldCheck className="h-5 w-5" />,
+                title: t('landing.risk1Title'),
+                desc: t('landing.risk1Desc'),
+              },
+              {
+                icon: <Target className="h-5 w-5" />,
+                title: t('landing.risk2Title'),
+                desc: t('landing.risk2Desc'),
+              },
+              {
+                icon: <Lock className="h-5 w-5" />,
+                title: t('landing.risk3Title'),
+                desc: t('landing.risk3Desc'),
+              },
+              {
+                icon: <RefreshCw className="h-5 w-5" />,
+                title: t('landing.risk4Title'),
+                desc: t('landing.risk4Desc'),
+              },
+            ].map(({ icon, title, desc }) => (
+              <div
+                key={title}
+                className="risk-card rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+              >
+                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  {icon}
+                </div>
+                <h3 className="mb-1.5 text-sm font-bold text-foreground">
+                  {title}
+                </h3>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══════════════════════════════════════════ FEATURES ════════════ */}
       <section
         ref={featuresRef}
@@ -761,7 +1012,7 @@ export function LandingPage() {
         ref={providersRef}
         className="border-t border-border/40 bg-muted/20 py-24 px-6"
       >
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-6xl">
           <div className="mb-14 text-center">
             <p className="prov-eyebrow mb-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">
               {t('landing.aiEyebrow')}
@@ -774,82 +1025,80 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <ProviderCard
               name={t('landing.claude')}
-              model={t('landing.claudeModel')}
               description={t('landing.claudeDesc')}
               highlight={t('landing.claudeTag')}
             />
             <ProviderCard
               name={t('landing.openai')}
-              model={t('landing.openaiModel')}
               description={t('landing.openaiDesc')}
               highlight={t('landing.openaiTag')}
             />
             <ProviderCard
               name={t('landing.groq')}
-              model={t('landing.groqModel')}
               description={t('landing.groqDesc')}
               highlight={t('landing.groqTag')}
+            />
+            <ProviderCard
+              name={t('landing.gemini')}
+              description={t('landing.geminiDesc')}
+              highlight={t('landing.geminiTag')}
+            />
+            <ProviderCard
+              name={t('landing.mistral')}
+              description={t('landing.mistralDesc')}
+              highlight={t('landing.mistralTag')}
+            />
+            <ProviderCard
+              name={t('landing.together')}
+              description={t('landing.togetherDesc')}
+              highlight={t('landing.togetherTag')}
             />
           </div>
         </div>
       </section>
 
-      {/* ════════════════════════════════════ RISK & PROTECTION ══════════ */}
+      {/* ═══════════════════════════════════════ TRADING MODES ═══════════ */}
       <section
-        ref={riskRef}
-        className="border-t border-border/40 bg-background py-24 px-6"
+        ref={modesRef}
+        className="bg-background relative border-t border-border/40 py-28 px-6 overflow-hidden"
       >
+        <div className="pointer-events-none absolute -z-10 left-1/2 top-1/2 h-[350px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/6 blur-[110px]" />
+
         <div className="mx-auto max-w-5xl">
-          <div className="mb-14 text-center">
-            <p className="risk-eyebrow mb-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              {t('landing.riskEyebrow')}
+          <div className="mb-16 text-center">
+            <p className="modes-eyebrow mb-3 font-mono text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              {t('landing.modesEyebrow')}
             </p>
-            <h2 className="risk-title text-3xl font-bold tracking-tight sm:text-4xl">
-              {t('landing.riskTitle')}
+            <h2 className="modes-title text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+              {t('landing.modesTitle')}
             </h2>
+            <p className="modes-sub mx-auto mt-4 max-w-2xl text-muted-foreground">
+              {t('landing.modesSub')}
+            </p>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: <ShieldCheck className="h-5 w-5" />,
-                title: t('landing.risk1Title'),
-                desc: t('landing.risk1Desc'),
-              },
-              {
-                icon: <Target className="h-5 w-5" />,
-                title: t('landing.risk2Title'),
-                desc: t('landing.risk2Desc'),
-              },
-              {
-                icon: <Lock className="h-5 w-5" />,
-                title: t('landing.risk3Title'),
-                desc: t('landing.risk3Desc'),
-              },
-              {
-                icon: <RefreshCw className="h-5 w-5" />,
-                title: t('landing.risk4Title'),
-                desc: t('landing.risk4Desc'),
-              },
-            ].map(({ icon, title, desc }) => (
-              <div
-                key={title}
-                className="risk-card rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
-              >
-                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  {icon}
-                </div>
-                <h3 className="mb-1.5 text-sm font-bold text-foreground">
-                  {title}
-                </h3>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {desc}
-                </p>
-              </div>
-            ))}
+          <div className="grid gap-6 sm:grid-cols-3">
+            <ModeCard
+              icon={<Play className="h-7 w-7 text-emerald-400" />}
+              title={t('landing.modeSandbox')}
+              description={t('landing.modeSandboxDesc')}
+              accent="bg-emerald-500/10"
+            />
+            <ModeCard
+              icon={<FlaskConical className="h-7 w-7 text-blue-400" />}
+              title={t('landing.modeTestnet')}
+              description={t('landing.modeTestnetDesc')}
+              accent="bg-blue-500/10"
+            />
+            <ModeCard
+              icon={<Radio className="h-7 w-7 text-amber-400" />}
+              title={t('landing.modeLive')}
+              description={t('landing.modeLiveDesc')}
+              accent="bg-amber-500/10"
+            />
           </div>
         </div>
       </section>
@@ -857,7 +1106,7 @@ export function LandingPage() {
       {/* ══════════════════════════════════════════════ CTA ══════════════ */}
       <section
         ref={ctaRef}
-        className="relative border-t border-border/40 bg-muted/20 py-32 px-6 overflow-hidden"
+        className="relative border-t border-border/40 bg-muted/30 py-32 px-6 overflow-hidden"
       >
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute left-1/2 top-1/2 h-[450px] w-[750px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-[110px]" />

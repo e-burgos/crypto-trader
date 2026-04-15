@@ -31,6 +31,10 @@ export interface NewsConfig {
   onlySummary: boolean;
   botEnabled: boolean;
   newsWeight: number;
+  primaryProvider: string | null;
+  primaryModel: string | null;
+  fallbackProvider: string | null;
+  fallbackModel: string | null;
   updatedAt: string;
 }
 
@@ -110,7 +114,6 @@ export function useOhlcv(asset: string, interval: string, limit = 200) {
       }
     },
     staleTime: 30_000,
-    refetchInterval: 60_000,
   });
 }
 

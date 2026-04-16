@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
 import { CustomSelect, type SelectOption } from '../ui/custom-select';
-import { Cpu, Loader2 } from 'lucide-react';
+import { Cpu, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 interface DynamicModelSelectProps {
@@ -21,8 +22,15 @@ export function DynamicModelSelect({
   label,
   className = '',
 }: DynamicModelSelectProps) {
+  const { t } = useTranslation();
   const { data: models, isLoading, isError } = useLLMProviderModels(provider);
   const [showAll, setShowAll] = useState(false);
+
+  const autoOption: SelectOption = {
+    value: '',
+    label: t('config.stepper.autoSelect'),
+    icon: <Sparkles className="h-3.5 w-3.5 text-primary" />,
+  };
 
   // Build options with a _recommended flag for filtering
   const allModels = !isLoading && !isError && models?.length ? models : null;
@@ -47,11 +55,12 @@ export function DynamicModelSelect({
       }));
 
   const hasRecommended = allOptions.some((o) => o._recommended);
-  const options: SelectOption[] = showAll
+  const filteredModels: SelectOption[] = showAll
     ? allOptions
     : allOptions.filter(
         (o) => !o.disabled && (!hasRecommended || o._recommended),
       );
+  const options: SelectOption[] = [autoOption, ...filteredModels];
 
   if (isLoading) {
     return (

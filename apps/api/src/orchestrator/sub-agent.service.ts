@@ -313,9 +313,7 @@ export class SubAgentService {
     });
 
     if (allCreds.length > 0) {
-      const activeProviders = allCreds.map(
-        (c) => c.provider as LLMProvider,
-      );
+      const activeProviders = allCreds.map((c) => c.provider as LLMProvider);
       const useCase = preferCheap ? 'CLASSIFY' : 'TRADING';
       const suggested = suggestModel(activeProviders, useCase, preferCheap);
 
@@ -327,11 +325,7 @@ export class SubAgentService {
           // otherwise use the ranking's suggested model
           const model = cred.selectedModel || suggested.model;
           const provider = suggested.provider as unknown as LLMProvider;
-          const client = createLLMProvider(
-            provider,
-            apiKey,
-            model,
-          );
+          const client = createLLMProvider(provider, apiKey, model);
           return {
             client,
             provider,

@@ -233,10 +233,11 @@ export function SettingsPage() {
   }
 
   function getLLMForm(provider: string) {
+    const saved = getLLMKeyStatus(provider);
     return (
       llmForms[provider] ?? {
         apiKey: '',
-        model: LLM_PROVIDERS.find((p) => p.value === provider)?.models[0] ?? '',
+        model: saved?.selectedModel ?? '',
       }
     );
   }
@@ -854,7 +855,7 @@ export function SettingsPage() {
                                 {
                                   provider: provider.value,
                                   apiKey: form.apiKey,
-                                  selectedModel: form.model,
+                                  selectedModel: form.model || null,
                                 },
                                 {
                                   onSuccess: () => {
@@ -862,7 +863,7 @@ export function SettingsPage() {
                                       ...f,
                                       [provider.value]: {
                                         apiKey: '',
-                                        model: provider.models[0],
+                                        model: '',
                                       },
                                     }));
                                     resetLLMTest();

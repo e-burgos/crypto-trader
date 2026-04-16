@@ -151,7 +151,7 @@ export function useSetLLMKey() {
     mutationFn: (data: {
       provider: string;
       apiKey: string;
-      selectedModel: string;
+      selectedModel: string | null;
     }) => api.post('/users/me/llm-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });

@@ -9,6 +9,7 @@ export interface LLMModel {
   inputPricePer1M?: number;
   outputPricePer1M?: number;
   deprecated?: boolean;
+  recommended?: boolean;
 }
 
 export interface LLMUsageByModel {

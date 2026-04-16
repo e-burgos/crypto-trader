@@ -21,7 +21,13 @@ import i18n from '../lib/i18n';
 
 // ── Step Types ────────────────────────────────────────────────────────────────
 type TradingMode = 'LIVE' | 'SANDBOX' | 'TESTNET';
-type LLMProvider = 'CLAUDE' | 'OPENAI' | 'GROQ' | 'GEMINI' | 'MISTRAL' | 'TOGETHER';
+type LLMProvider =
+  | 'CLAUDE'
+  | 'OPENAI'
+  | 'GROQ'
+  | 'GEMINI'
+  | 'MISTRAL'
+  | 'TOGETHER';
 
 interface OnboardingState {
   // Step 1: Binance Keys (Live)
@@ -263,7 +269,9 @@ function StepLLM({
     LLM_PROVIDERS[0];
 
   const currentKey = state.llmApiKeys[state.llmProvider] ?? '';
-  const filledCount = Object.values(state.llmApiKeys).filter((k) => k.length > 0).length;
+  const filledCount = Object.values(state.llmApiKeys).filter(
+    (k) => k.length > 0,
+  ).length;
 
   return (
     <div className="space-y-4">
@@ -273,7 +281,7 @@ function StepLLM({
 
       <div className="grid grid-cols-3 gap-3">
         {LLM_PROVIDERS.map((p) => {
-          const hasKey = !!(state.llmApiKeys[p.value]?.length);
+          const hasKey = !!state.llmApiKeys[p.value]?.length;
           return (
             <button
               key={p.value}
@@ -458,7 +466,9 @@ function StepMode({
         <div className="space-y-3">
           <div>
             <label className="mb-1.5 block text-sm font-medium">
-              {t('onboarding.initialCapitalUsdt', { defaultValue: 'Capital inicial (USDT)' })}
+              {t('onboarding.initialCapitalUsdt', {
+                defaultValue: 'Capital inicial (USDT)',
+              })}
             </label>
             <input
               type="number"
@@ -472,7 +482,9 @@ function StepMode({
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium">
-              {t('onboarding.initialCapitalUsdc', { defaultValue: 'Capital inicial (USDC)' })}
+              {t('onboarding.initialCapitalUsdc', {
+                defaultValue: 'Capital inicial (USDC)',
+              })}
             </label>
             <input
               type="number"
@@ -541,7 +553,8 @@ export function OnboardingPage() {
       return (
         state.skipBinance || (!!state.binanceApiKey && !!state.binanceApiSecret)
       );
-    if (step === 1) return Object.values(state.llmApiKeys).some((k) => k.length > 0);
+    if (step === 1)
+      return Object.values(state.llmApiKeys).some((k) => k.length > 0);
     if (state.mode === 'SANDBOX')
       return !!state.initialCapital && Number(state.initialCapital) >= 10;
     return true; // LIVE mode — capital field not shown

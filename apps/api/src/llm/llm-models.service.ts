@@ -17,6 +17,7 @@ interface ProviderModel {
   maxOutput?: number;
   pricing?: { input: number; output: number };
   deprecated?: boolean;
+  recommended?: boolean;
 }
 
 interface ProviderModelsResponse {
@@ -115,6 +116,7 @@ export class LLMModelsService {
         ? { input: pricing.input, output: pricing.output }
         : undefined,
       deprecated: pricing?.deprecated,
+      recommended: pricing?.recommended ?? false,
     };
   }
 

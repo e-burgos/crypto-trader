@@ -336,9 +336,6 @@ export function NewsConfigPanel({
             <div className="space-y-3">
               {/* Primary */}
               <div>
-                <p className="text-[11px] text-muted-foreground mb-1.5">
-                  {t('news.primaryProvider')}
-                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <CustomSelect
                     options={[
@@ -347,12 +344,14 @@ export function NewsConfigPanel({
                     ]}
                     value={primaryProvider}
                     onChange={(v) => handleProviderChange('primary', v)}
+                    label={t('news.primaryProvider')}
                   />
                   {primaryProvider && (
                     <DynamicModelSelect
                       provider={primaryProvider}
                       value={primaryModel}
                       onChange={setPrimaryModel}
+                      label={t('settings.model')}
                       fallbackModels={
                         LLM_PROVIDERS.find(
                           (p) => p.value === primaryProvider,
@@ -365,9 +364,6 @@ export function NewsConfigPanel({
 
               {/* Fallback */}
               <div>
-                <p className="text-[11px] text-muted-foreground mb-1.5">
-                  {t('news.fallbackProvider')}
-                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <CustomSelect
                     options={[
@@ -376,12 +372,14 @@ export function NewsConfigPanel({
                     ]}
                     value={fallbackProvider}
                     onChange={(v) => handleProviderChange('fallback', v)}
+                    label={t('news.fallbackProvider')}
                   />
                   {fallbackProvider && (
                     <DynamicModelSelect
                       provider={fallbackProvider}
                       value={fallbackModel}
                       onChange={setFallbackModel}
+                      label={t('settings.model')}
                       fallbackModels={
                         LLM_PROVIDERS.find(
                           (p) => p.value === fallbackProvider,

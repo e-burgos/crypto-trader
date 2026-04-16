@@ -36,6 +36,7 @@ import {
   useTestTestnetBinanceConnection,
   useSetLLMKey,
   useDeleteLLMKey,
+  useUpdateLLMModel,
   useUpdateProfile,
   useTestBinanceConnection,
   useTestLLMKey,
@@ -166,6 +167,7 @@ export function SettingsPage() {
   const { data: llmKeys = [] } = useLLMKeys();
   const { mutate: saveLLMKey, isPending: savingLLM } = useSetLLMKey();
   const { mutate: deleteLLMKey } = useDeleteLLMKey();
+  const { mutate: updateLLMModel } = useUpdateLLMModel();
   const [llmForms, setLlmForms] = useState<
     Record<string, { apiKey: string; model: string }>
   >({});
@@ -825,15 +827,19 @@ export function SettingsPage() {
                                 provider={provider.value}
                                 value={form.model}
                                 label={t('settings.model')}
-                                onChange={(model) =>
+                                onChange={(model) => {
                                   setLlmForms((f) => ({
                                     ...f,
                                     [provider.value]: {
                                       ...(f[provider.value] ?? { apiKey: '' }),
                                       model,
                                     },
-                                  }))
-                                }
+                                  }));
+                                  updateLLMModel({
+                                    provider: provider.value,
+                                    selectedModel: model || null,
+                                  });
+                                }}
                                 fallbackModels={provider.models}
                               />
                             </div>

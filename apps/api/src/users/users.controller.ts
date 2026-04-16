@@ -26,6 +26,7 @@ import {
   BinanceKeyDto,
   SetTestnetBinanceKeysDto,
   LLMKeyDto,
+  LLMModelDto,
   NewsApiKeyDto,
   UpdateUserStatusDto,
   UpdateOperationModeDto,
@@ -187,6 +188,20 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Clave LLM guardada' })
   setLLMKey(@CurrentUser() user: RequestUser, @Body() dto: LLMKeyDto) {
     return this.usersService.setLLMKey(user.userId, dto);
+  }
+
+  @Patch('users/me/llm-keys/model')
+  @ApiOperation({ summary: 'Actualizar modelo seleccionado de un proveedor LLM' })
+  @ApiResponse({ status: 200, description: 'Modelo actualizado' })
+  updateLLMModel(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: LLMModelDto,
+  ) {
+    return this.usersService.updateLLMModel(
+      user.userId,
+      dto.provider,
+      dto.selectedModel ?? null,
+    );
   }
 
   @Delete('users/me/llm-keys/:provider')

@@ -105,6 +105,24 @@ export class LLMKeyDto {
   selectedModel!: string;
 }
 
+export class LLMModelDto {
+  @ApiProperty({
+    enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL', 'TOGETHER'],
+    example: 'OPENAI',
+  })
+  @IsString()
+  provider!: string;
+
+  @ApiProperty({
+    example: 'gpt-4o',
+    description: 'Modelo seleccionado (null para auto)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  selectedModel?: string | null;
+}
+
 export class NewsApiKeyDto {
   @ApiProperty({ enum: ['CRYPTOPANIC'], example: 'CRYPTOPANIC' })
   @IsString()

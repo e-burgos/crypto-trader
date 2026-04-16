@@ -164,6 +164,17 @@ export function useSetLLMKey() {
   });
 }
 
+export function useUpdateLLMModel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { provider: string; selectedModel: string | null }) =>
+      api.patch('/users/me/llm-keys/model', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+    },
+  });
+}
+
 export function useDeleteLLMKey() {
   const qc = useQueryClient();
   return useMutation({

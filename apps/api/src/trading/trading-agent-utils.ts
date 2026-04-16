@@ -47,7 +47,9 @@ export function resolveTradingOverride(config: {
   fallbackModel?: string | null;
 }): ResolvedLLM | undefined {
   if (config.primaryProvider) {
-    const model = config.primaryModel || suggestModel([config.primaryProvider], 'TRADING', false)?.model;
+    const model =
+      config.primaryModel ||
+      suggestModel([config.primaryProvider], 'TRADING', false)?.model;
     if (model) {
       return {
         provider: config.primaryProvider,
@@ -56,7 +58,9 @@ export function resolveTradingOverride(config: {
     }
   }
   if (config.fallbackProvider) {
-    const model = config.fallbackModel || suggestModel([config.fallbackProvider], 'TRADING', false)?.model;
+    const model =
+      config.fallbackModel ||
+      suggestModel([config.fallbackProvider], 'TRADING', false)?.model;
     if (model) {
       return {
         provider: config.fallbackProvider,

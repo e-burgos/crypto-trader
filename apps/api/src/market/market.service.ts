@@ -298,7 +298,10 @@ export class MarketService {
         where: { userId, provider: cfg.primaryProvider, isActive: true },
       });
       if (cred) {
-        const model = cfg.primaryModel || cred.selectedModel || suggestModel([cfg.primaryProvider], 'NEWS', true)?.model;
+        const model =
+          cfg.primaryModel ||
+          cred.selectedModel ||
+          suggestModel([cfg.primaryProvider], 'NEWS', true)?.model;
         if (model) {
           return {
             provider: cfg.primaryProvider,
@@ -315,7 +318,10 @@ export class MarketService {
         where: { userId, provider: cfg.fallbackProvider, isActive: true },
       });
       if (cred) {
-        const model = cfg.fallbackModel || cred.selectedModel || suggestModel([cfg.fallbackProvider], 'NEWS', true)?.model;
+        const model =
+          cfg.fallbackModel ||
+          cred.selectedModel ||
+          suggestModel([cfg.fallbackProvider], 'NEWS', true)?.model;
         if (model) {
           return {
             provider: cfg.fallbackProvider,

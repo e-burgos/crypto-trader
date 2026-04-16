@@ -62,7 +62,9 @@ export function DynamicModelSelect({
       value &&
       allOptions.some((o) => o.value === value) &&
       hasRecommended &&
-      !allOptions.some((o) => o.value === value && o._recommended && !o.disabled)
+      !allOptions.some(
+        (o) => o.value === value && o._recommended && !o.disabled,
+      )
     ) {
       setShowAll(true);
     }

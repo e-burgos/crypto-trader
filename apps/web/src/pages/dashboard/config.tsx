@@ -997,6 +997,7 @@ function NewAgentStepperModal({
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <CustomSelect
+                        label={t('config.stepper.primaryLabel')}
                         options={[
                           { value: '', label: t('config.stepper.autoSelect') },
                           ...activeProviderOptions,
@@ -1033,6 +1034,7 @@ function NewAgentStepperModal({
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <CustomSelect
+                        label={t('config.stepper.fallbackLabel')}
                         options={[
                           { value: '', label: t('config.stepper.noFallback') },
                           ...activeProviderOptions,

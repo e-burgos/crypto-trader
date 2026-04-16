@@ -28,6 +28,14 @@ function useInternetStatus(): ConnStatus {
     }
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Double-check with a real fetch in case navigator.onLine is wrong
+    if (!navigator.onLine) {
+      fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' })
+        .then(() => setOnline(true))
+        .catch(() => {});
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -95,6 +103,10 @@ export function ConnectionStatusDropdown() {
     isLoading: apiLoading,
     isError: apiError,
   } = useApiPing();
+
+  // If the API responds, internet is definitely working regardless of navigator.onLine
+  const effectiveInternetStatus: ConnStatus =
+    apiPing?.status === 'ok' ? 'ok' : internetStatus;
   const { data: binance, isLoading: binanceLoading } = useBinanceKeyStatus();
   const { data: testnet, isLoading: testnetLoading } =
     useTestnetBinanceKeyStatus();
@@ -131,7 +143,7 @@ export function ConnectionStatusDropdown() {
       id: 'internet',
       label: t('connections.internet'),
       sublabel: t('connections.internetSub'),
-      status: internetStatus,
+      status: effectiveInternetStatus,
       href: '/dashboard',
     },
     {

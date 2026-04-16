@@ -191,12 +191,11 @@ export class UsersController {
   }
 
   @Patch('users/me/llm-keys/model')
-  @ApiOperation({ summary: 'Actualizar modelo seleccionado de un proveedor LLM' })
+  @ApiOperation({
+    summary: 'Actualizar modelo seleccionado de un proveedor LLM',
+  })
   @ApiResponse({ status: 200, description: 'Modelo actualizado' })
-  updateLLMModel(
-    @CurrentUser() user: RequestUser,
-    @Body() dto: LLMModelDto,
-  ) {
+  updateLLMModel(@CurrentUser() user: RequestUser, @Body() dto: LLMModelDto) {
     return this.usersService.updateLLMModel(
       user.userId,
       dto.provider,

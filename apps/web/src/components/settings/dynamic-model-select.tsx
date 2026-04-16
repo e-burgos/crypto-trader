@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
 import { CustomSelect, type SelectOption } from '../ui/custom-select';
@@ -55,6 +55,19 @@ export function DynamicModelSelect({
       }));
 
   const hasRecommended = allOptions.some((o) => o._recommended);
+
+  // Auto-expand to "Todos" if the saved model exists but isn't recommended
+  useEffect(() => {
+    if (
+      value &&
+      allOptions.some((o) => o.value === value) &&
+      hasRecommended &&
+      !allOptions.some((o) => o.value === value && o._recommended && !o.disabled)
+    ) {
+      setShowAll(true);
+    }
+  }, [value, allModels]);
+
   const filteredModels: SelectOption[] = showAll
     ? allOptions
     : allOptions.filter(

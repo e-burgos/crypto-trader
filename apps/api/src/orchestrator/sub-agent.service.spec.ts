@@ -15,6 +15,18 @@ jest.mock('../users/utils/encryption.util', () => ({
   decrypt: jest.fn(() => 'decrypted-api-key'),
 }));
 
+jest.mock('../llm/model-ranking', () => ({
+  suggestModel: jest.fn((providers, useCase, preferCheap) => {
+    if (providers.includes('GROQ')) {
+      return { provider: 'GROQ', model: 'llama-3.3-70b-versatile' };
+    }
+    if (providers.length > 0) {
+      return { provider: providers[0], model: 'some-model' };
+    }
+    return null;
+  }),
+}));
+
 const mockCredential = {
   provider: 'GROQ',
   apiKeyEncrypted: 'enc-key',
@@ -25,6 +37,7 @@ const mockCredential = {
 const mockPrismaService = {
   lLMCredential: {
     findFirst: jest.fn(),
+    findMany: jest.fn(),
   },
 };
 
@@ -45,15 +58,15 @@ describe('SubAgentService', () => {
 
   describe('getProvider', () => {
     it('should prefer Groq when preferCheap=true', async () => {
-      mockPrismaService.lLMCredential.findFirst.mockResolvedValue(
+      mockPrismaService.lLMCredential.findMany.mockResolvedValue([
         mockCredential,
-      );
+      ]);
 
       const result = await service.getProvider('user-1', true);
 
-      expect(mockPrismaService.lLMCredential.findFirst).toHaveBeenCalledWith(
+      expect(mockPrismaService.lLMCredential.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ provider: 'GROQ' }),
+          where: expect.objectContaining({ userId: 'user-1', isActive: true }),
         }),
       );
       expect(result.client).toBe(mockLLMProvider);
@@ -62,17 +75,19 @@ describe('SubAgentService', () => {
     });
 
     it('should fallback to any active credential if Groq not available', async () => {
-      mockPrismaService.lLMCredential.findFirst
-        .mockResolvedValueOnce(null) // no GROQ
-        .mockResolvedValueOnce(null) // no OPENAI
-        .mockResolvedValueOnce(mockCredential); // fallback to latest
+      const openaiCred = {
+        ...mockCredential,
+        provider: 'OPENAI',
+        selectedModel: 'gpt-4o',
+      };
+      mockPrismaService.lLMCredential.findMany.mockResolvedValue([openaiCred]);
 
       const result = await service.getProvider('user-1', true);
       expect(result.client).toBe(mockLLMProvider);
     });
 
     it('should throw if no active credentials found', async () => {
-      mockPrismaService.lLMCredential.findFirst.mockResolvedValue(null);
+      mockPrismaService.lLMCredential.findMany.mockResolvedValue([]);
 
       await expect(service.getProvider('user-1')).rejects.toThrow(
         'No active LLM credentials',
@@ -82,9 +97,9 @@ describe('SubAgentService', () => {
 
   describe('call', () => {
     beforeEach(() => {
-      mockPrismaService.lLMCredential.findFirst.mockResolvedValue(
+      mockPrismaService.lLMCredential.findMany.mockResolvedValue([
         mockCredential,
-      );
+      ]);
     });
 
     it('should call LLM with correct system prompt for market agent', async () => {

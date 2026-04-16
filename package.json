@@ -132,6 +132,7 @@
     "jsonwebtoken": "^9.0.3",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^1.7.0",
+    "multer": "^2.1.1",
     "openai": "^6.33.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

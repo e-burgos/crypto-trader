@@ -15,6 +15,7 @@ interface CustomSelectProps {
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  labelExtra?: React.ReactNode;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -25,6 +26,7 @@ export function CustomSelect({
   value,
   onChange,
   label,
+  labelExtra,
   placeholder = 'Select...',
   className,
   disabled,
@@ -45,10 +47,13 @@ export function CustomSelect({
 
   return (
     <div className={cn('space-y-1.5', className)} ref={ref}>
-      {label && (
-        <span className="block text-sm font-medium text-foreground">
-          {label}
-        </span>
+      {(label || labelExtra) && (
+        <div className="flex items-center justify-between">
+          {label && (
+            <span className="text-sm font-medium text-foreground">{label}</span>
+          )}
+          {labelExtra}
+        </div>
       )}
       <div className="relative">
         <button

@@ -1,5 +1,12 @@
 import { useRef, useState } from 'react';
-import { BotMessageSquare, Maximize2, X, Sparkles, Plus, Settings } from 'lucide-react';
+import {
+  BotMessageSquare,
+  Maximize2,
+  X,
+  Sparkles,
+  Plus,
+  Settings,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useChatStore } from '../../store/chat.store';
 import {

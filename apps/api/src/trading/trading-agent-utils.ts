@@ -1,4 +1,5 @@
 import { LLMProvider } from '../../generated/prisma/enums';
+import { suggestModel } from '../llm/model-ranking';
 
 const RISK_PROFILES: Record<string, string> = {
   CONSERVATIVE: 'Safe',
@@ -45,17 +46,27 @@ export function resolveTradingOverride(config: {
   fallbackProvider?: LLMProvider | null;
   fallbackModel?: string | null;
 }): ResolvedLLM | undefined {
-  if (config.primaryProvider && config.primaryModel) {
-    return {
-      provider: config.primaryProvider,
-      model: config.primaryModel,
-    };
+  if (config.primaryProvider) {
+    const model =
+      config.primaryModel ||
+      suggestModel([config.primaryProvider], 'TRADING', false)?.model;
+    if (model) {
+      return {
+        provider: config.primaryProvider,
+        model,
+      };
+    }
   }
-  if (config.fallbackProvider && config.fallbackModel) {
-    return {
-      provider: config.fallbackProvider,
-      model: config.fallbackModel,
-    };
+  if (config.fallbackProvider) {
+    const model =
+      config.fallbackModel ||
+      suggestModel([config.fallbackProvider], 'TRADING', false)?.model;
+    if (model) {
+      return {
+        provider: config.fallbackProvider,
+        model,
+      };
+    }
   }
   return undefined;
 }

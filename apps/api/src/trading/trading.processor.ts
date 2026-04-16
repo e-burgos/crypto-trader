@@ -537,6 +537,7 @@ export class TradingProcessor {
       // These are transient — retry instead of stopping the agent.
       const isLlmError =
         message.includes('Request failed with status code 429') ||
+        message.includes('Request failed with status code 451') ||
         message.includes('Request failed with status code 500') ||
         message.includes('Request failed with status code 502') ||
         message.includes('Request failed with status code 503') ||

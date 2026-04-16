@@ -293,30 +293,42 @@ export class MarketService {
     const cfg = await this.getNewsConfig(userId);
 
     // 1. Primary configured
-    if (cfg.primaryProvider && cfg.primaryModel) {
+    if (cfg.primaryProvider) {
       const cred = await this.prisma.lLMCredential.findFirst({
         where: { userId, provider: cfg.primaryProvider, isActive: true },
       });
       if (cred) {
-        return {
-          provider: cfg.primaryProvider,
-          model: cfg.primaryModel,
-          apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-        };
+        const model =
+          cfg.primaryModel ||
+          cred.selectedModel ||
+          suggestModel([cfg.primaryProvider], 'NEWS', true)?.model;
+        if (model) {
+          return {
+            provider: cfg.primaryProvider,
+            model,
+            apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+          };
+        }
       }
     }
 
     // 2. Fallback configured
-    if (cfg.fallbackProvider && cfg.fallbackModel) {
+    if (cfg.fallbackProvider) {
       const cred = await this.prisma.lLMCredential.findFirst({
         where: { userId, provider: cfg.fallbackProvider, isActive: true },
       });
       if (cred) {
-        return {
-          provider: cfg.fallbackProvider,
-          model: cfg.fallbackModel,
-          apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-        };
+        const model =
+          cfg.fallbackModel ||
+          cred.selectedModel ||
+          suggestModel([cfg.fallbackProvider], 'NEWS', true)?.model;
+        if (model) {
+          return {
+            provider: cfg.fallbackProvider,
+            model,
+            apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+          };
+        }
       }
     }
 

@@ -9,6 +9,7 @@ import { RagService } from './rag.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
 import { LLMSource } from '../../generated/prisma/enums';
+import { suggestModel } from '../llm/model-ranking';
 
 export type SubAgentId =
   | 'platform'
@@ -271,8 +272,10 @@ export class SubAgentService {
 
   /**
    * Get an LLMProviderClient from the user's active credentials.
-   * If preferCheap=true, prefers Groq (cheapest); otherwise uses most recent active cred.
-   * Returns the client plus provider/model metadata for usage logging.
+   * Resolution order:
+   *   1. Explicit override (from agent config primaryProvider/Model)
+   *   2. suggestModel() from ranking (uses selectedModel from credential as default)
+   *   3. Fallback: most recent active credential with its selectedModel
    */
   async getProvider(
     userId: string,
@@ -283,11 +286,9 @@ export class SubAgentService {
     provider: LLMProvider;
     model: string;
   }> {
-    let cred = null;
-
-    // If explicit override, look for that provider's credential
+    // 1. Explicit override from agent config
     if (override) {
-      cred = await this.prisma.lLMCredential.findFirst({
+      const cred = await this.prisma.lLMCredential.findFirst({
         where: { userId, provider: override.provider as any, isActive: true },
       });
       if (cred) {
@@ -303,43 +304,53 @@ export class SubAgentService {
           model: override.model,
         };
       }
-      // If override provider not available, fall through to default resolution
+      // Override provider not available — fall through to auto-selection
     }
 
-    if (preferCheap) {
-      cred = await this.prisma.lLMCredential.findFirst({
-        where: { userId, provider: LLMProvider.GROQ, isActive: true },
-      });
-      if (!cred) {
-        cred = await this.prisma.lLMCredential.findFirst({
-          where: { userId, provider: LLMProvider.OPENAI, isActive: true },
-        });
+    // 2. Auto-selection via model ranking
+    const allCreds = await this.prisma.lLMCredential.findMany({
+      where: { userId, isActive: true },
+    });
+
+    if (allCreds.length > 0) {
+      const activeProviders = allCreds.map((c) => c.provider as LLMProvider);
+      const useCase = preferCheap ? 'CLASSIFY' : 'TRADING';
+      const suggested = suggestModel(activeProviders, useCase, preferCheap);
+
+      if (suggested) {
+        const cred = allCreds.find((c) => c.provider === suggested.provider);
+        if (cred) {
+          const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+          // Use the user's selectedModel if it matches the suggested provider,
+          // otherwise use the ranking's suggested model
+          const model = cred.selectedModel || suggested.model;
+          const provider = suggested.provider as unknown as LLMProvider;
+          const client = createLLMProvider(provider, apiKey, model);
+          return {
+            client,
+            provider,
+            model,
+          };
+        }
       }
-    }
 
-    if (!cred) {
-      cred = await this.prisma.lLMCredential.findFirst({
-        where: { userId, isActive: true },
-        orderBy: { createdAt: 'desc' },
-      });
-    }
-
-    if (!cred) {
-      throw new Error(
-        `No active LLM credentials for user ${userId}. Configure them in Settings.`,
+      // 3. Fallback: first active credential with its selectedModel
+      const cred = allCreds[0];
+      const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
+      const client = createLLMProvider(
+        cred.provider as LLMProvider,
+        apiKey,
+        cred.selectedModel,
       );
+      return {
+        client,
+        provider: cred.provider as LLMProvider,
+        model: cred.selectedModel ?? client.name,
+      };
     }
 
-    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-    const client = createLLMProvider(
-      cred.provider as LLMProvider,
-      apiKey,
-      cred.selectedModel,
+    throw new Error(
+      `No active LLM credentials for user ${userId}. Configure them in Settings.`,
     );
-    return {
-      client,
-      provider: cred.provider as LLMProvider,
-      model: cred.selectedModel ?? client.name,
-    };
   }
 }

@@ -92,11 +92,14 @@ export function DynamicModelSelect({
     </button>
   );
 
+  // If the current value isn't among the visible options, fall back to auto
+  const effectiveValue = options.some((o) => o.value === value) ? value : '';
+
   return (
     <div className={className}>
       <CustomSelect
         options={options}
-        value={value}
+        value={effectiveValue}
         onChange={onChange}
         label={label}
         labelExtra={badgeButton}

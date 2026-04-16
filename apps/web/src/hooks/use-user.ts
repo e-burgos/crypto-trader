@@ -151,7 +151,7 @@ export function useSetLLMKey() {
     mutationFn: (data: {
       provider: string;
       apiKey: string;
-      selectedModel: string;
+      selectedModel: string | null;
     }) => api.post('/users/me/llm-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
@@ -161,6 +161,17 @@ export function useSetLLMKey() {
     },
     onError: (err: { message?: string }) =>
       toast.error(err?.message || 'Error al guardar la clave'),
+  });
+}
+
+export function useUpdateLLMModel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { provider: string; selectedModel: string | null }) =>
+      api.patch('/users/me/llm-keys/model', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+    },
   });
 }
 

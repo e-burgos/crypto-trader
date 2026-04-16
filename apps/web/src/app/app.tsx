@@ -150,6 +150,7 @@ export function App() {
               <Route path="agents" element={<AdminAgentsPage />} />
             </Route>
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </ThemeProvider>
     </QueryClientProvider>

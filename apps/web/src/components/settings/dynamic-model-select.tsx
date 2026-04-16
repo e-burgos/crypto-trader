@@ -1,18 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
 import { CustomSelect, type SelectOption } from '../ui/custom-select';
-import { Cpu, Loader2 } from 'lucide-react';
+import { Cpu, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-/** Models curated for crypto-trading / financial analysis per provider */
-const RECOMMENDED_MODELS: Record<string, string[]> = {
-  CLAUDE: ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-opus-4-5'],
-  OPENAI: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
-  GROQ: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
-  GEMINI: ['gemini-2.5-flash', 'gemini-2.5-pro'],
-  MISTRAL: ['mistral-small-latest', 'mistral-medium-latest', 'mistral-large-latest'],
-  TOGETHER: ['meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
-};
 
 interface DynamicModelSelectProps {
   provider: string;
@@ -31,35 +22,60 @@ export function DynamicModelSelect({
   label,
   className = '',
 }: DynamicModelSelectProps) {
+  const { t } = useTranslation();
   const { data: models, isLoading, isError } = useLLMProviderModels(provider);
   const [showAll, setShowAll] = useState(false);
-  const recommended = RECOMMENDED_MODELS[provider] ?? [];
 
-  const allOptions: SelectOption[] =
-    !isLoading && !isError && models?.length
-      ? models.map((m: LLMModel) => ({
-          value: m.id,
-          label: m.deprecated
-            ? `${m.label ?? m.id} (deprecated)`
-            : (m.label ?? m.id),
-          description: m.contextWindow
-            ? `${(m.contextWindow / 1000).toFixed(0)}K context`
-            : undefined,
-          icon: <Cpu className="h-3.5 w-3.5 text-muted-foreground" />,
-          disabled: m.deprecated,
-        }))
-      : fallbackModels.map((m) => ({
-          value: m,
-          label: m,
-          icon: <Cpu className="h-3.5 w-3.5 text-muted-foreground" />,
-        }));
+  const autoOption: SelectOption = {
+    value: '',
+    label: t('config.stepper.autoSelect'),
+    icon: <Sparkles className="h-3.5 w-3.5 text-primary" />,
+  };
 
-  const options = showAll
+  // Build options with a _recommended flag for filtering
+  const allModels = !isLoading && !isError && models?.length ? models : null;
+
+  const allOptions: (SelectOption & { _recommended?: boolean })[] = allModels
+    ? allModels.map((m: LLMModel) => ({
+        value: m.id,
+        label: m.deprecated
+          ? `${m.label ?? m.id} (deprecated)`
+          : (m.label ?? m.id),
+        description: m.contextWindow
+          ? `${(m.contextWindow / 1000).toFixed(0)}K context`
+          : undefined,
+        icon: <Cpu className="h-3.5 w-3.5 text-muted-foreground" />,
+        disabled: m.deprecated,
+        _recommended: m.recommended,
+      }))
+    : fallbackModels.map((m) => ({
+        value: m,
+        label: m,
+        icon: <Cpu className="h-3.5 w-3.5 text-muted-foreground" />,
+      }));
+
+  const hasRecommended = allOptions.some((o) => o._recommended);
+
+  // Auto-expand to "Todos" if the saved model exists but isn't recommended
+  useEffect(() => {
+    if (
+      value &&
+      allOptions.some((o) => o.value === value) &&
+      hasRecommended &&
+      !allOptions.some(
+        (o) => o.value === value && o._recommended && !o.disabled,
+      )
+    ) {
+      setShowAll(true);
+    }
+  }, [value, allModels]);
+
+  const filteredModels: SelectOption[] = showAll
     ? allOptions
     : allOptions.filter(
-        (o) =>
-          recommended.length === 0 || recommended.includes(o.value as string),
+        (o) => !o.disabled && (!hasRecommended || o._recommended),
       );
+  const options: SelectOption[] = [autoOption, ...filteredModels];
 
   if (isLoading) {
     return (
@@ -76,29 +92,32 @@ export function DynamicModelSelect({
     );
   }
 
+  const badgeButton = (
+    <button
+      type="button"
+      onClick={() => setShowAll(!showAll)}
+      className={cn(
+        'text-[10px] px-2 py-0.5 rounded-full border transition-colors',
+        showAll
+          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+          : 'bg-primary/10 border-primary/30 text-primary',
+      )}
+    >
+      {showAll ? 'Todos' : 'Recomendados'}
+    </button>
+  );
+
+  // If the current value isn't among the visible options, fall back to auto
+  const effectiveValue = options.some((o) => o.value === value) ? value : '';
+
   return (
     <div className={className}>
-      <div className="flex items-center justify-between mb-1">
-        {label && (
-          <label className="text-xs font-medium">{label}</label>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowAll(!showAll)}
-          className={cn(
-            'text-[10px] px-2 py-0.5 rounded-full border transition-colors',
-            showAll
-              ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-              : 'bg-primary/10 border-primary/30 text-primary',
-          )}
-        >
-          {showAll ? 'Todos' : 'Recomendados'}
-        </button>
-      </div>
       <CustomSelect
         options={options}
-        value={value}
+        value={effectiveValue}
         onChange={onChange}
+        label={label}
+        labelExtra={badgeButton}
         placeholder="Select model..."
       />
       {showAll && (

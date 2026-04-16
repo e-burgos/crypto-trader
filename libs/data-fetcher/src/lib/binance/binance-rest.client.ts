@@ -3,7 +3,10 @@ import { CandleInterval } from '@crypto-trader/shared';
 import axios, { AxiosInstance } from 'axios';
 import { BinanceRateLimiter } from './binance-rate-limiter';
 
-const BINANCE_BASE_URL = 'https://api.binance.com';
+const BINANCE_BASE_URL =
+  process.env['BINANCE_BASE_URL'] || 'https://api.binance.com';
+const BINANCE_PUBLIC_URL =
+  process.env['BINANCE_PUBLIC_URL'] || 'https://data-api.binance.vision';
 const BINANCE_TESTNET_URL = 'https://testnet.binance.vision';
 
 /** Request weights per endpoint as per Binance REST API docs. */
@@ -62,7 +65,11 @@ export class BinanceRestClient {
     this.apiKey = config.apiKey;
     this.apiSecret = config.apiSecret;
 
-    const baseURL = config.testnet ? BINANCE_TESTNET_URL : BINANCE_BASE_URL;
+    const baseURL = config.testnet
+      ? BINANCE_TESTNET_URL
+      : config.apiKey
+        ? BINANCE_BASE_URL
+        : BINANCE_PUBLIC_URL;
     this.client = axios.create({
       baseURL,
       timeout: 10000,

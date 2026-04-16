@@ -36,6 +36,7 @@ import {
   useTestTestnetBinanceConnection,
   useSetLLMKey,
   useDeleteLLMKey,
+  useUpdateLLMModel,
   useUpdateProfile,
   useTestBinanceConnection,
   useTestLLMKey,
@@ -166,6 +167,7 @@ export function SettingsPage() {
   const { data: llmKeys = [] } = useLLMKeys();
   const { mutate: saveLLMKey, isPending: savingLLM } = useSetLLMKey();
   const { mutate: deleteLLMKey } = useDeleteLLMKey();
+  const { mutate: updateLLMModel } = useUpdateLLMModel();
   const [llmForms, setLlmForms] = useState<
     Record<string, { apiKey: string; model: string }>
   >({});
@@ -233,10 +235,11 @@ export function SettingsPage() {
   }
 
   function getLLMForm(provider: string) {
+    const saved = getLLMKeyStatus(provider);
     return (
       llmForms[provider] ?? {
         apiKey: '',
-        model: LLM_PROVIDERS.find((p) => p.value === provider)?.models[0] ?? '',
+        model: saved?.selectedModel ?? '',
       }
     );
   }
@@ -819,31 +822,34 @@ export function SettingsPage() {
                             </p>
                           </div>
                           {status?.isActive ? (
-                          <div>
-                            <label className="mb-1 block text-xs font-medium">
-                              {t('settings.model')}
-                            </label>
-                            <DynamicModelSelect
-                              provider={provider.value}
-                              value={form.model}
-                              onChange={(model) =>
-                                setLlmForms((f) => ({
-                                  ...f,
-                                  [provider.value]: {
-                                    ...(f[provider.value] ?? { apiKey: '' }),
-                                    model,
-                                  },
-                                }))
-                              }
-                              fallbackModels={provider.models}
-                            />
-                          </div>
+                            <div>
+                              <DynamicModelSelect
+                                provider={provider.value}
+                                value={form.model}
+                                label={t('settings.model')}
+                                onChange={(model) => {
+                                  setLlmForms((f) => ({
+                                    ...f,
+                                    [provider.value]: {
+                                      ...(f[provider.value] ?? { apiKey: '' }),
+                                      model,
+                                    },
+                                  }));
+                                  updateLLMModel({
+                                    provider: provider.value,
+                                    selectedModel: model || null,
+                                  });
+                                }}
+                                fallbackModels={provider.models}
+                              />
+                            </div>
                           ) : (
-                          <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
-                            {t('settings.activateProviderFirst', {
-                              defaultValue: 'Guarda tu API key para seleccionar un modelo',
-                            })}
-                          </div>
+                            <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
+                              {t('settings.activateProviderFirst', {
+                                defaultValue:
+                                  'Guarda tu API key para seleccionar un modelo',
+                              })}
+                            </div>
                           )}
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -855,7 +861,7 @@ export function SettingsPage() {
                                 {
                                   provider: provider.value,
                                   apiKey: form.apiKey,
-                                  selectedModel: form.model,
+                                  selectedModel: form.model || null,
                                 },
                                 {
                                   onSuccess: () => {
@@ -863,7 +869,7 @@ export function SettingsPage() {
                                       ...f,
                                       [provider.value]: {
                                         apiKey: '',
-                                        model: provider.models[0],
+                                        model: '',
                                       },
                                     }));
                                     resetLLMTest();

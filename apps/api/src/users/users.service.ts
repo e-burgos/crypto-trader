@@ -225,6 +225,18 @@ export class UsersService {
     });
   }
 
+  async updateLLMModel(
+    userId: string,
+    provider: string,
+    selectedModel: string | null,
+  ) {
+    return this.prisma.lLMCredential.update({
+      where: { userId_provider: { userId, provider: provider as LLMProvider } },
+      data: { selectedModel: selectedModel ?? '' },
+      select: { id: true, provider: true, selectedModel: true, isActive: true },
+    });
+  }
+
   async deleteLLMKey(userId: string, provider: string) {
     await this.prisma.lLMCredential.deleteMany({
       where: { userId, provider: provider as LLMProvider },

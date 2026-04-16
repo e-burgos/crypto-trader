@@ -298,10 +298,12 @@ function AgentDetailModal({
   ];
 
   const providerLabel = cfg.primaryProvider
-    ? LLM_PROVIDERS.find((p) => p.value === cfg.primaryProvider)?.label ?? cfg.primaryProvider
+    ? (LLM_PROVIDERS.find((p) => p.value === cfg.primaryProvider)?.label ??
+      cfg.primaryProvider)
     : null;
   const fallbackLabel = cfg.fallbackProvider
-    ? LLM_PROVIDERS.find((p) => p.value === cfg.fallbackProvider)?.label ?? cfg.fallbackProvider
+    ? (LLM_PROVIDERS.find((p) => p.value === cfg.fallbackProvider)?.label ??
+      cfg.fallbackProvider)
     : null;
 
   return createPortal(
@@ -411,18 +413,30 @@ function AgentDetailModal({
             <div className="mt-3 rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1.5">
               <div className="flex items-center gap-1.5 mb-1">
                 <Brain className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-semibold">{t('config.editModal.aiModel')}</span>
+                <span className="text-xs font-semibold">
+                  {t('config.editModal.aiModel')}
+                </span>
               </div>
               {providerLabel && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground">{t('config.stepper.primaryLabel')}</span>
-                  <span className="text-[11px] font-semibold">{providerLabel}{cfg.primaryModel ? ` · ${cfg.primaryModel}` : ''}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {t('config.stepper.primaryLabel')}
+                  </span>
+                  <span className="text-[11px] font-semibold">
+                    {providerLabel}
+                    {cfg.primaryModel ? ` · ${cfg.primaryModel}` : ''}
+                  </span>
                 </div>
               )}
               {fallbackLabel && (
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground">{t('config.stepper.fallbackLabel')}</span>
-                  <span className="text-[11px] font-semibold">{fallbackLabel}{cfg.fallbackModel ? ` · ${cfg.fallbackModel}` : ''}</span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {t('config.stepper.fallbackLabel')}
+                  </span>
+                  <span className="text-[11px] font-semibold">
+                    {fallbackLabel}
+                    {cfg.fallbackModel ? ` · ${cfg.fallbackModel}` : ''}
+                  </span>
                 </div>
               )}
             </div>
@@ -983,6 +997,7 @@ function NewAgentStepperModal({
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <CustomSelect
+                        label={t('config.stepper.primaryLabel')}
                         options={[
                           { value: '', label: t('config.stepper.autoSelect') },
                           ...activeProviderOptions,
@@ -995,6 +1010,7 @@ function NewAgentStepperModal({
                           provider={form.primaryProvider}
                           value={form.primaryModel}
                           onChange={(m) => update({ primaryModel: m })}
+                          label={t('settings.model')}
                           fallbackModels={
                             LLM_PROVIDERS.find(
                               (p) => p.value === form.primaryProvider,
@@ -1018,6 +1034,7 @@ function NewAgentStepperModal({
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <CustomSelect
+                        label={t('config.stepper.fallbackLabel')}
                         options={[
                           { value: '', label: t('config.stepper.noFallback') },
                           ...activeProviderOptions,
@@ -1030,6 +1047,7 @@ function NewAgentStepperModal({
                           provider={form.fallbackProvider}
                           value={form.fallbackModel}
                           onChange={(m) => update({ fallbackModel: m })}
+                          label={t('settings.model')}
                           fallbackModels={
                             LLM_PROVIDERS.find(
                               (p) => p.value === form.fallbackProvider,
@@ -1635,9 +1653,6 @@ function EditAgentModal({
               <div className="space-y-3">
                 {/* Primary */}
                 <div>
-                  <p className="text-[11px] text-muted-foreground mb-1.5">
-                    {t('config.stepper.primaryLabel')}
-                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <CustomSelect
                       options={[
@@ -1646,12 +1661,14 @@ function EditAgentModal({
                       ]}
                       value={form.primaryProvider}
                       onChange={(v) => handleProviderChange('primary', v)}
+                      label={t('config.stepper.primaryLabel')}
                     />
                     {form.primaryProvider && (
                       <DynamicModelSelect
                         provider={form.primaryProvider}
                         value={form.primaryModel}
                         onChange={(m) => update({ primaryModel: m })}
+                        label={t('settings.model')}
                         fallbackModels={
                           LLM_PROVIDERS.find(
                             (p) => p.value === form.primaryProvider,
@@ -1664,9 +1681,6 @@ function EditAgentModal({
 
                 {/* Fallback */}
                 <div>
-                  <p className="text-[11px] text-muted-foreground mb-1.5">
-                    {t('config.stepper.fallbackLabel')}
-                  </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <CustomSelect
                       options={[
@@ -1675,12 +1689,14 @@ function EditAgentModal({
                       ]}
                       value={form.fallbackProvider}
                       onChange={(v) => handleProviderChange('fallback', v)}
+                      label={t('config.stepper.fallbackLabel')}
                     />
                     {form.fallbackProvider && (
                       <DynamicModelSelect
                         provider={form.fallbackProvider}
                         value={form.fallbackModel}
                         onChange={(m) => update({ fallbackModel: m })}
+                        label={t('settings.model')}
                         fallbackModels={
                           LLM_PROVIDERS.find(
                             (p) => p.value === form.fallbackProvider,

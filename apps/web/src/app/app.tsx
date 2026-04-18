@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { ThemeProvider } from '../components/theme-provider';
+import { AppThemeProvider } from '../containers/theme-provider-container';
 import { Navbar } from '../components/navbar';
 import { PriceTicker } from '../components/price-ticker';
 import { ProtectedRoute } from '../components/protected-route';
@@ -56,7 +56,7 @@ function WebSocketInit() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+      <AppThemeProvider>
         <WebSocketInit />
         <Toaster richColors position="top-right" />
         <ChatWidget />
@@ -154,7 +154,7 @@ export function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </ThemeProvider>
+      </AppThemeProvider>
     </QueryClientProvider>
   );
 }

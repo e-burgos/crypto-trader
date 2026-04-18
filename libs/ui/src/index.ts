@@ -63,6 +63,20 @@ export { KeyValueRow } from './lib/composites/key-value-row';
 export type { KeyValueRowProps } from './lib/composites/key-value-row';
 export { SectionTitle } from './lib/composites/section-title';
 export type { SectionTitleProps } from './lib/composites/section-title';
+export {
+  Dropdown,
+  DropdownItem,
+  DropdownSeparator,
+  DropdownLabel,
+} from './lib/composites/dropdown';
+export type { DropdownProps, DropdownItemProps } from './lib/composites/dropdown';
+export { Sidebar } from './lib/composites/sidebar';
+export type {
+  SidebarProps,
+  NavItem,
+  NavGroup,
+  SidebarUser,
+} from './lib/composites/sidebar';
 
 // Feedback
 export { EmptyState } from './lib/feedback/empty-state';
@@ -75,10 +89,20 @@ export type { CalloutProps, CalloutVariant } from './lib/feedback/callout';
 // Layout
 export { PageLayout } from './lib/layout/page-layout';
 export type { PageLayoutProps } from './lib/layout/page-layout';
+export { Navbar } from './lib/layout/navbar';
+export type { NavbarProps } from './lib/layout/navbar';
+export { DashboardHeader } from './lib/layout/dashboard-header';
+export type { DashboardHeaderProps } from './lib/layout/dashboard-header';
+
+// Theme
+export { ThemeProvider } from './lib/theme/theme-provider';
+export type { ThemeProviderProps } from './lib/theme/theme-provider';
 
 // Domain
 export { StatCard } from './lib/domain/market/stat-card';
 export type { StatCardProps } from './lib/domain/market/stat-card';
+export { PriceTicker } from './lib/domain/market/price-ticker';
+export type { PriceTickerProps, TickerItem } from './lib/domain/market/price-ticker';
 
 // Charts
 export { ChartCard } from './lib/charts/chart-card';

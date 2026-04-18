@@ -2,13 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTranslation } from 'react-i18next';
-import {
-  Bot,
-  Clock,
-  Filter,
-  ListChecks,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Bot, SlidersHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useAgentDecisions,
@@ -18,12 +12,7 @@ import { usePlatformMode } from '../../hooks/use-user';
 import {
   DECISION_COLOR,
   DECISION_BG,
-  DECISION_BORDER,
-  DECISION_ICON,
   DECISION_FILTERS,
-  ConfidenceBar,
-  IndicatorPanel,
-  NewsHeadlinesPanel,
   AgentDecisionCard,
   DecisionDetailModal,
   type DecisionFilter,

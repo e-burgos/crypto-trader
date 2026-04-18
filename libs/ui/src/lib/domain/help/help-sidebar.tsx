@@ -136,6 +136,7 @@ function SidebarNav({
                   {/* Children */}
                   {hasChildren && isExpanded && (
                     <ul className="mt-0.5 space-y-0.5 pl-4">
+                      {/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
                       {link.children!.map((child) => {
                         const isChildActive = activeId === child.id;
                         return (

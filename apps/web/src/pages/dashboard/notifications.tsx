@@ -1,11 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Bell,
-  CheckCheck,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { Bell, CheckCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   useNotifications,

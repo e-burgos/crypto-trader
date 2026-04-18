@@ -1,10 +1,7 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
 import { useTranslation } from 'react-i18next';
 import {
-  Bot,
   Clock,
   MessageSquare,
   TrendingDown,
@@ -27,7 +24,6 @@ import { cn } from '../../lib/utils';
 import {
   type AgentDecision,
   type AgentDecisionIndicators,
-  type AgentDecisionConfigDetails,
 } from '../../hooks/use-analytics';
 import { useCountdown } from '../bot-analysis';
 
@@ -74,7 +70,13 @@ export const DECISION_FILTERS: DecisionFilter[] = [
 
 // ── Confidence Bar ────────────────────────────────────────────────────────────
 
-export function ConfidenceBar({ value, color }: { value: number; color: string }) {
+export function ConfidenceBar({
+  value,
+  color,
+}: {
+  value: number;
+  color: string;
+}) {
   const { t } = useTranslation();
   const pct = Math.round(value * 100);
   return (
@@ -1019,4 +1021,3 @@ export function DecisionDetailModal({
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-

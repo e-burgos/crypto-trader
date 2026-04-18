@@ -1,15 +1,11 @@
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import {
   Brain,
   Clock,
-  RefreshCw,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Zap,
   Bot,
   Newspaper,
@@ -34,13 +30,10 @@ import {
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import {
-  useMarketSnapshot,
   deriveOpportunity,
   deriveOverallSignal,
-  useMarketNews,
   useNewsConfig,
   useNewsAnalysis,
-  MARKET_SYMBOLS,
   type OverallSignal,
   type MarketSnapshot,
   type NewsItem,
@@ -49,11 +42,7 @@ import {
   type AgentDecision,
   type AgentDecisionConfigDetails,
 } from '../../hooks/use-analytics';
-import {
-  type TradingConfig,
-  type AgentStatus,
-} from '../../hooks/use-trading';
-import { useBinanceTicker } from '../../hooks/use-binance-ticker';
+import { type TradingConfig, type AgentStatus } from '../../hooks/use-trading';
 
 // ── Color maps ────────────────────────────────────────────────────────────────
 
@@ -1875,4 +1864,3 @@ export function CombinedScoreBanner({
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-

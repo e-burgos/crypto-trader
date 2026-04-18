@@ -1,10 +1,4 @@
-import {
-  TrendingUp,
-  Activity,
-  Brain,
-  BarChart2,
-  Sparkles,
-} from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // ── Sparkline ─────────────────────────────────────────────────────────────────
@@ -181,7 +175,12 @@ export interface FeatureCardProps {
   badge?: string;
 }
 
-export function FeatureCard({ icon, title, description, badge }: FeatureCardProps) {
+export function FeatureCard({
+  icon,
+  title,
+  description,
+  badge,
+}: FeatureCardProps) {
   return (
     <div className="feat-card group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-6 transition-all duration-500 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl hover:shadow-primary/8">
       <div className="pointer-events-none absolute inset-0 -z-0 rounded-xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -326,4 +325,3 @@ export function ProcessStep({
     </div>
   );
 }
-

@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  ChevronRight,
-  ChevronLeft,
-} from 'lucide-react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '@crypto-trader/ui';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
@@ -13,7 +10,6 @@ import {
   StepBinance,
   StepLLM,
   StepMode,
-  LLM_PROVIDERS,
   type OnboardingState,
 } from '../components/onboarding';
 

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Bell,
   TrendingUp,
@@ -14,7 +13,6 @@ import {
 import { useTranslation, TFunction } from 'react-i18next';
 import { type Notification } from '../../hooks/use-notifications';
 import { cn } from '../../lib/utils';
-
 
 /**
  * Given a raw notification message (possibly JSON), parse the key and return
@@ -62,7 +60,13 @@ export function getNotificationRoute(type: string, message: string): string {
 
 // ── Icon mapping ──────────────────────────────────────────────────────────────
 
-export function NotifIcon({ type, message }: { type: string; message: string }) {
+export function NotifIcon({
+  type,
+  message,
+}: {
+  type: string;
+  message: string;
+}) {
   let key = '';
   try {
     key = (JSON.parse(message) as { key?: string })?.key ?? '';
@@ -323,4 +327,3 @@ export function getMessageKey(message: string): string {
 export const PAGE_SIZE = 10;
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-

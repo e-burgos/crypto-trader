@@ -1,48 +1,23 @@
-import { useState, useRef, useEffect } from 'react';
-import {
-  Save,
-  Play,
-  Square,
-  Loader2,
-  BookOpen,
-  Eye,
-  TestTube2,
-  Pencil,
-  Plus,
-  Bot,
-} from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Play, Square, BookOpen, Eye, Pencil, Plus, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
-import {
-  Button,
-  InfoTooltip,
-} from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import {
   useTradingConfigs,
-  useCreateConfig,
-  useUpdateConfig,
-  useDeleteConfig,
   useStartAgent,
   useStopAgent,
   useAgentStatus,
-  type TradingConfigDto,
 } from '../../hooks/use-trading';
+import { usePlatformMode } from '../../hooks/use-user';
 import {
-  useTestnetBinanceKeyStatus,
-  usePlatformMode,
-  useLLMKeys,
-} from '../../hooks/use-user';
-import {
-  SliderField,
   AgentDetailModal,
   NewAgentStepperModal,
   EditAgentModal,
   DeleteAgentModal,
-  type ConfigForm,
 } from '../../components/config';
 
 export function ConfigPage() {

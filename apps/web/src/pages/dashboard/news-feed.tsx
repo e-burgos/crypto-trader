@@ -1,9 +1,5 @@
 import { useRef, useState } from 'react';
-import {
-  Newspaper,
-  AlertCircle,
-  Settings,
-} from 'lucide-react';
+import { Newspaper, AlertCircle, Settings } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';

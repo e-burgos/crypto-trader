@@ -26,7 +26,11 @@ import {
   ExplainPanel,
 } from '@crypto-trader/ui';
 import { AgentsShowcaseSection } from './dashboard/agents-showcase';
-import { FaqItem, CodeBlock, HelpSectionTitle as SectionTitle } from '../components/help';
+import {
+  FaqItem,
+  CodeBlock,
+  HelpSectionTitle as SectionTitle,
+} from '../components/help';
 
 const SECTION_IDS = [
   'faq',

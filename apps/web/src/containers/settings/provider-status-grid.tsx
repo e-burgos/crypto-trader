@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { Activity, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../lib/utils';
 import { useProviderStatuses, type ProviderStatus } from '../../hooks/use-llm';

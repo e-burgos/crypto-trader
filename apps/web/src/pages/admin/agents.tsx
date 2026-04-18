@@ -1,11 +1,9 @@
 import { useRef } from 'react';
-import { cn } from '../../lib/utils';
+
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import {
-  useAgents,
-} from '../../hooks/use-admin-agents';
+import { useAgents } from '../../hooks/use-admin-agents';
 import type { AgentId } from '@crypto-trader/ui';
 import { AgentCard } from '../../components/admin';
 
@@ -14,7 +12,7 @@ gsap.registerPlugin(useGSAP);
 export function AdminAgentsPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { data: agents = [], isLoading } = useAgents();
+  const { isLoading } = useAgents();
 
   useGSAP(
     () => {

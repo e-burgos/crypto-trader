@@ -1,18 +1,7 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  CheckCircle,
-  Loader2,
-  ExternalLink,
-  Sun,
-  Moon,
-  TestTube2,
-} from 'lucide-react';
-import { Button, Input } from '@crypto-trader/ui';
+import { CheckCircle, ExternalLink, TestTube2 } from 'lucide-react';
+import { Input } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
-import { api } from '../../lib/api';
-import { useThemeStore } from '../../store/theme.store';
-import i18n from '../../lib/i18n';
 
 export type TradingMode = 'LIVE' | 'SANDBOX' | 'TESTNET';
 export type LLMProvider =

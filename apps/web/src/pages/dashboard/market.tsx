@@ -4,19 +4,9 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { useMarketSnapshot, MARKET_SYMBOLS } from '../../hooks/use-market';
 import {
-  useMarketSnapshot,
-  deriveOverallSignal,
-  deriveOpportunity,
-  MARKET_SYMBOLS,
-} from '../../hooks/use-market';
-import {
-  SIGNAL_CONFIG,
-  IndicatorRow,
-  SRLevels,
   LiveTickerPanel,
-  InfoButton,
-  OpportunityPanel,
   SnapshotPanel,
   ChartTab,
 } from '../../components/market';

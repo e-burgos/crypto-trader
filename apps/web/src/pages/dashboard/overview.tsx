@@ -30,19 +30,14 @@ import {
   ReferenceLine,
   Cell,
 } from 'recharts';
-import type { TooltipContentProps } from 'recharts';
-import { Button, InfoTooltip } from '@crypto-trader/ui';
+import { Button } from '@crypto-trader/ui';
 import {
   usePortfolioSummary,
   useAnalyticsSummary,
   usePnlChart,
   useAssetBreakdown,
 } from '../../hooks/use-analytics';
-import {
-  useSandboxWallet,
-  useBinanceBalance,
-  useAgentStatus,
-} from '../../hooks/use-trading';
+import { useSandboxWallet, useBinanceBalance } from '../../hooks/use-trading';
 import {
   useBinanceKeyStatus,
   useTestnetBinanceKeyStatus,
@@ -76,7 +71,7 @@ export function OverviewPage() {
   const { data: pnlChart = [] } = usePnlChart(platformMode);
   const { data: assetBreakdown = [] } = useAssetBreakdown(platformMode);
   const { data: wallets, isLoading: walletsLoading } = useSandboxWallet();
-  const { data: agentStatuses } = useAgentStatus();
+
   const { data: liveKeyStatus } = useBinanceKeyStatus();
   const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
 

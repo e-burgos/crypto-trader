@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  ChevronDown,
-  GitCommitVertical,
-  RotateCcw,
-  SeparatorHorizontal,
-} from 'lucide-react';
+import { ChevronDown, RotateCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useChatLLMOptions, LLMOption } from '../../hooks/use-chat';
 import { useChatStore } from '../../store/chat.store';

@@ -1,4 +1,11 @@
-import { FileText, Trash2, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import {
+  FileText,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Loader2,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { AgentDocument } from '../../hooks/use-admin-agents';
 

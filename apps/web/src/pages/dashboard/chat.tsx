@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 export function ChatPage() {
   const { t } = useTranslation();
   const { data: sessions = [] } = useChatSessions();
-  const { activeSessionId, setActiveSession } = useChatStore();
+  const { activeSessionId } = useChatStore();
   const [showNewSession, setShowNewSession] = useState(false);
 
   const { data: session } = useChatSession(activeSessionId ?? '');

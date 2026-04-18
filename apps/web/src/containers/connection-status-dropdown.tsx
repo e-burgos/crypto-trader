@@ -33,7 +33,9 @@ function useInternetStatus(): ConnStatus {
     if (!navigator.onLine) {
       fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' })
         .then(() => setOnline(true))
-        .catch(() => {});
+        .catch(() => {
+          /* intentional: swallow offline check */
+        });
     }
 
     return () => {

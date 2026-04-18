@@ -28,10 +28,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { Button } from '@crypto-trader/ui';
-import { cn } from '../lib/utils';
 import {
-  SparklineChart,
-  TradeRow,
   AgentDashboardCard,
   FeatureCard,
   ProviderCard,

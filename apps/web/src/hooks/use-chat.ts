@@ -98,10 +98,12 @@ export function useChatSession(sessionId: string | null) {
     enabled: isAuthenticated && !!sessionId,
     retry: (failureCount, error) => {
       // Don't retry on 404 — session was deleted or stale localStorage ID
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err = error as any;
       if (
-        (error as any)?.statusCode === 404 ||
-        (error as any)?.status === 404 ||
-        (error as any)?.response?.status === 404
+        err?.statusCode === 404 ||
+        err?.status === 404 ||
+        err?.response?.status === 404
       ) {
         // Clear stale session from store + localStorage
         useChatStore.getState().setActiveSession(null);

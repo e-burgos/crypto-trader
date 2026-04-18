@@ -1,20 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Save,
   Play,
   Square,
   Loader2,
-  BookOpen,
   X,
-  Eye,
   TestTube2,
   Trash2,
   Pencil,
   Check,
   ChevronRight,
   ChevronLeft,
-  Plus,
   Shield,
   Zap,
   TrendingUp,
@@ -24,26 +21,14 @@ import {
   Bot,
   Brain,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
-import {
-  Button,
-  InfoTooltip,
-  Select,
-  type SelectOption,
-} from '@crypto-trader/ui';
+import { Button, InfoTooltip, Select } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
-import { useGSAP } from '@gsap/react';
-import gsap from 'gsap';
 import {
-  useTradingConfigs,
   useCreateConfig,
   useUpdateConfig,
   useDeleteConfig,
-  useStartAgent,
-  useStopAgent,
-  useAgentStatus,
   type TradingConfigDto,
   type TradingMode,
   type TradingAsset,
@@ -51,12 +36,8 @@ import {
   type IntervalMode,
   type RiskProfile,
 } from '../../hooks/use-trading';
-import {
-  useTestnetBinanceKeyStatus,
-  usePlatformMode,
-  useLLMKeys,
-} from '../../hooks/use-user';
-import { StrategyPresets, PRESETS } from '@crypto-trader/ui';
+import { useTestnetBinanceKeyStatus, useLLMKeys } from '../../hooks/use-user';
+import { PRESETS } from '@crypto-trader/ui';
 import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
 
 // ── Fallback LLM providers (used when dynamic API is unavailable) ─────────
@@ -619,8 +600,7 @@ export function NewAgentStepperModal({
     mode: defaultMode,
   });
   const { mutate: createConfig, isPending } = useCreateConfig();
-  const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
-  const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
+  useTestnetBinanceKeyStatus();
   const { data: llmKeys = [] } = useLLMKeys();
 
   const activeProviders = LLM_PROVIDERS.filter((p) =>
@@ -1998,4 +1978,3 @@ export function DeleteAgentModal({
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-

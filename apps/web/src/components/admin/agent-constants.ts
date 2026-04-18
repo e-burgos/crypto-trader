@@ -1,11 +1,4 @@
-import {
-  Bot,
-  Cpu,
-  TrendingUp,
-  Link,
-  Shield,
-  Sparkles,
-} from 'lucide-react';
+import { Bot, Cpu, TrendingUp, Link, Shield, Sparkles } from 'lucide-react';
 import type { AgentId } from '@crypto-trader/ui';
 
 export const AGENT_ICON_MAP: Record<

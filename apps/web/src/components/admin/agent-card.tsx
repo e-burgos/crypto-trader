@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import {
   Sparkles,
-  Trash2,
   Upload,
   Loader2,
   ChevronDown,

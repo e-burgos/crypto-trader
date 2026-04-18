@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { Trade } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';

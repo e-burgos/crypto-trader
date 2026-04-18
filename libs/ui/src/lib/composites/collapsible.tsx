@@ -1,7 +1,6 @@
 import * as React from 'react';
 import * as CollapsiblePrimitive from '@radix-ui/react-collapsible';
 import { ChevronDown } from 'lucide-react';
-import { cn } from '../utils';
 
 interface CollapsibleProps {
   trigger: React.ReactNode;

@@ -1,12 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
-import {
-  Briefcase,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
-import {
-  Button,
-} from '@crypto-trader/ui';
+import { Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';

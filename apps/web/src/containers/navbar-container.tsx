@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Moon,
@@ -11,7 +10,7 @@ import {
 import { Button } from '@crypto-trader/ui';
 import { useThemeStore } from '../store/theme.store';
 import { useAuthStore } from '../store/auth.store';
-import { useUnreadCount } from '../hooks/use-notifications';
+
 import { AvatarDropdown } from './avatar-dropdown';
 import { LoginDropdown } from './login-dropdown';
 import { useTranslation } from 'react-i18next';
@@ -46,8 +45,6 @@ export function Navbar() {
   const { t } = useTranslation();
   const { theme, toggle } = useThemeStore();
   const { isAuthenticated } = useAuthStore();
-  const unreadCount = useUnreadCount();
-  const [notifOpen, setNotifOpen] = useState(false);
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">

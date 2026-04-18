@@ -1,63 +1,29 @@
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import {
-  Brain,
-  Clock,
-  RefreshCw,
-  Bot,
-  Newspaper,
-  Activity,
-  ChevronRight,
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Brain, RefreshCw, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useMarketSnapshot,
-  deriveOpportunity,
   deriveOverallSignal,
   useMarketNews,
   useNewsConfig,
   useNewsAnalysis,
   MARKET_SYMBOLS,
   type OverallSignal,
-  type MarketSnapshot,
-  type NewsItem,
 } from '../../hooks/use-market';
-import {
-  useAgentDecisions,
-  type AgentDecision,
-  type AgentDecisionConfigDetails,
-} from '../../hooks/use-analytics';
-import {
-  useTradingConfigs,
-  useAgentStatus,
-  type TradingConfig,
-  type AgentStatus,
-} from '../../hooks/use-trading';
+import { useAgentDecisions } from '../../hooks/use-analytics';
+import { useTradingConfigs, useAgentStatus } from '../../hooks/use-trading';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
 import { usePlatformMode } from '../../hooks/use-user';
 import {
-  SIGNAL_COLOR,
-  SIGNAL_BG,
-  DECISION_COLOR,
-  DECISION_BG,
-  SENTIMENT_COLOR,
-  useTimeAgo,
-  fmt,
-  fmtPrice,
-  StatusCard,
   TechnicalSummary,
   NewsSentimentPanel,
-  useCountdown,
-  AgentCurrentStateModal,
-  AgentCountdownCard,
-  NextDecisionBanner,
   AgentInputSummary,
   CombinedScoreBanner,
-  type StateModalTab,
+  NextDecisionBanner,
+  AI_VALID_MS,
   type NewsAnalysisData,
 } from '../../components/bot-analysis';
 

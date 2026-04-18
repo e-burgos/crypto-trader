@@ -13,7 +13,6 @@ import { HelpPage } from '../pages/help';
 import { DashboardLayout } from '../layouts/dashboard-layout';
 import { OverviewPage } from '../pages/dashboard/overview';
 import { TradeHistoryPage } from '../pages/dashboard/trade-history';
-import { AnalyticsPage } from '../pages/dashboard/analytics';
 import { MarketPage } from '../pages/dashboard/market';
 import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';

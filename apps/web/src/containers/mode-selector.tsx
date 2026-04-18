@@ -237,7 +237,6 @@ function PauseAgentsModal({
   const { t } = useTranslation();
   const fromCfg = MODE_CONFIG[fromMode];
   const toCfg = MODE_CONFIG[toMode];
-  const FromIcon = fromCfg.icon;
 
   return createPortal(
     <div
@@ -401,6 +400,7 @@ export function ModeSelector() {
   function handlePauseAndSwitch() {
     stopByMode.mutate(mode, {
       onSuccess: () => {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const target = pauseAgentsTarget!;
         setPauseAgentsTarget(null);
         // Si el destino es LIVE, mostrar confirmación adicional

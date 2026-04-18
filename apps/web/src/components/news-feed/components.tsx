@@ -17,7 +17,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useTranslation } from 'react-i18next';
+
 import {
   type NewsItem,
   type NewsAnalysis,
@@ -202,6 +202,7 @@ export function AnalysisSummaryCard({
                   <Sparkles className="h-3 w-3 text-primary shrink-0" />
                   Último análisis IA
                   <span className="text-[10px] text-muted-foreground/70 ml-1">
+                    {/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
                     {timeAgo(analysis.aiAnalyzedAt!)}
                   </span>
                 </button>
@@ -319,7 +320,9 @@ export function AnalysisSummaryCard({
               <button
                 onClick={() =>
                   onRunAi(
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     newsConfig!.primaryProvider!,
+                    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                     newsConfig!.primaryModel!,
                   )
                 }

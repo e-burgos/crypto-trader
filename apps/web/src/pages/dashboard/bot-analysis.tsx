@@ -1,7 +1,8 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Brain,
@@ -1289,6 +1290,7 @@ function AgentCountdownCard({
   nextRunAt: number | null;
 }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   // Prefer the real nextRunAt from the Bull job (via /trading/status).
   // Fallback to computing from lastDecision if the server didn't provide it.
@@ -1321,6 +1323,12 @@ function AgentCountdownCard({
   }, [nextCycleAt, serverNextRunAt, lastDecision, config.minIntervalMinutes]);
 
   const [showStateModal, setShowStateModal] = useState(false);
+
+  const handleViewState = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['analytics', 'decisions'] });
+    queryClient.invalidateQueries({ queryKey: ['trading', 'status'] });
+    setShowStateModal(true);
+  }, [queryClient]);
 
   const modeColor =
     config.mode === 'TESTNET'
@@ -1413,7 +1421,7 @@ function AgentCountdownCard({
 
         {/* Ver Estado Actual button */}
         <button
-          onClick={() => setShowStateModal(true)}
+          onClick={handleViewState}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
         >
           <Activity className="h-3 w-3" />

@@ -109,11 +109,13 @@ Posiciones abiertas: ${context.openPositionsCount ?? 0}
 
     case 'risk_gate':
       return `Portfolio actual del usuario:
-${JSON.stringify(context.portfolio, null, 2)}
+Posiciones abiertas: ${JSON.stringify(context.portfolio, null, 2)}
+Balances disponibles en wallet: ${JSON.stringify(context.availableBalances ?? [], null, 2)}
 Snapshot de mercado:
 Indicators summary: RSI=${(context.indicators as Record<string, unknown>)?.rsi ?? 'N/A'}, Price=${(context.indicators as Record<string, unknown>)?.price ?? 'N/A'}
 Config del bot:
 Asset=${(context.config as Record<string, unknown>)?.asset ?? 'N/A'}, Par=${(context.config as Record<string, unknown>)?.pair ?? 'N/A'}, MaxPosiciones=${(context.config as Record<string, unknown>)?.maxConcurrentPositions ?? 'N/A'}, StopLoss=${(context.config as Record<string, unknown>)?.stopLossPct ?? 'N/A'}%, TakeProfit=${(context.config as Record<string, unknown>)?.takeProfitPct ?? 'N/A'}%
+RECORDATORIO: Este bot opera UN par específico (${(context.config as Record<string, unknown>)?.asset ?? '?'}/${(context.config as Record<string, unknown>)?.pair ?? '?'}). Es normal que todas las posiciones sean del mismo activo. Calcula la exposición real considerando los balances disponibles + posiciones abiertas.
 Emite tu veredicto de riesgo en JSON.`;
 
     case 'news_technical_relevance':

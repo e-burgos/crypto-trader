@@ -455,3 +455,21 @@ export function AgentsShowcasePage() {
     </div>
   );
 }
+
+/* ── Embeddable Section (for Help page) ── */
+export function AgentsShowcaseSection() {
+  const agents = useAgentData();
+
+  return (
+    <div className="space-y-6">
+      <OrchestratorHero />
+      <PipelineSection />
+
+      <div className="space-y-4">
+        {agents.map((agent, i) => (
+          <AgentCard key={agent.id} agent={agent} index={i} />
+        ))}
+      </div>
+    </div>
+  );
+}

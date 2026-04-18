@@ -110,8 +110,8 @@ export class OrchestratorService {
     }>,
     llmOverride?: { provider: string; model: string },
   ): Promise<DecisionPayload> {
-    // Load config + open positions for FORGE and AEGIS context
-    const [config, openPositions] = await Promise.all([
+    // Load config + open positions + wallet balances for FORGE and AEGIS context
+    const [config, openPositions, sandboxWallets] = await Promise.all([
       this.prisma.tradingConfig.findFirst({
         where: { id: configId, userId },
         select: {
@@ -123,6 +123,7 @@ export class OrchestratorService {
           takeProfitPct: true,
           asset: true,
           pair: true,
+          mode: true,
         },
       }),
       this.prisma.position.findMany({
@@ -134,6 +135,10 @@ export class OrchestratorService {
           quantity: true,
           pnl: true,
         },
+      }),
+      this.prisma.sandboxWallet.findMany({
+        where: { userId },
+        select: { currency: true, balance: true },
       }),
     ]);
 
@@ -189,6 +194,10 @@ export class OrchestratorService {
           'risk_gate',
           {
             portfolio: openPositions,
+            availableBalances: sandboxWallets.map((w) => ({
+              currency: w.currency,
+              balance: Number(w.balance),
+            })),
             indicators: {
               rsi: (indicators as unknown as Record<string, unknown>).rsi,
               price: (indicators as unknown as Record<string, unknown>).close,
@@ -228,17 +237,31 @@ export class OrchestratorService {
     if (aegisVerdict.verdict === 'BLOCK') {
       const reason = aegisVerdict.reason ?? 'Riesgo elevado detectado';
       const alerts = aegisVerdict.alerts ?? [];
-      this.logger.warn(
-        `AEGIS BLOCK for user=${userId} config=${configId}: ${reason}`,
-      );
-      return {
-        decision: 'HOLD',
-        confidence: 1.0,
-        reasoning: `AEGIS BLOCK: ${reason}${alerts.length ? '. Alertas: ' + alerts.join(', ') : ''}`,
-        waitMinutes: 30,
-        orchestrated: true,
-        subAgentResults,
-      };
+
+      // Ignore false-positive blocks about single-asset concentration.
+      // Each bot trades one specific pair by design, so 100% concentration
+      // in that asset is expected and not a real risk signal.
+      const isFalseConcentrationBlock =
+        /concentraci[oó]n|exposici[oó]n.*(?:un solo|single|[\d]+%.*(?:portfolio|cartera))/i.test(
+          reason,
+        );
+      if (isFalseConcentrationBlock) {
+        this.logger.log(
+          `AEGIS BLOCK overridden (single-asset concentration is expected) for config=${configId}: ${reason}`,
+        );
+      } else {
+        this.logger.warn(
+          `AEGIS BLOCK for user=${userId} config=${configId}: ${reason}`,
+        );
+        return {
+          decision: 'HOLD',
+          confidence: 1.0,
+          reasoning: `AEGIS BLOCK: ${reason}${alerts.length ? '. Alertas: ' + alerts.join(', ') : ''}`,
+          waitMinutes: 30,
+          orchestrated: true,
+          subAgentResults,
+        };
+      }
     }
 
     // Synthesis call via orchestrator

@@ -220,19 +220,14 @@ function NavContent({
           icon: Newspaper,
         },
         {
-          to: '/dashboard/chat',
-          label: t('sidebar.chat'),
-          icon: BotMessageSquare,
-        },
-        {
-          to: '/dashboard/agents',
-          label: t('sidebar.agents'),
-          icon: Sparkles,
-        },
-        {
           to: '/dashboard/config',
           label: t('sidebar.config'),
           icon: SlidersHorizontal,
+        },
+        {
+          to: '/dashboard/chat',
+          label: t('sidebar.chat'),
+          icon: BotMessageSquare,
         },
       ],
     },

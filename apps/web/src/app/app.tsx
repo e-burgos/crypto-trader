@@ -22,7 +22,6 @@ import { NewsFeedPage } from '../pages/dashboard/news-feed';
 import { ChatPage } from '../pages/dashboard/chat';
 import { BotAnalysisPage } from '../pages/dashboard/bot-analysis';
 import { AgentLogPage } from '../pages/dashboard/agent-log';
-import { AgentsShowcasePage } from '../pages/dashboard/agents-showcase';
 import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { ChatWidget } from '../components/chat/chat-widget';
 import { NotificationsPage } from '../pages/dashboard/notifications';
@@ -128,7 +127,10 @@ export function App() {
             <Route path="market" element={<MarketPage />} />
             <Route path="bot-analysis" element={<BotAnalysisPage />} />
             <Route path="agent-log" element={<AgentLogPage />} />
-            <Route path="agents" element={<AgentsShowcasePage />} />
+            <Route
+              path="agents"
+              element={<Navigate to="/help#agents-showcase" replace />}
+            />
             <Route path="live-chart" element={<LiveChartPage />} />
             <Route path="news" element={<NewsFeedPage />} />
             <Route path="chat" element={<ChatPage />} />

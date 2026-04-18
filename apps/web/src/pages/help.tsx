@@ -25,6 +25,7 @@ import { DecisionFlowDiagram } from '../components/agent/decision-flow-diagram';
 import { StrategyPresets } from '../components/agent/strategy-presets';
 import { ParameterCards } from '../components/agent/parameter-cards';
 import { ExplainPanel } from '../components/agent/explain-panel';
+import { AgentsShowcaseSection } from './dashboard/agents-showcase';
 
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
@@ -100,6 +101,7 @@ const SECTION_IDS = [
   'faq',
   'guide',
   'behaviors',
+  'agents-showcase',
   'agent-flow',
   'agent-cycle',
   'agent-presets',
@@ -244,6 +246,11 @@ export function HelpPage() {
                   {t('help.stopAllDesc')}
                 </p>
               </div>
+            </section>
+
+            {/* ── Agents Showcase ───────────────────────────────────── */}
+            <section id="agents-showcase" data-section className="help-section">
+              <AgentsShowcaseSection />
             </section>
 
             {/* ── Agent & Configuration ────────────────────────────────── */}
@@ -925,7 +932,9 @@ export function HelpPage() {
                           <td className="px-3 py-2 font-mono text-muted-foreground/60">
                             {formula}
                           </td>
-                          <td className={`px-3 py-2 text-right font-mono ${color}`}>
+                          <td
+                            className={`px-3 py-2 text-right font-mono ${color}`}
+                          >
                             {value}
                           </td>
                         </tr>

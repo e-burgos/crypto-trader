@@ -17,7 +17,7 @@ const en = {
     analytics: 'Analytics',
     market: 'Market',
     botAnalysis: 'Bot Analysis',
-    config: 'Configuration',
+    config: 'Manage Agents',
     settings: 'Settings',
     notifications: 'Notifications',
     positions: 'Positions',
@@ -27,7 +27,7 @@ const en = {
     admin: 'Admin',
     help: 'Help & Guide',
     groupTrading: 'Trading',
-    groupAgente: 'Agent',
+    groupAgente: 'Agents',
     groupSystem: 'System',
     agentLog: 'Agent Log',
   },
@@ -584,6 +584,7 @@ const en = {
     guide: 'How to Trade',
     apiKeys: 'API Keys Setup',
     behaviors: 'Behaviors & Important Warnings',
+    agentsShowcase: 'AI Agents',
     stopAllTitle: 'Stopping agents does not close open positions',
     stopAllDesc:
       'When you stop all your agents (or an admin triggers the kill-switch), the running agents are halted and their scheduled jobs are cancelled. However, any open positions remain open in the exchange — they are NOT automatically closed. In LIVE mode this means your positions have no active stop-loss or take-profit monitoring until you restart the agent. You will receive a real-time alert if you have uncovered open positions. Close them manually from the Positions page if needed.',
@@ -1492,19 +1493,24 @@ const en = {
       'Five specialized AI agents, each with a unique codename, personality and expertise. Together, they form a comprehensive crypto intelligence layer.',
     agentNexus: 'NEXUS',
     agentNexusRole: 'Platform Expert',
-    agentNexusDesc: 'Knows every screen, parameter and workflow. Your personal guide through CryptoTrader.',
+    agentNexusDesc:
+      'Knows every screen, parameter and workflow. Your personal guide through CryptoTrader.',
     agentForge: 'FORGE',
     agentForgeRole: 'Operations',
-    agentForgeDesc: 'Executes actions: starts agents, configures strategies, manages positions and risk parameters.',
+    agentForgeDesc:
+      'Executes actions: starts agents, configures strategies, manages positions and risk parameters.',
     agentSigma: 'SIGMA',
     agentSigmaRole: 'Market Analyst',
-    agentSigmaDesc: 'Quantitative analyst with real-time access to prices, indicators, candlestick patterns and news sentiment.',
+    agentSigmaDesc:
+      'Quantitative analyst with real-time access to prices, indicators, candlestick patterns and news sentiment.',
     agentCipher: 'CIPHER',
     agentCipherRole: 'Blockchain Expert',
-    agentCipherDesc: 'Deep knowledge in cryptography, DeFi protocols, Layer 2, smart contracts and tokenomics.',
+    agentCipherDesc:
+      'Deep knowledge in cryptography, DeFi protocols, Layer 2, smart contracts and tokenomics.',
     agentAegis: 'AEGIS',
     agentAegisRole: 'Risk Manager',
-    agentAegisDesc: 'Evaluates every trade through Kelly Criterion, VaR, drawdown limits and position sizing.',
+    agentAegisDesc:
+      'Evaluates every trade through Kelly Criterion, VaR, drawdown limits and position sizing.',
     // Providers (6 now)
     aiEyebrow: '6 LLM Providers',
     aiTitle: 'Choose your AI. Or use them all.',
@@ -1543,13 +1549,17 @@ const en = {
     // Trading modes
     modesEyebrow: 'Three ways to trade',
     modesTitle: 'Your pace. Your rules.',
-    modesSub: 'Start safe in Sandbox, level up to Testnet, and go Live when ready.',
+    modesSub:
+      'Start safe in Sandbox, level up to Testnet, and go Live when ready.',
     modeSandbox: 'Sandbox',
-    modeSandboxDesc: 'Paper trading with virtual wallet and real market prices. Zero risk, full learning.',
+    modeSandboxDesc:
+      'Paper trading with virtual wallet and real market prices. Zero risk, full learning.',
     modeTestnet: 'Testnet',
-    modeTestnetDesc: 'Real orders on Binance Testnet. Experience the full trading flow without real money.',
+    modeTestnetDesc:
+      'Real orders on Binance Testnet. Experience the full trading flow without real money.',
     modeLive: 'Live Trading',
-    modeLiveDesc: 'Real funds on Binance. Automatic risk controls and kill-switch protection.',
+    modeLiveDesc:
+      'Real funds on Binance. Automatic risk controls and kill-switch protection.',
     // Risk section
     riskEyebrow: 'Your capital protected',
     riskTitle: 'AEGIS: Designed to protect first',

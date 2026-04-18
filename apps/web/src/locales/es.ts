@@ -17,7 +17,7 @@ const es = {
     analytics: 'Análisis',
     market: 'Mercado',
     botAnalysis: 'Análisis del Bot',
-    config: 'Configuración',
+    config: 'Gestionar Agentes',
     settings: 'Ajustes',
     notifications: 'Notificaciones',
     positions: 'Posiciones',
@@ -27,7 +27,7 @@ const es = {
     admin: 'Admin',
     help: 'Ayuda y Guía',
     groupTrading: 'Trading',
-    groupAgente: 'Agente',
+    groupAgente: 'Agentes',
     groupSystem: 'Sistema',
   },
   dashboard: {
@@ -588,6 +588,7 @@ const es = {
     guide: 'Cómo Operar',
     apiKeys: 'Configuración de Claves API',
     behaviors: 'Comportamientos y Avisos Importantes',
+    agentsShowcase: 'Agentes IA',
     stopAllTitle: 'Detener los agentes no cierra las posiciones abiertas',
     stopAllDesc:
       'Cuando detienes todos tus agentes (o un administrador activa el kill-switch), los agentes se detienen y sus trabajos programados se cancelan. Sin embargo, las posiciones abiertas permanecen abiertas en el exchange — NO se cierran automáticamente. En modo EN VIVO, esto significa que tus posiciones quedan sin stop-loss ni take-profit activos hasta que reinicies el agente. Recibirás una alerta en tiempo real si tienes posiciones sin cobertura. Ciérralas manualmente desde la página de Posiciones si es necesario.',

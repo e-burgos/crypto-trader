@@ -12,6 +12,7 @@ import {
   X,
   BarChart2,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
@@ -74,7 +75,8 @@ function SidebarNav({
             {group.links.map((link) => {
               const isActive = activeId === link.id;
               const hasChildren = !!link.children?.length;
-              const childActive = link.children?.some((c) => c.id === activeId) ?? false;
+              const childActive =
+                link.children?.some((c) => c.id === activeId) ?? false;
               // Expanded when: manually toggled OR any child is active
               const isExpanded = openIds.has(link.id) || childActive;
 
@@ -104,7 +106,7 @@ function SidebarNav({
                         </span>
                       )}
                       <span className="text-sm">{link.label}</span>
-                      {(isActive && !hasChildren) && (
+                      {isActive && !hasChildren && (
                         <span className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                       )}
                     </button>
@@ -201,6 +203,11 @@ export function HelpSidebar({ activeId, onNavigate }: HelpSidebarProps) {
           label: t('help.behaviors'),
           icon: <AlertTriangle className="h-4 w-4" />,
         },
+        {
+          id: 'agents-showcase',
+          label: t('help.agentsShowcase'),
+          icon: <Sparkles className="h-4 w-4" />,
+        },
       ],
     },
     {
@@ -226,10 +233,16 @@ export function HelpSidebar({ activeId, onNavigate }: HelpSidebarProps) {
           label: t('help.agentParams'),
           icon: <BookOpen className="h-4 w-4" />,
           children: [
-            { id: 'config-concepts-thresholds', label: t('help.conceptThresholds') },
+            {
+              id: 'config-concepts-thresholds',
+              label: t('help.conceptThresholds'),
+            },
             { id: 'config-concepts-sl', label: t('help.conceptSl') },
             { id: 'config-concepts-capital', label: t('help.conceptCapital') },
-            { id: 'config-concepts-interval', label: t('help.conceptInterval') },
+            {
+              id: 'config-concepts-interval',
+              label: t('help.conceptInterval'),
+            },
             { id: 'config-concepts-offset', label: t('help.conceptOffset') },
           ],
         },

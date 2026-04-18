@@ -74,6 +74,9 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
       }) => {
         queryClient.invalidateQueries({ queryKey: ['trading', 'decisions'] });
         queryClient.invalidateQueries({ queryKey: ['analytics', 'decisions'] });
+        queryClient.invalidateQueries({ queryKey: ['trading', 'status'] });
+        queryClient.invalidateQueries({ queryKey: ['market'] });
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
         toast.info(
           `Agente: ${data.decision} ${data.asset} (${data.confidence}% confianza)`,
           {

@@ -15,6 +15,9 @@ const mockPrismaService = {
   position: {
     findMany: jest.fn(),
   },
+  sandboxWallet: {
+    findMany: jest.fn(),
+  },
   newsAnalysis: {
     findUnique: jest.fn(),
     update: jest.fn(),
@@ -63,6 +66,7 @@ describe('OrchestratorService', () => {
 
     mockPrismaService.tradingConfig.findFirst.mockResolvedValue(mockConfig);
     mockPrismaService.position.findMany.mockResolvedValue([]);
+    mockPrismaService.sandboxWallet.findMany.mockResolvedValue([]);
   });
 
   // ── classifyIntent ─────────────────────────────────────────────────────────

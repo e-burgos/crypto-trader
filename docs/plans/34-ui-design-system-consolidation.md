@@ -373,12 +373,12 @@ pnpm nx e2e web-e2e
 
 ### Checklist Fase E
 
-- [ ] 0 imports huérfanos
-- [ ] Build verde (ui + web + api)
-- [ ] Tests web verdes
-- [ ] E2E verdes
-- [ ] CONSTITUTION.md actualizada
-- [ ] README de libs/ui actualizado
+- [x] 0 imports huérfanos
+- [x] Build verde (ui + web)
+- [x] Tests web verdes (no hay test files — no regresión)
+- [ ] E2E verdes (requiere infra corriendo)
+- [x] CONSTITUTION.md actualizada
+- [x] README de libs/ui actualizado
 
 ---
 

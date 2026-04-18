@@ -446,5 +446,3 @@ export function Sidebar({
     </>
   );
 }
-
-export type { SidebarProps, NavItem, NavGroup, SidebarUser };

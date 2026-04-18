@@ -33,7 +33,7 @@ crypto-trader/                    ← raíz del workspace NX
 │   ├── data-fetcher/             ← Binance OHLCV, noticias, RSS
 │   ├── trading-engine/           ← Lógica de órdenes y posiciones
 │   ├── shared/                   ← Types, DTOs, constantes, utils
-│   └── ui/                       ← Componentes React compartidos
+│   └── ui/                       ← Design system React (52 componentes stateless)
 ├── docs/
 │   ├── CONSTITUTION.md           ← Este archivo
 │   ├── specs/                    ← Specs por rama (01–27+)
@@ -227,7 +227,11 @@ web/src/
 │       ├── analytics/   AnalyticsPage     — Métricas de rendimiento
 │       ├── help/        HelpPage          — Documentación y guías
 │       └── admin/       AdminPage         — Solo ADMIN: kill-switch, usuarios
-├── components/           Componentes compartidos (layout, nav, dropdowns)
+├── components/           Solo protected-route.tsx (guardia de rutas)
+├── containers/           Componentes con hooks/stores/i18n (container pattern)
+│   ├── chat/            Chat widget, messages, session panel
+│   ├── settings/        Dynamic model select, AI usage, news config, provider status
+│   └── *.tsx            Navbar, sidebar, price ticker, dropdowns, mode selector
 ├── hooks/
 │   ├── use-auth.ts
 │   ├── use-trading.ts
@@ -243,7 +247,34 @@ web/src/
 └── router/               React Router config, rutas protegidas
 ```
 
-### 5.2 Gestión de estado
+### 5.2 Design System (`libs/ui` — `@crypto-trader/ui`)
+
+Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía `@crypto-trader/ui`.
+
+| Categoría | Componentes |
+|-----------|-------------|
+| **Primitives** | Button, Input, Badge, InfoTooltip, Typography, Spinner, ProgressBar, CopyButton, FormField, Separator, ToggleSwitch, Avatar |
+| **Composites** | Select, Dialog, Card, DataTable, Tabs, Pagination, FilterPills, SliderField, Stepper, Collapsible, KeyValueRow, SectionTitle, Dropdown, Sidebar |
+| **Feedback** | EmptyState, LoadingSkeleton, Callout |
+| **Layout** | PageLayout, Navbar, DashboardHeader |
+| **Theme** | ThemeProvider |
+| **Charts** | ChartCard, ChartTooltip, ChartTheme (constantes) |
+| **Domain/Market** | StatCard, PriceTicker, IndicatorInfoModal |
+| **Domain/Agent** | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets |
+| **Domain/Chat** | AgentHeader, AgentSelector, CapabilityButtons, ChatInput, OrchestratingIndicator, ToolCallCard |
+| **Domain/Help** | HelpSidebar |
+
+**Reglas de libs/ui:**
+1. **Sin hooks de datos** — ningún componente importa `useQuery`, `useMutation`, Zustand, React Router, o `useTranslation`. Toda data llega por props.
+2. **i18n por prop `t`** — los componentes que renderizan texto reciben `t: (key: string, opts?: Record<string, unknown>) => string`.
+3. **1 concepto = 1 archivo** — no duplicar componentes; consolidar variantes.
+4. **Dependencias mínimas** — solo React, clsx, tailwind-merge, lucide-react, @radix-ui/*, gsap (peerDeps).
+
+**Patrón Container/Presenter:**
+- `libs/ui/` = presenters (stateless, props-only)
+- `apps/web/src/containers/` = containers (hooks, stores, i18n, pasan data a presenters)
+
+### 5.3 Gestión de estado
 
 | Tipo de estado | Herramienta | Cuándo usarla |
 |---------------|-------------|---------------|
@@ -252,7 +283,7 @@ web/src/
 | **Form state** | React Hook Form | Formularios validados con Zod |
 | **Local** | `useState` / `useRef` | Estado de UI temporal (modales, tabs, expanded) |
 
-### 5.3 Internacionalización
+### 5.4 Internacionalización
 
 - **Idiomas soportados:** Español (ES — por defecto) e Inglés (EN).
 - **Librería:** `react-i18next` + `i18next`.
@@ -261,7 +292,7 @@ web/src/
 - **Convención de claves:** `seccion.componente.elemento` — ej. `notifications.markRead`.
 - **Regla:** Todo texto visible al usuario debe pasar por `t('clave')`. Nunca hardcodear texto en los componentes.
 
-### 5.4 Principios de animación
+### 5.5 Principios de animación
 
 - **GSAP** para: página landing (scroll-triggered), contadores animados (CountUp), transiciones de página.
 - **CSS Transitions / Tailwind** para: micro-interacciones de hover, estados de focus, dropdowns.

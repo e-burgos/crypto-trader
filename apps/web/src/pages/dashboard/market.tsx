@@ -37,7 +37,7 @@ import { useBinanceKlineStream } from '../../hooks/use-binance-kline';
 import {
   IndicatorInfoModal,
   type IndicatorKey,
-} from '../../components/market/indicator-info-modal';
+} from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -1100,6 +1100,7 @@ function SnapshotPanel({ symbol }: { symbol: string }) {
       {/* Indicator info modal */}
       {infoModal && (
         <IndicatorInfoModal
+          t={t}
           indicatorKey={infoModal}
           onClose={() => setInfoModal(null)}
         />
@@ -1492,6 +1493,7 @@ function ChartTab({
       </div>
 
       <IndicatorInfoModal
+        t={t}
         indicatorKey={chartInfoOpen ? 'chart' : null}
         onClose={() => setChartInfoOpen(false)}
       />

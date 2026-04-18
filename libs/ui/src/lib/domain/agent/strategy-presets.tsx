@@ -1,6 +1,5 @@
 import { Shield, TrendingUp, Zap } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils';
 
 export const PRESETS = {
   conservative: {
@@ -39,12 +38,11 @@ export const PRESETS = {
 } as const;
 
 interface StrategyPresetsProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   onApply?: (preset: keyof typeof PRESETS) => void;
 }
 
-export function StrategyPresets({ onApply }: StrategyPresetsProps) {
-  const { t } = useTranslation();
-
+export function StrategyPresets({ t, onApply }: StrategyPresetsProps) {
   const presets: Array<{
     key: keyof typeof PRESETS;
     icon: React.ReactNode;

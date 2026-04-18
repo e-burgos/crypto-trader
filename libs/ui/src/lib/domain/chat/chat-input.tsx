@@ -1,11 +1,11 @@
 import { useRef, useState, KeyboardEvent } from 'react';
 import { Send, Square } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { ChatCapability } from '../../hooks/use-chat';
+import { cn } from '../../utils';
+import type { ChatCapability } from './types';
 import { CapabilityButtons } from './capability-buttons';
-import { useTranslation } from 'react-i18next';
 
 interface ChatInputProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   onSend: (content: string, capability?: ChatCapability) => void;
   onStop: () => void;
   isStreaming: boolean;
@@ -14,13 +14,13 @@ interface ChatInputProps {
 }
 
 export function ChatInput({
+  t,
   onSend,
   onStop,
   isStreaming,
   disabled,
   hasMessages,
 }: ChatInputProps) {
-  const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -52,7 +52,7 @@ export function ChatInput({
   return (
     <div className="bg-transparent">
       {hasMessages && (
-        <CapabilityButtons onSelect={(msg, cap) => onSend(msg, cap)} compact />
+        <CapabilityButtons t={t} onSelect={(msg, cap) => onSend(msg, cap)} compact />
       )}
 
       <div className="px-3 pb-3 pt-2">

@@ -9,18 +9,8 @@ import {
   ChevronDown,
   Check,
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { AgentId } from '../../hooks/use-chat-agent';
-import { useTranslation } from 'react-i18next';
-
-export interface AgentConfig {
-  id: AgentId;
-  name: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  bgColor: string;
-}
+import { cn } from '../../utils';
+import type { AgentConfig, AgentId } from './types';
 
 export const AGENTS: AgentConfig[] = [
   {
@@ -66,21 +56,21 @@ export const AGENTS: AgentConfig[] = [
 ];
 
 interface AgentSelectorProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   selected: AgentId | null;
   onSelect: (agentId: AgentId | null) => void;
   className?: string;
 }
 
 export function AgentSelector({
+  t,
   selected,
   onSelect,
   className,
 }: AgentSelectorProps) {
-  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -104,7 +94,6 @@ export function AgentSelector({
       className={cn('relative', className)}
       data-testid="agent-selector"
     >
-      {/* Trigger button */}
       <button
         type="button"
         data-testid="agent-selector-trigger"
@@ -114,7 +103,6 @@ export function AgentSelector({
           'bg-muted/40 ring-border hover:bg-muted/70',
         )}
       >
-        {/* Icon */}
         <div
           className={cn(
             'flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1',
@@ -125,8 +113,6 @@ export function AgentSelector({
         >
           <SelectedIcon className="h-3 w-3" />
         </div>
-
-        {/* Label */}
         <span
           className={cn(
             'flex-1 font-medium',
@@ -135,14 +121,11 @@ export function AgentSelector({
         >
           {selectedAgent ? selectedAgent.name : 'KRYPTO'}
         </span>
-
-        {/* Subtitle */}
         <span className="hidden sm:block truncate max-w-[160px] text-xs text-muted-foreground">
           {selectedAgent
             ? t(selectedAgent.description)
             : t('agents.kryptoDesc', { defaultValue: 'Auto-routing' })}
         </span>
-
         <ChevronDown
           className={cn(
             'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
@@ -151,10 +134,8 @@ export function AgentSelector({
         />
       </button>
 
-      {/* Dropdown */}
       {open && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
-          {/* KRYPTO auto option */}
           <button
             type="button"
             data-testid="agent-card-auto"
@@ -189,11 +170,7 @@ export function AgentSelector({
               <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
             )}
           </button>
-
-          {/* Divider */}
           <div className="mx-2 h-px bg-border/60" />
-
-          {/* Sub-agents */}
           {AGENTS.map((agent) => {
             const Icon = agent.icon;
             const isSelected = selected === agent.id;

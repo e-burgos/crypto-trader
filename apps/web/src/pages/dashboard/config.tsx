@@ -59,8 +59,8 @@ import {
 import {
   StrategyPresets,
   PRESETS,
-} from '../../components/agent/strategy-presets';
-import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
+} from '@crypto-trader/ui';
+import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
 
 // ── Fallback LLM providers (used when dynamic API is unavailable) ─────────
 

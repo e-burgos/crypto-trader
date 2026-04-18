@@ -56,6 +56,8 @@ export default defineConfig(() => ({
         '@radix-ui/react-collapsible',
         'recharts',
         'lightweight-charts',
+        'gsap',
+        '@gsap/react',
       ],
     },
   },

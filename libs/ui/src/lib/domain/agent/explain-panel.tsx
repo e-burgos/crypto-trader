@@ -8,17 +8,14 @@ import {
   MapPin,
   Lightbulb,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils';
 
 interface ExplainPanelProps {
-  /** Render only the concept with this id. Omit to render all concepts. */
+  t: (key: string, opts?: Record<string, unknown>) => string;
   conceptId?: 'threshold' | 'sl' | 'capital' | 'interval' | 'offset';
 }
 
-export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
-  const { t } = useTranslation();
-
+export function ExplainPanel({ t, conceptId }: ExplainPanelProps) {
   const concepts = [
     {
       id: 'threshold',
@@ -384,7 +381,6 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
               colors.bg,
             )}
           >
-            {/* Header */}
             <div className="flex items-start gap-2">
               <span className="shrink-0 text-muted-foreground">{c.icon}</span>
               <div className="flex-1 min-w-0">
@@ -406,11 +402,7 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
                 </p>
               </div>
             </div>
-
-            {/* Example */}
             <div>{c.example}</div>
-
-            {/* Profiles table */}
             {c.profileCols[1] !== '' && (
               <div>
                 <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -458,8 +450,6 @@ export function ExplainPanel({ conceptId }: ExplainPanelProps = {}) {
                 </div>
               </div>
             )}
-
-            {/* Tip */}
             <p className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Lightbulb className="h-3 w-3 shrink-0 text-amber-400" /> {c.tip}
             </p>

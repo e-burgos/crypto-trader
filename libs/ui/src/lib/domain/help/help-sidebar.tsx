@@ -14,8 +14,7 @@ import {
   ChevronDown,
   Sparkles,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils';
 
 interface SidebarChild {
   id: string;
@@ -35,6 +34,7 @@ interface SidebarGroup {
 }
 
 interface HelpSidebarProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   activeId: string;
   onNavigate: (id: string) => void;
 }
@@ -175,8 +175,7 @@ function SidebarNav({
   );
 }
 
-export function HelpSidebar({ activeId, onNavigate }: HelpSidebarProps) {
-  const { t } = useTranslation();
+export function HelpSidebar({ t, activeId, onNavigate }: HelpSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const groups: SidebarGroup[] = [

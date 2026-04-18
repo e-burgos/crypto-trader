@@ -98,11 +98,39 @@ export type { DashboardHeaderProps } from './lib/layout/dashboard-header';
 export { ThemeProvider } from './lib/theme/theme-provider';
 export type { ThemeProviderProps } from './lib/theme/theme-provider';
 
-// Domain
+// Domain — Market
 export { StatCard } from './lib/domain/market/stat-card';
 export type { StatCardProps } from './lib/domain/market/stat-card';
 export { PriceTicker } from './lib/domain/market/price-ticker';
 export type { PriceTickerProps, TickerItem } from './lib/domain/market/price-ticker';
+export { IndicatorInfoModal } from './lib/domain/market/indicator-info-modal';
+export type { IndicatorKey } from './lib/domain/market/indicator-info-modal';
+
+// Domain — Agent
+export { DecisionFlowDiagram } from './lib/domain/agent/decision-flow-diagram';
+export { ExplainPanel } from './lib/domain/agent/explain-panel';
+export { ParameterCards } from './lib/domain/agent/parameter-cards';
+export { StrategyPresets, PRESETS } from './lib/domain/agent/strategy-presets';
+
+// Domain — Chat
+export type {
+  AgentId,
+  ChatCapability,
+  ChatMessageItem,
+  StreamError,
+  AgentConfig,
+  ChatSessionSummary,
+  LLMOption,
+} from './lib/domain/chat/types';
+export { AgentHeader } from './lib/domain/chat/agent-header';
+export { AgentSelector, AGENTS } from './lib/domain/chat/agent-selector';
+export { CapabilityButtons } from './lib/domain/chat/capability-buttons';
+export { ChatInput } from './lib/domain/chat/chat-input';
+export { OrchestratingIndicator } from './lib/domain/chat/orchestrating-indicator';
+export { ToolCallCard } from './lib/domain/chat/tool-call-card';
+
+// Domain — Help
+export { HelpSidebar } from './lib/domain/help/help-sidebar';
 
 // Charts
 export { ChartCard } from './lib/charts/chart-card';
@@ -117,9 +145,3 @@ export {
   CANDLESTICK_COLORS,
 } from './lib/charts/chart-theme';
 export type { ChartColor } from './lib/charts/chart-theme';
-
-// Layout (will be populated in Phase C)
-
-// Domain (will be populated in Phase D)
-
-// Theme (will be populated in Phase C)

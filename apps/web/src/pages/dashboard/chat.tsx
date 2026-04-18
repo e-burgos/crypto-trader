@@ -5,19 +5,22 @@ import {
   useChatSession,
   useSaveUserMessage,
   useChatStream,
-  ChatCapability,
 } from '../../hooks/use-chat';
+import type { ChatCapability } from '@crypto-trader/ui';
 import { useChatAgent } from '../../hooks/use-chat-agent';
 import { useChatStore } from '../../store/chat.store';
-import { ChatMessages } from '../../components/chat/chat-messages';
-import { ChatInput } from '../../components/chat/chat-input';
-import { CapabilityButtons } from '../../components/chat/capability-buttons';
-import { ChatSessionPanel } from '../../components/chat/chat-session-panel';
-import { NewSessionModal } from '../../components/chat/llm-selector';
-import { AgentSelector } from '../../components/chat/agent-selector';
-import { AgentHeader } from '../../components/chat/agent-header';
-import { OrchestratingIndicator } from '../../components/chat/orchestrating-indicator';
-import { ChatLLMOverride } from '../../components/chat/chat-llm-override';
+import { ChatMessages } from '../../containers/chat/chat-messages';
+import {
+  ChatInput,
+  CapabilityButtons,
+  AgentSelector,
+  AgentHeader,
+  OrchestratingIndicator,
+  AGENTS,
+} from '@crypto-trader/ui';
+import { ChatSessionPanel } from '../../containers/chat/chat-session-panel';
+import { NewSessionModal } from '../../containers/chat/llm-selector';
+import { ChatLLMOverride } from '../../containers/chat/chat-llm-override';
 import { useTranslation } from 'react-i18next';
 
 export function ChatPage() {
@@ -123,6 +126,7 @@ export function ChatPage() {
               </p>
             </div>
             <CapabilityButtons
+              t={t}
               onSelect={(msg, cap) => handleSend(msg, cap)}
               compact={false}
             />
@@ -138,6 +142,7 @@ export function ChatPage() {
             {/* Agent selector */}
             <div className="border-b border-border px-4 py-2">
               <AgentSelector
+                t={t}
                 selected={selectedAgentId}
                 onSelect={selectAgent}
               />
@@ -146,6 +151,8 @@ export function ChatPage() {
             {activeAgentId && (
               <div className="border-b border-border/50 px-4 py-2">
                 <AgentHeader
+                  t={t}
+                  agents={AGENTS}
                   agentId={activeAgentId}
                   routedByKrypto={!!routedAgentId && !selectedAgentId}
                   provider={session?.provider}
@@ -166,7 +173,7 @@ export function ChatPage() {
             {/* Orchestrating indicator */}
             {isOrchestrating && (
               <div className="px-4 pb-2">
-                <OrchestratingIndicator step={orchestratingStep} />
+                <OrchestratingIndicator t={t} step={orchestratingStep} />
               </div>
             )}
             {/* Input */}
@@ -175,6 +182,7 @@ export function ChatPage() {
               sessionModel={session?.model ?? ''}
             />
             <ChatInput
+              t={t}
               onSend={handleSend}
               onStop={stopStream}
               isStreaming={isStreaming || isOrchestrating}

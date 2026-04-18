@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { useTranslation } from 'react-i18next';
+import { cn } from '../../utils';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1167,16 +1166,17 @@ function getIndicators(
 // ── Modal Component ────────────────────────────────────────────────────────────
 
 interface IndicatorInfoModalProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   indicatorKey: IndicatorKey | null;
   onClose: () => void;
 }
 
 export function IndicatorInfoModal({
+  t,
   indicatorKey,
   onClose,
 }: IndicatorInfoModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
 
   useEffect(() => {
     if (!indicatorKey) return;

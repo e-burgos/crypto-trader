@@ -1,8 +1,8 @@
 import { Wrench, CheckCircle, XCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { useTranslation } from 'react-i18next';
+import { cn } from '../../utils';
 
 interface ToolCallCardProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   tool: string;
   params?: Record<string, unknown>;
   onConfirm?: () => void;
@@ -12,6 +12,7 @@ interface ToolCallCardProps {
 }
 
 export function ToolCallCard({
+  t,
   tool,
   params,
   onConfirm,
@@ -19,8 +20,6 @@ export function ToolCallCard({
   isPending = false,
   className,
 }: ToolCallCardProps) {
-  const { t } = useTranslation();
-
   return (
     <div
       className={cn(

@@ -29,8 +29,8 @@ import {
   type AgentDefinition,
   type AgentDocument,
 } from '../../hooks/use-admin-agents';
-import type { AgentId } from '../../hooks/use-chat-agent';
-import { AGENTS } from '../../components/chat/agent-selector';
+import type { AgentId } from '@crypto-trader/ui';
+import { AGENTS } from '@crypto-trader/ui';
 
 gsap.registerPlugin(useGSAP);
 

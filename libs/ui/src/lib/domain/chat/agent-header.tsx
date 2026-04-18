@@ -1,10 +1,10 @@
 import { Sparkles } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { AgentId } from '../../hooks/use-chat-agent';
-import { AGENTS } from './agent-selector';
-import { useTranslation } from 'react-i18next';
+import { cn } from '../../utils';
+import type { AgentConfig, AgentId } from './types';
 
 interface AgentHeaderProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  agents: AgentConfig[];
   agentId: AgentId | null;
   routedByKrypto?: boolean;
   provider?: string;
@@ -13,18 +13,17 @@ interface AgentHeaderProps {
 }
 
 export function AgentHeader({
+  t,
+  agents,
   agentId,
   routedByKrypto = false,
   provider,
   model,
   className,
 }: AgentHeaderProps) {
-  const { t } = useTranslation();
-
-  const agent = agentId ? AGENTS.find((a) => a.id === agentId) : null;
+  const agent = agentId ? agents.find((a) => a.id === agentId) : null;
 
   if (!agent) {
-    // Fallback: show KRYPTO
     return (
       <div
         className={cn('flex items-center gap-2', className)}

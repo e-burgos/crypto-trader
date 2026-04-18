@@ -1,8 +1,7 @@
 import { useRef } from 'react';
 import { HelpCircle, TrendingUp, BarChart2, BookOpen } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { ChatCapability } from '../../hooks/use-chat';
-import { useTranslation } from 'react-i18next';
+import { cn } from '../../utils';
+import type { ChatCapability } from './types';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
@@ -47,15 +46,16 @@ const CAPABILITIES: Capability[] = [
 ];
 
 interface CapabilityButtonsProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
   onSelect: (content: string, capability: ChatCapability) => void;
   compact?: boolean;
 }
 
 export function CapabilityButtons({
+  t,
   onSelect,
   compact = false,
 }: CapabilityButtonsProps) {
-  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const getLabel = (key: ChatCapability) =>

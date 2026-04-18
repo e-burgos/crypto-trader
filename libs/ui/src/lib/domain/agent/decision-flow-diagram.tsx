@@ -9,11 +9,13 @@ import {
   Check,
   TrendingDown,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils';
 
-export function DecisionFlowDiagram() {
-  const { t } = useTranslation();
+interface DecisionFlowDiagramProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}
+
+export function DecisionFlowDiagram({ t }: DecisionFlowDiagramProps) {
   return (
     <div className="w-full">
       <div className="flex flex-col md:flex-row md:items-stretch gap-3 w-full">

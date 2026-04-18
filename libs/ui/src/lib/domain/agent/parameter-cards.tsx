@@ -1,10 +1,11 @@
 import { Target, Shield, Wallet, Timer, Lightbulb } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils';
 
-export function ParameterCards() {
-  const { t } = useTranslation();
+interface ParameterCardsProps {
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}
 
+export function ParameterCards({ t }: ParameterCardsProps) {
   const cards = [
     {
       title: t('config.guide.cardThresholds'),

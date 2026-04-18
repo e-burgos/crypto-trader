@@ -45,10 +45,10 @@ import {
   useDeleteNewsApiKey,
   useTestNewsApiKey,
 } from '../../hooks/use-user';
-import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
-import { AIUsageDashboard } from '../../components/settings/ai-usage-dashboard';
-import { ProviderStatusGrid } from '../../components/settings/provider-status-grid';
-import { NewsConfigPanel } from '../../components/settings/news-config-panel';
+import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
+import { AIUsageDashboard } from '../../containers/settings/ai-usage-dashboard';
+import { ProviderStatusGrid } from '../../containers/settings/provider-status-grid';
+import { NewsConfigPanel } from '../../containers/settings/news-config-panel';
 import { useNewsConfig, useUpdateNewsConfig } from '../../hooks/use-market';
 import { toast } from 'sonner';
 

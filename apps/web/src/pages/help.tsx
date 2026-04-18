@@ -20,11 +20,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { HelpSidebar } from '../components/help/help-sidebar';
-import { DecisionFlowDiagram } from '../components/agent/decision-flow-diagram';
-import { StrategyPresets } from '../components/agent/strategy-presets';
-import { ParameterCards } from '../components/agent/parameter-cards';
-import { ExplainPanel } from '../components/agent/explain-panel';
+import { HelpSidebar, DecisionFlowDiagram, StrategyPresets, ParameterCards, ExplainPanel } from '@crypto-trader/ui';
 import { AgentsShowcaseSection } from './dashboard/agents-showcase';
 
 function FaqItem({ q, a }: { q: string; a: string }) {
@@ -192,7 +188,7 @@ export function HelpPage() {
 
         <div className="flex gap-8 items-start">
           {/* Sidebar */}
-          <HelpSidebar activeId={activeId} onNavigate={scrollToSection} />
+          <HelpSidebar t={t} activeId={activeId} onNavigate={scrollToSection} />
 
           {/* Content */}
           <div ref={contentRef} className="flex-1 min-w-0 max-w-7xl space-y-14">
@@ -309,7 +305,7 @@ export function HelpPage() {
                 <h3 className="mb-3 text-sm font-bold">
                   {t('config.guide.flowTitle')}
                 </h3>
-                <DecisionFlowDiagram />
+                <DecisionFlowDiagram t={t} />
               </div>
 
               {/* Possible decisions grid */}
@@ -493,7 +489,7 @@ export function HelpPage() {
                 <h3 className="mb-3 text-sm font-bold">
                   {t('config.guide.presetsTitle')}
                 </h3>
-                <StrategyPresets />
+                <StrategyPresets t={t} />
               </div>
             </section>
 
@@ -505,7 +501,7 @@ export function HelpPage() {
                 <h3 className="mb-3 text-sm font-bold">
                   {t('config.guide.paramTitle')}
                 </h3>
-                <ParameterCards />
+                <ParameterCards t={t} />
               </div>
             </section>
 
@@ -514,7 +510,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="threshold" />
+              <ExplainPanel t={t} conceptId="threshold" />
             </section>
 
             <section
@@ -522,7 +518,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="sl" />
+              <ExplainPanel t={t} conceptId="sl" />
             </section>
 
             <section
@@ -530,7 +526,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="capital" />
+              <ExplainPanel t={t} conceptId="capital" />
             </section>
 
             <section
@@ -538,7 +534,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="interval" />
+              <ExplainPanel t={t} conceptId="interval" />
             </section>
 
             <section
@@ -546,7 +542,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="offset" />
+              <ExplainPanel t={t} conceptId="offset" />
             </section>
 
             {/* ── Trade Execution Flow ─────────────────────────────────── */}

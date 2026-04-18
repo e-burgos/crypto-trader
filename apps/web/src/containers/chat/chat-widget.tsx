@@ -13,18 +13,21 @@ import {
   useChatSession,
   useSaveUserMessage,
   useChatStream,
-  ChatCapability,
 } from '../../hooks/use-chat';
+import type { ChatCapability } from '@crypto-trader/ui';
 import { useChatAgent } from '../../hooks/use-chat-agent';
 import { useLLMKeys } from '../../hooks/use-user';
 import { useAuthStore } from '../../store/auth.store';
 import { ChatMessages } from './chat-messages';
-import { ChatInput } from './chat-input';
-import { CapabilityButtons } from './capability-buttons';
+import {
+  ChatInput,
+  CapabilityButtons,
+  AgentSelector,
+  AgentHeader,
+  OrchestratingIndicator,
+  AGENTS,
+} from '@crypto-trader/ui';
 import { NewSessionModal } from './llm-selector';
-import { AgentSelector } from './agent-selector';
-import { AgentHeader } from './agent-header';
-import { OrchestratingIndicator } from './orchestrating-indicator';
 import { ChatLLMOverride } from './chat-llm-override';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -272,6 +275,7 @@ export function ChatWidget() {
               {/* Agent selector — pick which sub-agent to use */}
               <div className="px-3 py-2 border-b border-border/50">
                 <AgentSelector
+                  t={t}
                   selected={selectedAgentId}
                   onSelect={selectAgent}
                 />
@@ -281,6 +285,8 @@ export function ChatWidget() {
               {activeAgentId && (
                 <div className="px-4 py-2 border-b border-border/50">
                   <AgentHeader
+                    t={t}
+                    agents={AGENTS}
                     agentId={activeAgentId}
                     routedByKrypto={!!routedAgentId && !selectedAgentId}
                     provider={session?.provider}
@@ -299,7 +305,7 @@ export function ChatWidget() {
               </div>
               {isOrchestrating && (
                 <div className="px-3 pb-2">
-                  <OrchestratingIndicator step={orchestratingStep} />
+                  <OrchestratingIndicator t={t} step={orchestratingStep} />
                 </div>
               )}
               <div className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
@@ -308,6 +314,7 @@ export function ChatWidget() {
                 sessionModel={session?.model ?? ''}
               />
               <ChatInput
+                t={t}
                 onSend={handleSend}
                 onStop={stopStream}
                 isStreaming={isStreaming || isOrchestrating}
@@ -384,6 +391,7 @@ function WelcomeState({
 
       <div className="welcome-el w-full">
         <CapabilityButtons
+          t={t}
           onSelect={(msg, cap) => onSend(msg, cap)}
           compact={false}
         />

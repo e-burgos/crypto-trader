@@ -4,10 +4,7 @@ import { useTradeHistory, type Trade } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { usePlatformMode } from '../../hooks/use-user';
-import {
-  DataTable,
-  type DataTableColumn,
-} from '@crypto-trader/ui';
+import { DataTable, type DataTableColumn } from '@crypto-trader/ui';
 
 type FilterType = 'ALL' | 'BUY' | 'SELL';
 

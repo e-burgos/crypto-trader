@@ -26,7 +26,12 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
-import { Button, InfoTooltip, Select, type SelectOption } from '@crypto-trader/ui';
+import {
+  Button,
+  InfoTooltip,
+  Select,
+  type SelectOption,
+} from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';

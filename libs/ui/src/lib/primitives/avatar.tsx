@@ -29,17 +29,20 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function Avatar({ name, src, size = 'md', status, className }: AvatarProps) {
+export function Avatar({
+  name,
+  src,
+  size = 'md',
+  status,
+  className,
+}: AvatarProps) {
   return (
     <div className={cn('relative inline-flex', className)}>
       {src ? (
         <img
           src={src}
           alt={name}
-          className={cn(
-            'rounded-full object-cover',
-            SIZE_CLASSES[size],
-          )}
+          className={cn('rounded-full object-cover', SIZE_CLASSES[size])}
         />
       ) : (
         <div

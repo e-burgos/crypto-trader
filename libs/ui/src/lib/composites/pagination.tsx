@@ -46,10 +46,7 @@ export function Pagination({
 
       {pages.map((page, i) =>
         page === 'ellipsis' ? (
-          <span
-            key={`ellipsis-${i}`}
-            className="px-1 text-muted-foreground"
-          >
+          <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground">
             ...
           </span>
         ) : (

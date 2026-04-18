@@ -57,9 +57,7 @@ export function Callout({
     >
       <div className="shrink-0 mt-0.5">{icon || styles.icon}</div>
       <div className="text-sm">
-        {title && (
-          <p className="font-medium text-foreground">{title}</p>
-        )}
+        {title && <p className="font-medium text-foreground">{title}</p>}
         <div className="text-muted-foreground">{children}</div>
       </div>
     </div>

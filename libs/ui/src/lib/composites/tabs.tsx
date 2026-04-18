@@ -15,7 +15,13 @@ interface TabsProps {
   className?: string;
 }
 
-export function Tabs({ tabs, value, onChange, size = 'md', className }: TabsProps) {
+export function Tabs({
+  tabs,
+  value,
+  onChange,
+  size = 'md',
+  className,
+}: TabsProps) {
   return (
     <div
       className={cn(

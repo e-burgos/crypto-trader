@@ -49,7 +49,10 @@ export type { TabsProps, Tab } from './lib/composites/tabs';
 export { Pagination } from './lib/composites/pagination';
 export type { PaginationProps } from './lib/composites/pagination';
 export { FilterPills } from './lib/composites/filter-pills';
-export type { FilterPillsProps, FilterPill } from './lib/composites/filter-pills';
+export type {
+  FilterPillsProps,
+  FilterPill,
+} from './lib/composites/filter-pills';
 export { SliderField } from './lib/composites/slider-field';
 export type { SliderFieldProps } from './lib/composites/slider-field';
 export { Stepper } from './lib/composites/stepper';
@@ -77,7 +80,19 @@ export type { PageLayoutProps } from './lib/layout/page-layout';
 export { StatCard } from './lib/domain/market/stat-card';
 export type { StatCardProps } from './lib/domain/market/stat-card';
 
-// Charts (will be populated in Phase B - charts)
+// Charts
+export { ChartCard } from './lib/charts/chart-card';
+export type { ChartCardProps } from './lib/charts/chart-card';
+export { ChartTooltip } from './lib/charts/chart-tooltip';
+export type { ChartTooltipProps } from './lib/charts/chart-tooltip';
+export {
+  CHART_COLORS,
+  CHART_PALETTE,
+  RECHARTS_DEFAULTS,
+  LIGHTWEIGHT_CHART_DEFAULTS,
+  CANDLESTICK_COLORS,
+} from './lib/charts/chart-theme';
+export type { ChartColor } from './lib/charts/chart-theme';
 
 // Layout (will be populated in Phase C)
 

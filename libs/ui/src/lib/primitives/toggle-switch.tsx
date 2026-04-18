@@ -18,8 +18,7 @@ export function ToggleSwitch({
   className,
 }: ToggleSwitchProps) {
   const trackSize = size === 'sm' ? 'h-5 w-9' : 'h-6 w-11';
-  const thumbSize =
-    size === 'sm' ? 'h-3.5 w-3.5' : 'h-4.5 w-4.5 sm:h-5 sm:w-5';
+  const thumbSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4.5 w-4.5 sm:h-5 sm:w-5';
   const translate = checked
     ? size === 'sm'
       ? 'translate-x-4'

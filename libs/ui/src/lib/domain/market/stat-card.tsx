@@ -48,9 +48,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      {sub && (
-        <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
-      )}
+      {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }

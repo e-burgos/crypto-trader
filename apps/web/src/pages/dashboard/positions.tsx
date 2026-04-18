@@ -11,7 +11,12 @@ import {
   Eye,
   Minus,
 } from 'lucide-react';
-import { Button, InfoTooltip, DataTable, type DataTableColumn } from '@crypto-trader/ui';
+import {
+  Button,
+  InfoTooltip,
+  DataTable,
+  type DataTableColumn,
+} from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';

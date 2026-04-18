@@ -16,19 +16,9 @@ type TypographyVariant =
   | 'label'
   | 'overline';
 
-type TypographyWeight =
-  | 'normal'
-  | 'medium'
-  | 'semibold'
-  | 'bold'
-  | 'extrabold';
+type TypographyWeight = 'normal' | 'medium' | 'semibold' | 'bold' | 'extrabold';
 
-type TypographyColor =
-  | 'default'
-  | 'muted'
-  | 'accent'
-  | 'danger'
-  | 'success';
+type TypographyColor = 'default' | 'muted' | 'accent' | 'danger' | 'success';
 
 interface TypographyProps {
   variant: TypographyVariant;
@@ -121,4 +111,9 @@ export function Typography({
   );
 }
 
-export type { TypographyProps, TypographyVariant, TypographyWeight, TypographyColor };
+export type {
+  TypographyProps,
+  TypographyVariant,
+  TypographyWeight,
+  TypographyColor,
+};

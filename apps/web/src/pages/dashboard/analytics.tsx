@@ -16,7 +16,7 @@ import {
   usePnlChart,
   useAssetBreakdown,
 } from '../../hooks/use-analytics';
-import { InfoTooltip } from '../../components/ui/info-tooltip';
+import { InfoTooltip } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';

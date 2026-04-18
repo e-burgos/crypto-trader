@@ -31,7 +31,7 @@ import {
   Cell,
 } from 'recharts';
 import type { TooltipContentProps } from 'recharts';
-import { Button } from '../../components/ui/button';
+import { Button, InfoTooltip } from '@crypto-trader/ui';
 import {
   usePortfolioSummary,
   useAnalyticsSummary,
@@ -48,7 +48,6 @@ import {
   useTestnetBinanceKeyStatus,
   usePlatformMode,
 } from '../../hooks/use-user';
-import { InfoTooltip } from '../../components/ui/info-tooltip';
 import { useThemeStore } from '../../store/theme.store';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';

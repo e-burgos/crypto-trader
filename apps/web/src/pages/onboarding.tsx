@@ -11,8 +11,7 @@ import {
   Moon,
   TestTube2,
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { PasswordInput } from '../components/ui/password-input';
+import { Button, Input } from '@crypto-trader/ui';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
 import { useThemeStore } from '../store/theme.store';
@@ -149,7 +148,8 @@ function StepBinance({
             <label className="mb-1.5 block text-sm font-medium">
               {t('onboarding.binanceApiSecret')}
             </label>
-            <PasswordInput
+            <Input
+              type="password"
               value={state.binanceApiSecret}
               onChange={(e) => onChange({ binanceApiSecret: e.target.value })}
               placeholder={t('onboarding.binanceApiSecretPlaceholder')}
@@ -213,7 +213,8 @@ function StepBinance({
               <label className="mb-1.5 block text-sm font-medium">
                 {t('settings.binanceTestnetApiSecret')}
               </label>
-              <PasswordInput
+              <Input
+                type="password"
                 value={state.binanceTestnetApiSecret}
                 onChange={(e) =>
                   onChange({ binanceTestnetApiSecret: e.target.value })
@@ -324,7 +325,8 @@ function StepLLM({
         <label className="mb-1.5 block text-sm font-medium">
           {t('onboarding.apiKey')} — {provider.label}
         </label>
-        <PasswordInput
+        <Input
+          type="password"
           value={currentKey}
           onChange={(e) =>
             onChange({

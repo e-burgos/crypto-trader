@@ -12,7 +12,7 @@ import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useLLMKeys } from '../../hooks/use-user';
 import { DynamicModelSelect } from './dynamic-model-select';
-import { CustomSelect } from '../ui/custom-select';
+import { Select } from '@crypto-trader/ui';
 import type { NewsConfig } from '../../hooks/use-market';
 
 const NEWS_COUNTS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
@@ -337,7 +337,7 @@ export function NewsConfigPanel({
               {/* Primary */}
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <CustomSelect
+                  <Select
                     options={[
                       { value: '', label: t('news.selectProvider') },
                       ...activeProviderOptions,
@@ -365,7 +365,7 @@ export function NewsConfigPanel({
               {/* Fallback */}
               <div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <CustomSelect
+                  <Select
                     options={[
                       { value: '', label: t('news.selectProvider') },
                       ...activeProviderOptions,

@@ -7,7 +7,7 @@ import { usePlatformMode } from '../../hooks/use-user';
 import {
   DataTable,
   type DataTableColumn,
-} from '../../components/ui/data-table';
+} from '@crypto-trader/ui';
 
 type FilterType = 'ALL' | 'BUY' | 'SELL';
 

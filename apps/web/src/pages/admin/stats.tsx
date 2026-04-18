@@ -8,8 +8,7 @@ import {
   Clock,
   Loader2,
 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { InfoTooltip } from '../../components/ui/info-tooltip';
+import { Button, InfoTooltip } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';

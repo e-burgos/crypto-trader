@@ -26,8 +26,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
-import { Button } from '../../components/ui/button';
-import { InfoTooltip } from '../../components/ui/info-tooltip';
+import { Button, InfoTooltip, Select, type SelectOption } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
@@ -57,7 +56,6 @@ import {
   PRESETS,
 } from '../../components/agent/strategy-presets';
 import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
-import { CustomSelect } from '../../components/ui/custom-select';
 
 // ── Fallback LLM providers (used when dynamic API is unavailable) ─────────
 
@@ -996,7 +994,7 @@ function NewAgentStepperModal({
                       {t('config.stepper.primaryLlmHint')}
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <CustomSelect
+                      <Select
                         label={t('config.stepper.primaryLabel')}
                         options={[
                           { value: '', label: t('config.stepper.autoSelect') },
@@ -1033,7 +1031,7 @@ function NewAgentStepperModal({
                       {t('config.stepper.fallbackLlmHint')}
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <CustomSelect
+                      <Select
                         label={t('config.stepper.fallbackLabel')}
                         options={[
                           { value: '', label: t('config.stepper.noFallback') },
@@ -1654,7 +1652,7 @@ function EditAgentModal({
                 {/* Primary */}
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <CustomSelect
+                    <Select
                       options={[
                         { value: '', label: t('config.stepper.autoSelect') },
                         ...activeProviderOptions,
@@ -1682,7 +1680,7 @@ function EditAgentModal({
                 {/* Fallback */}
                 <div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <CustomSelect
+                    <Select
                       options={[
                         { value: '', label: t('config.stepper.noFallback') },
                         ...activeProviderOptions,

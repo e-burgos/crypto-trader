@@ -27,7 +27,7 @@ import {
   FlaskConical,
   Radio,
 } from 'lucide-react';
-import { Button } from '../components/ui/button';
+import { Button } from '@crypto-trader/ui';
 import { cn } from '../lib/utils';
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { Button } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';

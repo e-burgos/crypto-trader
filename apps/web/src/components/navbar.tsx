@@ -8,7 +8,7 @@ import {
   LayoutDashboard,
   Languages,
 } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from '@crypto-trader/ui';
 import { useThemeStore } from '../store/theme.store';
 import { useAuthStore } from '../store/auth.store';
 import { useUnreadCount } from '../hooks/use-notifications';

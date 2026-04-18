@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
-import { CustomSelect, type SelectOption } from '../ui/custom-select';
+import { Select, type SelectOption } from '@crypto-trader/ui';
 import { Cpu, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -80,7 +80,7 @@ export function DynamicModelSelect({
   if (isLoading) {
     return (
       <div className={`relative ${className}`}>
-        <CustomSelect
+        <Select
           options={fallbackModels.map((m) => ({ value: m, label: m }))}
           value={value}
           onChange={onChange}
@@ -112,7 +112,7 @@ export function DynamicModelSelect({
 
   return (
     <div className={className}>
-      <CustomSelect
+      <Select
         options={options}
         value={effectiveValue}
         onChange={onChange}

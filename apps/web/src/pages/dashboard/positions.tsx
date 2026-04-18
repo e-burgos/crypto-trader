@@ -11,7 +11,7 @@ import {
   Eye,
   Minus,
 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { Button, InfoTooltip, DataTable, type DataTableColumn } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -24,11 +24,6 @@ import {
 import { useLivePrices, calcUnrealizedPnl } from '../../hooks/use-live-prices';
 import { useMarketStore } from '../../store/market.store';
 import { usePlatformMode } from '../../hooks/use-user';
-import { InfoTooltip } from '../../components/ui/info-tooltip';
-import {
-  DataTable,
-  type DataTableColumn,
-} from '../../components/ui/data-table';
 
 const PAGE_SIZE = 20;
 

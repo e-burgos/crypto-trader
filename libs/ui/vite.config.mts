@@ -43,7 +43,22 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       // External packages that should not be bundled into your library.
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      external: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'lucide-react',
+        '@radix-ui/react-slot',
+        '@radix-ui/react-dialog',
+        '@radix-ui/react-tooltip',
+        '@radix-ui/react-tabs',
+        '@radix-ui/react-dropdown-menu',
+        '@radix-ui/react-collapsible',
+        'recharts',
+        'lightweight-charts',
+        'gsap',
+        '@gsap/react',
+      ],
     },
   },
 }));

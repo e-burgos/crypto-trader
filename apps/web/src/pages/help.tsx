@@ -3,9 +3,7 @@ import {
   HelpCircle,
   BookOpen,
   Key,
-  ChevronDown,
   ChevronRight,
-  ChevronUp,
   ExternalLink,
   AlertTriangle,
   GitFork,
@@ -20,82 +18,19 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { HelpSidebar } from '../components/help/help-sidebar';
-import { DecisionFlowDiagram } from '../components/agent/decision-flow-diagram';
-import { StrategyPresets } from '../components/agent/strategy-presets';
-import { ParameterCards } from '../components/agent/parameter-cards';
-import { ExplainPanel } from '../components/agent/explain-panel';
+import {
+  HelpSidebar,
+  DecisionFlowDiagram,
+  StrategyPresets,
+  ParameterCards,
+  ExplainPanel,
+} from '@crypto-trader/ui';
 import { AgentsShowcaseSection } from './dashboard/agents-showcase';
-
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  const bodyRef = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      if (!bodyRef.current) return;
-      if (open) {
-        gsap.fromTo(
-          bodyRef.current,
-          { height: 0, opacity: 0 },
-          { height: 'auto', opacity: 1, duration: 0.3, ease: 'power2.out' },
-        );
-      } else {
-        gsap.to(bodyRef.current, {
-          height: 0,
-          opacity: 0,
-          duration: 0.2,
-          ease: 'power2.in',
-        });
-      }
-    },
-    { dependencies: [open] },
-  );
-
-  return (
-    <div className="rounded-lg border border-border overflow-hidden">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left font-medium text-sm hover:bg-muted/30 transition-colors"
-      >
-        {q}
-        {open ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-primary" />
-        ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-        )}
-      </button>
-      <div ref={bodyRef} className="overflow-hidden h-0 opacity-0">
-        <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
-          {a}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function CodeBlock({ children }: { children: React.ReactNode }) {
-  return (
-    <code className="block rounded-lg bg-muted px-4 py-3 font-mono text-xs text-foreground">
-      {children}
-    </code>
-  );
-}
-
-function SectionTitle({
-  icon,
-  children,
-}: {
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mb-5 flex items-center gap-2 border-b border-border pb-3">
-      <span className="text-primary">{icon}</span>
-      <h2 className="text-xl font-bold">{children}</h2>
-    </div>
-  );
-}
+import {
+  FaqItem,
+  CodeBlock,
+  HelpSectionTitle as SectionTitle,
+} from '../components/help';
 
 const SECTION_IDS = [
   'faq',
@@ -192,7 +127,7 @@ export function HelpPage() {
 
         <div className="flex gap-8 items-start">
           {/* Sidebar */}
-          <HelpSidebar activeId={activeId} onNavigate={scrollToSection} />
+          <HelpSidebar t={t} activeId={activeId} onNavigate={scrollToSection} />
 
           {/* Content */}
           <div ref={contentRef} className="flex-1 min-w-0 max-w-7xl space-y-14">
@@ -309,7 +244,7 @@ export function HelpPage() {
                 <h3 className="mb-3 text-sm font-bold">
                   {t('config.guide.flowTitle')}
                 </h3>
-                <DecisionFlowDiagram />
+                <DecisionFlowDiagram t={t} />
               </div>
 
               {/* Possible decisions grid */}
@@ -493,7 +428,7 @@ export function HelpPage() {
                 <h3 className="mb-3 text-sm font-bold">
                   {t('config.guide.presetsTitle')}
                 </h3>
-                <StrategyPresets />
+                <StrategyPresets t={t} />
               </div>
             </section>
 
@@ -505,7 +440,7 @@ export function HelpPage() {
                 <h3 className="mb-3 text-sm font-bold">
                   {t('config.guide.paramTitle')}
                 </h3>
-                <ParameterCards />
+                <ParameterCards t={t} />
               </div>
             </section>
 
@@ -514,7 +449,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="threshold" />
+              <ExplainPanel t={t} conceptId="threshold" />
             </section>
 
             <section
@@ -522,7 +457,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="sl" />
+              <ExplainPanel t={t} conceptId="sl" />
             </section>
 
             <section
@@ -530,7 +465,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="capital" />
+              <ExplainPanel t={t} conceptId="capital" />
             </section>
 
             <section
@@ -538,7 +473,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="interval" />
+              <ExplainPanel t={t} conceptId="interval" />
             </section>
 
             <section
@@ -546,7 +481,7 @@ export function HelpPage() {
               data-section
               className="help-section"
             >
-              <ExplainPanel conceptId="offset" />
+              <ExplainPanel t={t} conceptId="offset" />
             </section>
 
             {/* ── Trade Execution Flow ─────────────────────────────────── */}

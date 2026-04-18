@@ -16,9 +16,7 @@ import {
   TableConfig,
   BarChart3,
 } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { InfoTooltip } from '../../components/ui/info-tooltip';
-import { PasswordInput } from '../../components/ui/password-input';
+import { Button, InfoTooltip, Input } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
@@ -47,10 +45,10 @@ import {
   useDeleteNewsApiKey,
   useTestNewsApiKey,
 } from '../../hooks/use-user';
-import { DynamicModelSelect } from '../../components/settings/dynamic-model-select';
-import { AIUsageDashboard } from '../../components/settings/ai-usage-dashboard';
-import { ProviderStatusGrid } from '../../components/settings/provider-status-grid';
-import { NewsConfigPanel } from '../../components/settings/news-config-panel';
+import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
+import { AIUsageDashboard } from '../../containers/settings/ai-usage-dashboard';
+import { ProviderStatusGrid } from '../../containers/settings/provider-status-grid';
+import { NewsConfigPanel } from '../../containers/settings/news-config-panel';
 import { useNewsConfig, useUpdateNewsConfig } from '../../hooks/use-market';
 import { toast } from 'sonner';
 
@@ -364,7 +362,8 @@ export function SettingsPage() {
                 <label className="mb-1.5 block text-sm font-medium">
                   {t('settings.password')}
                 </label>
-                <PasswordInput
+                <Input
+                  type="password"
                   value={profileForm.password}
                   onChange={(e) =>
                     setProfileForm((f) => ({ ...f, password: e.target.value }))
@@ -448,7 +447,8 @@ export function SettingsPage() {
                   <label className="mb-1.5 block text-sm font-medium">
                     {t('settings.apiSecret')}
                   </label>
-                  <PasswordInput
+                  <Input
+                    type="password"
                     value={binanceForm.apiSecret}
                     onChange={(e) =>
                       setBinanceForm((f) => ({
@@ -590,7 +590,8 @@ export function SettingsPage() {
                   <label className="mb-1.5 block text-sm font-medium">
                     {t('settings.binanceTestnetApiSecret')}
                   </label>
-                  <PasswordInput
+                  <Input
+                    type="password"
                     value={testnetForm.apiSecret}
                     onChange={(e) =>
                       setTestnetForm((f) => ({
@@ -792,7 +793,8 @@ export function SettingsPage() {
                             <label className="mb-1 block text-xs font-medium">
                               API Key
                             </label>
-                            <PasswordInput
+                            <Input
+                              type="password"
                               placeholder="sk-..."
                               value={form.apiKey}
                               onChange={(e) =>
@@ -1169,7 +1171,8 @@ export function SettingsPage() {
                       )}
 
                       <div className="flex flex-col gap-3">
-                        <PasswordInput
+                        <Input
+                          type="password"
                           value={formKey}
                           onChange={(e) =>
                             setNewsKeyForms((prev) => ({

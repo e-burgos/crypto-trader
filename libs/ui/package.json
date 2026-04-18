@@ -7,6 +7,7 @@
     ".": {
       "import": "./index.mjs",
       "require": "./index.js"
-    }
+    },
+    "./tailwind-preset": "./src/lib/tokens/tailwind-preset.js"
   }
 }

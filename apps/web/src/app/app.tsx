@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { ThemeProvider } from '../components/theme-provider';
-import { Navbar } from '../components/navbar';
-import { PriceTicker } from '../components/price-ticker';
+import { AppThemeProvider } from '../containers/theme-provider-container';
+import { Navbar } from '../containers/navbar-container';
+import { PriceTicker } from '../containers/price-ticker-container';
 import { ProtectedRoute } from '../components/protected-route';
 import { LandingPage } from '../pages/landing';
 import { LoginPage } from '../pages/login';
@@ -13,7 +13,6 @@ import { HelpPage } from '../pages/help';
 import { DashboardLayout } from '../layouts/dashboard-layout';
 import { OverviewPage } from '../pages/dashboard/overview';
 import { TradeHistoryPage } from '../pages/dashboard/trade-history';
-import { AnalyticsPage } from '../pages/dashboard/analytics';
 import { MarketPage } from '../pages/dashboard/market';
 import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';
@@ -23,7 +22,7 @@ import { ChatPage } from '../pages/dashboard/chat';
 import { BotAnalysisPage } from '../pages/dashboard/bot-analysis';
 import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { LiveChartPage } from '../pages/dashboard/live-chart';
-import { ChatWidget } from '../components/chat/chat-widget';
+import { ChatWidget } from '../containers/chat/chat-widget';
 import { NotificationsPage } from '../pages/dashboard/notifications';
 import { AdminLayout } from '../pages/admin/index';
 import { AdminStatsPage } from '../pages/admin/stats';
@@ -56,7 +55,7 @@ function WebSocketInit() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+      <AppThemeProvider>
         <WebSocketInit />
         <Toaster richColors position="top-right" />
         <ChatWidget />
@@ -154,7 +153,7 @@ export function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </ThemeProvider>
+      </AppThemeProvider>
     </QueryClientProvider>
   );
 }

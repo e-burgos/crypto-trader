@@ -2,8 +2,7 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp, Loader2 } from 'lucide-react';
-import { Button } from '../components/ui/button';
-import { PasswordInput } from '../components/ui/password-input';
+import { Button, Input } from '@crypto-trader/ui';
 import { useAuthStore } from '../store/auth.store';
 
 export function RegisterPage() {
@@ -87,7 +86,8 @@ export function RegisterPage() {
                 >
                   {t('auth.password')}
                 </label>
-                <PasswordInput
+                <Input
+                  type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -104,7 +104,8 @@ export function RegisterPage() {
                 >
                   {t('auth.confirmPassword')}
                 </label>
-                <PasswordInput
+                <Input
+                  type="password"
                   id="confirm"
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}

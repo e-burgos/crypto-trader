@@ -644,522 +644,670 @@ function getIndicators(
 ): Record<IndicatorKey, IndicatorInfo> {
   const k = (s: string) => t(`market.indicators.${s}`);
   return {
-  price: {
-    title: k('price.title'),
-    subtitle: k('price.subtitle'),
-    what: k('price.what'),
-    how: k('price.how'),
-    signals: [
-      { label: k('price.s0Label'), color: 'text-emerald-400', desc: k('price.s0Desc') },
-      { label: k('price.s1Label'), color: 'text-sky-400', desc: k('price.s1Desc') },
-      { label: k('price.s2Label'), color: 'text-amber-400', desc: k('price.s2Desc') },
-      { label: k('price.s3Label'), color: 'text-red-400', desc: k('price.s3Desc') },
-    ],
-    tip: k('price.tip'),
-    chart: <PriceChart />,
-  },
-  signalReasons: {
-    title: k('signalReasons.title'),
-    subtitle: k('signalReasons.subtitle'),
-    what: k('signalReasons.what'),
-    how: k('signalReasons.how'),
-    signals: [
-      { label: k('signalReasons.s0Label'), color: 'text-emerald-400', desc: k('signalReasons.s0Desc') },
-      { label: k('signalReasons.s1Label'), color: 'text-red-400', desc: k('signalReasons.s1Desc') },
-      { label: k('signalReasons.s2Label'), color: 'text-amber-400', desc: k('signalReasons.s2Desc') },
-      { label: k('signalReasons.s3Label'), color: 'text-sky-400', desc: k('signalReasons.s3Desc') },
-    ],
-    tip: k('signalReasons.tip'),
-    chart: (
-      <svg
-        viewBox="0 0 280 90"
-        className="w-full h-24"
-        role="img"
-        aria-label="Signal factors chart"
-      >
-        {/* Score bar */}
-        <rect x="10" y="35" width="260" height="14" rx="7" fill="#1e293b" />
-        {/* Negative half */}
-        <rect
-          x="10"
-          y="35"
-          width="130"
-          height="14"
-          rx="7"
-          fill="#ef4444"
-          opacity="0.25"
-        />
-        {/* Positive half — score +2 out of max ~6 */}
-        <rect
-          x="140"
-          y="35"
-          width="87"
-          height="14"
-          rx="0"
-          fill="#10b981"
-          opacity="0.4"
-        />
-        <rect
-          x="227"
-          y="35"
-          width="43"
-          height="14"
-          rx="7"
-          fill="#10b981"
-          opacity="0.15"
-        />
-        {/* Center line */}
-        <line
-          x1="140"
-          y1="28"
-          x2="140"
-          y2="57"
-          stroke="#64748b"
-          strokeWidth="1.5"
-          strokeDasharray="3,2"
-        />
-        <text x="136" y="24" fill="#64748b" fontSize="9" textAnchor="middle">
-          0
-        </text>
-        {/* Current score marker */}
-        <circle
-          cx="207"
-          cy="42"
-          r="8"
-          fill="#10b981"
-          stroke="#fff"
-          strokeWidth="1.5"
-          opacity="0.9"
-        />
-        <text
-          x="207"
-          y="46"
-          fill="#fff"
-          fontSize="9"
-          fontWeight="700"
-          textAnchor="middle"
+    price: {
+      title: k('price.title'),
+      subtitle: k('price.subtitle'),
+      what: k('price.what'),
+      how: k('price.how'),
+      signals: [
+        {
+          label: k('price.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('price.s0Desc'),
+        },
+        {
+          label: k('price.s1Label'),
+          color: 'text-sky-400',
+          desc: k('price.s1Desc'),
+        },
+        {
+          label: k('price.s2Label'),
+          color: 'text-amber-400',
+          desc: k('price.s2Desc'),
+        },
+        {
+          label: k('price.s3Label'),
+          color: 'text-red-400',
+          desc: k('price.s3Desc'),
+        },
+      ],
+      tip: k('price.tip'),
+      chart: <PriceChart />,
+    },
+    signalReasons: {
+      title: k('signalReasons.title'),
+      subtitle: k('signalReasons.subtitle'),
+      what: k('signalReasons.what'),
+      how: k('signalReasons.how'),
+      signals: [
+        {
+          label: k('signalReasons.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('signalReasons.s0Desc'),
+        },
+        {
+          label: k('signalReasons.s1Label'),
+          color: 'text-red-400',
+          desc: k('signalReasons.s1Desc'),
+        },
+        {
+          label: k('signalReasons.s2Label'),
+          color: 'text-amber-400',
+          desc: k('signalReasons.s2Desc'),
+        },
+        {
+          label: k('signalReasons.s3Label'),
+          color: 'text-sky-400',
+          desc: k('signalReasons.s3Desc'),
+        },
+      ],
+      tip: k('signalReasons.tip'),
+      chart: (
+        <svg
+          viewBox="0 0 280 90"
+          className="w-full h-24"
+          role="img"
+          aria-label="Signal factors chart"
         >
-          +2
-        </text>
-        {/* Labels */}
-        <text x="12" y="72" fill="#ef4444" fontSize="9">
-          SELL
-        </text>
-        <text x="122" y="72" fill="#f59e0b" fontSize="9" textAnchor="middle">
-          NEUTRAL
-        </text>
-        <text x="268" y="72" fill="#10b981" fontSize="9" textAnchor="end">
-          BUY
-        </text>
-        {/* Factor pills */}
-        <rect
-          x="10"
-          y="78"
-          width="60"
-          height="11"
-          rx="5"
-          fill="#10b981"
-          opacity="0.2"
-        />
-        <text x="40" y="87" fill="#10b981" fontSize="8" textAnchor="middle">
-          RSI oversold
-        </text>
-        <rect
-          x="78"
-          y="78"
-          width="68"
-          height="11"
-          rx="5"
-          fill="#10b981"
-          opacity="0.2"
-        />
-        <text x="112" y="87" fill="#10b981" fontSize="8" textAnchor="middle">
-          MACD cruce ↑
-        </text>
-        <rect
-          x="154"
-          y="78"
-          width="56"
-          height="11"
-          rx="5"
-          fill="#ef4444"
-          opacity="0.2"
-        />
-        <text x="182" y="87" fill="#ef4444" fontSize="8" textAnchor="middle">
-          BB superior
-        </text>
-        <rect
-          x="218"
-          y="78"
-          width="52"
-          height="11"
-          rx="5"
-          fill="#f59e0b"
-          opacity="0.2"
-        />
-        <text x="244" y="87" fill="#f59e0b" fontSize="8" textAnchor="middle">
-          Vol. normal
-        </text>
-      </svg>
-    ),
-  },
-  rsi: {
-    title: k('rsi.title'),
-    subtitle: k('rsi.subtitle'),
-    what: k('rsi.what'),
-    how: k('rsi.how'),
-    signals: [
-      { label: k('rsi.s0Label'), color: 'text-emerald-400', desc: k('rsi.s0Desc') },
-      { label: k('rsi.s1Label'), color: 'text-amber-400', desc: k('rsi.s1Desc') },
-      { label: k('rsi.s2Label'), color: 'text-red-400', desc: k('rsi.s2Desc') },
-    ],
-    tip: k('rsi.tip'),
-    chart: <RsiChart />,
-  },
-  macd: {
-    title: k('macd.title'),
-    subtitle: k('macd.subtitle'),
-    what: k('macd.what'),
-    how: k('macd.how'),
-    signals: [
-      { label: k('macd.s0Label'), color: 'text-emerald-400', desc: k('macd.s0Desc') },
-      { label: k('macd.s1Label'), color: 'text-red-400', desc: k('macd.s1Desc') },
-      { label: k('macd.s2Label'), color: 'text-emerald-400', desc: k('macd.s2Desc') },
-      { label: k('macd.s3Label'), color: 'text-red-400', desc: k('macd.s3Desc') },
-    ],
-    tip: k('macd.tip'),
-    chart: <MacdChart />,
-  },
-  ema: {
-    title: k('ema.title'),
-    subtitle: k('ema.subtitle'),
-    what: k('ema.what'),
-    how: k('ema.how'),
-    signals: [
-      { label: k('ema.s0Label'), color: 'text-emerald-400', desc: k('ema.s0Desc') },
-      { label: k('ema.s1Label'), color: 'text-red-400', desc: k('ema.s1Desc') },
-      { label: k('ema.s2Label'), color: 'text-emerald-400', desc: k('ema.s2Desc') },
-      { label: k('ema.s3Label'), color: 'text-red-400', desc: k('ema.s3Desc') },
-    ],
-    tip: k('ema.tip'),
-    chart: <EmaChart />,
-  },
-  bollinger: {
-    title: k('bollinger.title'),
-    subtitle: k('bollinger.subtitle'),
-    what: k('bollinger.what'),
-    how: k('bollinger.how'),
-    signals: [
-      { label: k('bollinger.s0Label'), color: 'text-red-400', desc: k('bollinger.s0Desc') },
-      { label: k('bollinger.s1Label'), color: 'text-emerald-400', desc: k('bollinger.s1Desc') },
-      { label: k('bollinger.s2Label'), color: 'text-amber-400', desc: k('bollinger.s2Desc') },
-      { label: k('bollinger.s3Label'), color: 'text-sky-400', desc: k('bollinger.s3Desc') },
-    ],
-    tip: k('bollinger.tip'),
-    chart: <BollingerChart />,
-  },
-  volume: {
-    title: k('volume.title'),
-    subtitle: k('volume.subtitle'),
-    what: k('volume.what'),
-    how: k('volume.how'),
-    signals: [
-      { label: k('volume.s0Label'), color: 'text-emerald-400', desc: k('volume.s0Desc') },
-      { label: k('volume.s1Label'), color: 'text-amber-400', desc: k('volume.s1Desc') },
-      { label: k('volume.s2Label'), color: 'text-red-400', desc: k('volume.s2Desc') },
-    ],
-    tip: k('volume.tip'),
-    chart: <VolumeChart />,
-  },
-  opportunity: {
-    title: k('opportunity.title'),
-    subtitle: k('opportunity.subtitle'),
-    what: k('opportunity.what'),
-    how: k('opportunity.how'),
-    signals: [
-      { label: k('opportunity.s0Label'), color: 'text-emerald-400', desc: k('opportunity.s0Desc') },
-      { label: k('opportunity.s1Label'), color: 'text-red-400', desc: k('opportunity.s1Desc') },
-      { label: k('opportunity.s2Label'), color: 'text-amber-400', desc: k('opportunity.s2Desc') },
-      { label: k('opportunity.s3Label'), color: 'text-sky-400', desc: k('opportunity.s3Desc') },
-    ],
-    tip: k('opportunity.tip'),
-    chart: (
-      <svg
-        viewBox="0 0 280 100"
-        className="w-full h-28"
-        role="img"
-        aria-label="Opportunity panel diagram"
-      >
-        {/* Score axis */}
-        <rect x="10" y="42" width="260" height="12" rx="6" fill="#1e293b" />
-        {/* Sell zone left */}
-        <rect
-          x="10"
-          y="42"
-          width="86"
-          height="12"
-          rx="6"
-          fill="#ef4444"
-          opacity="0.35"
-        />
-        {/* Neutral zone center */}
-        <rect
-          x="96"
-          y="42"
-          width="88"
-          height="12"
-          fill="#f59e0b"
-          opacity="0.25"
-        />
-        {/* Buy zone right */}
-        <rect
-          x="184"
-          y="42"
-          width="86"
-          height="12"
-          rx="6"
-          fill="#10b981"
-          opacity="0.35"
-        />
-        {/* Zone labels */}
-        <text
-          x="53"
-          y="38"
-          fill="#ef4444"
-          fontSize="8"
-          fontWeight="600"
-          textAnchor="middle"
-        >
-          VENDER
-        </text>
-        <text
-          x="140"
-          y="38"
-          fill="#f59e0b"
-          fontSize="8"
-          fontWeight="600"
-          textAnchor="middle"
-        >
-          ESPERAR
-        </text>
-        <text
-          x="227"
-          y="38"
-          fill="#10b981"
-          fontSize="8"
-          fontWeight="600"
-          textAnchor="middle"
-        >
-          COMPRAR
-        </text>
-        {/* Score markers */}
-        <line
-          x1="96"
-          y1="35"
-          x2="96"
-          y2="62"
-          stroke="#94a3b8"
-          strokeWidth="1"
-          strokeDasharray="3,2"
-        />
-        <line
-          x1="184"
-          y1="35"
-          x2="184"
-          y2="62"
-          stroke="#94a3b8"
-          strokeWidth="1"
-          strokeDasharray="3,2"
-        />
-        <text x="96" y="70" fill="#64748b" fontSize="8" textAnchor="middle">
-          -4
-        </text>
-        <text x="184" y="70" fill="#64748b" fontSize="8" textAnchor="middle">
-          +4
-        </text>
-        <text x="10" y="70" fill="#64748b" fontSize="8">
-          -8
-        </text>
-        <text x="265" y="70" fill="#64748b" fontSize="8" textAnchor="end">
-          +8
-        </text>
-        {/* Example score needle at +1 (WAIT zone) */}
-        <circle
-          cx="147"
-          cy="48"
-          r="7"
-          fill="#f59e0b"
-          stroke="#fff"
-          strokeWidth="1.5"
-        />
-        <text
-          x="147"
-          y="52"
-          fill="#fff"
-          fontSize="8"
-          fontWeight="700"
-          textAnchor="middle"
-        >
-          +1
-        </text>
-        {/* Confidence bar */}
-        <text x="10" y="86" fill="#94a3b8" fontSize="8">
-          Confianza:
-        </text>
-        <rect x="65" y="78" width="160" height="8" rx="4" fill="#1e293b" />
-        <rect
-          x="65"
-          y="78"
-          width="113"
-          height="8"
-          rx="4"
-          fill="#f59e0b"
-          opacity="0.7"
-        />
-        <text x="232" y="86" fill="#f59e0b" fontSize="9" fontWeight="700">
-          71%
-        </text>
-        <text x="10" y="99" fill="#64748b" fontSize="7">
-          Score bajo → ESPERAR aunque % sea alto
-        </text>
-      </svg>
-    ),
-  },
-  chart: {
-    title: k('chart.title'),
-    subtitle: k('chart.subtitle'),
-    what: k('chart.what'),
-    how: k('chart.how'),
-    signals: [
-      { label: k('chart.s0Label'), color: 'text-violet-400', desc: k('chart.s0Desc') },
-      { label: k('chart.s1Label'), color: 'text-orange-400', desc: k('chart.s1Desc') },
-      { label: k('chart.s2Label'), color: 'text-amber-400', desc: k('chart.s2Desc') },
-      { label: k('chart.s3Label'), color: 'text-slate-400', desc: k('chart.s3Desc') },
-    ],
-    tip: k('chart.tip'),
-    chart: (
-      <svg
-        viewBox="0 0 280 100"
-        className="w-full h-28"
-        role="img"
-        aria-label="Candlestick chart with overlays"
-      >
-        {/* Grid lines */}
-        {[20, 40, 60, 80].map((y) => (
-          <line
-            key={y}
-            x1="10"
-            y1={y}
-            x2="270"
-            y2={y}
-            stroke="#1e293b"
-            strokeWidth="1"
+          {/* Score bar */}
+          <rect x="10" y="35" width="260" height="14" rx="7" fill="#1e293b" />
+          {/* Negative half */}
+          <rect
+            x="10"
+            y="35"
+            width="130"
+            height="14"
+            rx="7"
+            fill="#ef4444"
+            opacity="0.25"
           />
-        ))}
-        {/* Candles */}
-        {[
-          { x: 20, o: 70, c: 55, h: 75, l: 50, bull: false },
-          { x: 40, o: 55, c: 60, h: 65, l: 48, bull: true },
-          { x: 60, o: 60, c: 52, h: 63, l: 45, bull: false },
-          { x: 80, o: 52, c: 58, h: 62, l: 48, bull: true },
-          { x: 100, o: 58, c: 65, h: 68, l: 55, bull: true },
-          { x: 120, o: 65, c: 60, h: 70, l: 56, bull: false },
-          { x: 140, o: 60, c: 68, h: 72, l: 57, bull: true },
-          { x: 160, o: 68, c: 74, h: 78, l: 65, bull: true },
-          { x: 180, o: 74, c: 70, h: 80, l: 66, bull: false },
-          { x: 200, o: 70, c: 76, h: 82, l: 68, bull: true },
-          { x: 220, o: 76, c: 72, h: 79, l: 68, bull: false },
-          { x: 240, o: 72, c: 78, h: 83, l: 70, bull: true },
-        ].map(({ x, o, c, h, l, bull }) => (
-          <g key={x}>
+          {/* Positive half — score +2 out of max ~6 */}
+          <rect
+            x="140"
+            y="35"
+            width="87"
+            height="14"
+            rx="0"
+            fill="#10b981"
+            opacity="0.4"
+          />
+          <rect
+            x="227"
+            y="35"
+            width="43"
+            height="14"
+            rx="7"
+            fill="#10b981"
+            opacity="0.15"
+          />
+          {/* Center line */}
+          <line
+            x1="140"
+            y1="28"
+            x2="140"
+            y2="57"
+            stroke="#64748b"
+            strokeWidth="1.5"
+            strokeDasharray="3,2"
+          />
+          <text x="136" y="24" fill="#64748b" fontSize="9" textAnchor="middle">
+            0
+          </text>
+          {/* Current score marker */}
+          <circle
+            cx="207"
+            cy="42"
+            r="8"
+            fill="#10b981"
+            stroke="#fff"
+            strokeWidth="1.5"
+            opacity="0.9"
+          />
+          <text
+            x="207"
+            y="46"
+            fill="#fff"
+            fontSize="9"
+            fontWeight="700"
+            textAnchor="middle"
+          >
+            +2
+          </text>
+          {/* Labels */}
+          <text x="12" y="72" fill="#ef4444" fontSize="9">
+            SELL
+          </text>
+          <text x="122" y="72" fill="#f59e0b" fontSize="9" textAnchor="middle">
+            NEUTRAL
+          </text>
+          <text x="268" y="72" fill="#10b981" fontSize="9" textAnchor="end">
+            BUY
+          </text>
+          {/* Factor pills */}
+          <rect
+            x="10"
+            y="78"
+            width="60"
+            height="11"
+            rx="5"
+            fill="#10b981"
+            opacity="0.2"
+          />
+          <text x="40" y="87" fill="#10b981" fontSize="8" textAnchor="middle">
+            RSI oversold
+          </text>
+          <rect
+            x="78"
+            y="78"
+            width="68"
+            height="11"
+            rx="5"
+            fill="#10b981"
+            opacity="0.2"
+          />
+          <text x="112" y="87" fill="#10b981" fontSize="8" textAnchor="middle">
+            MACD cruce ↑
+          </text>
+          <rect
+            x="154"
+            y="78"
+            width="56"
+            height="11"
+            rx="5"
+            fill="#ef4444"
+            opacity="0.2"
+          />
+          <text x="182" y="87" fill="#ef4444" fontSize="8" textAnchor="middle">
+            BB superior
+          </text>
+          <rect
+            x="218"
+            y="78"
+            width="52"
+            height="11"
+            rx="5"
+            fill="#f59e0b"
+            opacity="0.2"
+          />
+          <text x="244" y="87" fill="#f59e0b" fontSize="8" textAnchor="middle">
+            Vol. normal
+          </text>
+        </svg>
+      ),
+    },
+    rsi: {
+      title: k('rsi.title'),
+      subtitle: k('rsi.subtitle'),
+      what: k('rsi.what'),
+      how: k('rsi.how'),
+      signals: [
+        {
+          label: k('rsi.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('rsi.s0Desc'),
+        },
+        {
+          label: k('rsi.s1Label'),
+          color: 'text-amber-400',
+          desc: k('rsi.s1Desc'),
+        },
+        {
+          label: k('rsi.s2Label'),
+          color: 'text-red-400',
+          desc: k('rsi.s2Desc'),
+        },
+      ],
+      tip: k('rsi.tip'),
+      chart: <RsiChart />,
+    },
+    macd: {
+      title: k('macd.title'),
+      subtitle: k('macd.subtitle'),
+      what: k('macd.what'),
+      how: k('macd.how'),
+      signals: [
+        {
+          label: k('macd.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('macd.s0Desc'),
+        },
+        {
+          label: k('macd.s1Label'),
+          color: 'text-red-400',
+          desc: k('macd.s1Desc'),
+        },
+        {
+          label: k('macd.s2Label'),
+          color: 'text-emerald-400',
+          desc: k('macd.s2Desc'),
+        },
+        {
+          label: k('macd.s3Label'),
+          color: 'text-red-400',
+          desc: k('macd.s3Desc'),
+        },
+      ],
+      tip: k('macd.tip'),
+      chart: <MacdChart />,
+    },
+    ema: {
+      title: k('ema.title'),
+      subtitle: k('ema.subtitle'),
+      what: k('ema.what'),
+      how: k('ema.how'),
+      signals: [
+        {
+          label: k('ema.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('ema.s0Desc'),
+        },
+        {
+          label: k('ema.s1Label'),
+          color: 'text-red-400',
+          desc: k('ema.s1Desc'),
+        },
+        {
+          label: k('ema.s2Label'),
+          color: 'text-emerald-400',
+          desc: k('ema.s2Desc'),
+        },
+        {
+          label: k('ema.s3Label'),
+          color: 'text-red-400',
+          desc: k('ema.s3Desc'),
+        },
+      ],
+      tip: k('ema.tip'),
+      chart: <EmaChart />,
+    },
+    bollinger: {
+      title: k('bollinger.title'),
+      subtitle: k('bollinger.subtitle'),
+      what: k('bollinger.what'),
+      how: k('bollinger.how'),
+      signals: [
+        {
+          label: k('bollinger.s0Label'),
+          color: 'text-red-400',
+          desc: k('bollinger.s0Desc'),
+        },
+        {
+          label: k('bollinger.s1Label'),
+          color: 'text-emerald-400',
+          desc: k('bollinger.s1Desc'),
+        },
+        {
+          label: k('bollinger.s2Label'),
+          color: 'text-amber-400',
+          desc: k('bollinger.s2Desc'),
+        },
+        {
+          label: k('bollinger.s3Label'),
+          color: 'text-sky-400',
+          desc: k('bollinger.s3Desc'),
+        },
+      ],
+      tip: k('bollinger.tip'),
+      chart: <BollingerChart />,
+    },
+    volume: {
+      title: k('volume.title'),
+      subtitle: k('volume.subtitle'),
+      what: k('volume.what'),
+      how: k('volume.how'),
+      signals: [
+        {
+          label: k('volume.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('volume.s0Desc'),
+        },
+        {
+          label: k('volume.s1Label'),
+          color: 'text-amber-400',
+          desc: k('volume.s1Desc'),
+        },
+        {
+          label: k('volume.s2Label'),
+          color: 'text-red-400',
+          desc: k('volume.s2Desc'),
+        },
+      ],
+      tip: k('volume.tip'),
+      chart: <VolumeChart />,
+    },
+    opportunity: {
+      title: k('opportunity.title'),
+      subtitle: k('opportunity.subtitle'),
+      what: k('opportunity.what'),
+      how: k('opportunity.how'),
+      signals: [
+        {
+          label: k('opportunity.s0Label'),
+          color: 'text-emerald-400',
+          desc: k('opportunity.s0Desc'),
+        },
+        {
+          label: k('opportunity.s1Label'),
+          color: 'text-red-400',
+          desc: k('opportunity.s1Desc'),
+        },
+        {
+          label: k('opportunity.s2Label'),
+          color: 'text-amber-400',
+          desc: k('opportunity.s2Desc'),
+        },
+        {
+          label: k('opportunity.s3Label'),
+          color: 'text-sky-400',
+          desc: k('opportunity.s3Desc'),
+        },
+      ],
+      tip: k('opportunity.tip'),
+      chart: (
+        <svg
+          viewBox="0 0 280 100"
+          className="w-full h-28"
+          role="img"
+          aria-label="Opportunity panel diagram"
+        >
+          {/* Score axis */}
+          <rect x="10" y="42" width="260" height="12" rx="6" fill="#1e293b" />
+          {/* Sell zone left */}
+          <rect
+            x="10"
+            y="42"
+            width="86"
+            height="12"
+            rx="6"
+            fill="#ef4444"
+            opacity="0.35"
+          />
+          {/* Neutral zone center */}
+          <rect
+            x="96"
+            y="42"
+            width="88"
+            height="12"
+            fill="#f59e0b"
+            opacity="0.25"
+          />
+          {/* Buy zone right */}
+          <rect
+            x="184"
+            y="42"
+            width="86"
+            height="12"
+            rx="6"
+            fill="#10b981"
+            opacity="0.35"
+          />
+          {/* Zone labels */}
+          <text
+            x="53"
+            y="38"
+            fill="#ef4444"
+            fontSize="8"
+            fontWeight="600"
+            textAnchor="middle"
+          >
+            VENDER
+          </text>
+          <text
+            x="140"
+            y="38"
+            fill="#f59e0b"
+            fontSize="8"
+            fontWeight="600"
+            textAnchor="middle"
+          >
+            ESPERAR
+          </text>
+          <text
+            x="227"
+            y="38"
+            fill="#10b981"
+            fontSize="8"
+            fontWeight="600"
+            textAnchor="middle"
+          >
+            COMPRAR
+          </text>
+          {/* Score markers */}
+          <line
+            x1="96"
+            y1="35"
+            x2="96"
+            y2="62"
+            stroke="#94a3b8"
+            strokeWidth="1"
+            strokeDasharray="3,2"
+          />
+          <line
+            x1="184"
+            y1="35"
+            x2="184"
+            y2="62"
+            stroke="#94a3b8"
+            strokeWidth="1"
+            strokeDasharray="3,2"
+          />
+          <text x="96" y="70" fill="#64748b" fontSize="8" textAnchor="middle">
+            -4
+          </text>
+          <text x="184" y="70" fill="#64748b" fontSize="8" textAnchor="middle">
+            +4
+          </text>
+          <text x="10" y="70" fill="#64748b" fontSize="8">
+            -8
+          </text>
+          <text x="265" y="70" fill="#64748b" fontSize="8" textAnchor="end">
+            +8
+          </text>
+          {/* Example score needle at +1 (WAIT zone) */}
+          <circle
+            cx="147"
+            cy="48"
+            r="7"
+            fill="#f59e0b"
+            stroke="#fff"
+            strokeWidth="1.5"
+          />
+          <text
+            x="147"
+            y="52"
+            fill="#fff"
+            fontSize="8"
+            fontWeight="700"
+            textAnchor="middle"
+          >
+            +1
+          </text>
+          {/* Confidence bar */}
+          <text x="10" y="86" fill="#94a3b8" fontSize="8">
+            Confianza:
+          </text>
+          <rect x="65" y="78" width="160" height="8" rx="4" fill="#1e293b" />
+          <rect
+            x="65"
+            y="78"
+            width="113"
+            height="8"
+            rx="4"
+            fill="#f59e0b"
+            opacity="0.7"
+          />
+          <text x="232" y="86" fill="#f59e0b" fontSize="9" fontWeight="700">
+            71%
+          </text>
+          <text x="10" y="99" fill="#64748b" fontSize="7">
+            Score bajo → ESPERAR aunque % sea alto
+          </text>
+        </svg>
+      ),
+    },
+    chart: {
+      title: k('chart.title'),
+      subtitle: k('chart.subtitle'),
+      what: k('chart.what'),
+      how: k('chart.how'),
+      signals: [
+        {
+          label: k('chart.s0Label'),
+          color: 'text-violet-400',
+          desc: k('chart.s0Desc'),
+        },
+        {
+          label: k('chart.s1Label'),
+          color: 'text-orange-400',
+          desc: k('chart.s1Desc'),
+        },
+        {
+          label: k('chart.s2Label'),
+          color: 'text-amber-400',
+          desc: k('chart.s2Desc'),
+        },
+        {
+          label: k('chart.s3Label'),
+          color: 'text-slate-400',
+          desc: k('chart.s3Desc'),
+        },
+      ],
+      tip: k('chart.tip'),
+      chart: (
+        <svg
+          viewBox="0 0 280 100"
+          className="w-full h-28"
+          role="img"
+          aria-label="Candlestick chart with overlays"
+        >
+          {/* Grid lines */}
+          {[20, 40, 60, 80].map((y) => (
             <line
-              x1={x}
-              y1={h}
-              x2={x}
-              y2={l}
-              stroke={bull ? '#10b981' : '#ef4444'}
+              key={y}
+              x1="10"
+              y1={y}
+              x2="270"
+              y2={y}
+              stroke="#1e293b"
               strokeWidth="1"
             />
-            <rect
-              x={x - 5}
-              y={Math.min(o, c)}
-              width={10}
-              height={Math.max(Math.abs(o - c), 2)}
-              fill={bull ? '#10b981' : '#ef4444'}
-            />
-          </g>
-        ))}
-        {/* S line (green) */}
-        <line
-          x1="10"
-          y1="72"
-          x2="270"
-          y2="72"
-          stroke="#10b981"
-          strokeWidth="1.5"
-          strokeDasharray="4,3"
-          opacity="0.9"
-        />
-        <text x="14" y="70" fill="#10b981" fontSize="7" fontWeight="700">
-          S
-        </text>
-        {/* R line (red) */}
-        <line
-          x1="10"
-          y1="28"
-          x2="270"
-          y2="28"
-          stroke="#ef4444"
-          strokeWidth="1.5"
-          strokeDasharray="4,3"
-          opacity="0.9"
-        />
-        <text x="14" y="26" fill="#ef4444" fontSize="7" fontWeight="700">
-          R
-        </text>
-        {/* EMA 9 (violet) */}
-        <line
-          x1="10"
-          y1="62"
-          x2="270"
-          y2="62"
-          stroke="#a78bfa"
-          strokeWidth="1.5"
-          opacity="0.8"
-        />
-        <text x="248" y="60" fill="#a78bfa" fontSize="7">
-          EMA 9
-        </text>
-        {/* EMA 200 (orange dashed) */}
-        <line
-          x1="10"
-          y1="85"
-          x2="270"
-          y2="85"
-          stroke="#f97316"
-          strokeWidth="2"
-          strokeDasharray="6,3"
-          opacity="0.7"
-        />
-        <text x="232" y="83" fill="#f97316" fontSize="7">
-          EMA 200
-        </text>
-      </svg>
-    ),
-  },
-  supportResistance: {
-    title: k('supportResistance.title'),
-    subtitle: k('supportResistance.subtitle'),
-    what: k('supportResistance.what'),
-    how: k('supportResistance.how'),
-    signals: [
-      { label: k('supportResistance.s0Label'), color: 'text-red-400', desc: k('supportResistance.s0Desc') },
-      { label: k('supportResistance.s1Label'), color: 'text-emerald-400', desc: k('supportResistance.s1Desc') },
-      { label: k('supportResistance.s2Label'), color: 'text-sky-400', desc: k('supportResistance.s2Desc') },
-    ],
-    tip: k('supportResistance.tip'),
-    chart: <SupportResistanceChart />,
-  },
+          ))}
+          {/* Candles */}
+          {[
+            { x: 20, o: 70, c: 55, h: 75, l: 50, bull: false },
+            { x: 40, o: 55, c: 60, h: 65, l: 48, bull: true },
+            { x: 60, o: 60, c: 52, h: 63, l: 45, bull: false },
+            { x: 80, o: 52, c: 58, h: 62, l: 48, bull: true },
+            { x: 100, o: 58, c: 65, h: 68, l: 55, bull: true },
+            { x: 120, o: 65, c: 60, h: 70, l: 56, bull: false },
+            { x: 140, o: 60, c: 68, h: 72, l: 57, bull: true },
+            { x: 160, o: 68, c: 74, h: 78, l: 65, bull: true },
+            { x: 180, o: 74, c: 70, h: 80, l: 66, bull: false },
+            { x: 200, o: 70, c: 76, h: 82, l: 68, bull: true },
+            { x: 220, o: 76, c: 72, h: 79, l: 68, bull: false },
+            { x: 240, o: 72, c: 78, h: 83, l: 70, bull: true },
+          ].map(({ x, o, c, h, l, bull }) => (
+            <g key={x}>
+              <line
+                x1={x}
+                y1={h}
+                x2={x}
+                y2={l}
+                stroke={bull ? '#10b981' : '#ef4444'}
+                strokeWidth="1"
+              />
+              <rect
+                x={x - 5}
+                y={Math.min(o, c)}
+                width={10}
+                height={Math.max(Math.abs(o - c), 2)}
+                fill={bull ? '#10b981' : '#ef4444'}
+              />
+            </g>
+          ))}
+          {/* S line (green) */}
+          <line
+            x1="10"
+            y1="72"
+            x2="270"
+            y2="72"
+            stroke="#10b981"
+            strokeWidth="1.5"
+            strokeDasharray="4,3"
+            opacity="0.9"
+          />
+          <text x="14" y="70" fill="#10b981" fontSize="7" fontWeight="700">
+            S
+          </text>
+          {/* R line (red) */}
+          <line
+            x1="10"
+            y1="28"
+            x2="270"
+            y2="28"
+            stroke="#ef4444"
+            strokeWidth="1.5"
+            strokeDasharray="4,3"
+            opacity="0.9"
+          />
+          <text x="14" y="26" fill="#ef4444" fontSize="7" fontWeight="700">
+            R
+          </text>
+          {/* EMA 9 (violet) */}
+          <line
+            x1="10"
+            y1="62"
+            x2="270"
+            y2="62"
+            stroke="#a78bfa"
+            strokeWidth="1.5"
+            opacity="0.8"
+          />
+          <text x="248" y="60" fill="#a78bfa" fontSize="7">
+            EMA 9
+          </text>
+          {/* EMA 200 (orange dashed) */}
+          <line
+            x1="10"
+            y1="85"
+            x2="270"
+            y2="85"
+            stroke="#f97316"
+            strokeWidth="2"
+            strokeDasharray="6,3"
+            opacity="0.7"
+          />
+          <text x="232" y="83" fill="#f97316" fontSize="7">
+            EMA 200
+          </text>
+        </svg>
+      ),
+    },
+    supportResistance: {
+      title: k('supportResistance.title'),
+      subtitle: k('supportResistance.subtitle'),
+      what: k('supportResistance.what'),
+      how: k('supportResistance.how'),
+      signals: [
+        {
+          label: k('supportResistance.s0Label'),
+          color: 'text-red-400',
+          desc: k('supportResistance.s0Desc'),
+        },
+        {
+          label: k('supportResistance.s1Label'),
+          color: 'text-emerald-400',
+          desc: k('supportResistance.s1Desc'),
+        },
+        {
+          label: k('supportResistance.s2Label'),
+          color: 'text-sky-400',
+          desc: k('supportResistance.s2Desc'),
+        },
+      ],
+      tip: k('supportResistance.tip'),
+      chart: <SupportResistanceChart />,
+    },
   };
 }
 

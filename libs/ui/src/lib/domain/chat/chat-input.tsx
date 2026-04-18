@@ -52,7 +52,11 @@ export function ChatInput({
   return (
     <div className="bg-transparent">
       {hasMessages && (
-        <CapabilityButtons t={t} onSelect={(msg, cap) => onSend(msg, cap)} compact />
+        <CapabilityButtons
+          t={t}
+          onSelect={(msg, cap) => onSend(msg, cap)}
+          compact
+        />
       )}
 
       <div className="px-3 pb-3 pt-2">

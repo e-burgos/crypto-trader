@@ -69,7 +69,10 @@ export {
   DropdownSeparator,
   DropdownLabel,
 } from './lib/composites/dropdown';
-export type { DropdownProps, DropdownItemProps } from './lib/composites/dropdown';
+export type {
+  DropdownProps,
+  DropdownItemProps,
+} from './lib/composites/dropdown';
 export { Sidebar } from './lib/composites/sidebar';
 export type {
   SidebarProps,
@@ -102,7 +105,10 @@ export type { ThemeProviderProps } from './lib/theme/theme-provider';
 export { StatCard } from './lib/domain/market/stat-card';
 export type { StatCardProps } from './lib/domain/market/stat-card';
 export { PriceTicker } from './lib/domain/market/price-ticker';
-export type { PriceTickerProps, TickerItem } from './lib/domain/market/price-ticker';
+export type {
+  PriceTickerProps,
+  TickerItem,
+} from './lib/domain/market/price-ticker';
 export { IndicatorInfoModal } from './lib/domain/market/indicator-info-modal';
 export type { IndicatorKey } from './lib/domain/market/indicator-info-modal';
 

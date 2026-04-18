@@ -412,8 +412,8 @@ export function Sidebar({
           onClick={onToggleCollapsed}
           aria-label={
             collapsed
-              ? labels?.expandSidebar ?? 'Expand sidebar'
-              : labels?.collapseSidebar ?? 'Collapse sidebar'
+              ? (labels?.expandSidebar ?? 'Expand sidebar')
+              : (labels?.collapseSidebar ?? 'Collapse sidebar')
           }
           className={cn(
             'absolute -right-3 top-[72px] z-10',

@@ -21,10 +21,7 @@ export function ChartCard({
 }: ChartCardProps) {
   return (
     <div
-      className={cn(
-        'rounded-xl border border-border bg-card p-4',
-        className,
-      )}
+      className={cn('rounded-xl border border-border bg-card p-4', className)}
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>

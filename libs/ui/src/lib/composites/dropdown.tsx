@@ -75,9 +75,7 @@ export function DropdownItem({
         className,
       )}
     >
-      {icon && (
-        <span className="shrink-0 text-muted-foreground">{icon}</span>
-      )}
+      {icon && <span className="shrink-0 text-muted-foreground">{icon}</span>}
       {children}
     </DropdownMenuPrimitive.Item>
   );

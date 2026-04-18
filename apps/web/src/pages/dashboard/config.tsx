@@ -56,10 +56,7 @@ import {
   usePlatformMode,
   useLLMKeys,
 } from '../../hooks/use-user';
-import {
-  StrategyPresets,
-  PRESETS,
-} from '@crypto-trader/ui';
+import { StrategyPresets, PRESETS } from '@crypto-trader/ui';
 import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
 
 // ── Fallback LLM providers (used when dynamic API is unavailable) ─────────

@@ -64,91 +64,91 @@ ui  →  shared
 
 ### 3.1 Gestor de paquetes y build
 
-| Herramienta | Versión | Rol |
-|-------------|---------|-----|
-| **pnpm** | 9.x | Package manager del workspace |
-| **NX** | 22.x | Monorepo orchestration, cache, affected |
-| **TypeScript** | 6.x | Lenguaje base en todos los packages |
-| **Node.js** | ≥20 | Runtime requerido |
+| Herramienta    | Versión | Rol                                     |
+| -------------- | ------- | --------------------------------------- |
+| **pnpm**       | 9.x     | Package manager del workspace           |
+| **NX**         | 22.x    | Monorepo orchestration, cache, affected |
+| **TypeScript** | 6.x     | Lenguaje base en todos los packages     |
+| **Node.js**    | ≥20     | Runtime requerido                       |
 
 ### 3.2 Backend (`apps/api`)
 
-| Tecnología | Versión | Rol |
-|-----------|---------|-----|
-| **NestJS** | 11.x | Framework HTTP + DI + módulos |
-| **Prisma ORM** | 7.x | Acceso a base de datos + migraciones |
-| **PostgreSQL** | 16 | Base de datos principal (Railway en prod) |
-| **Redis** | 7 | Cache de noticias, estado del agente, pub/sub WebSocket |
-| **Bull** | 4.x | Colas de trabajos: análisis, órdenes, noticias |
-| **Socket.io** | 4.x | Gateway WebSocket para actualizaciones en tiempo real |
-| **Passport + JWT** | — | Autenticación (access token 15min + refresh token) |
-| **bcrypt** | 6.x | Hash de contraseñas |
-| **class-validator** | 0.15.x | Validación de DTOs |
-| **Webpack** | — | Build de producción del API (NX target) |
+| Tecnología          | Versión | Rol                                                     |
+| ------------------- | ------- | ------------------------------------------------------- |
+| **NestJS**          | 11.x    | Framework HTTP + DI + módulos                           |
+| **Prisma ORM**      | 7.x     | Acceso a base de datos + migraciones                    |
+| **PostgreSQL**      | 16      | Base de datos principal (Railway en prod)               |
+| **Redis**           | 7       | Cache de noticias, estado del agente, pub/sub WebSocket |
+| **Bull**            | 4.x     | Colas de trabajos: análisis, órdenes, noticias          |
+| **Socket.io**       | 4.x     | Gateway WebSocket para actualizaciones en tiempo real   |
+| **Passport + JWT**  | —       | Autenticación (access token 15min + refresh token)      |
+| **bcrypt**          | 6.x     | Hash de contraseñas                                     |
+| **class-validator** | 0.15.x  | Validación de DTOs                                      |
+| **Webpack**         | —       | Build de producción del API (NX target)                 |
 
 **Bundler runtime API:** `@swc-node/register` para desarrollo, Webpack para producción.
 
 ### 3.3 Frontend (`apps/web`)
 
-| Tecnología | Versión | Rol |
-|-----------|---------|-----|
-| **React** | 19.x | UI framework |
-| **Vite** | 8.x | Dev server + build tool |
-| **React Router DOM** | 6.x | Routing SPA |
-| **TanStack Query** | 5.x | Server state, caché de peticiones |
-| **Zustand** | 5.x | Client state global (auth, market, sidebar, theme, chat) |
-| **React Hook Form** | 7.x | Manejo de formularios |
-| **Zod** | 4.x | Validación de esquemas (forms + API responses) |
-| **Tailwind CSS** | 3.x | Utility-first CSS |
-| **GSAP** | 3.x | Animaciones (landing, counters, transiciones) |
-| **Socket.io-client** | 4.x | Conexión WebSocket al API |
-| **lightweight-charts** | 5.x | Gráfico de velas (TradingView-style) |
-| **Recharts** | 3.x | Gráficos de analytics (línea, área, barras) |
-| **react-i18next** | 17.x | Internacionalización (ES + EN, ~1400 claves) |
-| **Lucide React** | 1.x | Librería de iconos |
-| **Sonner** | 2.x | Toast notifications |
-| **axios** | 1.x | Cliente HTTP |
-| **react-markdown** | 10.x | Render de markdown (chat, decisiones) |
+| Tecnología             | Versión | Rol                                                      |
+| ---------------------- | ------- | -------------------------------------------------------- |
+| **React**              | 19.x    | UI framework                                             |
+| **Vite**               | 8.x     | Dev server + build tool                                  |
+| **React Router DOM**   | 6.x     | Routing SPA                                              |
+| **TanStack Query**     | 5.x     | Server state, caché de peticiones                        |
+| **Zustand**            | 5.x     | Client state global (auth, market, sidebar, theme, chat) |
+| **React Hook Form**    | 7.x     | Manejo de formularios                                    |
+| **Zod**                | 4.x     | Validación de esquemas (forms + API responses)           |
+| **Tailwind CSS**       | 3.x     | Utility-first CSS                                        |
+| **GSAP**               | 3.x     | Animaciones (landing, counters, transiciones)            |
+| **Socket.io-client**   | 4.x     | Conexión WebSocket al API                                |
+| **lightweight-charts** | 5.x     | Gráfico de velas (TradingView-style)                     |
+| **Recharts**           | 3.x     | Gráficos de analytics (línea, área, barras)              |
+| **react-i18next**      | 17.x    | Internacionalización (ES + EN, ~1400 claves)             |
+| **Lucide React**       | 1.x     | Librería de iconos                                       |
+| **Sonner**             | 2.x     | Toast notifications                                      |
+| **axios**              | 1.x     | Cliente HTTP                                             |
+| **react-markdown**     | 10.x    | Render de markdown (chat, decisiones)                    |
 
 ### 3.4 Proveedores LLM (multi-proveedor, por usuario)
 
-| Proveedor | SDK | Modelos soportados |
-|-----------|-----|-------------------|
+| Proveedor              | SDK                 | Modelos soportados                  |
+| ---------------------- | ------------------- | ----------------------------------- |
 | **Anthropic (Claude)** | `@anthropic-ai/sdk` | claude-sonnet-4-6, claude-haiku-4-5 |
-| **OpenAI** | `openai` | gpt-4o, gpt-4o-mini |
-| **Groq** | `groq-sdk` | llama-3.3-70b, mixtral-8x7b |
+| **OpenAI**             | `openai`            | gpt-4o, gpt-4o-mini                 |
+| **Groq**               | `groq-sdk`          | llama-3.3-70b, mixtral-8x7b         |
 
 > Las claves API son **por usuario**, almacenadas cifradas en DB. Nunca como variable de entorno global.
 
 ### 3.5 Fuentes de datos de mercado
 
-| Fuente | Tipo | Dato |
-|--------|------|------|
-| **Binance REST API** | Polling | OHLCV velas, balance, órdenes |
-| **Binance WebSocket** | Streaming | Precio en tiempo real (ticker) |
-| **CryptoPanic** | API libre | Noticias con sentimiento |
-| **NewsData.io** | API (por usuario) | Noticias crypto |
-| **RSS (CoinDesk, Cointelegraph, Decrypt)** | Polling | Headlines, `rss-parser` |
+| Fuente                                     | Tipo              | Dato                           |
+| ------------------------------------------ | ----------------- | ------------------------------ |
+| **Binance REST API**                       | Polling           | OHLCV velas, balance, órdenes  |
+| **Binance WebSocket**                      | Streaming         | Precio en tiempo real (ticker) |
+| **CryptoPanic**                            | API libre         | Noticias con sentimiento       |
+| **NewsData.io**                            | API (por usuario) | Noticias crypto                |
+| **RSS (CoinDesk, Cointelegraph, Decrypt)** | Polling           | Headlines, `rss-parser`        |
 
 ### 3.6 Testing
 
-| Herramienta | Scope | Runner |
-|-------------|-------|--------|
-| **Vitest** | Frontend (libs + web) | `pnpm nx test web` |
-| **Jest** | Backend (api + libs node) | `pnpm nx test api` |
-| **Playwright** | E2E cross-app | `pnpm nx e2e web-e2e` |
-| **Supertest** | Integration API | `pnpm nx e2e api-e2e` |
+| Herramienta    | Scope                     | Runner                |
+| -------------- | ------------------------- | --------------------- |
+| **Vitest**     | Frontend (libs + web)     | `pnpm nx test web`    |
+| **Jest**       | Backend (api + libs node) | `pnpm nx test api`    |
+| **Playwright** | E2E cross-app             | `pnpm nx e2e web-e2e` |
+| **Supertest**  | Integration API           | `pnpm nx e2e api-e2e` |
 
 ### 3.7 Infra y despliegue
 
-| Entorno | Servicio | Método |
-|---------|----------|--------|
-| Frontend prod | **GitHub Pages** | GitHub Actions → `nx build web` → static deploy |
-| Backend prod | **Railway** | Dockerfile en `apps/api/Dockerfile` |
-| DB prod | **Railway** (PostgreSQL 16) | `prisma migrate deploy` en CI |
-| Cache prod | **Railway** (Redis 7) | Compartido con API |
-| Local dev | **Docker Compose** | `docker compose up -d postgres redis` |
-| CI/CD | **GitHub Actions** | Lint → test → build → deploy on merge to main |
+| Entorno       | Servicio                    | Método                                          |
+| ------------- | --------------------------- | ----------------------------------------------- |
+| Frontend prod | **GitHub Pages**            | GitHub Actions → `nx build web` → static deploy |
+| Backend prod  | **Railway**                 | Dockerfile en `apps/api/Dockerfile`             |
+| DB prod       | **Railway** (PostgreSQL 16) | `prisma migrate deploy` en CI                   |
+| Cache prod    | **Railway** (Redis 7)       | Compartido con API                              |
+| Local dev     | **Docker Compose**          | `docker compose up -d postgres redis`           |
+| CI/CD         | **GitHub Actions**          | Lint → test → build → deploy on merge to main   |
 
 ---
 
@@ -195,13 +195,13 @@ api/src/
 
 ### 4.4 WebSocket events
 
-| Evento | Dirección | Descripción |
-|--------|-----------|-------------|
-| `trade:executed` | server → client | Nueva orden ejecutada |
+| Evento             | Dirección       | Descripción                 |
+| ------------------ | --------------- | --------------------------- |
+| `trade:executed`   | server → client | Nueva orden ejecutada       |
 | `position:updated` | server → client | P&L de posición actualizado |
-| `agent:decision` | server → client | Nueva decisión del agente |
-| `price:tick` | server → client | Precio en tiempo real |
-| `notification:new` | server → client | Nueva notificación in-app |
+| `agent:decision`   | server → client | Nueva decisión del agente   |
+| `price:tick`       | server → client | Precio en tiempo real       |
+| `notification:new` | server → client | Nueva notificación in-app   |
 
 ---
 
@@ -251,37 +251,39 @@ web/src/
 
 Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía `@crypto-trader/ui`.
 
-| Categoría | Componentes |
-|-----------|-------------|
-| **Primitives** | Button, Input, Badge, InfoTooltip, Typography, Spinner, ProgressBar, CopyButton, FormField, Separator, ToggleSwitch, Avatar |
-| **Composites** | Select, Dialog, Card, DataTable, Tabs, Pagination, FilterPills, SliderField, Stepper, Collapsible, KeyValueRow, SectionTitle, Dropdown, Sidebar |
-| **Feedback** | EmptyState, LoadingSkeleton, Callout |
-| **Layout** | PageLayout, Navbar, DashboardHeader |
-| **Theme** | ThemeProvider |
-| **Charts** | ChartCard, ChartTooltip, ChartTheme (constantes) |
-| **Domain/Market** | StatCard, PriceTicker, IndicatorInfoModal |
-| **Domain/Agent** | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets |
-| **Domain/Chat** | AgentHeader, AgentSelector, CapabilityButtons, ChatInput, OrchestratingIndicator, ToolCallCard |
-| **Domain/Help** | HelpSidebar |
+| Categoría         | Componentes                                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Primitives**    | Button, Input, Badge, InfoTooltip, Typography, Spinner, ProgressBar, CopyButton, FormField, Separator, ToggleSwitch, Avatar                     |
+| **Composites**    | Select, Dialog, Card, DataTable, Tabs, Pagination, FilterPills, SliderField, Stepper, Collapsible, KeyValueRow, SectionTitle, Dropdown, Sidebar |
+| **Feedback**      | EmptyState, LoadingSkeleton, Callout                                                                                                            |
+| **Layout**        | PageLayout, Navbar, DashboardHeader                                                                                                             |
+| **Theme**         | ThemeProvider                                                                                                                                   |
+| **Charts**        | ChartCard, ChartTooltip, ChartTheme (constantes)                                                                                                |
+| **Domain/Market** | StatCard, PriceTicker, IndicatorInfoModal                                                                                                       |
+| **Domain/Agent**  | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets                                                                              |
+| **Domain/Chat**   | AgentHeader, AgentSelector, CapabilityButtons, ChatInput, OrchestratingIndicator, ToolCallCard                                                  |
+| **Domain/Help**   | HelpSidebar                                                                                                                                     |
 
 **Reglas de libs/ui:**
+
 1. **Sin hooks de datos** — ningún componente importa `useQuery`, `useMutation`, Zustand, React Router, o `useTranslation`. Toda data llega por props.
 2. **i18n por prop `t`** — los componentes que renderizan texto reciben `t: (key: string, opts?: Record<string, unknown>) => string`.
 3. **1 concepto = 1 archivo** — no duplicar componentes; consolidar variantes.
-4. **Dependencias mínimas** — solo React, clsx, tailwind-merge, lucide-react, @radix-ui/*, gsap (peerDeps).
+4. **Dependencias mínimas** — solo React, clsx, tailwind-merge, lucide-react, @radix-ui/\*, gsap (peerDeps).
 
 **Patrón Container/Presenter:**
+
 - `libs/ui/` = presenters (stateless, props-only)
 - `apps/web/src/containers/` = containers (hooks, stores, i18n, pasan data a presenters)
 
 ### 5.3 Gestión de estado
 
-| Tipo de estado | Herramienta | Cuándo usarla |
-|---------------|-------------|---------------|
-| **Server state** | TanStack Query | Datos del API (posiciones, decisiones, noticias, config) |
-| **Global client** | Zustand | Auth session, tema, sidebar collapsed, estado de chat, símbolo activo de mercado |
-| **Form state** | React Hook Form | Formularios validados con Zod |
-| **Local** | `useState` / `useRef` | Estado de UI temporal (modales, tabs, expanded) |
+| Tipo de estado    | Herramienta           | Cuándo usarla                                                                    |
+| ----------------- | --------------------- | -------------------------------------------------------------------------------- |
+| **Server state**  | TanStack Query        | Datos del API (posiciones, decisiones, noticias, config)                         |
+| **Global client** | Zustand               | Auth session, tema, sidebar collapsed, estado de chat, símbolo activo de mercado |
+| **Form state**    | React Hook Form       | Formularios validados con Zod                                                    |
+| **Local**         | `useState` / `useRef` | Estado de UI temporal (modales, tabs, expanded)                                  |
 
 ### 5.4 Internacionalización
 
@@ -305,31 +307,31 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 
 ### Modelos principales
 
-| Modelo | Descripción |
-|--------|-------------|
-| `User` | Cuenta de usuario (TRADER o ADMIN) |
-| `BinanceCredential` | Claves API Binance cifradas (prod + testnet) |
-| `LLMCredential` | Claves API por proveedor LLM (CLAUDE, OPENAI, GROQ) |
-| `NewsApiCredential` | Claves API noticias por proveedor (CRYPTOPANIC, NEWSDATA) |
-| `TradingConfig` | Configuración de trading por asset/pair/modo |
-| `Position` | Posición abierta o cerrada con P&L |
-| `Trade` | Orden BUY/SELL ejecutada (vinculada a Position) |
-| `AgentDecision` | Decisión del agente con indicadores + news + reasoning |
-| `NewsItem` | Noticia caché con sentimiento |
-| `Notification` | Notificación in-app por usuario |
-| `ChatSession` / `ChatMessage` | Historial del chat con el asistente IA |
-| `SandboxWallet` | Wallet virtual para modo Sandbox |
-| `NewsConfig` | Config de noticias por usuario (botEnabled, newsWeight) |
-| `NewsAnalysis` | Análisis de noticias generado por LLM |
-| `AdminAction` | Log de acciones administrativas |
+| Modelo                        | Descripción                                               |
+| ----------------------------- | --------------------------------------------------------- |
+| `User`                        | Cuenta de usuario (TRADER o ADMIN)                        |
+| `BinanceCredential`           | Claves API Binance cifradas (prod + testnet)              |
+| `LLMCredential`               | Claves API por proveedor LLM (CLAUDE, OPENAI, GROQ)       |
+| `NewsApiCredential`           | Claves API noticias por proveedor (CRYPTOPANIC, NEWSDATA) |
+| `TradingConfig`               | Configuración de trading por asset/pair/modo              |
+| `Position`                    | Posición abierta o cerrada con P&L                        |
+| `Trade`                       | Orden BUY/SELL ejecutada (vinculada a Position)           |
+| `AgentDecision`               | Decisión del agente con indicadores + news + reasoning    |
+| `NewsItem`                    | Noticia caché con sentimiento                             |
+| `Notification`                | Notificación in-app por usuario                           |
+| `ChatSession` / `ChatMessage` | Historial del chat con el asistente IA                    |
+| `SandboxWallet`               | Wallet virtual para modo Sandbox                          |
+| `NewsConfig`                  | Config de noticias por usuario (botEnabled, newsWeight)   |
+| `NewsAnalysis`                | Análisis de noticias generado por LLM                     |
+| `AdminAction`                 | Log de acciones administrativas                           |
 
 ### Modos de trading (enum `TradingMode`)
 
-| Modo | Descripción |
-|------|-------------|
-| `SANDBOX` | Paper trading con wallet virtual, precios reales |
+| Modo      | Descripción                                        |
+| --------- | -------------------------------------------------- |
+| `SANDBOX` | Paper trading con wallet virtual, precios reales   |
 | `TESTNET` | Órdenes reales en Binance Testnet (red de pruebas) |
-| `LIVE` | Órdenes reales en Binance Producción |
+| `LIVE`    | Órdenes reales en Binance Producción               |
 
 ---
 
@@ -362,6 +364,7 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 ### 7.4 Commits
 
 Seguir Conventional Commits:
+
 ```
 feat(scope): descripción
 fix(scope): descripción
@@ -411,31 +414,32 @@ pnpm nx affected --target=test   # Solo testear lo afectado por cambios
 
 ### Backend (`.env`)
 
-| Variable | Descripción |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string |
-| `JWT_SECRET` | Secret para access tokens |
-| `JWT_REFRESH_SECRET` | Secret para refresh tokens |
+| Variable                     | Descripción                                |
+| ---------------------------- | ------------------------------------------ |
+| `DATABASE_URL`               | PostgreSQL connection string               |
+| `REDIS_URL`                  | Redis connection string                    |
+| `JWT_SECRET`                 | Secret para access tokens                  |
+| `JWT_REFRESH_SECRET`         | Secret para refresh tokens                 |
 | `BINANCE_KEY_ENCRYPTION_KEY` | Clave maestra AES-256 para cifrar API keys |
-| `CRYPTOPANIC_API_KEY` | CryptoPanic free tier (noticias globales) |
-| `NODE_ENV` | `development` \| `production` |
-| `PORT` | Puerto del servidor (default 3000) |
+| `CRYPTOPANIC_API_KEY`        | CryptoPanic free tier (noticias globales)  |
+| `NODE_ENV`                   | `development` \| `production`              |
+| `PORT`                       | Puerto del servidor (default 3000)         |
 
 > Las claves de LLM (Claude, OpenAI, Groq) y NewsAPI van por usuario en DB — **no son variables de entorno**.
 
 ### Frontend (`.env`)
 
-| Variable | Descripción |
-|----------|-------------|
+| Variable       | Descripción                                          |
+| -------------- | ---------------------------------------------------- |
 | `VITE_API_URL` | URL base del backend (ej. `https://api.railway.app`) |
-| `VITE_WS_URL` | URL WebSocket del backend |
+| `VITE_WS_URL`  | URL WebSocket del backend                            |
 
 ---
 
 ## 10. Scope del Proyecto (Phase 1)
 
 ### En scope
+
 - Trading de BTC/ETH contra USDT/USDC en Binance
 - Modos: Sandbox (paper) + Testnet + Live
 - Multi-usuario con aislamiento completo
@@ -462,21 +466,21 @@ pnpm nx affected --target=test   # Solo testear lo afectado por cambios
 
 ## 11. Decisiones Arquitecturales Clave
 
-| # | Decisión | Razón |
-|---|----------|-------|
-| 1 | Monorepo NX | Compartir tipos y lógica entre web/api sin duplicación |
-| 2 | pnpm workspaces | Performance y correctness en resolución de dependencias |
-| 3 | NestJS para API | DI robusto, módulos, decoradores — ideal para arquitectura multi-dominio |
-| 4 | Prisma ORM | Type-safety end-to-end, migraciones declarativas |
-| 5 | Bull + Redis para colas | Garantía de entrega de trabajos de análisis; reintentos automáticos |
-| 6 | AES-256-GCM para claves | Estándar de la industria; clave maestra separada de los datos |
-| 7 | LLM por usuario (no global) | Costos atribuibles al usuario; flexibilidad de proveedor |
-| 8 | GitHub Pages para web | Cero costo; build estático compatible con React Router |
-| 9 | Railway para API | Deploy desde Dockerfile; PostgreSQL + Redis incluidos |
-| 10 | Sandbox server-side enforced | Nunca confiar en el cliente para prevenir órdenes reales |
-| 11 | TanStack Query para server state | Caché, refetch, stale-time — evita useEffect para fetching |
-| 12 | i18n desde el inicio | Evitar deuda de localización; arquitectura bilingüe nativa |
+| #   | Decisión                         | Razón                                                                    |
+| --- | -------------------------------- | ------------------------------------------------------------------------ |
+| 1   | Monorepo NX                      | Compartir tipos y lógica entre web/api sin duplicación                   |
+| 2   | pnpm workspaces                  | Performance y correctness en resolución de dependencias                  |
+| 3   | NestJS para API                  | DI robusto, módulos, decoradores — ideal para arquitectura multi-dominio |
+| 4   | Prisma ORM                       | Type-safety end-to-end, migraciones declarativas                         |
+| 5   | Bull + Redis para colas          | Garantía de entrega de trabajos de análisis; reintentos automáticos      |
+| 6   | AES-256-GCM para claves          | Estándar de la industria; clave maestra separada de los datos            |
+| 7   | LLM por usuario (no global)      | Costos atribuibles al usuario; flexibilidad de proveedor                 |
+| 8   | GitHub Pages para web            | Cero costo; build estático compatible con React Router                   |
+| 9   | Railway para API                 | Deploy desde Dockerfile; PostgreSQL + Redis incluidos                    |
+| 10  | Sandbox server-side enforced     | Nunca confiar en el cliente para prevenir órdenes reales                 |
+| 11  | TanStack Query para server state | Caché, refetch, stale-time — evita useEffect para fetching               |
+| 12  | i18n desde el inicio             | Evitar deuda de localización; arquitectura bilingüe nativa               |
 
 ---
 
-*Este documento es la fuente de verdad sobre la arquitectura y convenciones del proyecto. Ante cualquier discrepancia entre el código y este documento, prevalece el código — y este documento debe actualizarse.*
+_Este documento es la fuente de verdad sobre la arquitectura y convenciones del proyecto. Ante cualquier discrepancia entre el código y este documento, prevalece el código — y este documento debe actualizarse._

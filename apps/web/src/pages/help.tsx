@@ -20,7 +20,13 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-import { HelpSidebar, DecisionFlowDiagram, StrategyPresets, ParameterCards, ExplainPanel } from '@crypto-trader/ui';
+import {
+  HelpSidebar,
+  DecisionFlowDiagram,
+  StrategyPresets,
+  ParameterCards,
+  ExplainPanel,
+} from '@crypto-trader/ui';
 import { AgentsShowcaseSection } from './dashboard/agents-showcase';
 
 function FaqItem({ q, a }: { q: string; a: string }) {

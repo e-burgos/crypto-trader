@@ -34,10 +34,7 @@ import {
 } from 'lucide-react';
 import { useThemeStore } from '../../store/theme.store';
 import { useBinanceKlineStream } from '../../hooks/use-binance-kline';
-import {
-  IndicatorInfoModal,
-  type IndicatorKey,
-} from '@crypto-trader/ui';
+import { IndicatorInfoModal, type IndicatorKey } from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {

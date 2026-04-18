@@ -11,35 +11,45 @@ import { Button, Card, Dialog, StatCard } from '@crypto-trader/ui';
 ## Categorías de componentes
 
 ### Primitives
+
 `Button` · `Input` · `Badge` · `InfoTooltip` · `Typography` · `Spinner` · `ProgressBar` · `CopyButton` · `FormField` · `Separator` · `ToggleSwitch` · `Avatar`
 
 ### Composites
+
 `Select` · `Dialog` · `Card` · `DataTable` · `Tabs` · `Pagination` · `FilterPills` · `SliderField` · `Stepper` · `Collapsible` · `KeyValueRow` · `SectionTitle` · `Dropdown` · `Sidebar`
 
 ### Feedback
+
 `EmptyState` · `LoadingSkeleton` · `Callout`
 
 ### Layout
+
 `PageLayout` · `Navbar` · `DashboardHeader`
 
 ### Theme
+
 `ThemeProvider`
 
 ### Charts
+
 `ChartCard` · `ChartTooltip` · `CHART_COLORS` · `CHART_PALETTE` · `RECHARTS_DEFAULTS` · `LIGHTWEIGHT_CHART_DEFAULTS` · `CANDLESTICK_COLORS`
 
 ### Domain — Market
+
 `StatCard` · `PriceTicker` · `IndicatorInfoModal`
 
 ### Domain — Agent
+
 `DecisionFlowDiagram` · `ExplainPanel` · `ParameterCards` · `StrategyPresets` · `PRESETS`
 
 ### Domain — Chat
+
 `AgentHeader` · `AgentSelector` · `AGENTS` · `CapabilityButtons` · `ChatInput` · `OrchestratingIndicator` · `ToolCallCard`
 
 Tipos: `AgentId` · `ChatCapability` · `ChatMessageItem` · `StreamError` · `AgentConfig` · `ChatSessionSummary` · `LLMOption`
 
 ### Domain — Help
+
 `HelpSidebar`
 
 ## Convenciones

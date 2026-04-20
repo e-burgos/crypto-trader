@@ -18,6 +18,7 @@ interface ProviderModel {
   pricing?: { input: number; output: number };
   deprecated?: boolean;
   recommended?: boolean;
+  categories?: string[];
 }
 
 interface ProviderModelsResponse {
@@ -98,6 +99,8 @@ export class LLMModelsService {
         return this.fetchMistral(apiKey);
       case LLMProvider.TOGETHER:
         return this.fetchTogether(apiKey);
+      case LLMProvider.OPENROUTER:
+        return this.fetchOpenRouter(apiKey);
       default:
         throw new BadGatewayException(`Unsupported provider: ${provider}`);
     }
@@ -266,5 +269,76 @@ export class LLMModelsService {
           contextWindow: m.context_length ?? 131_072,
         }),
       );
+  }
+
+  private async fetchOpenRouter(apiKey: string): Promise<ProviderModel[]> {
+    const { data } = await axios.get('https://openrouter.ai/api/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      timeout: 15000,
+    });
+
+    const textModels = (data.data ?? []).filter(
+      (m: any) =>
+        m.id &&
+        m.architecture?.modality === 'text->text' &&
+        m.top_provider?.is_moderated !== undefined &&
+        !m.expiration_date, // exclude deprecated/expiring models
+    );
+
+    // Sort by weekly usage (position in API response = popularity) and build models
+    const models: ProviderModel[] = textModels.slice(0, 150).map((m: any) => {
+      const inputPrice = m.pricing
+        ? parseFloat(m.pricing.prompt) * 1_000_000
+        : 0;
+      const outputPrice = m.pricing
+        ? parseFloat(m.pricing.completion) * 1_000_000
+        : 0;
+      const isFree = inputPrice === 0 && outputPrice === 0;
+      const supportedParams: string[] = m.supported_parameters ?? [];
+      const hasReasoning =
+        supportedParams.includes('reasoning') ||
+        supportedParams.includes('include_reasoning');
+      const hasTools = supportedParams.includes('tools');
+      const contextLen = m.context_length ?? 128_000;
+
+      // Dynamic category classification
+      const categories: string[] = [];
+      if (isFree) categories.push('free');
+      if (!isFree) categories.push('paid');
+      if (hasReasoning) categories.push('reasoning');
+      if (hasTools) categories.push('analytics');
+      // "fast" heuristic: low price + high context or known fast providers
+      if ((inputPrice < 1.0 && outputPrice < 5.0) || isFree) {
+        categories.push('fast');
+      }
+
+      return {
+        id: m.id,
+        name: m.name ?? m.id,
+        contextWindow: contextLen,
+        pricing: { input: inputPrice, output: outputPrice },
+        deprecated: false,
+        recommended: MODEL_PRICING[m.id]?.recommended ?? false,
+        categories,
+      } as ProviderModel;
+    });
+
+    // Build top-paid: non-free sorted by output price desc (most capable first), limit 10
+    const paidModels = models.filter((m) => m.categories?.includes('paid'));
+    const topPaidIds = new Set(
+      [...paidModels]
+        .sort((a, b) => (b.pricing?.output ?? 0) - (a.pricing?.output ?? 0))
+        .slice(0, 10)
+        .map((m) => m.id),
+    );
+
+    // Tag top-paid
+    for (const m of models) {
+      if (topPaidIds.has(m.id)) {
+        m.categories!.push('top-paid');
+      }
+    }
+
+    return models;
   }
 }

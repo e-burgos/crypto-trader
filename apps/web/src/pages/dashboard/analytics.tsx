@@ -164,7 +164,7 @@ export function AnalyticsPage() {
                 tickFormatter={(v) => v.slice(5)}
               />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'P&L']} />
+              <Tooltip formatter={(v) => [`$${Number(v).toFixed(2)}`, 'P&L']} />
               <Line
                 type="monotone"
                 dataKey="pnl"
@@ -195,7 +195,7 @@ export function AnalyticsPage() {
               />
               <XAxis dataKey="asset" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-              <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, 'P&L']} />
+              <Tooltip formatter={(v) => [`$${Number(v).toFixed(2)}`, 'P&L']} />
               <Bar dataKey="totalPnl" fill="#6366f1" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

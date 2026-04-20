@@ -90,7 +90,7 @@ export function AvatarDropdown({ size = 'md' }: AvatarDropdownProps) {
             <button
               onClick={() => {
                 close();
-                navigate('/dashboard/settings?tab=profile');
+                navigate('/dashboard/settings/profile');
               }}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >

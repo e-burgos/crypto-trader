@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState, useCallback } from 'react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
+import { useChatStore } from '../store/chat.store';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import type {

@@ -346,7 +346,7 @@ export function LandingPage() {
   );
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden my-8">
       {/* ════════════════════════════════════════════ HERO ════════════════ */}
       <section
         ref={heroRef}
@@ -711,6 +711,17 @@ export function LandingPage() {
             <p className="prov-sub mt-4 text-muted-foreground">
               {t('landing.aiSub')}
             </p>
+          </div>
+
+          {/* Featured: OpenRouter */}
+          <div className="mb-5">
+            <ProviderCard
+              name={t('landing.openrouter')}
+              description={t('landing.openrouterDesc')}
+              highlight={t('landing.openrouterTag')}
+              featured
+              featuredLabel={t('landing.openrouterRecommended')}
+            />
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

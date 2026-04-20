@@ -1,15 +1,12 @@
 export {
   getNotificationRoute,
-  NotifIcon,
   iconBg,
   translateMessage,
   timeAgo,
   routeLabel,
-  NotifRow,
   getMessageKey,
-  NOTIF_TABS,
-  TRADE_KEYS,
-  AGENT_KEYS,
-  PAGE_SIZE,
-} from './components';
-export type { NotifTab } from './components';
+} from './notification-utils';
+export { NotifIcon } from './notif-icon';
+export { NotifRow } from './notif-row';
+export { NOTIF_TABS, TRADE_KEYS, AGENT_KEYS, PAGE_SIZE } from './constants';
+export type { NotifTab } from './constants';

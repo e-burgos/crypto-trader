@@ -5,8 +5,10 @@ import { BinanceRateLimiter } from './binance-rate-limiter';
 
 const BINANCE_BASE_URL =
   process.env['BINANCE_BASE_URL'] || 'https://api.binance.com';
+// Public data endpoint — kept as env var but no longer used as default.
+// api.binance.com serves public klines without auth and has more stable rate limits.
 const BINANCE_PUBLIC_URL =
-  process.env['BINANCE_PUBLIC_URL'] || 'https://data-api.binance.vision';
+  process.env['BINANCE_PUBLIC_URL'] || 'https://api.binance.com';
 const BINANCE_TESTNET_URL = 'https://testnet.binance.vision';
 
 /** Request weights per endpoint as per Binance REST API docs. */
@@ -80,7 +82,7 @@ export class BinanceRestClient {
     if (!BinanceRestClient.rateLimiters.has(baseURL)) {
       BinanceRestClient.rateLimiters.set(
         baseURL,
-        new BinanceRateLimiter(1200, 60_000),
+        new BinanceRateLimiter(1100, 60_000),
       );
     }
     const rateLimiter = BinanceRestClient.rateLimiters.get(baseURL)!;

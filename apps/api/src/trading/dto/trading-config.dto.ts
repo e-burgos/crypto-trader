@@ -44,6 +44,7 @@ export enum LLMProviderEnum {
   GEMINI = 'GEMINI',
   MISTRAL = 'MISTRAL',
   TOGETHER = 'TOGETHER',
+  OPENROUTER = 'OPENROUTER',
 }
 
 export class CreateTradingConfigDto {

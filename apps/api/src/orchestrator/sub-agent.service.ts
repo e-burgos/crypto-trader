@@ -2,7 +2,11 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
 // eslint-disable-next-line @nx/enforce-module-boundaries
-import { createLLMProvider, LLMProviderClient } from '@crypto-trader/analysis';
+import {
+  createLLMProvider,
+  LLMProviderClient,
+  OpenRouterProvider,
+} from '@crypto-trader/analysis';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { LLMProvider } from '@crypto-trader/shared';
 import { RagService } from './rag.service';
@@ -295,11 +299,14 @@ export class SubAgentService {
       });
       if (cred) {
         const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-        const client = createLLMProvider(
-          override.provider,
-          apiKey,
-          override.model,
-        );
+        const client =
+          override.provider === LLMProvider.OPENROUTER
+            ? new OpenRouterProvider({
+                apiKey,
+                model: override.model,
+                fallbackModels: (cred as any).fallbackModels ?? [],
+              })
+            : createLLMProvider(override.provider, apiKey, override.model);
         return {
           client,
           provider: override.provider,
@@ -327,7 +334,14 @@ export class SubAgentService {
           // otherwise use the ranking's suggested model
           const model = cred.selectedModel || suggested.model;
           const provider = suggested.provider as unknown as LLMProvider;
-          const client = createLLMProvider(provider, apiKey, model);
+          const client =
+            provider === LLMProvider.OPENROUTER
+              ? new OpenRouterProvider({
+                  apiKey,
+                  model,
+                  fallbackModels: (cred as any).fallbackModels ?? [],
+                })
+              : createLLMProvider(provider, apiKey, model);
           return {
             client,
             provider,
@@ -339,14 +353,18 @@ export class SubAgentService {
       // 3. Fallback: first active credential with its selectedModel
       const cred = allCreds[0];
       const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-      const client = createLLMProvider(
-        cred.provider as LLMProvider,
-        apiKey,
-        cred.selectedModel,
-      );
+      const credProvider = cred.provider as LLMProvider;
+      const client =
+        credProvider === LLMProvider.OPENROUTER
+          ? new OpenRouterProvider({
+              apiKey,
+              model: cred.selectedModel,
+              fallbackModels: (cred as any).fallbackModels ?? [],
+            })
+          : createLLMProvider(credProvider, apiKey, cred.selectedModel);
       return {
         client,
-        provider: cred.provider as LLMProvider,
+        provider: credProvider,
         model: cred.selectedModel ?? client.name,
       };
     }

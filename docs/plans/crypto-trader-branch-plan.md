@@ -24,6 +24,7 @@
 | 32  | feature/32-operation-mode-selector     | 32-operation-mode-selector.md        | 20,02,09   |
 | 33  | feature/33-bugfix-batch-ux-data        | 33-bugfix-batch-ux-data.md           | 31,32,28   |
 | 34  | feature/ui-design-system-consolidation | 34-ui-design-system-consolidation.md | 33         |
+| 35  | feature/openrouter-integration         | 35-openrouter-integration.md         | 31,34      |
 
 ## Flujo recomendado
 

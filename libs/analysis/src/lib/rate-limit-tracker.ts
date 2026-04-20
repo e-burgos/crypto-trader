@@ -59,6 +59,7 @@ export function parseRateLimitHeaders(
     case 'OPENAI':
     case 'GROQ':
     case 'TOGETHER':
+    case 'OPENROUTER':
       return {
         tokensRemaining: num(headers['x-ratelimit-remaining-tokens']),
         tokensLimit: num(headers['x-ratelimit-limit-tokens']),

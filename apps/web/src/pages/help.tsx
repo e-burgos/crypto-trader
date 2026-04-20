@@ -115,7 +115,7 @@ export function HelpPage() {
   );
 
   return (
-    <div className="bg-background/50 backdrop-blur-[1px]">
+    <div className="bg-background/50 backdrop-blur-[1px] my-10">
       <div className="mx-auto max-w-7xl px-4 py-10">
         {/* Page title */}
         <div className="mb-8">

@@ -533,7 +533,7 @@ export function OverviewPage() {
                     variant="outline"
                     className="mt-3 gap-1.5 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/70"
                   >
-                    <Link to="/dashboard/settings">
+                    <Link to="/dashboard/settings/exchange">
                       {t('balanceSource.goToSettings')}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
@@ -613,7 +613,7 @@ export function OverviewPage() {
                     variant="outline"
                     className="mt-3 gap-1.5 border-red-500/50 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/70"
                   >
-                    <Link to="/dashboard/settings">
+                    <Link to="/dashboard/settings/exchange">
                       {t('balanceSource.goToSettings')}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>

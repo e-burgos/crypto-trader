@@ -350,6 +350,11 @@ export class UsersService {
           headers: { Authorization: `Bearer ${apiKey}` },
           timeout: 8000,
         });
+      } else if (provider === 'OPENROUTER') {
+        await axios.get('https://openrouter.ai/api/v1/models', {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          timeout: 8000,
+        });
       } else {
         return { connected: false, error: 'Unknown provider' };
       }

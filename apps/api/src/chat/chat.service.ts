@@ -31,6 +31,7 @@ const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.GEMINI]: 'Google Gemini',
   [LLMProvider.MISTRAL]: 'Mistral AI',
   [LLMProvider.TOGETHER]: 'Together AI',
+  [LLMProvider.OPENROUTER]: 'OpenRouter',
 };
 
 const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
@@ -64,6 +65,18 @@ const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
     'deepseek-ai/DeepSeek-R1',
     'Qwen/Qwen3-235B-A22B-fp8',
     'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+  ],
+  [LLMProvider.OPENROUTER]: [
+    // Top Paid
+    'anthropic/claude-sonnet-4.6',
+    'google/gemini-3-flash-preview',
+    'anthropic/claude-opus-4.6',
+    'deepseek/deepseek-v3.2',
+    'google/gemini-2.5-flash-lite',
+    // Top Free
+    'openrouter/elephant-alpha',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'google/gemma-4-31b-it:free',
   ],
 };
 
@@ -897,6 +910,14 @@ Always respond in the same language the user writes to you. Be direct and confid
           messages,
           onDelta,
         );
+      case LLMProvider.OPENROUTER:
+        return this.streamOpenRouter(
+          apiKey,
+          model,
+          systemPrompt,
+          messages,
+          onDelta,
+        );
       default:
         throw new BadRequestException(`Unsupported provider: ${provider}`);
     }
@@ -1257,6 +1278,71 @@ Always respond in the same language the user writes to you. Be direct and confid
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'content-type': 'application/json',
+        },
+        responseType: 'stream',
+        timeout: 120_000,
+      },
+    );
+
+    return new Promise<StreamUsage>((resolve, reject) => {
+      let buffer = '';
+      const usage: StreamUsage = { inputTokens: 0, outputTokens: 0 };
+      resp.data.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(raw) as {
+              choices?: { delta?: { content?: string } }[];
+              usage?: { prompt_tokens?: number; completion_tokens?: number };
+            };
+            const text = parsed.choices?.[0]?.delta?.content;
+            if (text) onDelta(text);
+            if (parsed.usage) {
+              usage.inputTokens = parsed.usage.prompt_tokens ?? 0;
+              usage.outputTokens = parsed.usage.completion_tokens ?? 0;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      });
+      resp.data.on('end', () => resolve(usage));
+      resp.data.on('error', reject);
+    });
+  }
+
+  private async streamOpenRouter(
+    apiKey: string,
+    model: string,
+    systemPrompt: string,
+    messages: ConversationMessage[],
+    onDelta: (delta: string) => void,
+  ): Promise<StreamUsage> {
+    // OpenRouter uses OpenAI-compatible streaming format
+    const resp = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model,
+        stream: true,
+        stream_options: { include_usage: true },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
+        max_tokens: 2048,
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://cryptotrader.app',
+          'X-Title': 'CryptoTrader',
         },
         responseType: 'stream',
         timeout: 120_000,

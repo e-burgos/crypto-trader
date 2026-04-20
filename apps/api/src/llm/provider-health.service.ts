@@ -366,6 +366,12 @@ export class ProviderHealthService implements OnModuleInit, OnModuleDestroy {
             timeout: 5000,
           });
           break;
+        case LLMProvider.OPENROUTER:
+          await axios.get('https://openrouter.ai/api/v1/models', {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            timeout: 5000,
+          });
+          break;
       }
       return true;
     } catch {

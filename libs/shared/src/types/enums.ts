@@ -64,6 +64,7 @@ export enum LLMProvider {
   GEMINI = 'GEMINI',
   MISTRAL = 'MISTRAL',
   TOGETHER = 'TOGETHER',
+  OPENROUTER = 'OPENROUTER',
 }
 // ── Risk Profile ─────────────────────────────────────────────────
 export enum RiskProfile {

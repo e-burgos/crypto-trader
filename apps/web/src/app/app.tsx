@@ -5,6 +5,7 @@ import { AppThemeProvider } from '../containers/theme-provider-container';
 import { Navbar } from '../containers/navbar-container';
 import { PriceTicker } from '../containers/price-ticker-container';
 import { ProtectedRoute } from '../components/protected-route';
+import { GuestRoute } from '../components/guest-route';
 import { LandingPage } from '../pages/landing';
 import { LoginPage } from '../pages/login';
 import { RegisterPage } from '../pages/register';
@@ -16,6 +17,12 @@ import { TradeHistoryPage } from '../pages/dashboard/trade-history';
 import { MarketPage } from '../pages/dashboard/market';
 import { ConfigPage } from '../pages/dashboard/config';
 import { SettingsPage } from '../pages/dashboard/settings';
+import {
+  SettingsProfilePage,
+  SettingsExchangePage,
+  SettingsLLMsPage,
+  SettingsNewsPage,
+} from '../pages/dashboard/settings/index';
 import { PositionsPage } from '../pages/dashboard/positions';
 import { NewsFeedPage } from '../pages/dashboard/news-feed';
 import { ChatPage } from '../pages/dashboard/chat';
@@ -30,6 +37,7 @@ import { AdminUsersPage } from '../pages/admin/users';
 import { AdminAgentsPage } from '../pages/admin/agents';
 import { useWebSocket } from '../hooks/use-websocket';
 import { useAuthStore } from '../store/auth.store';
+import { ScrollToTop } from '../components/scroll-to-top';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -39,8 +47,8 @@ function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navbar />
-      <PriceTicker />
       <main>{children}</main>
+      <PriceTicker />
     </>
   );
 }
@@ -56,6 +64,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppThemeProvider>
+        <ScrollToTop />
         <WebSocketInit />
         <Toaster richColors position="top-right" />
         <ChatWidget />
@@ -71,17 +80,21 @@ export function App() {
           <Route
             path="/login"
             element={
-              <PublicLayout>
-                <LoginPage />
-              </PublicLayout>
+              <GuestRoute>
+                <PublicLayout>
+                  <LoginPage />
+                </PublicLayout>
+              </GuestRoute>
             }
           />
           <Route
             path="/register"
             element={
-              <PublicLayout>
-                <RegisterPage />
-              </PublicLayout>
+              <GuestRoute>
+                <PublicLayout>
+                  <RegisterPage />
+                </PublicLayout>
+              </GuestRoute>
             }
           />
           <Route
@@ -134,7 +147,17 @@ export function App() {
             <Route path="news" element={<NewsFeedPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="config" element={<ConfigPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+            <Route
+              path="settings"
+              element={<Navigate to="/dashboard/settings/profile" replace />}
+            />
+            <Route path="settings/profile" element={<SettingsProfilePage />} />
+            <Route
+              path="settings/exchange"
+              element={<SettingsExchangePage />}
+            />
+            <Route path="settings/llms" element={<SettingsLLMsPage />} />
+            <Route path="settings/news" element={<SettingsNewsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
           </Route>
           <Route

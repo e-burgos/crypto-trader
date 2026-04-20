@@ -1,8 +1,14 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTranslation } from 'react-i18next';
-import { Bot, SlidersHorizontal } from 'lucide-react';
+import {
+  Bot,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  X,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useAgentDecisions,

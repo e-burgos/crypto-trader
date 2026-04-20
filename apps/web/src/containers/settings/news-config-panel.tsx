@@ -213,7 +213,7 @@ export function NewsConfigPanel({
     <div className="rounded-2xl border border-border bg-card mb-6">
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/20">
         <Settings className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">Configuración de Noticias</span>
+        <span className="text-sm font-semibold">{t('news.configTitle')}</span>
       </div>
       <div className="p-5 space-y-5">
         {/* Interval & Count */}
@@ -221,7 +221,7 @@ export function NewsConfigPanel({
           <div>
             <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1.5">
               <Clock className="h-3 w-3" />
-              Intervalo de análisis (min)
+              {t('news.analysisInterval')}
             </label>
             <input
               type="number"
@@ -236,7 +236,7 @@ export function NewsConfigPanel({
           <div>
             <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-1.5">
               <Hash className="h-3 w-3" />
-              Cantidad de noticias
+              {t('news.newsCount')}
             </label>
             <div className="flex flex-wrap gap-1.5">
               {NEWS_COUNTS.map((n) => (
@@ -260,12 +260,9 @@ export function NewsConfigPanel({
         {/* Bot enabled toggle */}
         <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
           <div>
-            <p className="text-xs font-semibold">
-              Agente analiza noticias antes de decidir
-            </p>
+            <p className="text-xs font-semibold">{t('news.botAnalyzesNews')}</p>
             <p className="text-[11px] text-muted-foreground">
-              El bot incluirá el análisis de noticias al tomar decisiones de
-              trading
+              {t('news.botAnalyzesNewsDesc')}
             </p>
           </div>
           <button
@@ -292,12 +289,9 @@ export function NewsConfigPanel({
           <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold">
-                  Peso de noticias en la decisión
-                </p>
+                <p className="text-xs font-semibold">{t('news.newsWeight')}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Porcentaje de influencia del sentimiento sobre los indicadores
-                  técnicos
+                  {t('news.newsWeightDesc')}
                 </p>
               </div>
               <span className="text-sm font-bold text-primary shrink-0 w-10 text-right">
@@ -314,9 +308,9 @@ export function NewsConfigPanel({
               className="w-full accent-primary"
             />
             <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>0% (solo técnicos)</span>
-              <span>50% (equilibrado)</span>
-              <span>100% (solo noticias)</span>
+              <span>{t('news.weightTechnicalOnly')}</span>
+              <span>{t('news.weightBalanced')}</span>
+              <span>{t('news.weightNewsOnly')}</span>
             </div>
           </div>
         )}
@@ -402,9 +396,9 @@ export function NewsConfigPanel({
         {/* Only summary toggle */}
         <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-4 py-3">
           <div>
-            <p className="text-xs font-semibold">Solo noticias con resumen</p>
+            <p className="text-xs font-semibold">{t('news.onlySummary')}</p>
             <p className="text-[11px] text-muted-foreground">
-              Excluye noticias sin contenido (recomendado)
+              {t('news.onlySummaryDesc')}
             </p>
           </div>
           <button
@@ -429,7 +423,7 @@ export function NewsConfigPanel({
         {/* Sources */}
         <div>
           <p className="text-[11px] text-muted-foreground mb-2">
-            Fuentes habilitadas (todas = vacío)
+            {t('news.enabledSources')}
           </p>
           <div className="flex flex-wrap gap-2">
             {ALL_SOURCE_IDS.map((id) => (
@@ -460,7 +454,7 @@ export function NewsConfigPanel({
           ) : (
             <Save className="h-3.5 w-3.5" />
           )}
-          Guardar configuración
+          {t('news.saveConfig')}
         </button>
       </div>
     </div>

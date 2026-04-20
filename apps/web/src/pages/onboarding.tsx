@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import {
+  ChevronRight,
+  ChevronLeft,
+  Sun,
+  Moon,
+  CheckCircle,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@crypto-trader/ui';
 import { cn } from '../lib/utils';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
+import { useThemeStore } from '../store/theme.store';
 import {
   StepBinance,
   StepLLM,
@@ -15,7 +23,7 @@ import {
 
 export function OnboardingPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const STEPS = t('onboarding.steps', { returnObjects: true }) as string[];
   const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);

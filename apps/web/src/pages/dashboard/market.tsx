@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
+import { Activity, BarChart3 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useMarketSnapshot, MARKET_SYMBOLS } from '../../hooks/use-market';
 import {

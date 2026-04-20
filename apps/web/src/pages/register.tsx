@@ -39,7 +39,7 @@ export function RegisterPage() {
   const displayError = localError || error;
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center px-4 py-12 my-8 sm:my-0">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">

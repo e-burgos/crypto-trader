@@ -51,15 +51,12 @@ export function ChatWidget() {
     useChatStore();
   const [showNewSession, setShowNewSession] = useState(false);
 
-  // B1: Don't render chat widget for unauthenticated users
-  if (!isAuthenticated) return null;
-
   const overlayRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
 
   // GSAP: animate FAB on mount
   useGSAP(() => {
-    if (!fabRef.current) return;
+    if (!fabRef.current || !isAuthenticated) return;
     gsap.fromTo(
       fabRef.current,
       { scale: 0, opacity: 0 },
@@ -77,7 +74,7 @@ export function ChatWidget() {
   // GSAP: animate overlay open
   useGSAP(
     () => {
-      if (!overlayRef.current || !isOpen) return;
+      if (!overlayRef.current || !isOpen || !isAuthenticated) return;
       gsap.fromTo(
         overlayRef.current,
         { opacity: 0, scale: 0.88, y: 20, transformOrigin: 'bottom right' },
@@ -111,6 +108,9 @@ export function ChatWidget() {
     onOrchestrating: handleOrchestratingEvent,
     onDone: handleStreamDone,
   });
+
+  // All hooks called above — safe to early-return now
+  if (!isAuthenticated) return null;
 
   const handleSend = async (content: string, capability?: ChatCapability) => {
     if (!activeSessionId) {

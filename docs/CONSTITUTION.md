@@ -114,9 +114,15 @@ ui  →  shared
 
 | Proveedor              | SDK                 | Modelos soportados                  |
 | ---------------------- | ------------------- | ----------------------------------- |
+| **OpenRouter** ⭐       | HTTP (OpenAI-compat) | 200+ modelos de todos los providers |
 | **Anthropic (Claude)** | `@anthropic-ai/sdk` | claude-sonnet-4-6, claude-haiku-4-5 |
 | **OpenAI**             | `openai`            | gpt-4o, gpt-4o-mini                 |
 | **Groq**               | `groq-sdk`          | llama-3.3-70b, mixtral-8x7b         |
+| **Google (Gemini)**    | `@google/generative-ai` | gemini-2.5-flash, gemini-2.5-pro |
+| **Mistral**            | `@mistralai/mistralai` | mistral-large, mistral-small      |
+| **Together**           | HTTP (OpenAI-compat) | llama, mixtral, qwen               |
+
+> **OpenRouter** es el proveedor **primario recomendado**: una sola API key da acceso a todos los modelos con fallback automático y billing unificado. Los proveedores directos siguen soportados como alternativa.
 
 > Las claves API son **por usuario**, almacenadas cifradas en DB. Nunca como variable de entorno global.
 
@@ -222,7 +228,7 @@ web/src/
 │       ├── bot-analysis/ BotAnalysisPage  — Snapshot mercado, decisiones, noticias
 │       ├── news/        NewsFeedPage      — Feed de noticias con sentimiento
 │       ├── config/      ConfigPage        — Multi-config, thresholds, modo
-│       ├── settings/    SettingsPage      — Claves Binance, LLM, NewsAPI, perfil
+│       ├── settings/    SettingsPage      — AI (3 sub-tabs: Primary/Providers/Analytics), Binance, NewsAPI, perfil
 │       ├── notifications/ NotificationsPage — Centro de notificaciones
 │       ├── analytics/   AnalyticsPage     — Métricas de rendimiento
 │       ├── help/        HelpPage          — Documentación y guías
@@ -311,7 +317,7 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 | ----------------------------- | --------------------------------------------------------- |
 | `User`                        | Cuenta de usuario (TRADER o ADMIN)                        |
 | `BinanceCredential`           | Claves API Binance cifradas (prod + testnet)              |
-| `LLMCredential`               | Claves API por proveedor LLM (CLAUDE, OPENAI, GROQ)       |
+| `LLMCredential`               | Claves API por proveedor LLM (OPENROUTER, CLAUDE, OPENAI, GROQ, GEMINI, MISTRAL, TOGETHER) + fallbackModels |
 | `NewsApiCredential`           | Claves API noticias por proveedor (CRYPTOPANIC, NEWSDATA) |
 | `TradingConfig`               | Configuración de trading por asset/pair/modo              |
 | `Position`                    | Posición abierta o cerrada con P&L                        |
@@ -480,6 +486,7 @@ pnpm nx affected --target=test   # Solo testear lo afectado por cambios
 | 10  | Sandbox server-side enforced     | Nunca confiar en el cliente para prevenir órdenes reales                 |
 | 11  | TanStack Query para server state | Caché, refetch, stale-time — evita useEffect para fetching               |
 | 12  | i18n desde el inicio             | Evitar deuda de localización; arquitectura bilingüe nativa               |
+| 13  | OpenRouter como provider recomendado | Una API key → 200+ modelos, fallback automático, billing unificado; reduce fricción de onboarding |
 
 ---
 

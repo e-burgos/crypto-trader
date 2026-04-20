@@ -25,6 +25,9 @@ export type { MistralProviderConfig } from './mistral.provider';
 export { TogetherProvider } from './together.provider';
 export type { TogetherProviderConfig } from './together.provider';
 
+export { OpenRouterProvider } from './openrouter.provider';
+export type { OpenRouterProviderConfig } from './openrouter.provider';
+
 export { LLMAnalyzer } from './llm-analyzer';
 
 export { createLLMProvider } from './llm-factory';

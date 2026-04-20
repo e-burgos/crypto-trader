@@ -63,9 +63,21 @@
     background-image:
       linear-gradient(hsl(173 80% 40% / 0.055) 1px, transparent 1px),
       linear-gradient(90deg, hsl(173 80% 40% / 0.055) 1px, transparent 1px),
-      radial-gradient(ellipse 75% 55% at 92% 0%, hsl(173 80% 40% / 0.13) 0%, transparent 65%),
-      radial-gradient(ellipse 55% 45% at 4% 100%, hsl(173 80% 40% / 0.09) 0%, transparent 65%);
-    background-size: 52px 52px, 52px 52px, 100% 100%, 100% 100%;
+      radial-gradient(
+        ellipse 75% 55% at 92% 0%,
+        hsl(173 80% 40% / 0.13) 0%,
+        transparent 65%
+      ),
+      radial-gradient(
+        ellipse 55% 45% at 4% 100%,
+        hsl(173 80% 40% / 0.09) 0%,
+        transparent 65%
+      );
+    background-size:
+      52px 52px,
+      52px 52px,
+      100% 100%,
+      100% 100%;
     background-attachment: fixed;
   }
 }
@@ -131,6 +143,35 @@
 }
 
 /* ── Custom scrollbar ───────────────────────────────────────── */
+/* Global: apply to all scrollable elements */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 9999px;
+  transition: background-color 0.2s;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--primary) / 0.45);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--border)) transparent;
@@ -208,19 +249,19 @@
   animation: proc-dot-travel 3s ease-in-out 1.5s infinite alternate;
 }
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
+  width: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
-  margin-block: 8px;
+  margin-block: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
+  background-color: hsl(var(--muted-foreground) / 0.18);
   border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--primary) / 0.5);
+  background-color: hsl(var(--primary) / 0.4);
 }

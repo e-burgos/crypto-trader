@@ -1,0 +1,133 @@
+import {
+  Cpu,
+  Bot,
+  TrendingUp,
+  Link as LinkIcon,
+  Shield,
+  Zap,
+  BookOpen,
+  BarChart3,
+  Network,
+  ShieldAlert,
+  Target,
+  Brain,
+  MessageSquare,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { type AgentShowcase } from './types';
+
+export function useAgentData(): AgentShowcase[] {
+  const { t } = useTranslation();
+  return [
+    {
+      id: 'platform',
+      codename: 'NEXUS',
+      role: t('agentsShowcase.nexus.role'),
+      icon: Cpu,
+      color: 'text-cyan-400',
+      gradient: 'from-cyan-500/20 via-cyan-500/5 to-transparent',
+      glowColor: 'shadow-cyan-500/20',
+      ringColor: 'ring-cyan-500/30',
+      quote: t('agentsShowcase.nexus.quote'),
+      description: t('agentsShowcase.nexus.description'),
+      capabilities: [
+        { icon: BookOpen, label: t('agentsShowcase.nexus.cap1') },
+        { icon: Target, label: t('agentsShowcase.nexus.cap2') },
+        { icon: MessageSquare, label: t('agentsShowcase.nexus.cap3') },
+      ],
+      tags: [
+        t('agentsShowcase.nexus.tag1'),
+        t('agentsShowcase.nexus.tag2'),
+        t('agentsShowcase.nexus.tag3'),
+      ],
+    },
+    {
+      id: 'operations',
+      codename: 'FORGE',
+      role: t('agentsShowcase.forge.role'),
+      icon: Bot,
+      color: 'text-orange-400',
+      gradient: 'from-orange-500/20 via-orange-500/5 to-transparent',
+      glowColor: 'shadow-orange-500/20',
+      ringColor: 'ring-orange-500/30',
+      quote: t('agentsShowcase.forge.quote'),
+      description: t('agentsShowcase.forge.description'),
+      capabilities: [
+        { icon: Zap, label: t('agentsShowcase.forge.cap1') },
+        { icon: Target, label: t('agentsShowcase.forge.cap2') },
+        { icon: ShieldAlert, label: t('agentsShowcase.forge.cap3') },
+      ],
+      tags: [
+        t('agentsShowcase.forge.tag1'),
+        t('agentsShowcase.forge.tag2'),
+        t('agentsShowcase.forge.tag3'),
+      ],
+    },
+    {
+      id: 'market',
+      codename: 'SIGMA',
+      role: t('agentsShowcase.sigma.role'),
+      icon: TrendingUp,
+      color: 'text-emerald-400',
+      gradient: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
+      glowColor: 'shadow-emerald-500/20',
+      ringColor: 'ring-emerald-500/30',
+      quote: t('agentsShowcase.sigma.quote'),
+      description: t('agentsShowcase.sigma.description'),
+      capabilities: [
+        { icon: BarChart3, label: t('agentsShowcase.sigma.cap1') },
+        { icon: TrendingUp, label: t('agentsShowcase.sigma.cap2') },
+        { icon: Brain, label: t('agentsShowcase.sigma.cap3') },
+      ],
+      tags: [
+        t('agentsShowcase.sigma.tag1'),
+        t('agentsShowcase.sigma.tag2'),
+        t('agentsShowcase.sigma.tag3'),
+      ],
+    },
+    {
+      id: 'blockchain',
+      codename: 'CIPHER',
+      role: t('agentsShowcase.cipher.role'),
+      icon: LinkIcon,
+      color: 'text-violet-400',
+      gradient: 'from-violet-500/20 via-violet-500/5 to-transparent',
+      glowColor: 'shadow-violet-500/20',
+      ringColor: 'ring-violet-500/30',
+      quote: t('agentsShowcase.cipher.quote'),
+      description: t('agentsShowcase.cipher.description'),
+      capabilities: [
+        { icon: Network, label: t('agentsShowcase.cipher.cap1') },
+        { icon: Shield, label: t('agentsShowcase.cipher.cap2') },
+        { icon: BookOpen, label: t('agentsShowcase.cipher.cap3') },
+      ],
+      tags: [
+        t('agentsShowcase.cipher.tag1'),
+        t('agentsShowcase.cipher.tag2'),
+        t('agentsShowcase.cipher.tag3'),
+      ],
+    },
+    {
+      id: 'risk',
+      codename: 'AEGIS',
+      role: t('agentsShowcase.aegis.role'),
+      icon: Shield,
+      color: 'text-red-400',
+      gradient: 'from-red-500/20 via-red-500/5 to-transparent',
+      glowColor: 'shadow-red-500/20',
+      ringColor: 'ring-red-500/30',
+      quote: t('agentsShowcase.aegis.quote'),
+      description: t('agentsShowcase.aegis.description'),
+      capabilities: [
+        { icon: ShieldAlert, label: t('agentsShowcase.aegis.cap1') },
+        { icon: BarChart3, label: t('agentsShowcase.aegis.cap2') },
+        { icon: Target, label: t('agentsShowcase.aegis.cap3') },
+      ],
+      tags: [
+        t('agentsShowcase.aegis.tag1'),
+        t('agentsShowcase.aegis.tag2'),
+        t('agentsShowcase.aegis.tag3'),
+      ],
+    },
+  ];
+}

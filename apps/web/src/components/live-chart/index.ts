@@ -1,7 +1,3 @@
-export {
-  chartColors,
-  normalizeCandles,
-  LiveStatsBar,
-  INTERVALS,
-} from './components';
-export type { Interval } from './components';
+export { chartColors, normalizeCandles, INTERVALS } from './chart-helpers';
+export type { Interval } from './chart-helpers';
+export { LiveStatsBar } from './live-stats-bar';

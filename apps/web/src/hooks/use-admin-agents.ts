@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import i18n from '../lib/i18n';
 import { AgentId } from './use-chat-agent';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -67,10 +68,10 @@ export function useUpdateAgent() {
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: agentKeys.all });
       qc.invalidateQueries({ queryKey: agentKeys.detail(id) });
-      toast.success('Agent updated');
+      toast.success(i18n.t('toasts.agentUpdated'));
     },
     onError: () => {
-      toast.error('Failed to update agent');
+      toast.error(i18n.t('toasts.agentUpdateError'));
     },
   });
 }
@@ -89,10 +90,10 @@ export function useUploadDocument() {
     onSuccess: (_, { agentId }) => {
       qc.invalidateQueries({ queryKey: agentKeys.detail(agentId) });
       qc.invalidateQueries({ queryKey: agentKeys.all });
-      toast.success('Document uploaded, processing started');
+      toast.success(i18n.t('toasts.docUploaded'));
     },
     onError: () => {
-      toast.error('Failed to upload document');
+      toast.error(i18n.t('toasts.docUploadError'));
     },
   });
 }
@@ -105,10 +106,10 @@ export function useDeleteDocument() {
     onSuccess: (_, { agentId }) => {
       qc.invalidateQueries({ queryKey: agentKeys.detail(agentId) });
       qc.invalidateQueries({ queryKey: agentKeys.all });
-      toast.success('Document deleted');
+      toast.success(i18n.t('toasts.docDeleted'));
     },
     onError: () => {
-      toast.error('Failed to delete document');
+      toast.error(i18n.t('toasts.docDeleteError'));
     },
   });
 }

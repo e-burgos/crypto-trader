@@ -58,7 +58,8 @@ function formatCost(cost: number): string {
 
 function timeAgo(
   iso: string,
-  t: (key: string, opts?: object) => string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: string, opts?: any) => string,
 ): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);

@@ -108,7 +108,7 @@ export function NewsFeedPage() {
         </div>
 
         <a
-          href="/dashboard/settings?tab=news"
+          href="/dashboard/settings/news"
           className="rounded-lg border border-border p-2 text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
           title={t('news.configure') ?? 'Configuración de noticias'}
         >

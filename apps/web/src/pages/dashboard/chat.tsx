@@ -60,13 +60,7 @@ export function ChatPage() {
       return;
     }
     await saveMessage.mutateAsync({ content, capability });
-    const { sessionProvider, sessionModel } = useChatStore.getState();
-    startStream(
-      content,
-      capability,
-      sessionProvider ?? undefined,
-      sessionModel ?? undefined,
-    );
+    startStream(content, capability);
   };
 
   const hasMessages = (session?.messages.length ?? 0) > 0;

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import i18n from '../lib/i18n';
 
 export interface AdminStats {
   totalUsers: number;
@@ -77,10 +78,10 @@ export function useKillSwitch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin'] });
       qc.invalidateQueries({ queryKey: ['trading'] });
-      toast.success('Kill switch activado — todo el trading detenido');
+      toast.success(i18n.t('toasts.killSwitchSuccess'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al activar el kill switch'),
+      toast.error(err?.message || i18n.t('toasts.killSwitchError')),
   });
 }
 
@@ -91,9 +92,9 @@ export function useToggleUserStatus() {
       api.patch(`/admin/users/${id}/status`, { isActive }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'users'] });
-      toast.success('Estado del usuario actualizado');
+      toast.success(i18n.t('toasts.userStatusUpdated'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al actualizar el estado del usuario'),
+      toast.error(err?.message || i18n.t('toasts.userStatusError')),
   });
 }

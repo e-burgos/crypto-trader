@@ -6,22 +6,31 @@ import {
   Clock,
   Loader2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import type { AgentDocument } from '../../hooks/use-admin-agents';
 
 const STATUS_CONFIG = {
   PENDING: {
     icon: Clock,
-    label: 'Pending',
+    labelKey: 'admin.docPending',
     className: 'text-muted-foreground',
   },
   PROCESSING: {
     icon: Loader2,
-    label: 'Processing',
+    labelKey: 'admin.docProcessing',
     className: 'text-orange-400 animate-spin',
   },
-  READY: { icon: CheckCircle, label: 'Ready', className: 'text-emerald-400' },
-  ERROR: { icon: XCircle, label: 'Error', className: 'text-red-400' },
+  READY: {
+    icon: CheckCircle,
+    labelKey: 'admin.docReady',
+    className: 'text-emerald-400',
+  },
+  ERROR: {
+    icon: XCircle,
+    labelKey: 'admin.docError',
+    className: 'text-red-400',
+  },
 };
 
 export function DocumentRow({
@@ -33,6 +42,7 @@ export function DocumentRow({
   onDelete: () => void;
   isDeleting: boolean;
 }) {
+  const { t } = useTranslation();
   const status = STATUS_CONFIG[doc.status] ?? STATUS_CONFIG.PENDING;
   const StatusIcon = status.icon;
 
@@ -47,7 +57,9 @@ export function DocumentRow({
       </div>
       <div className="flex items-center gap-1.5">
         <StatusIcon className={cn('h-4 w-4', status.className)} />
-        <span className="text-xs text-muted-foreground">{status.label}</span>
+        <span className="text-xs text-muted-foreground">
+          {t(status.labelKey)}
+        </span>
       </div>
       <button
         type="button"

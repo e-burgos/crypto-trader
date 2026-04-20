@@ -3,8 +3,8 @@ export {
   sourceLabel,
   SENTIMENT_CONFIG,
   NEWS_COUNTS,
-  AnalysisSummaryCard,
-  NewsDetailModal,
-  NewsCard,
-} from './components';
-export type { SentimentFilter } from './components';
+} from './news-utils';
+export type { SentimentFilter } from './news-utils';
+export { AnalysisSummaryCard } from './analysis-summary-card';
+export { NewsDetailModal } from './news-detail-modal';
+export { NewsCard } from './news-card';

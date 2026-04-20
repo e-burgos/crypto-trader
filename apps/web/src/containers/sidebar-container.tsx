@@ -2,7 +2,6 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   LayoutDashboard,
   History,
-  Settings,
   TrendingUp,
   SlidersHorizontal,
   Briefcase,
@@ -14,6 +13,8 @@ import {
   Brain,
   Bell,
   ListChecks,
+  User,
+  Rss,
 } from 'lucide-react';
 import { Sidebar, type NavGroup } from '@crypto-trader/ui';
 import { useAuthStore } from '../store/auth.store';
@@ -125,7 +126,33 @@ export function SidebarContainer() {
       ],
     },
     {
-      label: t('sidebar.groupSystem'),
+      label: t('sidebar.groupSettings'),
+      items: [
+        {
+          id: 'settings-exchange',
+          label: t('sidebar.settingsExchange'),
+          icon: <TrendingUp className="h-4 w-4" />,
+          href: '/dashboard/settings/exchange',
+          active: isActive('/dashboard/settings/exchange'),
+        },
+        {
+          id: 'settings-llms',
+          label: t('sidebar.settingsLLMs'),
+          icon: <BotMessageSquare className="h-4 w-4" />,
+          href: '/dashboard/settings/llms',
+          active: isActive('/dashboard/settings/llms'),
+        },
+        {
+          id: 'settings-news',
+          label: t('sidebar.settingsNews'),
+          icon: <Rss className="h-4 w-4" />,
+          href: '/dashboard/settings/news',
+          active: isActive('/dashboard/settings/news'),
+        },
+      ],
+    },
+    {
+      label: t('sidebar.groupPlatform'),
       items: [
         {
           id: 'notifications',
@@ -133,13 +160,6 @@ export function SidebarContainer() {
           icon: <Bell className="h-4 w-4" />,
           href: '/dashboard/notifications',
           active: isActive('/dashboard/notifications'),
-        },
-        {
-          id: 'settings',
-          label: t('sidebar.settings'),
-          icon: <Settings className="h-4 w-4" />,
-          href: '/dashboard/settings',
-          active: isActive('/dashboard/settings'),
         },
         {
           id: 'help',
@@ -185,7 +205,7 @@ export function SidebarContainer() {
       user={{ email: user?.email ?? '', role: user?.role }}
       onNavigate={(href) => navigate(href)}
       onLogout={logout}
-      onProfile={() => navigate('/dashboard/settings?tab=profile')}
+      onProfile={() => navigate('/dashboard/settings/profile')}
       logo={logo}
       mobileOpen={mobileOpen}
       onCloseMobile={closeMobile}

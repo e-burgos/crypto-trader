@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, RotateCcw } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useChatLLMOptions, LLMOption } from '../../hooks/use-chat';
+import {
+  useChatLLMOptions,
+  useUpdateChatSession,
+  LLMOption,
+} from '../../hooks/use-chat';
+import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
 import { useChatStore } from '../../store/chat.store';
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +17,29 @@ const PROVIDER_COLORS: Record<string, string> = {
   GEMINI: 'text-blue-400',
   MISTRAL: 'text-orange-500',
   TOGETHER: 'text-cyan-400',
+  OPENROUTER: 'text-purple-400',
 };
+
+// ── OpenRouter category filters ─────────────────────────────────────────────
+
+type ORCategory =
+  | 'top-paid'
+  | 'free'
+  | 'all'
+  | 'reasoning'
+  | 'fast'
+  | 'analytics';
+
+const OR_CATEGORIES: { value: ORCategory; labelKey: string }[] = [
+  { value: 'top-paid', labelKey: 'settings.orCategory.topPaid' },
+  { value: 'free', labelKey: 'settings.orCategory.free' },
+  { value: 'all', labelKey: 'settings.orCategory.all' },
+  { value: 'reasoning', labelKey: 'settings.orCategory.reasoning' },
+  { value: 'fast', labelKey: 'settings.orCategory.fast' },
+  { value: 'analytics', labelKey: 'settings.orCategory.analytics' },
+];
+
+// ── Component ───────────────────────────────────────────────────────────────
 
 interface ChatLLMOverrideProps {
   /** Current session provider */
@@ -27,15 +54,22 @@ export function ChatLLMOverride({
 }: ChatLLMOverrideProps) {
   const { t } = useTranslation();
   const { data: options = [] } = useChatLLMOptions();
-  const {
-    sessionProvider: overrideProvider,
-    sessionModel: overrideModel,
-    setSessionLLM,
-  } = useChatStore();
+  const { activeSessionId } = useChatStore();
+  const updateSession = useUpdateChatSession(activeSessionId ?? '');
 
   const [providerOpen, setProviderOpen] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
+  const [category, setCategory] = useState<ORCategory>('top-paid');
+  const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const isOpenRouter = sessionProvider === 'OPENROUTER';
+
+  // Fetch dynamic models for OpenRouter
+  const { data: orModels } = useLLMProviderModels(
+    isOpenRouter ? 'OPENROUTER' : '',
+  );
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -45,33 +79,78 @@ export function ChatLLMOverride({
       ) {
         setProviderOpen(false);
         setModelOpen(false);
+        setSearch('');
       }
     }
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const activeProvider = overrideProvider ?? sessionProvider;
-  const activeOption = options.find((o) => o.provider === activeProvider);
-  const activeModel = overrideModel ?? sessionModel;
-  const isOverridden = overrideProvider !== null || overrideModel !== null;
+  const activeOption = options.find((o) => o.provider === sessionProvider);
+
+  // For OpenRouter: filter models by selected category
+  const orFiltered =
+    isOpenRouter && orModels
+      ? category === 'all'
+        ? orModels.filter((m) => !m.deprecated)
+        : orModels.filter(
+            (m) => !m.deprecated && m.categories?.includes(category),
+          )
+      : [];
+
+  // For non-OpenRouter providers
   const availableModels = activeOption?.models ?? [];
 
+  // Auto-switch category if current model is not visible
+  useEffect(() => {
+    if (!isOpenRouter || !orModels?.length || !sessionModel) return;
+    const visible = orFiltered.some((m) => m.id === sessionModel);
+    if (!visible) {
+      for (const cat of OR_CATEGORIES) {
+        if (cat.value === 'all') {
+          setCategory('all');
+          break;
+        }
+        if (
+          orModels.some(
+            (m) => m.id === sessionModel && m.categories?.includes(cat.value),
+          )
+        ) {
+          setCategory(cat.value);
+          break;
+        }
+      }
+    }
+  }, [sessionModel, orModels]);
+
   const handleProviderSelect = (opt: LLMOption) => {
-    setSessionLLM(opt.provider, opt.models[0] ?? sessionModel);
+    const newModel = opt.models[0] ?? sessionModel;
+    updateSession.mutate({ provider: opt.provider, model: newModel });
     setProviderOpen(false);
   };
 
   const handleModelSelect = (model: string) => {
-    setSessionLLM(overrideProvider ?? sessionProvider, model);
+    updateSession.mutate({ model });
     setModelOpen(false);
+    setSearch('');
   };
 
-  const handleReset = () => {
-    setSessionLLM(null, null);
+  const handleCategorySelect = (cat: ORCategory) => {
+    setCategory(cat);
+    setProviderOpen(false);
   };
 
-  if (options.length <= 1) return null;
+  // Show when multiple providers OR when single provider is OpenRouter
+  const hasOpenRouter = options.some((o) => o.provider === 'OPENROUTER');
+  if (options.length <= 1 && !hasOpenRouter) return null;
+
+  // Active category label for display
+  const activeCategoryLabel = isOpenRouter
+    ? t(
+        OR_CATEGORIES.find((c) => c.value === category)?.labelKey ??
+          'settings.orCategory.topPaid',
+      )
+    : null;
 
   return (
     <div ref={containerRef} className="flex items-center gap-1 px-3 pb-1">
@@ -79,7 +158,7 @@ export function ChatLLMOverride({
         {t('chat.llmOverride.label', { defaultValue: 'Model' })}
       </span>
 
-      {/* Provider selector */}
+      {/* First selector: Provider (multi-provider) or Category (OpenRouter-only) */}
       <div className="relative">
         <button
           type="button"
@@ -90,92 +169,195 @@ export function ChatLLMOverride({
           className={cn(
             'flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors',
             'hover:bg-muted/50',
-            isOverridden ? 'text-primary' : 'text-muted-foreground',
+            isOpenRouter ? 'text-primary' : 'text-muted-foreground',
           )}
         >
           <span
             className={
-              PROVIDER_COLORS[activeProvider] ?? 'text-muted-foreground'
+              isOpenRouter
+                ? 'text-purple-400'
+                : (PROVIDER_COLORS[sessionProvider] ?? 'text-muted-foreground')
             }
           >
-            {activeOption?.label ?? activeProvider}
+            {isOpenRouter && options.length <= 1
+              ? activeCategoryLabel
+              : (activeOption?.label ?? sessionProvider)}
           </span>
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>
 
         {providerOpen && (
           <div className="absolute bg-background bottom-full left-0 z-50 mb-1 min-w-[140px] rounded-lg border border-border bg-popover p-1 shadow-lg">
-            {options.map((opt) => (
-              <button
-                key={opt.provider}
-                type="button"
-                onClick={() => handleProviderSelect(opt)}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
-                  'hover:bg-muted/60',
-                  opt.provider === activeProvider && 'bg-muted/40 font-medium',
-                )}
-              >
-                <span className={PROVIDER_COLORS[opt.provider] ?? ''}>
-                  {opt.label}
-                </span>
-              </button>
-            ))}
+            {isOpenRouter && options.length <= 1
+              ? /* Category list for OpenRouter-only */
+                OR_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => handleCategorySelect(cat.value)}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
+                      'hover:bg-muted/60',
+                      cat.value === category && 'bg-muted/40 font-medium',
+                    )}
+                  >
+                    <span
+                      className={
+                        cat.value === category
+                          ? 'text-purple-400'
+                          : 'text-muted-foreground'
+                      }
+                    >
+                      {t(cat.labelKey)}
+                    </span>
+                  </button>
+                ))
+              : /* Provider list for multi-provider */
+                options.map((opt) => (
+                  <button
+                    key={opt.provider}
+                    type="button"
+                    onClick={() => handleProviderSelect(opt)}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors',
+                      'hover:bg-muted/60',
+                      opt.provider === sessionProvider &&
+                        'bg-muted/40 font-medium',
+                    )}
+                  >
+                    <span className={PROVIDER_COLORS[opt.provider] ?? ''}>
+                      {opt.label}
+                    </span>
+                  </button>
+                ))}
           </div>
         )}
       </div>
 
-      {/* Model selector */}
+      {/* Separator when multi-provider + OpenRouter: show category pills */}
+      {isOpenRouter && options.length > 1 && (
+        <div className="flex items-center gap-0.5">
+          <span className="text-muted-foreground/40 mx-0.5">·</span>
+          {OR_CATEGORIES.map((cat) => (
+            <button
+              key={cat.value}
+              type="button"
+              onClick={() => setCategory(cat.value)}
+              className={cn(
+                'rounded-md px-1.5 py-0.5 text-[10px] transition-colors',
+                cat.value === category
+                  ? 'bg-primary/15 text-primary font-medium'
+                  : 'text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/40',
+              )}
+            >
+              {t(cat.labelKey)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Second selector: Models */}
       <div className="relative">
         <button
           type="button"
           onClick={() => {
-            setModelOpen(!modelOpen);
+            const next = !modelOpen;
+            setModelOpen(next);
             setProviderOpen(false);
+            if (!next) setSearch('');
+            else setTimeout(() => searchInputRef.current?.focus(), 0);
           }}
           className={cn(
             'flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors',
             'hover:bg-muted/50',
-            isOverridden ? 'text-primary font-medium' : 'text-muted-foreground',
+            'text-muted-foreground',
           )}
         >
-          <span className="max-w-[120px] truncate">{activeModel}</span>
+          <span className="max-w-[180px] truncate">{sessionModel}</span>
           <ChevronDown className="h-3 w-3 opacity-50" />
         </button>
 
-        {modelOpen && availableModels.length > 0 && (
-          <div className="absolute bg-background bottom-full left-0 z-50 mb-1 max-h-48 min-w-[180px] overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
-            {availableModels.map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleModelSelect(m)}
-                className={cn(
-                  'flex w-full items-center rounded-md px-2 py-1.5 text-xs transition-colors',
-                  'hover:bg-muted/60',
-                  m === activeModel && 'bg-muted/40 font-medium',
-                )}
-              >
-                <span className="truncate">{m}</span>
-              </button>
-            ))}
+        {modelOpen && (
+          <div className="absolute bg-background bottom-full left-0 z-50 mb-1 max-h-64 min-w-[260px] rounded-lg border border-border bg-popover shadow-lg flex flex-col">
+            {/* Search input */}
+            <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
+              <Search className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('chat.llmOverride.searchPlaceholder', {
+                  defaultValue: 'Search models...',
+                })}
+                className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/40 outline-none"
+              />
+            </div>
+            {/* Model list */}
+            <div className="overflow-y-auto p-1">
+              {isOpenRouter
+                ? (() => {
+                    const q = search.toLowerCase();
+                    const visible = orFiltered.filter(
+                      (m) =>
+                        !q ||
+                        m.id.toLowerCase().includes(q) ||
+                        (m.label ?? '').toLowerCase().includes(q),
+                    );
+                    return visible.length > 0 ? (
+                      visible.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => handleModelSelect(m.id)}
+                          className={cn(
+                            'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors',
+                            'hover:bg-muted/60',
+                            m.id === sessionModel && 'bg-muted/40 font-medium',
+                          )}
+                        >
+                          <span className="truncate">{m.label ?? m.id}</span>
+                          {m.contextWindow && (
+                            <span className="ml-2 shrink-0 text-[10px] text-muted-foreground/50">
+                              {(m.contextWindow / 1000).toFixed(0)}K
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground/60">
+                        {t('chat.llmOverride.noModels', {
+                          defaultValue: 'No models in this category',
+                        })}
+                      </div>
+                    );
+                  })()
+                : (() => {
+                    const q = search.toLowerCase();
+                    const visible = availableModels.filter(
+                      (m) => !q || m.toLowerCase().includes(q),
+                    );
+                    return visible.length > 0
+                      ? visible.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => handleModelSelect(m)}
+                            className={cn(
+                              'flex w-full items-center rounded-md px-2 py-1.5 text-xs transition-colors',
+                              'hover:bg-muted/60',
+                              m === sessionModel && 'bg-muted/40 font-medium',
+                            )}
+                          >
+                            <span className="truncate">{m}</span>
+                          </button>
+                        ))
+                      : null;
+                  })()}
+            </div>
           </div>
         )}
       </div>
-
-      {/* Reset button */}
-      {isOverridden && (
-        <button
-          type="button"
-          onClick={handleReset}
-          title={t('chat.llmOverride.reset', {
-            defaultValue: 'Reset to session default',
-          })}
-          className="ml-0.5 rounded-md p-0.5 text-muted-foreground/60 hover:bg-muted/50 hover:text-muted-foreground transition-colors"
-        >
-          <RotateCcw className="h-3 w-3" />
-        </button>
-      )}
     </div>
   );
 }

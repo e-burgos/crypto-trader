@@ -91,6 +91,7 @@ enum LLMProvider {
   GEMINI
   MISTRAL
   TOGETHER
+  OPENROUTER
 }
 
 enum LLMSource {
@@ -172,6 +173,7 @@ model LLMCredential {
   apiKeyIv        String
   selectedModel   String
   isActive        Boolean     @default(true)
+  fallbackModels  String[]    @default([])
   createdAt       DateTime    @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -15,6 +15,7 @@ import {
   ExternalLink,
   TableConfig,
   BarChart3,
+  Star,
 } from 'lucide-react';
 import { Button, InfoTooltip, Input } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
@@ -48,6 +49,7 @@ import {
 import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
 import { AIUsageDashboard } from '../../containers/settings/ai-usage-dashboard';
 import { ProviderStatusGrid } from '../../containers/settings/provider-status-grid';
+import { OpenRouterPrimaryTab } from '../../containers/settings/openrouter-primary-tab';
 import { NewsConfigPanel } from '../../containers/settings/news-config-panel';
 import { useNewsConfig, useUpdateNewsConfig } from '../../hooks/use-market';
 import { toast } from 'sonner';
@@ -108,10 +110,26 @@ const LLM_PROVIDERS = [
     helpLink: 'https://api.together.xyz/settings/api-keys',
     helpLinkText: 'api.together.xyz',
   },
+  {
+    value: 'OPENROUTER',
+    label: 'OpenRouter',
+    models: [
+      'anthropic/claude-sonnet-4.6',
+      'google/gemini-3-flash-preview',
+      'anthropic/claude-opus-4.6',
+      'deepseek/deepseek-v3.2',
+      'google/gemini-2.5-flash-lite',
+      'openrouter/elephant-alpha',
+      'nvidia/nemotron-3-super-120b-a12b:free',
+      'google/gemma-4-31b-it:free',
+    ],
+    helpLink: 'https://openrouter.ai/keys',
+    helpLinkText: 'openrouter.ai',
+  },
 ];
 
 type Tab = 'profile' | 'exchange' | 'ai' | 'news';
-type AISubTab = 'keys' | 'analytics';
+type AISubTab = 'primary' | 'providers' | 'analytics';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -123,7 +141,7 @@ export function SettingsPage() {
       ? tab
       : 'profile';
   });
-  const [aiSubTab, setAiSubTab] = useState<AISubTab>('keys');
+  const [aiSubTab, setAiSubTab] = useState<AISubTab>('primary');
 
   // Sync tab when URL param changes
   useEffect(() => {
@@ -677,16 +695,32 @@ export function SettingsPage() {
             {/* ── AI Subtab Navigation ── */}
             <div className="mb-4 flex gap-1 rounded-lg bg-muted/50 p-1">
               <button
-                onClick={() => setAiSubTab('keys')}
+                onClick={() => setAiSubTab('primary')}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-                  aiSubTab === 'keys'
+                  aiSubTab === 'primary'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Star className="h-4 w-4" />
+                {t('settings.aiSubTabs.primary', {
+                  defaultValue: 'Primary Provider',
+                })}
+              </button>
+              <button
+                onClick={() => setAiSubTab('providers')}
+                className={cn(
+                  'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  aiSubTab === 'providers'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Key className="h-4 w-4" />
-                {t('settings.aiSubTabs.apiKeys')}
+                {t('settings.aiSubTabs.providers', {
+                  defaultValue: 'Other Providers',
+                })}
               </button>
               <button
                 onClick={() => setAiSubTab('analytics')}
@@ -702,249 +736,296 @@ export function SettingsPage() {
               </button>
             </div>
 
-            {aiSubTab === 'keys' && (
-              <div className="rounded-xl border border-border bg-card p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BotMessageSquare className="h-4 w-4 text-primary" />
-                    <h2 className="font-semibold">{t('settings.llmKeys')}</h2>
-                    {llmValidation && (
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-semibold',
-                          llmValidation.active > 0
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-red-500/10 text-red-500',
-                        )}
-                      >
-                        {llmValidation.active}/{llmValidation.total}{' '}
-                        {t('settings.available')}
-                      </span>
-                    )}
-                  </div>
+            {aiSubTab === 'primary' && (
+              <OpenRouterPrimaryTab
+                llmKeys={llmKeys}
+                llmValidation={llmValidation}
+                validatingLLMKeys={validatingLLMKeys}
+                savingLLM={savingLLM}
+                testingLLM={testingLLM}
+                llmTestProvider={llmTestProvider}
+                llmTestResult={llmTestResult}
+                onSave={(data) =>
+                  saveLLMKey(data, {
+                    onSuccess: () => resetLLMTest(),
+                  })
+                }
+                onTest={(provider) => testLLM(provider)}
+                onDelete={(provider) => deleteLLMKey(provider)}
+                onUpdateModel={(data) => updateLLMModel(data)}
+              />
+            )}
+
+            {aiSubTab === 'providers' && (
+              <>
+                {/* Banner suggesting OpenRouter */}
+                <div className="mb-4 flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <p className="text-sm text-muted-foreground">
+                    <Star className="mr-1 inline h-4 w-4 text-primary" />
+                    {t('settings.openrouter.bannerHint', {
+                      defaultValue:
+                        'With OpenRouter you can access all these providers with a single API key.',
+                    })}
+                  </p>
                   <Button
                     size="sm"
                     variant="ghost"
-                    disabled={validatingLLMKeys}
-                    onClick={() => revalidateLLMKeys()}
+                    onClick={() => setAiSubTab('primary')}
+                    className="shrink-0 text-primary"
                   >
-                    {validatingLLMKeys ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    ) : (
-                      <RefreshCw className="mr-1 h-3 w-3" />
-                    )}
-                    {validatingLLMKeys
-                      ? t('settings.validating')
-                      : t('settings.revalidate')}
+                    {t('settings.openrouter.configureCta', {
+                      defaultValue: 'Configure OpenRouter',
+                    })}
                   </Button>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {LLM_PROVIDERS.map((provider) => {
-                    const status = getLLMKeyStatus(provider.value);
-                    const form = getLLMForm(provider.value);
-                    const validation = llmValidation?.results.find(
-                      (r) => r.provider === provider.value,
-                    );
-                    // Priority: manual test > auto-validation > DB isActive flag
-                    const manualTestFailed =
-                      status?.isActive &&
-                      llmTestResult &&
-                      llmTestProvider === provider.value &&
-                      !llmTestResult.connected;
-                    const resolvedStatus = manualTestFailed
-                      ? 'INVALID'
-                      : (validation?.status ??
-                        (status?.isActive ? 'ACTIVE' : 'INACTIVE'));
-                    return (
-                      <div
-                        key={provider.value}
-                        className="rounded-lg border border-border p-4"
-                      >
-                        <div className="mb-3 flex items-center justify-between">
-                          <span className="font-medium text-sm">
-                            {provider.label}
-                          </span>
-                          {validatingLLMKeys && status?.isActive ? (
-                            <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-500">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              {t('settings.validating')}
-                            </span>
-                          ) : (
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-xs font-semibold',
-                                resolvedStatus === 'ACTIVE'
-                                  ? 'bg-emerald-500/10 text-emerald-500'
-                                  : resolvedStatus === 'INVALID'
-                                    ? 'bg-red-500/10 text-red-500'
-                                    : 'bg-muted text-muted-foreground',
+
+                <div className="rounded-xl border border-border bg-card p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BotMessageSquare className="h-4 w-4 text-primary" />
+                      <h2 className="font-semibold">{t('settings.llmKeys')}</h2>
+                      {llmValidation && (
+                        <span
+                          className={cn(
+                            'rounded-full px-2 py-0.5 text-xs font-semibold',
+                            llmValidation.active > 0
+                              ? 'bg-emerald-500/10 text-emerald-500'
+                              : 'bg-red-500/10 text-red-500',
+                          )}
+                        >
+                          {llmValidation.active}/{llmValidation.total}{' '}
+                          {t('settings.available')}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={validatingLLMKeys}
+                      onClick={() => revalidateLLMKeys()}
+                    >
+                      {validatingLLMKeys ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-1 h-3 w-3" />
+                      )}
+                      {validatingLLMKeys
+                        ? t('settings.validating')
+                        : t('settings.revalidate')}
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {LLM_PROVIDERS.filter((p) => p.value !== 'OPENROUTER').map(
+                      (provider) => {
+                        const status = getLLMKeyStatus(provider.value);
+                        const form = getLLMForm(provider.value);
+                        const validation = llmValidation?.results.find(
+                          (r) => r.provider === provider.value,
+                        );
+                        // Priority: manual test > auto-validation > DB isActive flag
+                        const manualTestFailed =
+                          status?.isActive &&
+                          llmTestResult &&
+                          llmTestProvider === provider.value &&
+                          !llmTestResult.connected;
+                        const resolvedStatus = manualTestFailed
+                          ? 'INVALID'
+                          : (validation?.status ??
+                            (status?.isActive ? 'ACTIVE' : 'INACTIVE'));
+                        return (
+                          <div
+                            key={provider.value}
+                            className="rounded-lg border border-border p-4"
+                          >
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="font-medium text-sm">
+                                {provider.label}
+                              </span>
+                              {validatingLLMKeys && status?.isActive ? (
+                                <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-500">
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                  {t('settings.validating')}
+                                </span>
+                              ) : (
+                                <span
+                                  className={cn(
+                                    'rounded-full px-2 py-0.5 text-xs font-semibold',
+                                    resolvedStatus === 'ACTIVE'
+                                      ? 'bg-emerald-500/10 text-emerald-500'
+                                      : resolvedStatus === 'INVALID'
+                                        ? 'bg-red-500/10 text-red-500'
+                                        : 'bg-muted text-muted-foreground',
+                                  )}
+                                >
+                                  {resolvedStatus === 'ACTIVE'
+                                    ? t('settings.active')
+                                    : resolvedStatus === 'INVALID'
+                                      ? t('settings.invalid')
+                                      : t('settings.inactive')}
+                                </span>
                               )}
-                            >
-                              {resolvedStatus === 'ACTIVE'
-                                ? t('settings.active')
-                                : resolvedStatus === 'INVALID'
-                                  ? t('settings.invalid')
-                                  : t('settings.inactive')}
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-1">
-                          <div>
-                            <label className="mb-1 block text-xs font-medium">
-                              API Key
-                            </label>
-                            <Input
-                              type="password"
-                              placeholder="sk-..."
-                              value={form.apiKey}
-                              onChange={(e) =>
-                                setLlmForms((f) => ({
-                                  ...f,
-                                  [provider.value]: {
-                                    ...(f[provider.value] ?? {
-                                      model: provider.models[0],
-                                    }),
-                                    apiKey: e.target.value,
-                                  },
-                                }))
-                              }
-                              className="px-2 py-2"
-                            />
-                            <p className="mt-1.5 text-xs text-muted-foreground">
-                              {t('settings.getApiKeyAt')}{' '}
-                              <a
-                                href={provider.helpLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
-                              >
-                                {provider.helpLinkText}
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
-                            </p>
-                          </div>
-                          {status?.isActive ? (
-                            <div>
-                              <DynamicModelSelect
-                                provider={provider.value}
-                                value={form.model}
-                                label={t('settings.model')}
-                                onChange={(model) => {
-                                  setLlmForms((f) => ({
-                                    ...f,
-                                    [provider.value]: {
-                                      ...(f[provider.value] ?? { apiKey: '' }),
-                                      model,
-                                    },
-                                  }));
-                                  updateLLMModel({
-                                    provider: provider.value,
-                                    selectedModel: model || null,
-                                  });
-                                }}
-                                fallbackModels={provider.models}
-                              />
                             </div>
-                          ) : (
-                            <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
-                              {t('settings.activateProviderFirst', {
-                                defaultValue:
-                                  'Guarda tu API key para seleccionar un modelo',
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <Button
-                            size="sm"
-                            disabled={savingLLM || !form.apiKey}
-                            onClick={() =>
-                              saveLLMKey(
-                                {
-                                  provider: provider.value,
-                                  apiKey: form.apiKey,
-                                  selectedModel: form.model || null,
-                                },
-                                {
-                                  onSuccess: () => {
+                            <div className="grid gap-3 sm:grid-cols-1">
+                              <div>
+                                <label className="mb-1 block text-xs font-medium">
+                                  API Key
+                                </label>
+                                <Input
+                                  type="password"
+                                  placeholder="sk-..."
+                                  value={form.apiKey}
+                                  onChange={(e) =>
                                     setLlmForms((f) => ({
                                       ...f,
                                       [provider.value]: {
-                                        apiKey: '',
-                                        model: '',
+                                        ...(f[provider.value] ?? {
+                                          model: provider.models[0],
+                                        }),
+                                        apiKey: e.target.value,
                                       },
-                                    }));
-                                    resetLLMTest();
-                                  },
-                                },
-                              )
-                            }
-                          >
-                            {savingLLM && (
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            )}
-                            {t('common.save')}
-                          </Button>
-                          {status?.isActive && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                disabled={testingLLM}
-                                onClick={() => testLLM(provider.value)}
-                              >
-                                {testingLLM &&
-                                  llmTestProvider === provider.value && (
-                                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                  )}
-                                {testingLLM &&
-                                llmTestProvider === provider.value
-                                  ? t('settings.testing')
-                                  : t('settings.testConnection')}
-                              </Button>
-                              {llmTestResult &&
-                                llmTestProvider === provider.value && (
-                                  <span
-                                    className={cn(
-                                      'text-xs font-medium',
-                                      llmTestResult.connected
-                                        ? 'text-emerald-500'
-                                        : 'text-red-500',
-                                    )}
+                                    }))
+                                  }
+                                  className="px-2 py-2"
+                                />
+                                <p className="mt-1.5 text-xs text-muted-foreground">
+                                  {t('settings.getApiKeyAt')}{' '}
+                                  <a
+                                    href={provider.helpLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
                                   >
-                                    {llmTestResult.connected
-                                      ? t('settings.testSuccess')
-                                      : `${t('settings.testFailed')}: ${llmTestResult.error}`}
-                                  </span>
-                                )}
-                              {validation?.status === 'INVALID' &&
-                                validation.error &&
-                                !(
-                                  llmTestResult &&
-                                  llmTestProvider === provider.value
-                                ) && (
-                                  <span className="text-xs font-medium text-red-500">
-                                    {t('settings.autoValidationFailed')}:{' '}
-                                    {validation.error}
-                                  </span>
-                                )}
+                                    {provider.helpLinkText}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </p>
+                              </div>
+                              {status?.isActive ? (
+                                <div>
+                                  <DynamicModelSelect
+                                    provider={provider.value}
+                                    value={form.model}
+                                    label={t('settings.model')}
+                                    onChange={(model) => {
+                                      setLlmForms((f) => ({
+                                        ...f,
+                                        [provider.value]: {
+                                          ...(f[provider.value] ?? {
+                                            apiKey: '',
+                                          }),
+                                          model,
+                                        },
+                                      }));
+                                      updateLLMModel({
+                                        provider: provider.value,
+                                        selectedModel: model || null,
+                                      });
+                                    }}
+                                    fallbackModels={provider.models}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
+                                  {t('settings.activateProviderFirst', {
+                                    defaultValue:
+                                      'Guarda tu API key para seleccionar un modelo',
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="gap-1.5 text-red-500 hover:text-red-600"
-                                onClick={() => deleteLLMKey(provider.value)}
+                                disabled={savingLLM || !form.apiKey}
+                                onClick={() =>
+                                  saveLLMKey(
+                                    {
+                                      provider: provider.value,
+                                      apiKey: form.apiKey,
+                                      selectedModel: form.model || null,
+                                    },
+                                    {
+                                      onSuccess: () => {
+                                        setLlmForms((f) => ({
+                                          ...f,
+                                          [provider.value]: {
+                                            apiKey: '',
+                                            model: '',
+                                          },
+                                        }));
+                                        resetLLMTest();
+                                      },
+                                    },
+                                  )
+                                }
                               >
-                                <Trash2 className="h-3 w-3" />
-                                {t('settings.remove')}
+                                {savingLLM && (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                )}
+                                {t('common.save')}
                               </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                              {status?.isActive && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={testingLLM}
+                                    onClick={() => testLLM(provider.value)}
+                                  >
+                                    {testingLLM &&
+                                      llmTestProvider === provider.value && (
+                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                      )}
+                                    {testingLLM &&
+                                    llmTestProvider === provider.value
+                                      ? t('settings.testing')
+                                      : t('settings.testConnection')}
+                                  </Button>
+                                  {llmTestResult &&
+                                    llmTestProvider === provider.value && (
+                                      <span
+                                        className={cn(
+                                          'text-xs font-medium',
+                                          llmTestResult.connected
+                                            ? 'text-emerald-500'
+                                            : 'text-red-500',
+                                        )}
+                                      >
+                                        {llmTestResult.connected
+                                          ? t('settings.testSuccess')
+                                          : `${t('settings.testFailed')}: ${llmTestResult.error}`}
+                                      </span>
+                                    )}
+                                  {validation?.status === 'INVALID' &&
+                                    validation.error &&
+                                    !(
+                                      llmTestResult &&
+                                      llmTestProvider === provider.value
+                                    ) && (
+                                      <span className="text-xs font-medium text-red-500">
+                                        {t('settings.autoValidationFailed')}:{' '}
+                                        {validation.error}
+                                      </span>
+                                    )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="gap-1.5 text-red-500 hover:text-red-600"
+                                    onClick={() => deleteLLMKey(provider.value)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    {t('settings.remove')}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      },
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {aiSubTab === 'analytics' && (

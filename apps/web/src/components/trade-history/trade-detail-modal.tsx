@@ -33,7 +33,9 @@ export function TradeDetailModal({
   const pos = trade.position;
   const cfg = pos?.config;
   const asset =
-    pos?.asset ?? trade.pair?.replace(/USDT|BTC|ETH|BNB|BUSD/, '') ?? '';
+    pos?.asset ??
+    (trade as { pair?: string }).pair?.replace(/USDT|BTC|ETH|BNB|BUSD/, '') ??
+    '';
   const quoteCurrency = pos?.pair ? pos.pair.replace(pos.asset, '') : 'USDT';
   const baseCurrency = pos?.asset ?? asset;
 

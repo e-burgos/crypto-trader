@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
 import { toast } from 'sonner';
+import i18n from '../lib/i18n';
 
 export type TradingMode = 'SANDBOX' | 'TESTNET' | 'LIVE';
 
@@ -66,10 +67,10 @@ export function useSetBinanceKeys() {
       api.post('/users/me/binance-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'binance-status'] });
-      toast.success('Claves API de Binance guardadas');
+      toast.success(i18n.t('toasts.binanceKeysSaved'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al guardar las claves'),
+      toast.error(err?.message || i18n.t('toasts.binanceKeysSaveError')),
   });
 }
 
@@ -79,10 +80,10 @@ export function useDeleteBinanceKeys() {
     mutationFn: () => api.delete('/users/me/binance-keys'),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'binance-status'] });
-      toast.success('Claves de Binance eliminadas');
+      toast.success(i18n.t('toasts.binanceKeysDeleted'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al eliminar las claves'),
+      toast.error(err?.message || i18n.t('toasts.binanceKeysDeleteError')),
   });
 }
 
@@ -105,10 +106,10 @@ export function useSetTestnetBinanceKeys() {
       api.post('/users/me/binance-keys/testnet', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'binance-testnet-status'] });
-      toast.success('Claves API de Binance Testnet guardadas');
+      toast.success(i18n.t('toasts.testnetKeysSaved'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al guardar las claves testnet'),
+      toast.error(err?.message || i18n.t('toasts.testnetKeysSaveError')),
   });
 }
 
@@ -118,10 +119,10 @@ export function useDeleteTestnetBinanceKeys() {
     mutationFn: () => api.delete('/users/me/binance-keys/testnet'),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'binance-testnet-status'] });
-      toast.success('Claves de Binance Testnet eliminadas');
+      toast.success(i18n.t('toasts.testnetKeysDeleted'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al eliminar las claves testnet'),
+      toast.error(err?.message || i18n.t('toasts.testnetKeysDeleteError')),
   });
 }
 
@@ -133,15 +134,15 @@ export function useTestTestnetBinanceConnection() {
       ),
     onSuccess: (data) => {
       if (data.connected) {
-        toast.success('Conexión con Binance Testnet exitosa');
+        toast.success(i18n.t('toasts.testnetConnectionSuccess'));
       } else {
         toast.error(
-          `Error de conexión testnet: ${data.error ?? 'desconocido'}`,
+          i18n.t('toasts.testnetConnectionError', { error: data.error ?? 'unknown' }),
         );
       }
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al probar la conexión testnet'),
+      toast.error(err?.message || i18n.t('toasts.testnetConnectionTestError')),
   });
 }
 
@@ -157,10 +158,10 @@ export function useSetLLMKey() {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
       qc.invalidateQueries({ queryKey: ['llm-keys-validation'] });
       qc.invalidateQueries({ queryKey: ['llm', 'providers', 'status'] });
-      toast.success('Clave API de LLM guardada');
+      toast.success(i18n.t('toasts.llmKeySaved'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al guardar la clave'),
+      toast.error(err?.message || i18n.t('toasts.llmKeySaveError')),
   });
 }
 
@@ -184,10 +185,10 @@ export function useDeleteLLMKey() {
       qc.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
       qc.invalidateQueries({ queryKey: ['llm-keys-validation'] });
       qc.invalidateQueries({ queryKey: ['llm', 'providers', 'status'] });
-      toast.success('Clave LLM eliminada');
+      toast.success(i18n.t('toasts.llmKeyDeleted'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al eliminar la clave'),
+      toast.error(err?.message || i18n.t('toasts.llmKeyDeleteError')),
   });
 }
 
@@ -198,10 +199,10 @@ export function useUpdateProfile() {
       api.put('/users/me', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'profile'] });
-      toast.success('Perfil actualizado');
+      toast.success(i18n.t('toasts.profileUpdated'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al actualizar el perfil'),
+      toast.error(err?.message || i18n.t('toasts.profileUpdateError')),
   });
 }
 
@@ -232,10 +233,10 @@ export function useSetNewsApiKey() {
       api.post('/users/me/news-api-keys', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'news-api-keys'] });
-      toast.success('Clave API de noticias guardada');
+      toast.success(i18n.t('toasts.newsKeySaved'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al guardar la clave'),
+      toast.error(err?.message || i18n.t('toasts.newsKeySaveError')),
   });
 }
 
@@ -246,10 +247,10 @@ export function useDeleteNewsApiKey() {
       api.delete(`/users/me/news-api-keys/${provider}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user', 'news-api-keys'] });
-      toast.success('Clave API de noticias eliminada');
+      toast.success(i18n.t('toasts.newsKeyDeleted'));
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al eliminar la clave'),
+      toast.error(err?.message || i18n.t('toasts.newsKeyDeleteError')),
   });
 }
 
@@ -353,7 +354,7 @@ export function useUpdatePlatformMode() {
       qc.invalidateQueries({ queryKey: ['positions'] });
     },
     onError: (err: { message?: string }) =>
-      toast.error(err?.message || 'Error al cambiar el modo de operación'),
+      toast.error(err?.message || i18n.t('toasts.modeChangeError')),
   });
 }
 
@@ -375,7 +376,7 @@ export function usePlatformMode() {
       updateMode.mutate('SANDBOX', {
         onSuccess: () => {
           toast.warning(
-            `Modo ${mode} no disponible. Cambiado a Sandbox automáticamente.`,
+            i18n.t('toasts.modeFallback', { mode }),
           );
         },
       });

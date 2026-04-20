@@ -1,5 +1,14 @@
 import { useState, useRef } from 'react';
-import { Play, Square, BookOpen, Eye, Pencil, Plus, Bot } from 'lucide-react';
+import {
+  Play,
+  Square,
+  BookOpen,
+  Eye,
+  Pencil,
+  Plus,
+  Bot,
+  Trash2,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { TradingConfig } from '../../hooks/use-trading';
 import { cn } from '../../lib/utils';

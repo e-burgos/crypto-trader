@@ -3,8 +3,8 @@ import { MODEL_RANKING, suggestModel, suggestModels } from './model-ranking';
 
 describe('model-ranking', () => {
   describe('MODEL_RANKING', () => {
-    it('should contain 20 ranked models', () => {
-      expect(MODEL_RANKING).toHaveLength(20);
+    it('should contain 28 ranked models', () => {
+      expect(MODEL_RANKING).toHaveLength(28);
     });
 
     it('should be sorted by intelligenceScore descending', () => {
@@ -15,12 +15,13 @@ describe('model-ranking', () => {
       }
     });
 
-    it('should include all 6 providers', () => {
+    it('should include all 7 providers', () => {
       const providers = new Set(MODEL_RANKING.map((m) => m.provider));
       expect(providers).toContain(LLMProvider.CLAUDE);
       expect(providers).toContain(LLMProvider.OPENAI);
+      expect(providers).toContain(LLMProvider.OPENROUTER);
       expect(providers).toBeInstanceOf(Set);
-      expect(providers.size).toBe(6);
+      expect(providers.size).toBe(7);
     });
   });
 
@@ -32,13 +33,14 @@ describe('model-ranking', () => {
       LLMProvider.GROQ,
       LLMProvider.MISTRAL,
       LLMProvider.TOGETHER,
+      LLMProvider.OPENROUTER,
     ];
 
     it('should return the highest intelligence model for TRADING', () => {
       const result = suggestModel(allProviders, 'TRADING');
       expect(result).not.toBeNull();
-      // Gemini 3.1 Pro Preview and GPT-5.4 both score 57
-      expect(result!.intelligenceScore).toBe(57);
+      // Claude Opus 4.6 (OpenRouter) scores 58
+      expect(result!.intelligenceScore).toBe(58);
     });
 
     it('should filter by active providers only', () => {
@@ -69,9 +71,9 @@ describe('model-ranking', () => {
     it('should break cost ties by intelligence score (preferCheap)', () => {
       const result = suggestModel(allProviders, 'NEWS', true);
       expect(result).not.toBeNull();
-      // Among CHEAP models for NEWS: GPT-5.4 Nano (44), Gemini 3.1 Flash-Lite (34), Gemini 2.5 Flash (22)
-      // Highest intelligence among cheapest = GPT-5.4 Nano (44)
-      expect(result!.model).toBe('gpt-5.4-nano');
+      // Among FREE models for NEWS: Elephant Alpha (30), Nemotron 3 Super (28)
+      // Highest intelligence among cheapest (FREE) = Elephant Alpha (30)
+      expect(result!.model).toBe('openrouter/elephant-alpha');
     });
 
     it('should return highest intelligence when preferCheap is false', () => {
@@ -95,6 +97,7 @@ describe('model-ranking', () => {
       LLMProvider.GROQ,
       LLMProvider.MISTRAL,
       LLMProvider.TOGETHER,
+      LLMProvider.OPENROUTER,
     ];
 
     it('should return up to 3 suggestions by default', () => {

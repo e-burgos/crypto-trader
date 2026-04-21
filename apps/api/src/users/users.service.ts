@@ -232,7 +232,7 @@ export class UsersService {
   ) {
     return this.prisma.lLMCredential.update({
       where: { userId_provider: { userId, provider: provider as LLMProvider } },
-      data: { selectedModel: selectedModel ?? '' },
+      data: { selectedModel: selectedModel || '' },
       select: { id: true, provider: true, selectedModel: true, isActive: true },
     });
   }

@@ -120,6 +120,7 @@ export class AnalyticsService {
           createdAt: true,
           indicators: true,
           newsHeadlines: true,
+          metadata: true,
         },
       }),
       this.prisma.lLMCredential.findFirst({
@@ -155,8 +156,6 @@ export class AnalyticsService {
             intervalMode: true,
             orderPriceOffsetPct: true,
             isRunning: true,
-            primaryProvider: true,
-            primaryModel: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -167,8 +166,54 @@ export class AnalyticsService {
 
     return decisions.map((d) => {
       const cfg = d.configId ? configMap.get(d.configId) : undefined;
+
+      // Extract SIGMA news_sentiment from orchestration metadata
+      let sigmaSentiment: {
+        sentiment: number;
+        impact: string;
+        reasoning: string;
+        cached?: boolean;
+      } | null = null;
+      if (d.metadata) {
+        const meta = d.metadata as {
+          subAgentResults?: Array<{
+            task: string;
+            output: string;
+            cached?: boolean;
+          }>;
+        };
+        const sigmaResult = meta.subAgentResults?.find(
+          (r) => r.task === 'news_sentiment',
+        );
+        if (sigmaResult?.output && sigmaResult.output !== '{}') {
+          try {
+            let cleaned = sigmaResult.output
+              .replace(/```(?:json)?\s*/gi, '')
+              .trim();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let parsed: any;
+            try {
+              parsed = JSON.parse(cleaned);
+            } catch {
+              const match = cleaned.match(/\{[\s\S]*\}/);
+              parsed = match ? JSON.parse(match[0]) : null;
+            }
+            if (parsed) {
+              sigmaSentiment = {
+                ...parsed,
+                cached: sigmaResult.cached ?? false,
+              };
+            }
+          } catch {
+            /* ignore parse errors */
+          }
+        }
+      }
+
       return {
         ...d,
+        metadata: undefined, // don't leak raw metadata to frontend
+        sigmaSentiment,
         mode: d.mode ?? cfg?.mode ?? null,
         configName: d.configName ?? cfg?.name ?? null,
         configDetails: cfg
@@ -188,8 +233,8 @@ export class AnalyticsService {
               updatedAt: cfg.updatedAt,
             }
           : null,
-        llmProvider: cfg?.primaryProvider ?? activeLlm?.provider ?? null,
-        llmModel: cfg?.primaryModel ?? activeLlm?.selectedModel ?? null,
+        llmProvider: activeLlm?.provider ?? null,
+        llmModel: activeLlm?.selectedModel ?? null,
       };
     });
   }

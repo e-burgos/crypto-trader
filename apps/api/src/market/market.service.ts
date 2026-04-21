@@ -1,4 +1,4 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { HttpException, Injectable, Logger, Optional } from '@nestjs/common';
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import {
   CoinGeckoNewsFetcher,
@@ -22,7 +22,7 @@ import {
 } from '../../generated/prisma/enums';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
-import { suggestModel } from '../llm/model-ranking';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 
 const VALID_ASSETS = ['BTC', 'ETH'];
 const VALID_INTERVALS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -114,9 +114,11 @@ const OPTIONAL_NEWS_SOURCES = [
 @Injectable()
 export class MarketService {
   private readonly binance = new BinanceRestClient();
+  private readonly logger = new Logger(MarketService.name);
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly agentConfigResolver: AgentConfigResolverService,
     @Optional() private readonly llmUsageService?: LLMUsageService,
   ) {}
 
@@ -128,8 +130,8 @@ export class MarketService {
     return this.prisma.newsConfig.create({
       data: {
         userId,
-        intervalMinutes: 30,
-        newsCount: 40,
+        intervalMinutes: 10,
+        newsCount: 15,
         enabledSources: [],
         onlySummary: true,
         botEnabled: true,
@@ -147,26 +149,18 @@ export class MarketService {
       onlySummary?: boolean;
       botEnabled?: boolean;
       newsWeight?: number;
-      primaryProvider?: LLMProvider | null;
-      primaryModel?: string | null;
-      fallbackProvider?: LLMProvider | null;
-      fallbackModel?: string | null;
     },
   ) {
     return this.prisma.newsConfig.upsert({
       where: { userId },
       create: {
         userId,
-        intervalMinutes: data.intervalMinutes ?? 30,
-        newsCount: data.newsCount ?? 40,
+        intervalMinutes: data.intervalMinutes ?? 10,
+        newsCount: data.newsCount ?? 15,
         enabledSources: data.enabledSources ?? [],
         onlySummary: data.onlySummary ?? true,
         botEnabled: data.botEnabled ?? true,
         newsWeight: data.newsWeight ?? 15,
-        primaryProvider: data.primaryProvider ?? undefined,
-        primaryModel: data.primaryModel ?? undefined,
-        fallbackProvider: data.fallbackProvider ?? undefined,
-        fallbackModel: data.fallbackModel ?? undefined,
       },
       update: data,
     });
@@ -285,74 +279,36 @@ export class MarketService {
     });
   }
 
-  // ── Resolve LLM for News (3-level fallback) ───────────────────────────────
+  // ── Resolve LLM for News (uses first active credential) ────────────────────
 
   async resolveLLMForNews(
     userId: string,
   ): Promise<{ provider: LLMProvider; model: string; apiKey: string } | null> {
-    const cfg = await this.getNewsConfig(userId);
-
-    // 1. Primary configured
-    if (cfg.primaryProvider) {
-      const cred = await this.prisma.lLMCredential.findFirst({
-        where: { userId, provider: cfg.primaryProvider, isActive: true },
-      });
-      if (cred) {
-        const model =
-          cfg.primaryModel ||
-          cred.selectedModel ||
-          suggestModel([cfg.primaryProvider], 'NEWS', true)?.model;
-        if (model) {
-          return {
-            provider: cfg.primaryProvider,
-            model,
-            apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-          };
-        }
-      }
-    }
-
-    // 2. Fallback configured
-    if (cfg.fallbackProvider) {
-      const cred = await this.prisma.lLMCredential.findFirst({
-        where: { userId, provider: cfg.fallbackProvider, isActive: true },
-      });
-      if (cred) {
-        const model =
-          cfg.fallbackModel ||
-          cred.selectedModel ||
-          suggestModel([cfg.fallbackProvider], 'NEWS', true)?.model;
-        if (model) {
-          return {
-            provider: cfg.fallbackProvider,
-            model,
-            apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-          };
-        }
-      }
-    }
-
-    // 3. Global ranking suggestion (cheapest for NEWS)
+    // Resolution now handled centrally by AgentConfigResolver for orchestrated calls.
+    // This method provides a simple fallback for direct news AI analysis.
     const activeCreds = await this.prisma.lLMCredential.findMany({
       where: { userId, isActive: true },
     });
-    const activeProviders = [...new Set(activeCreds.map((c) => c.provider))];
-    const suggested = suggestModel(activeProviders, 'NEWS', true);
-    if (!suggested) return null;
+    if (activeCreds.length === 0) return null;
 
-    const cred = activeCreds.find((c) => c.provider === suggested.provider);
-    if (!cred) return null;
-
+    const cred = activeCreds[0];
     return {
-      provider: suggested.provider,
-      model: suggested.model,
+      provider: cred.provider as LLMProvider,
+      model: cred.selectedModel,
       apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
     };
   }
 
   // ── AI Sentiment Analysis → updates latest DB record ──────────────────────
 
-  async analyzeSentiment(userId: string, provider: string, model?: string) {
+  async analyzeSentiment(userId: string) {
+    // Resolve SIGMA agent config (market analysis agent)
+    const agentCfg = await this.agentConfigResolver.resolveConfig(
+      'market',
+      userId,
+    );
+    const provider = agentCfg.provider as string;
+    const model = agentCfg.model;
     // Ensure a keyword analysis exists; create one if not
     let analysis = await this.getLatestAnalysis(userId);
     if (!analysis) {
@@ -374,7 +330,10 @@ export class MarketService {
       where: { userId_provider: { userId, provider: provider as LLMProvider } },
     });
     if (!cred)
-      throw new Error(`No LLM credential found for provider: ${provider}`);
+      throw new HttpException(
+        `No LLM credential found for provider: ${provider}`,
+        400,
+      );
 
     const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
     const usedModel = model || cred.selectedModel || undefined;
@@ -431,8 +390,37 @@ ${numbered}`;
           });
       }
 
-      const cleaned = response.text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(cleaned);
+      // Robust JSON extraction: strip code fences, then extract the JSON array
+      let cleaned = response.text.replace(/```(?:json)?\s*/gi, '').trim();
+      // Try direct parse first
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch {
+        // Extract the outermost JSON array from the text
+        const arrMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (arrMatch) {
+          cleaned = arrMatch[0];
+        }
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch {
+          // LLM may have truncated the response — try to repair
+          // Find the last complete object (ending with }) and close the array
+          const lastCompleteObj = cleaned.lastIndexOf('}');
+          if (lastCompleteObj > 0) {
+            const repaired = cleaned.substring(0, lastCompleteObj + 1).trim();
+            const closedArray = repaired.endsWith(']')
+              ? repaired
+              : repaired + ']';
+            parsed = JSON.parse(closedArray);
+          } else {
+            this.logger.warn(
+              `analyzeSentiment: no '}' found in cleaned response (len=${cleaned.length}): ${cleaned.substring(0, 300)}`,
+            );
+            throw new Error('No complete JSON object found in LLM response');
+          }
+        }
+      }
     } catch (e) {
       recordCall(
         userId,
@@ -440,20 +428,19 @@ ${numbered}`;
         false,
         e instanceof Error ? e.message : String(e),
       );
-      throw new Error(
+      throw new HttpException(
         `Failed to parse LLM sentiment response: ${e instanceof Error ? e.message : String(e)}`,
+        502,
       );
     }
 
     const validSentiments = new Set(['POSITIVE', 'NEGATIVE', 'NEUTRAL']);
     const aiHeadlines = headlines.map((h, i) => {
       const result = parsed.find((p) => p.index === i + 1);
+      const rawSentiment = result?.sentiment?.toUpperCase?.() ?? '';
       const sentiment =
-        result && validSentiments.has(result.sentiment.toUpperCase())
-          ? (result.sentiment.toUpperCase() as
-              | 'POSITIVE'
-              | 'NEGATIVE'
-              | 'NEUTRAL')
+        validSentiments.has(rawSentiment)
+          ? (rawSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL')
           : 'NEUTRAL';
       return { id: h.id, sentiment, reasoning: result?.reasoning ?? '' };
     });

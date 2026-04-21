@@ -281,38 +281,35 @@ export class ProviderHealthService implements OnModuleInit, OnModuleDestroy {
         where: { isRunning: true },
         select: {
           userId: true,
-          primaryProvider: true,
-          fallbackProvider: true,
         },
       });
 
       const seen = new Set<string>();
       for (const cfg of activeConfigs) {
-        // Check both primary and fallback providers
-        const providers = [cfg.primaryProvider, cfg.fallbackProvider].filter(
-          Boolean,
-        ) as string[];
+        // Check all active credentials for the user
+        const creds = await this.prisma.lLMCredential.findMany({
+          where: { userId: cfg.userId, isActive: true },
+          select: {
+            userId: true,
+            provider: true,
+            apiKeyEncrypted: true,
+            apiKeyIv: true,
+          },
+        });
 
-        for (const provider of providers) {
-          const key = `${cfg.userId}:${provider}`;
+        for (const cred of creds) {
+          const key = `${cfg.userId}:${cred.provider}`;
           if (seen.has(key)) continue;
           seen.add(key);
 
-          const cred = await this.prisma.lLMCredential.findFirst({
-            where: {
-              userId: cfg.userId,
-              provider: provider as LLMProvider,
-              isActive: true,
-            },
-            select: { apiKeyEncrypted: true, apiKeyIv: true },
-          });
-          if (!cred) continue;
-
           const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-          const ok = await this.healthCheck(provider as LLMProvider, apiKey);
+          const ok = await this.healthCheck(
+            cred.provider as LLMProvider,
+            apiKey,
+          );
           recordCall(
             cfg.userId,
-            provider,
+            cred.provider,
             ok,
             ok ? undefined : 'Health check failed',
           );

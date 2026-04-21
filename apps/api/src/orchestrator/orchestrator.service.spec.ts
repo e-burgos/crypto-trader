@@ -22,6 +22,12 @@ const mockPrismaService = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  newsConfig: {
+    findUnique: jest.fn(),
+  },
+  agentDecision: {
+    findFirst: jest.fn(),
+  },
 };
 
 const mockConfig = {
@@ -67,6 +73,8 @@ describe('OrchestratorService', () => {
     mockPrismaService.tradingConfig.findFirst.mockResolvedValue(mockConfig);
     mockPrismaService.position.findMany.mockResolvedValue([]);
     mockPrismaService.sandboxWallet.findMany.mockResolvedValue([]);
+    mockPrismaService.newsConfig.findUnique.mockResolvedValue({ intervalMinutes: 10 });
+    mockPrismaService.agentDecision.findFirst.mockResolvedValue(null);
   });
 
   // ── classifyIntent ─────────────────────────────────────────────────────────

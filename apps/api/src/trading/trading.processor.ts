@@ -28,7 +28,6 @@ import {
 } from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
-import { resolveTradingOverride } from './trading-agent-utils';
 
 interface AgentJobData {
   userId: string;
@@ -264,8 +263,7 @@ export class TradingProcessor {
         createdAt: d.createdAt.toISOString(),
       }));
 
-      // 8. Call OrchestratorService (replaces direct LLM call — Spec 28 Phase A)
-      const llmOverride = resolveTradingOverride(config);
+      // 8. Call OrchestratorService (uses AgentConfigResolver for model selection)
       const orchestratedDecision =
         await this.orchestratorService.orchestrateDecision(
           userId,
@@ -276,7 +274,7 @@ export class TradingProcessor {
             sentiment: n.sentiment,
             summary: n.summary ?? null,
           })),
-          llmOverride,
+          undefined,
         );
       // Adapt DecisionPayload to the shape expected by the rest of the processor
       const decision = {
@@ -287,6 +285,12 @@ export class TradingProcessor {
         orchestrated: orchestratedDecision.orchestrated,
         subAgentResults: orchestratedDecision.subAgentResults,
       };
+
+      // Compute effective wait: AGENT mode respects LLM suggestion, CUSTOM mode uses user config.
+      const effectiveWaitMinutes =
+        config.intervalMode === 'CUSTOM'
+          ? config.minIntervalMinutes
+          : decision.suggestedWaitMinutes;
 
       // 9. Save decision
       const savedDecision = await this.prisma.agentDecision.create({
@@ -305,7 +309,7 @@ export class TradingProcessor {
             author: n.author ?? null,
             source: n.source,
           })) as any,
-          waitMinutes: decision.suggestedWaitMinutes,
+          waitMinutes: effectiveWaitMinutes,
           configId: config.id,
           configName: config.name || undefined,
           mode: config.mode as any,
@@ -409,14 +413,8 @@ export class TradingProcessor {
         cachedMarketPrice,
       );
 
-      // 12. Schedule next cycle
-      // If intervalMode is CUSTOM, always use the user-configured minIntervalMinutes.
-      // If AGENT (default), use the LLM's suggested wait but enforce minIntervalMinutes as floor.
-      const waitMinutes =
-        config.intervalMode === 'CUSTOM'
-          ? config.minIntervalMinutes
-          : Math.max(decision.suggestedWaitMinutes, config.minIntervalMinutes);
-      const delay = waitMinutes * 60 * 1000;
+      // 12. Schedule next cycle — uses the same effectiveWaitMinutes computed above.
+      const delay = effectiveWaitMinutes * 60 * 1000;
 
       // Re-queue only if still running.
       // NOTE: We intentionally omit jobId here. Using the same static jobId while
@@ -433,7 +431,7 @@ export class TradingProcessor {
           { delay, removeOnComplete: true },
         );
         this.logger.log(
-          `Next cycle for config ${configId} in ${waitMinutes}min`,
+          `Next cycle for config ${configId} in ${effectiveWaitMinutes}min`,
         );
       }
     } catch (err) {

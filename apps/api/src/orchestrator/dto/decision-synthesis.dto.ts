@@ -2,6 +2,8 @@ export interface SubAgentResult {
   agentId: string;
   task: string;
   output: string;
+  /** True when this result was reused from a recent decision (within analysis interval TTL) */
+  cached?: boolean;
 }
 
 export interface AegisVerdict {

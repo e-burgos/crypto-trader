@@ -22,6 +22,7 @@ import {
   SettingsExchangePage,
   SettingsLLMsPage,
   SettingsNewsPage,
+  SettingsAgentsPage,
 } from '../pages/dashboard/settings/index';
 import { PositionsPage } from '../pages/dashboard/positions';
 import { NewsFeedPage } from '../pages/dashboard/news-feed';
@@ -158,6 +159,7 @@ export function App() {
             />
             <Route path="settings/llms" element={<SettingsLLMsPage />} />
             <Route path="settings/news" element={<SettingsNewsPage />} />
+            <Route path="settings/agents" element={<SettingsAgentsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
           </Route>
           <Route

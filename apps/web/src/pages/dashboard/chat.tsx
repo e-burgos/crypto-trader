@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { BotMessageSquare } from 'lucide-react';
 import {
   useChatSessions,
   useChatSession,
   useSaveUserMessage,
   useChatStream,
+  useCreateChatSession,
 } from '../../hooks/use-chat';
 import type { ChatCapability } from '@crypto-trader/ui';
 import { useChatAgent } from '../../hooks/use-chat-agent';
@@ -19,15 +19,13 @@ import {
   AGENTS,
 } from '@crypto-trader/ui';
 import { ChatSessionPanel } from '../../containers/chat/chat-session-panel';
-import { NewSessionModal } from '../../containers/chat/llm-selector';
-import { ChatLLMOverride } from '../../containers/chat/chat-llm-override';
 import { useTranslation } from 'react-i18next';
 
 export function ChatPage() {
   const { t } = useTranslation();
   const { data: sessions = [] } = useChatSessions();
   const { activeSessionId } = useChatStore();
-  const [showNewSession, setShowNewSession] = useState(false);
+  const setActiveSession = useChatStore((s) => s.setActiveSession);
 
   const { data: session } = useChatSession(activeSessionId ?? '');
   const saveMessage = useSaveUserMessage(activeSessionId ?? '');
@@ -41,7 +39,7 @@ export function ChatPage() {
     handleRoutingEvent,
     handleOrchestratingEvent,
     handleStreamDone,
-  } = useChatAgent();
+  } = useChatAgent(session?.agentId);
   const {
     streamingContent,
     isStreaming,
@@ -53,17 +51,30 @@ export function ChatPage() {
     onOrchestrating: handleOrchestratingEvent,
     onDone: handleStreamDone,
   });
+  const createSession = useCreateChatSession();
 
   const handleSend = async (content: string, capability?: ChatCapability) => {
-    if (!activeSessionId) {
-      setShowNewSession(true);
-      return;
+    let sid = activeSessionId;
+    if (!sid) {
+      try {
+        const newSession = await createSession.mutateAsync({
+          title: content.slice(0, 60) || 'New Chat',
+        });
+        sid = newSession.id;
+        setActiveSession(sid);
+      } catch {
+        return;
+      }
     }
     await saveMessage.mutateAsync({ content, capability });
-    startStream(content, capability);
+    startStream(content, capability, selectedAgentId ?? undefined);
   };
 
   const hasMessages = (session?.messages.length ?? 0) > 0;
+
+  const displayAgent = activeAgentId
+    ? AGENTS.find((a) => a.id === activeAgentId)
+    : null;
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -81,10 +92,19 @@ export function ChatPage() {
             <div>
               <h1 className="font-bold text-foreground">KRYPTO</h1>
               {session ? (
-                <p className="text-xs text-muted-foreground">
-                  {session.provider} ·{' '}
-                  <span className="font-mono">{session.model}</span>
-                </p>
+                <div className="flex items-center gap-1.5">
+                  {displayAgent ? (
+                    <span className="text-xs font-medium text-primary">
+                      {displayAgent.name}
+                    </span>
+                  ) : null}
+                  {session.model && (
+                    <span className="text-xs text-muted-foreground">
+                      {displayAgent ? '·' : ''}{' '}
+                      <span className="font-mono">{session.model}</span>
+                    </span>
+                  )}
+                </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   {t('chat.subtitle', {
@@ -95,7 +115,7 @@ export function ChatPage() {
             </div>
           </div>
           <button
-            onClick={() => setShowNewSession(true)}
+            onClick={() => setActiveSession(null)}
             className="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
           >
             + {t('chat.newSession', { defaultValue: 'New session' })}
@@ -125,7 +145,11 @@ export function ChatPage() {
               compact={false}
             />
             <button
-              onClick={() => setShowNewSession(true)}
+              onClick={() =>
+                handleSend(
+                  t('chat.defaultGreeting', { defaultValue: 'Hello, KRYPTO!' }),
+                )
+              }
               className="mt-2 rounded-xl bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90"
             >
               {t('chat.newSession', { defaultValue: 'New session' })}
@@ -133,13 +157,16 @@ export function ChatPage() {
           </div>
         ) : (
           <>
-            {/* Agent selector */}
-            <div className="border-b border-border px-4 py-2">
+            {/* Agent selector + orchestrating status */}
+            <div className="border-b border-border px-4 py-2 space-y-2">
               <AgentSelector
                 t={t}
                 selected={selectedAgentId}
                 onSelect={selectAgent}
               />
+              {isOrchestrating && (
+                <OrchestratingIndicator t={t} step={orchestratingStep} />
+              )}
             </div>
             {/* Active agent header */}
             {activeAgentId && (
@@ -164,17 +191,7 @@ export function ChatPage() {
                 streamError={streamError}
               />
             </div>
-            {/* Orchestrating indicator */}
-            {isOrchestrating && (
-              <div className="px-4 pb-2">
-                <OrchestratingIndicator t={t} step={orchestratingStep} />
-              </div>
-            )}
             {/* Input */}
-            <ChatLLMOverride
-              sessionProvider={session?.provider ?? ''}
-              sessionModel={session?.model ?? ''}
-            />
             <ChatInput
               t={t}
               onSend={handleSend}
@@ -185,10 +202,6 @@ export function ChatPage() {
           </>
         )}
       </div>
-
-      {showNewSession && (
-        <NewSessionModal onClose={() => setShowNewSession(false)} />
-      )}
     </div>
   );
 }

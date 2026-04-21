@@ -7,12 +7,10 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
-  Brain,
   Bot,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Select } from '@crypto-trader/ui';
 import { PRESETS } from '@crypto-trader/ui';
 import {
   useCreateConfig,
@@ -22,10 +20,8 @@ import {
   type TradingPair,
   type IntervalMode,
 } from '../../hooks/use-trading';
-import { useTestnetBinanceKeyStatus, useLLMKeys } from '../../hooks/use-user';
-import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
+import { useTestnetBinanceKeyStatus } from '../../hooks/use-user';
 import {
-  LLM_PROVIDERS,
   type ConfigForm,
   DEFAULT_FORM,
   STEPS,
@@ -55,15 +51,6 @@ export function NewAgentStepperModal({
   });
   const { mutate: createConfig, isPending } = useCreateConfig();
   useTestnetBinanceKeyStatus();
-  const { data: llmKeys = [] } = useLLMKeys();
-
-  const activeProviders = LLM_PROVIDERS.filter((p) =>
-    llmKeys.some((k) => k.provider === p.value && k.isActive),
-  );
-  const activeProviderOptions = activeProviders.map((p) => ({
-    value: p.value,
-    label: p.label,
-  }));
 
   const totalSteps = STEPS.length;
   const currentStep = STEPS[stepIdx].id;
@@ -85,17 +72,6 @@ export function NewAgentStepperModal({
     setForm((f) => ({ ...f, ...PRESETS[key] }));
   }
 
-  function handleProviderChange(
-    role: 'primary' | 'fallback',
-    provider: string,
-  ) {
-    if (role === 'primary') {
-      update({ primaryProvider: provider, primaryModel: '' });
-    } else {
-      update({ fallbackProvider: provider, fallbackModel: '' });
-    }
-  }
-
   function handleSubmit() {
     const dto: TradingConfigDto = {
       name: form.name || undefined,
@@ -113,10 +89,6 @@ export function NewAgentStepperModal({
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
       orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
       riskProfile: form.riskProfile,
-      primaryProvider: form.primaryProvider || undefined,
-      primaryModel: form.primaryModel || undefined,
-      fallbackProvider: form.fallbackProvider || undefined,
-      fallbackModel: form.fallbackModel || undefined,
     };
     createConfig(dto, { onSuccess: onCreated });
   }
@@ -131,10 +103,6 @@ export function NewAgentStepperModal({
     identity: {
       title: t('config.stepper.stepIdentity'),
       subtitle: t('config.stepper.stepIdentityHint'),
-    },
-    aiModel: {
-      title: t('config.stepper.stepAiModel'),
-      subtitle: t('config.stepper.stepAiModelHint'),
     },
     thresholds: {
       title: t('config.stepper.stepThresholds'),
@@ -394,105 +362,6 @@ export function NewAgentStepperModal({
                   </p>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* ── STEP: AI MODEL ── */}
-          {currentStep === 'aiModel' && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-border/60 bg-primary/5 p-3.5">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  🧠 {t('config.stepper.aiModelCallout')}
-                </p>
-              </div>
-
-              {activeProviderOptions.length === 0 ? (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-                  <p className="text-xs text-amber-400">
-                    {t('config.stepper.noActiveProviders')}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Brain className="h-3.5 w-3.5 text-primary" />
-                      <p className="text-sm font-semibold">
-                        {t('config.stepper.primaryLlm')}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('config.stepper.primaryLlmHint')}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Select
-                        label={t('config.stepper.primaryLabel')}
-                        options={[
-                          { value: '', label: t('config.stepper.autoSelect') },
-                          ...activeProviderOptions,
-                        ]}
-                        value={form.primaryProvider}
-                        onChange={(v) => handleProviderChange('primary', v)}
-                      />
-                      {form.primaryProvider && (
-                        <DynamicModelSelect
-                          provider={form.primaryProvider}
-                          value={form.primaryModel}
-                          onChange={(m) => update({ primaryModel: m })}
-                          label={t('settings.model')}
-                          fallbackModels={
-                            LLM_PROVIDERS.find(
-                              (p) => p.value === form.primaryProvider,
-                            )?.models ?? []
-                          }
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Brain className="h-3.5 w-3.5 text-muted-foreground" />
-                      <p className="text-sm font-semibold">
-                        {t('config.stepper.fallbackLlm')}
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('config.stepper.fallbackLlmHint')}
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Select
-                        label={t('config.stepper.fallbackLabel')}
-                        options={[
-                          { value: '', label: t('config.stepper.noFallback') },
-                          ...activeProviderOptions,
-                        ]}
-                        value={form.fallbackProvider}
-                        onChange={(v) => handleProviderChange('fallback', v)}
-                      />
-                      {form.fallbackProvider && (
-                        <DynamicModelSelect
-                          provider={form.fallbackProvider}
-                          value={form.fallbackModel}
-                          onChange={(m) => update({ fallbackModel: m })}
-                          label={t('settings.model')}
-                          fallbackModels={
-                            LLM_PROVIDERS.find(
-                              (p) => p.value === form.fallbackProvider,
-                            )?.models ?? []
-                          }
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {!form.primaryProvider && !form.fallbackProvider && (
-                    <p className="text-[10px] text-muted-foreground/70 italic text-center">
-                      💡 {t('config.stepper.autoSuggestion')}
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -773,55 +642,6 @@ export function NewAgentStepperModal({
                   </div>
                 ))}
               </div>
-
-              {(form.primaryProvider || form.fallbackProvider) && (
-                <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-1.5">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Brain className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-semibold">
-                      {t('config.stepper.aiModelReview')}
-                    </span>
-                  </div>
-                  {form.primaryProvider && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {t('config.stepper.primaryLabel')}:{' '}
-                      <span className="font-semibold text-foreground">
-                        {LLM_PROVIDERS.find(
-                          (p) => p.value === form.primaryProvider,
-                        )?.label ?? form.primaryProvider}
-                      </span>
-                      {form.primaryModel && (
-                        <>
-                          {' '}
-                          ·{' '}
-                          <span className="font-medium text-foreground">
-                            {form.primaryModel}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  )}
-                  {form.fallbackProvider && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {t('config.stepper.fallbackLabel')}:{' '}
-                      <span className="font-semibold text-foreground">
-                        {LLM_PROVIDERS.find(
-                          (p) => p.value === form.fallbackProvider,
-                        )?.label ?? form.fallbackProvider}
-                      </span>
-                      {form.fallbackModel && (
-                        <>
-                          {' '}
-                          ·{' '}
-                          <span className="font-medium text-foreground">
-                            {form.fallbackModel}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  )}
-                </div>
-              )}
 
               <p className="text-xs text-muted-foreground text-center">
                 {t('config.stepper.reviewNote')}

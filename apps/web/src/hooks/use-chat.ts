@@ -27,8 +27,8 @@ export interface LLMOption {
 export interface ChatSessionSummary {
   id: string;
   title: string;
-  provider: string;
-  model: string;
+  provider: string | null;
+  model: string | null;
   agentId?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -49,10 +49,10 @@ export interface ChatSessionWithMessages extends ChatSessionSummary {
 }
 
 export interface CreateSessionDto {
-  provider: string;
-  model: string;
   title?: string;
   agentId?: string | null;
+  provider?: string;
+  model?: string;
 }
 
 export interface SendMessageDto {
@@ -167,12 +167,43 @@ export function useUpdateChatSession(sessionId: string) {
 }
 
 export function useSaveUserMessage(sessionId: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (dto: SendMessageDto) =>
       api.post<{ userMessageId: string }>(
         `/chat/sessions/${sessionId}/messages`,
         dto,
       ),
+    onMutate: async (dto) => {
+      // Cancel outgoing refetches so they don't overwrite the optimistic update
+      await qc.cancelQueries({ queryKey: chatKeys.session(sessionId) });
+
+      const previous = qc.getQueryData<ChatSessionWithMessages>(
+        chatKeys.session(sessionId),
+      );
+
+      if (previous) {
+        const optimisticMsg: ChatMessageItem = {
+          id: `optimistic-${Date.now()}`,
+          role: 'USER',
+          content: dto.content,
+          createdAt: new Date().toISOString(),
+          metadata: dto.capability ? { capability: dto.capability } : null,
+        };
+        qc.setQueryData<ChatSessionWithMessages>(chatKeys.session(sessionId), {
+          ...previous,
+          messages: [...previous.messages, optimisticMsg],
+        });
+      }
+
+      return { previous };
+    },
+    onError: (_err, _dto, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        qc.setQueryData(chatKeys.session(sessionId), context.previous);
+      }
+    },
   });
 }
 
@@ -191,6 +222,19 @@ export interface StreamError {
   retryAfter?: number;
 }
 
+// ── Types for interactive elements (Phase D) ──────────────────────────────
+export interface QuickAction {
+  type: 'navigate' | 'open_docs' | 'transfer_agent';
+  label: string;
+  target: string;
+}
+
+export interface InlineOption {
+  id: string;
+  label: string;
+  value: string;
+}
+
 // ── SSE Streaming Hook ─────────────────────────────────────────────────────
 
 export function useChatStream(
@@ -206,18 +250,17 @@ export function useChatStream(
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [streamError, setStreamError] = useState<StreamError | null>(null);
+  const [quickActions, setQuickActions] = useState<QuickAction[] | null>(null);
+  const [inlineOptions, setInlineOptions] = useState<InlineOption[] | null>(
+    null,
+  );
   const esRef = useRef<EventSource | null>(null);
   const qc = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const startStream = useCallback(
-    (
-      content: string,
-      capability?: ChatCapability,
-      providerOverride?: string,
-      modelOverride?: string,
-    ) => {
+    (content: string, capability?: ChatCapability, agentId?: string) => {
       if (!sessionId || !accessToken) return;
 
       // Close any existing stream
@@ -230,13 +273,15 @@ export function useChatStream(
       setIsStreaming(true);
       setError(null);
       setStreamError(null);
+      setQuickActions(null);
+      setInlineOptions(null);
 
       const params = new URLSearchParams({
         content,
         token: accessToken,
         ...(capability ? { capability } : {}),
-        ...(providerOverride ? { providerOverride } : {}),
-        ...(modelOverride ? { modelOverride } : {}),
+        locale: i18n.language || 'en',
+        ...(agentId ? { agentId } : {}),
       });
 
       const url = `${API_BASE}/chat/sessions/${sessionId}/stream?${params.toString()}`;
@@ -258,6 +303,8 @@ export function useChatStream(
             error?: string;
             errorCode?: string;
             retryAfter?: number;
+            quickActions?: QuickAction[];
+            inlineOptions?: InlineOption[];
           };
 
           if (data.error) {
@@ -322,6 +369,9 @@ export function useChatStream(
 
           if (data.done) {
             setIsStreaming(false);
+            if (data.quickActions?.length) setQuickActions(data.quickActions);
+            if (data.inlineOptions?.length)
+              setInlineOptions(data.inlineOptions);
             es.close();
             esRef.current = null;
             options?.onDone?.();
@@ -372,6 +422,8 @@ export function useChatStream(
     isStreaming,
     error,
     streamError,
+    quickActions,
+    inlineOptions,
     startStream,
     stopStream,
   };
@@ -395,5 +447,17 @@ export function useExecuteTool(sessionId: string | null) {
     onError: () => {
       toast.error('Tool execution failed');
     },
+  });
+}
+
+// ── D: Inline option selection ─────────────────────────────────────────────
+
+export function useSelectOption(sessionId: string | null) {
+  return useMutation({
+    mutationFn: (body: { optionId: string; value: string }) =>
+      api.post<{ action: string; target?: string }>(
+        `/chat/sessions/${sessionId}/select`,
+        body,
+      ),
   });
 }

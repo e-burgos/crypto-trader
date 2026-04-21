@@ -31,10 +31,6 @@ export interface NewsConfig {
   onlySummary: boolean;
   botEnabled: boolean;
   newsWeight: number;
-  primaryProvider: string | null;
-  primaryModel: string | null;
-  fallbackProvider: string | null;
-  fallbackModel: string | null;
   updatedAt: string;
 }
 
@@ -167,8 +163,8 @@ export function useRunKeywordAnalysis() {
 export function useRunAiAnalysis() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { provider: string; model?: string }) =>
-      api.post<NewsAnalysis>('/market/news/analysis/ai', data),
+    mutationFn: () =>
+      api.post<NewsAnalysis>('/market/news/analysis/ai', {}),
     onSuccess: (analysis) => {
       queryClient.setQueryData(['market', 'news-analysis'], analysis);
     },

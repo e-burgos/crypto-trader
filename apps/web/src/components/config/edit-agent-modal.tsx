@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Save, Loader2, X, TestTube2, Brain } from 'lucide-react';
+import { Save, Loader2, X, TestTube2, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Select } from '@crypto-trader/ui';
 import type { TradingConfig } from '../../hooks/use-trading';
 import {
   useUpdateConfig,
@@ -11,9 +10,8 @@ import {
   type TradingMode,
   type IntervalMode,
 } from '../../hooks/use-trading';
-import { useTestnetBinanceKeyStatus, useLLMKeys } from '../../hooks/use-user';
-import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
-import { LLM_PROVIDERS, type ConfigForm, StepperSlider } from './constants';
+import { useTestnetBinanceKeyStatus } from '../../hooks/use-user';
+import { type ConfigForm, StepperSlider } from './constants';
 
 export function EditAgentModal({
   cfg,
@@ -26,15 +24,6 @@ export function EditAgentModal({
   const { mutate: updateConfig, isPending } = useUpdateConfig();
   const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
   const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
-  const { data: llmKeys = [] } = useLLMKeys();
-
-  const activeProviders = LLM_PROVIDERS.filter((p) =>
-    llmKeys.some((k) => k.provider === p.value && k.isActive),
-  );
-  const activeProviderOptions = activeProviders.map((p) => ({
-    value: p.value,
-    label: p.label,
-  }));
 
   const toForm = (c: TradingConfig): ConfigForm => ({
     name: c.name ?? '',
@@ -52,10 +41,6 @@ export function EditAgentModal({
     minIntervalMinutes: String(c.minIntervalMinutes),
     orderPriceOffsetPct: String((c.orderPriceOffsetPct * 100).toFixed(1)),
     riskProfile: c.riskProfile ?? 'MODERATE',
-    primaryProvider: c.primaryProvider ?? '',
-    primaryModel: c.primaryModel ?? '',
-    fallbackProvider: c.fallbackProvider ?? '',
-    fallbackModel: c.fallbackModel ?? '',
   });
 
   const [form, setForm] = useState<ConfigForm>(() => toForm(cfg));
@@ -72,21 +57,9 @@ export function EditAgentModal({
     setForm((f) => ({ ...f, ...patch }));
   }
 
-  function handleProviderChange(
-    role: 'primary' | 'fallback',
-    provider: string,
-  ) {
-    if (role === 'primary') {
-      update({ primaryProvider: provider, primaryModel: '' });
-    } else {
-      update({ fallbackProvider: provider, fallbackModel: '' });
-    }
-  }
-
   function handleSave() {
     const dto: Partial<TradingConfigDto> = {
       name: form.name || undefined,
-      mode: form.mode,
       buyThreshold: parseFloat(form.buyThreshold),
       sellThreshold: parseFloat(form.sellThreshold),
       stopLossPct: parseFloat(form.stopLossPct) / 100,
@@ -98,10 +71,6 @@ export function EditAgentModal({
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
       orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
       riskProfile: form.riskProfile,
-      primaryProvider: form.primaryProvider || undefined,
-      primaryModel: form.primaryModel || undefined,
-      fallbackProvider: form.fallbackProvider || undefined,
-      fallbackModel: form.fallbackModel || undefined,
     };
     updateConfig({ id: cfg.id, data: dto }, { onSuccess: onClose });
   }
@@ -149,7 +118,7 @@ export function EditAgentModal({
             />
           </div>
 
-          {/* Mode */}
+          {/* Mode (read-only) */}
           <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
             <label className="mb-1 block text-sm font-semibold">
               {t('trading.mode')}
@@ -159,16 +128,16 @@ export function EditAgentModal({
                 <button
                   key={m}
                   type="button"
-                  onClick={() => update({ mode: m })}
+                  disabled
                   className={cn(
-                    'flex-1 rounded-lg border py-2 text-xs font-bold transition-colors',
+                    'flex-1 rounded-lg border py-2 text-xs font-bold transition-colors cursor-not-allowed',
                     form.mode === m
                       ? m === 'LIVE'
                         ? 'border-red-500 bg-red-500/10 text-red-400'
                         : m === 'TESTNET'
                           ? 'border-sky-500 bg-sky-500/10 text-sky-400'
                           : 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-muted-foreground hover:border-primary/30',
+                      : 'border-border text-muted-foreground opacity-40',
                   )}
                 >
                   {m === 'TESTNET' ? (
@@ -184,88 +153,25 @@ export function EditAgentModal({
                 </button>
               ))}
             </div>
-            {form.mode === 'LIVE' && (
-              <p className="mt-2 text-xs text-red-400">
-                ⚠️ {t('trading.realFundsWarning')}
-              </p>
-            )}
-            {form.mode === 'TESTNET' && !hasTestnetKeys && (
-              <p className="mt-2 text-xs text-sky-400">
-                {t('onboarding.testnetRequiresKeys')}
-              </p>
-            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('config.editModal.modeReadonly', 'El modo se asigna desde la configuración global al crear el agente.')}
+            </p>
           </div>
 
-          {/* AI Model */}
-          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-4">
+          {/* AI Model — info */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-2">
             <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" />
+              <Info className="h-4 w-4 text-primary" />
               <p className="text-sm font-semibold">
                 {t('config.editModal.aiModel')}
               </p>
             </div>
-
-            {activeProviderOptions.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t('config.stepper.noActiveProviders')}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Select
-                      options={[
-                        { value: '', label: t('config.stepper.autoSelect') },
-                        ...activeProviderOptions,
-                      ]}
-                      value={form.primaryProvider}
-                      onChange={(v) => handleProviderChange('primary', v)}
-                      label={t('config.stepper.primaryLabel')}
-                    />
-                    {form.primaryProvider && (
-                      <DynamicModelSelect
-                        provider={form.primaryProvider}
-                        value={form.primaryModel}
-                        onChange={(m) => update({ primaryModel: m })}
-                        label={t('settings.model')}
-                        fallbackModels={
-                          LLM_PROVIDERS.find(
-                            (p) => p.value === form.primaryProvider,
-                          )?.models ?? []
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Select
-                      options={[
-                        { value: '', label: t('config.stepper.noFallback') },
-                        ...activeProviderOptions,
-                      ]}
-                      value={form.fallbackProvider}
-                      onChange={(v) => handleProviderChange('fallback', v)}
-                      label={t('config.stepper.fallbackLabel')}
-                    />
-                    {form.fallbackProvider && (
-                      <DynamicModelSelect
-                        provider={form.fallbackProvider}
-                        value={form.fallbackModel}
-                        onChange={(m) => update({ fallbackModel: m })}
-                        label={t('settings.model')}
-                        fallbackModels={
-                          LLM_PROVIDERS.find(
-                            (p) => p.value === form.fallbackProvider,
-                          )?.models ?? []
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t(
+                'config.editModal.aiModelNote',
+                'El modelo IA lo gestiona SIGMA desde Configuración → Agentes.',
+              )}
+            </p>
           </div>
 
           {/* Thresholds */}

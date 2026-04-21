@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SidebarContainer } from '../containers/sidebar-container';
 import { DashboardHeader } from '../containers/dashboard-header-container';
+import { LLMKeyGuard } from '../components/llm-key-guard';
 
 export function DashboardLayout() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -20,7 +21,9 @@ export function DashboardLayout() {
           ref={scrollRef}
           className="flex-1 overflow-y-auto bg-background/50 backdrop-blur-[1px]"
         >
-          <Outlet />
+          <LLMKeyGuard>
+            <Outlet />
+          </LLMKeyGuard>
         </div>
       </div>
     </div>

@@ -6,6 +6,8 @@ import {
   Settings,
   CircleDot,
   ChevronRight,
+  Brain,
+  RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +19,20 @@ import {
 } from '../../hooks/use-market';
 import { SENTIMENT_COLOR, AI_VALID_MS } from './constants';
 
-export function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
+export interface SigmaSentiment {
+  sentiment: number;
+  impact: string;
+  reasoning: string;
+  cached?: boolean;
+}
+
+export function NewsSentimentPanel({
+  news,
+  sigmaSentiment,
+}: {
+  news: NewsItem[];
+  sigmaSentiment?: SigmaSentiment | null;
+}) {
   const { t } = useTranslation();
   const { data: config } = useNewsConfig();
   const { data: analysis } = useNewsAnalysis();
@@ -100,7 +115,13 @@ export function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('botAnalysis.newsSentimentTitle')}
         </span>
-        {analysis ? (
+        {sigmaSentiment ? (
+          <span
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-violet-500/10 text-violet-400 border-violet-500/20"
+          >
+            <Brain className="h-2.5 w-2.5" /> SIGMA
+          </span>
+        ) : analysis ? (
           <span
             className={cn(
               'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
@@ -111,7 +132,7 @@ export function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
           >
             {hasAi ? (
               <>
-                <Sparkles className="h-2.5 w-2.5" /> IA activa
+                <Sparkles className="h-2.5 w-2.5" /> {t('botAnalysis.badgeAi')}
               </>
             ) : (
               <>
@@ -237,6 +258,70 @@ export function NewsSentimentPanel({ news }: { news: NewsItem[] }) {
               <span className={cn('text-[11px] font-bold', sentimentColor)}>
                 {t('botAnalysis.scoreLabel')}: {score > 0 ? '+' : ''}
                 {typeof score === 'number' ? score.toFixed(2) : score}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* SIGMA AI Conclusion */}
+        {sigmaSentiment && (
+          <div
+            className={cn(
+              'shrink-0 rounded-lg border p-3 space-y-1.5',
+              sigmaSentiment.impact === 'positive'
+                ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+                : sigmaSentiment.impact === 'negative'
+                  ? 'border-red-500/20 bg-red-500/[0.06]'
+                  : 'border-amber-500/20 bg-amber-500/[0.06]',
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <Brain className="h-3 w-3 text-violet-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wide text-violet-400">
+                {t('botAnalysis.sigmaTitle')}
+              </span>
+              <span
+                className={cn(
+                  'ml-1 text-[10px] font-semibold',
+                  sigmaSentiment.impact === 'positive'
+                    ? 'text-emerald-400'
+                    : sigmaSentiment.impact === 'negative'
+                      ? 'text-red-400'
+                      : 'text-amber-400',
+                )}
+              >
+                {sigmaSentiment.impact === 'positive'
+                  ? t('botAnalysis.sigmaImpactPositive')
+                  : sigmaSentiment.impact === 'negative'
+                    ? t('botAnalysis.sigmaImpactNegative')
+                    : t('botAnalysis.sigmaImpactNeutral')}
+              </span>
+              {sigmaSentiment.cached && (
+                <span className="ml-auto inline-flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
+                  <RefreshCw className="h-2.5 w-2.5" />
+                  {t('botAnalysis.sigmaCached')}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] leading-relaxed text-foreground/80">
+              {sigmaSentiment.reasoning}
+            </p>
+            <div className="text-right">
+              <span
+                className={cn(
+                  'text-[10px] font-mono font-bold',
+                  sigmaSentiment.sentiment > 0
+                    ? 'text-emerald-400'
+                    : sigmaSentiment.sentiment < 0
+                      ? 'text-red-400'
+                      : 'text-amber-400',
+                )}
+              >
+                {t('botAnalysis.scoreLabel')}:{' '}
+                {sigmaSentiment.sentiment > 0 ? '+' : ''}
+                {typeof sigmaSentiment.sentiment === 'number'
+                  ? sigmaSentiment.sentiment.toFixed(2)
+                  : sigmaSentiment.sentiment}
               </span>
             </div>
           </div>

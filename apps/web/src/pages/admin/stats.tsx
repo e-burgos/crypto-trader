@@ -188,7 +188,7 @@ export function AdminStatsPage() {
               >
                 <span className="font-mono text-primary">{entry.action}</span>
                 <div className="text-right text-muted-foreground shrink-0">
-                  <div>{entry.userId}</div>
+                  <div>{entry.admin?.email ?? entry.adminId}</div>
                   <div>{new Date(entry.createdAt).toLocaleString()}</div>
                 </div>
               </div>

@@ -172,7 +172,8 @@ api/src/
 ├── notifications/      NotificationsModule — Centro de notificaciones + WebSocket
 ├── analytics/          AnalyticsModule  — P&L, win rate, decisiones
 ├── admin/              AdminModule      — Kill-switch global, gestión de usuarios
-└── chat/               ChatModule       — Chat IA con historial de sesión
+├── chat/               ChatModule       — Chat IA con historial de sesión
+└── agents/             AgentConfigModule — Config centralizada de proveedor/modelo por agente
 ```
 
 ### 4.2 Pipeline del agente (por TradingConfig activo)
@@ -182,7 +183,8 @@ api/src/
 2. data-fetcher: Fetch OHLCV velas de Binance
 3. analysis: Calcular indicadores (RSI, MACD, BB, EMA, Volumen, S&R)
 4. data-fetcher: Noticias recientes (CryptoPanic / RSS)
-5. analysis: LLM call → { decision, confidence, reasoning, waitMinutes }
+5. AgentConfigResolver: resolver proveedor/modelo por agente (usuario > admin > fallback)
+6. LLM call → { decision, confidence, reasoning, waitMinutes }
 6. trading-engine: Si confidence ≥ threshold → ejecutar orden en Binance
 7. DB: Guardar AgentDecision + Trade + actualizar Position
 8. WebSocket: Emitir eventos al frontend (trade:executed, agent:decision)
@@ -228,7 +230,7 @@ web/src/
 │       ├── bot-analysis/ BotAnalysisPage  — Snapshot mercado, decisiones, noticias
 │       ├── news/        NewsFeedPage      — Feed de noticias con sentimiento
 │       ├── config/      ConfigPage        — Multi-config, thresholds, modo
-│       ├── settings/    SettingsPage      — AI (3 sub-tabs: Primary/Providers/Analytics), Binance, NewsAPI, perfil
+│       ├── settings/    SettingsPage      — AI (3 sub-tabs: Primary/Providers/Analytics), Agents, Binance, NewsAPI, perfil
 │       ├── notifications/ NotificationsPage — Centro de notificaciones
 │       ├── analytics/   AnalyticsPage     — Métricas de rendimiento
 │       ├── help/        HelpPage          — Documentación y guías
@@ -246,7 +248,8 @@ web/src/
 │   ├── use-analytics.ts
 │   ├── use-user.ts
 │   ├── use-binance-ticker.ts
-│   └── use-chat.ts
+│   ├── use-chat.ts
+│   └── use-agent-config.ts
 ├── stores/               Zustand stores (auth, market, sidebar, theme, chat)
 ├── locales/              es.ts / en.ts — ~1400 claves i18n c/u
 ├── lib/                  utils, api client (axios), constants
@@ -266,8 +269,8 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 | **Theme**         | ThemeProvider                                                                                                                                   |
 | **Charts**        | ChartCard, ChartTooltip, ChartTheme (constantes)                                                                                                |
 | **Domain/Market** | StatCard, PriceTicker, IndicatorInfoModal                                                                                                       |
-| **Domain/Agent**  | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets                                                                              |
-| **Domain/Chat**   | AgentHeader, AgentSelector, CapabilityButtons, ChatInput, OrchestratingIndicator, ToolCallCard                                                  |
+| **Domain/Agent**  | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets, AgentConfigCard, ProviderSearchSelect, ModelSearchSelect                    |
+| **Domain/Chat**   | AgentHeader, AgentSelector, CapabilityButtons, ChatInput, OrchestratingIndicator, ToolCallCard, QuickActionButtons, ChatInlineOptions           |
 | **Domain/Help**   | HelpSidebar                                                                                                                                     |
 
 **Reglas de libs/ui:**
@@ -325,7 +328,9 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 | `AgentDecision`               | Decisión del agente con indicadores + news + reasoning                                                      |
 | `NewsItem`                    | Noticia caché con sentimiento                                                                               |
 | `Notification`                | Notificación in-app por usuario                                                                             |
-| `ChatSession` / `ChatMessage` | Historial del chat con el asistente IA                                                                      |
+| `ChatSession` / `ChatMessage` | Historial del chat con el asistente IA (provider/model opcionales, resueltos por agente)                    |
+| `AgentConfig`                 | Override de proveedor/modelo por agente por usuario                                                         |
+| `AdminAgentConfig`            | Defaults globales de proveedor/modelo por agente (solo OpenRouter, seteados por Admin)                      |
 | `SandboxWallet`               | Wallet virtual para modo Sandbox                                                                            |
 | `NewsConfig`                  | Config de noticias por usuario (botEnabled, newsWeight)                                                     |
 | `NewsAnalysis`                | Análisis de noticias generado por LLM                                                                       |
@@ -472,21 +477,23 @@ pnpm nx affected --target=test   # Solo testear lo afectado por cambios
 
 ## 11. Decisiones Arquitecturales Clave
 
-| #   | Decisión                             | Razón                                                                                             |
-| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| 1   | Monorepo NX                          | Compartir tipos y lógica entre web/api sin duplicación                                            |
-| 2   | pnpm workspaces                      | Performance y correctness en resolución de dependencias                                           |
-| 3   | NestJS para API                      | DI robusto, módulos, decoradores — ideal para arquitectura multi-dominio                          |
-| 4   | Prisma ORM                           | Type-safety end-to-end, migraciones declarativas                                                  |
-| 5   | Bull + Redis para colas              | Garantía de entrega de trabajos de análisis; reintentos automáticos                               |
-| 6   | AES-256-GCM para claves              | Estándar de la industria; clave maestra separada de los datos                                     |
-| 7   | LLM por usuario (no global)          | Costos atribuibles al usuario; flexibilidad de proveedor                                          |
-| 8   | GitHub Pages para web                | Cero costo; build estático compatible con React Router                                            |
-| 9   | Railway para API                     | Deploy desde Dockerfile; PostgreSQL + Redis incluidos                                             |
-| 10  | Sandbox server-side enforced         | Nunca confiar en el cliente para prevenir órdenes reales                                          |
-| 11  | TanStack Query para server state     | Caché, refetch, stale-time — evita useEffect para fetching                                        |
-| 12  | i18n desde el inicio                 | Evitar deuda de localización; arquitectura bilingüe nativa                                        |
-| 13  | OpenRouter como provider recomendado | Una API key → 200+ modelos, fallback automático, billing unificado; reduce fricción de onboarding |
+| #   | Decisión                                  | Razón                                                                                                                                          |
+| --- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Monorepo NX                               | Compartir tipos y lógica entre web/api sin duplicación                                                                                         |
+| 2   | pnpm workspaces                           | Performance y correctness en resolución de dependencias                                                                                        |
+| 3   | NestJS para API                           | DI robusto, módulos, decoradores — ideal para arquitectura multi-dominio                                                                       |
+| 4   | Prisma ORM                                | Type-safety end-to-end, migraciones declarativas                                                                                               |
+| 5   | Bull + Redis para colas                   | Garantía de entrega de trabajos de análisis; reintentos automáticos                                                                            |
+| 6   | AES-256-GCM para claves                   | Estándar de la industria; clave maestra separada de los datos                                                                                  |
+| 7   | LLM por usuario (no global)               | Costos atribuibles al usuario; flexibilidad de proveedor                                                                                       |
+| 8   | GitHub Pages para web                     | Cero costo; build estático compatible con React Router                                                                                         |
+| 9   | Railway para API                          | Deploy desde Dockerfile; PostgreSQL + Redis incluidos                                                                                          |
+| 10  | Sandbox server-side enforced              | Nunca confiar en el cliente para prevenir órdenes reales                                                                                       |
+| 11  | TanStack Query para server state          | Caché, refetch, stale-time — evita useEffect para fetching                                                                                     |
+| 12  | i18n desde el inicio                      | Evitar deuda de localización; arquitectura bilingüe nativa                                                                                     |
+| 13  | OpenRouter como provider recomendado      | Una API key → 200+ modelos, fallback automático, billing unificado; reduce fricción de onboarding                                              |
+| 14  | Agent Hub: config centralizada por agente | Un agente = un par proveedor/modelo. Resolución: usuario > admin > hardcoded fallback. Elimina config LLM dispersa en TradingConfig/NewsConfig |
+| 15  | Chat resuelve LLM por agente (no manual)  | El chat usa `AgentConfigResolver` según el agente activo. Sin selección manual de provider/model. "Primary Model" en settings es solo fallback |
 
 ---
 

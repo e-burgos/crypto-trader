@@ -25,6 +25,7 @@
 | 33  | feature/33-bugfix-batch-ux-data        | 33-bugfix-batch-ux-data.md           | 31,32,28   |
 | 34  | feature/ui-design-system-consolidation | 34-ui-design-system-consolidation.md | 33         |
 | 35  | feature/openrouter-integration         | 35-openrouter-integration.md         | 31,34      |
+| 36  | feature/agent-hub-config               | 36-agent-hub-config.md               | 28,31,35   |
 
 ## Flujo recomendado
 

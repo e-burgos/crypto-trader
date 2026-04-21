@@ -154,10 +154,19 @@ export function parseLLMResponse(raw: string): LLMDecision {
   // Strip markdown code blocks if present
   let cleaned = raw.trim();
   if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    cleaned = cleaned.replace(/```(?:json)?\s*/gi, '').trim();
   }
 
-  const parsed = JSON.parse(cleaned);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // Extract outermost JSON object from mixed text
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in LLM response');
+    parsed = JSON.parse(match[0]);
+  }
 
   // Validate required fields
   const decision = parsed.decision;

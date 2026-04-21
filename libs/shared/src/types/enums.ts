@@ -79,6 +79,18 @@ export enum Sentiment {
   NEGATIVE = 'NEGATIVE',
 }
 
+// ── Agent IDs ────────────────────────────────────────────
+export enum AgentId {
+  PLATFORM = 'platform',
+  OPERATIONS = 'operations',
+  MARKET = 'market',
+  BLOCKCHAIN = 'blockchain',
+  RISK = 'risk',
+  ORCHESTRATOR = 'orchestrator',
+  ROUTING = 'routing',
+  SYNTHESIS = 'synthesis',
+}
+
 // ── Indicators ───────────────────────────────────────────
 export enum RSISignal {
   OVERBOUGHT = 'OVERBOUGHT',

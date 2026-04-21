@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '../utils';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, Search, X } from 'lucide-react';
 
 export interface SelectOption {
   value: string;
@@ -17,8 +17,10 @@ interface SelectProps {
   label?: string;
   labelExtra?: React.ReactNode;
   placeholder?: string;
+  searchPlaceholder?: string;
   className?: string;
   disabled?: boolean;
+  searchable?: boolean;
 }
 
 export function Select({
@@ -28,11 +30,15 @@ export function Select({
   label,
   labelExtra,
   placeholder = 'Select...',
+  searchPlaceholder = 'Search...',
   className,
   disabled,
+  searchable = false,
 }: SelectProps) {
   const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
   const ref = React.useRef<HTMLDivElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const selected = options.find((o) => o.value === value);
 
   React.useEffect(() => {
@@ -44,6 +50,26 @@ export function Select({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Focus search input when dropdown opens
+  React.useEffect(() => {
+    if (open && searchable) {
+      // Small delay to ensure DOM is rendered
+      requestAnimationFrame(() => searchRef.current?.focus());
+    }
+    if (!open) setSearch('');
+  }, [open, searchable]);
+
+  const filteredOptions = React.useMemo(() => {
+    if (!searchable || !search.trim()) return options;
+    const q = search.toLowerCase();
+    return options.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        o.value.toLowerCase().includes(q) ||
+        o.description?.toLowerCase().includes(q),
+    );
+  }, [options, search, searchable]);
 
   return (
     <div className={cn('space-y-1.5', className)} ref={ref}>
@@ -83,39 +109,78 @@ export function Select({
 
         {open && (
           <div className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-lg border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 slide-in-from-top-2">
-            <div className="max-h-60 overflow-y-auto p-1">
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  disabled={option.disabled}
-                  onClick={() => {
-                    onChange(option.value);
-                    setOpen(false);
+            {searchable && (
+              <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
+                <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
+                  onKeyDown={(e) => {
+                    // Prevent dropdown close on typing
+                    e.stopPropagation();
+                    if (e.key === 'Escape') {
+                      if (search) {
+                        setSearch('');
+                      } else {
+                        setOpen(false);
+                      }
+                    }
                   }}
-                  className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
-                    'hover:bg-accent/50',
-                    option.value === value && 'bg-primary/10 text-primary',
-                    option.disabled && 'opacity-50 cursor-not-allowed',
-                  )}
-                >
-                  {option.icon && (
-                    <span className="shrink-0">{option.icon}</span>
-                  )}
-                  <div className="flex-1 text-left">
-                    <span className="block">{option.label}</span>
-                    {option.description && (
-                      <span className="block text-xs text-muted-foreground">
-                        {option.description}
-                      </span>
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="max-h-60 overflow-y-auto p-1">
+              {filteredOptions.length === 0 ? (
+                <div className="px-2.5 py-3 text-center text-sm text-muted-foreground">
+                  No results
+                </div>
+              ) : (
+                filteredOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    disabled={option.disabled}
+                    onClick={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
+                      'hover:bg-accent/50',
+                      option.value === value && 'bg-primary/10 text-primary',
+                      option.disabled && 'opacity-50 cursor-not-allowed',
                     )}
-                  </div>
-                  {option.value === value && (
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
-                  )}
-                </button>
-              ))}
+                  >
+                    {option.icon && (
+                      <span className="shrink-0">{option.icon}</span>
+                    )}
+                    <div className="flex-1 text-left">
+                      <span className="block">{option.label}</span>
+                      {option.description && (
+                        <span className="block text-xs text-muted-foreground">
+                          {option.description}
+                        </span>
+                      )}
+                    </div>
+                    {option.value === value && (
+                      <Check className="h-4 w-4 shrink-0 text-primary" />
+                    )}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}

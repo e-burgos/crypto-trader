@@ -67,6 +67,8 @@ enum AgentId {
   blockchain    // CIPHER — Experto en Blockchain
   risk          // AEGIS  — Gestor de Riesgo
   orchestrator  // KRYPTO — Orquestador central
+  routing       // KRYPTO — Modelo rápido para clasificación de intención
+  synthesis     // KRYPTO — Modelo principal para decisiones de trading
 }
 
 enum DocumentStatus {
@@ -144,6 +146,7 @@ model User {
   newsConfig        NewsConfig?
   newsAnalyses      NewsAnalysis[]
   llmUsageLogs      LlmUsageLog[]
+  agentConfigs      AgentConfig[]
 
   @@map("users")
 }
@@ -216,12 +219,6 @@ model TradingConfig {
   orderPriceOffsetPct    Float         @default(0)
   mode                   TradingMode   @default(SANDBOX)
   isRunning              Boolean       @default(false)
-  /// Primary LLM provider/model for this trading agent
-  primaryProvider        LLMProvider?
-  primaryModel           String?
-  /// Fallback LLM provider/model if primary is unavailable
-  fallbackProvider       LLMProvider?
-  fallbackModel          String?
   /// Risk profile that influences LLM model selection and prompts
   riskProfile            RiskProfile   @default(MODERATE)
   createdAt              DateTime      @default(now())
@@ -319,21 +316,14 @@ model NewsItem {
 model NewsConfig {
   id              String   @id @default(cuid())
   userId          String   @unique
-  intervalMinutes Int      @default(30)
-  newsCount       Int      @default(40)
+  intervalMinutes Int      @default(10)
+  newsCount       Int      @default(15)
   enabledSources  String[] @default([])
   onlySummary     Boolean  @default(true)
   /// Whether the trading bot should include news analysis in its decisions
   botEnabled      Boolean  @default(true)
   /// Weight (0-100%) that news sentiment carries in the LLM trading decision
   newsWeight      Int      @default(15)
-
-  /// Primary LLM provider/model for news sentiment analysis
-  primaryProvider  LLMProvider?
-  primaryModel     String?
-  /// Fallback LLM provider/model if primary is unavailable
-  fallbackProvider LLMProvider?
-  fallbackModel    String?
 
   updatedAt       DateTime @updatedAt
 
@@ -430,8 +420,8 @@ model ChatSession {
   id        String      @id @default(cuid())
   userId    String
   title     String      @default("New Chat")
-  provider  LLMProvider
-  model     String
+  provider  LLMProvider?
+  model     String?
   /// Agent assigned to this session. null = KRYPTO classifies on first message.
   agentId   AgentId? @map("agent_id")
   createdAt DateTime    @default(now())
@@ -528,4 +518,34 @@ model AgentDocumentChunk {
   @@index([agentId])
   @@index([documentId])
   @@map("agent_document_chunks")
+}
+
+// ── Spec 36: Agent Hub — per-agent LLM configuration ─────────────────────────
+
+/// User-level agent config override (takes priority over admin defaults)
+model AgentConfig {
+  id        String      @id @default(cuid())
+  userId    String
+  agentId   AgentId
+  provider  LLMProvider
+  model     String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, agentId])
+  @@map("agent_configs")
+}
+
+/// Admin-level default config per agent (always OpenRouter)
+model AdminAgentConfig {
+  id        String      @id @default(cuid())
+  agentId   AgentId     @unique
+  provider  LLMProvider @default(OPENROUTER)
+  model     String
+  updatedAt DateTime    @updatedAt
+  updatedBy String
+
+  @@map("admin_agent_configs")
 }

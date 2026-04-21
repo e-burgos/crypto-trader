@@ -3,6 +3,8 @@ import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 import { AGENT_SEEDS } from './seed/agents';
+import { PRESET_FREE } from '../src/agents/agent-presets';
+import { AgentId, LLMProvider } from '../generated/prisma/enums';
 
 const BCRYPT_SALT_ROUNDS = 12;
 
@@ -129,6 +131,29 @@ async function main() {
         },
       });
       console.log(`Agent: ${agent.displayName} (${agent.id})`);
+    }
+
+    // ── AdminAgentConfig: seed con preset gratuito (Spec 36) ─────────────────
+    // Solo se aplica en create — no sobreescribe customizaciones de admin.
+    for (const [agentIdStr, entry] of Object.entries(PRESET_FREE)) {
+      const agentId = agentIdStr as AgentId;
+      if (agentId === AgentId.orchestrator) continue;
+      const existing = await prisma.adminAgentConfig.findUnique({
+        where: { agentId },
+      });
+      if (!existing) {
+        await prisma.adminAgentConfig.create({
+          data: {
+            agentId,
+            provider: entry.provider as LLMProvider,
+            model: entry.model,
+            updatedBy: 'seed',
+          },
+        });
+        console.log(`AdminAgentConfig seeded: ${agentId} → ${entry.model}`);
+      } else {
+        console.log(`AdminAgentConfig already set: ${agentId} (skipped)`);
+      }
     }
 
     console.log('\n✅ Seed completado!');

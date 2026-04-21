@@ -25,6 +25,7 @@ import {
   NextDecisionBanner,
   AI_VALID_MS,
   type NewsAnalysisData,
+  type SigmaSentiment,
 } from '../../components/bot-analysis';
 
 gsap.registerPlugin(useGSAP);
@@ -137,6 +138,14 @@ export function BotAnalysisPage() {
 
   const lastDecision = modeDecisions[0] ?? null;
 
+  // Extract latest SIGMA sentiment from any recent decision
+  const latestSigma: SigmaSentiment | null = (() => {
+    for (const d of modeDecisions) {
+      if (d.sigmaSentiment) return d.sigmaSentiment;
+    }
+    return null;
+  })();
+
   const updatedLabel = dataUpdatedAt
     ? t('botAnalysis.updatedAgo', {
         count: Math.round((Date.now() - dataUpdatedAt) / 60_000),
@@ -217,13 +226,14 @@ export function BotAnalysisPage() {
           />
           <div className="grid gap-4 lg:grid-cols-2 analysis-section">
             <TechnicalSummary snapshot={snapshot} livePrice={livePrice} />
-            <NewsSentimentPanel news={newsItems} />
+            <NewsSentimentPanel news={newsItems} sigmaSentiment={latestSigma} />
           </div>
           <AgentInputSummary
             snapshot={snapshot}
             livePrice={livePrice}
             newsAnalysis={newsAnalysisData}
             hasAi={pageHasAi}
+            hasSigma={!!latestSigma}
             botNewsEnabled={pageNewsConfig?.botEnabled ?? false}
             newsWeight={pageNewsConfig?.newsWeight ?? 0}
             agentStatuses={agentStatuses}

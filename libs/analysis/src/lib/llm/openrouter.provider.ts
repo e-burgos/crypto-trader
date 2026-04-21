@@ -37,8 +37,8 @@ export class OpenRouterProvider implements LLMProviderClient {
 
     // Enable fallback routing when fallback models are configured
     if (this.fallbackModels.length > 0) {
-      body.route = 'fallback';
-      body.models = [this.model, ...this.fallbackModels];
+      body['route'] = 'fallback';
+      body['models'] = [this.model, ...this.fallbackModels];
     }
 
     const { data } = await axios.post(

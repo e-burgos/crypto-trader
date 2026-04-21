@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Square, Loader2, X, Pencil, Check, Brain } from 'lucide-react';
+import { Play, Square, Loader2, X, Pencil, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Button } from '@crypto-trader/ui';
 import type { TradingConfig } from '../../hooks/use-trading';
 import { useUpdateConfig } from '../../hooks/use-trading';
-import { LLM_PROVIDERS } from './constants';
 
 export function AgentDetailModal({
   cfg,
@@ -90,15 +89,6 @@ export function AgentDetailModal({
       ),
     },
   ];
-
-  const providerLabel = cfg.primaryProvider
-    ? (LLM_PROVIDERS.find((p) => p.value === cfg.primaryProvider)?.label ??
-      cfg.primaryProvider)
-    : null;
-  const fallbackLabel = cfg.fallbackProvider
-    ? (LLM_PROVIDERS.find((p) => p.value === cfg.fallbackProvider)?.label ??
-      cfg.fallbackProvider)
-    : null;
 
   return createPortal(
     <div
@@ -198,44 +188,6 @@ export function AgentDetailModal({
               </div>
             ))}
           </dl>
-
-          {(providerLabel || fallbackLabel) && (
-            <div className="mt-3 rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1.5">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Brain className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-semibold">
-                  {t('config.editModal.aiModel')}
-                </span>
-              </div>
-              {providerLabel && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground">
-                    {t('config.stepper.primaryLabel')}
-                  </span>
-                  <span className="text-[11px] font-semibold">
-                    {providerLabel}
-                    {cfg.primaryModel ? ` · ${cfg.primaryModel}` : ''}
-                  </span>
-                </div>
-              )}
-              {fallbackLabel && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground">
-                    {t('config.stepper.fallbackLabel')}
-                  </span>
-                  <span className="text-[11px] font-semibold">
-                    {fallbackLabel}
-                    {cfg.fallbackModel ? ` · ${cfg.fallbackModel}` : ''}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          {!providerLabel && !fallbackLabel && (
-            <p className="mt-3 text-[10px] text-muted-foreground/70 italic text-center">
-              {t('config.stepper.autoSuggestion')}
-            </p>
-          )}
         </div>
 
         {/* Footer */}

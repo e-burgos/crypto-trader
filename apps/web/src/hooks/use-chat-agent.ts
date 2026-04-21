@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export type AgentId =
   | 'platform'
@@ -30,11 +30,20 @@ export interface UseChatAgentReturn {
   activeAgentId: AgentId | null;
 }
 
-export function useChatAgent(): UseChatAgentReturn {
+export function useChatAgent(
+  sessionAgentId?: string | null,
+): UseChatAgentReturn {
   const [selectedAgentId, setSelectedAgentId] = useState<AgentId | null>(null);
   const [routedAgentId, setRoutedAgentId] = useState<AgentId | null>(null);
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [orchestratingStep, setOrchestratingStep] = useState('');
+
+  // Restore routedAgentId from session data (e.g. on page load / session switch)
+  useEffect(() => {
+    if (sessionAgentId && !selectedAgentId) {
+      setRoutedAgentId(sessionAgentId as AgentId);
+    }
+  }, [sessionAgentId, selectedAgentId]);
 
   const selectAgent = useCallback((agentId: AgentId | null) => {
     setSelectedAgentId(agentId);

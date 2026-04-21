@@ -98,26 +98,24 @@ export function DynamicModelSelect({
     }
   }, [value, allModels]);
 
-  // For OpenRouter: auto-switch category if saved model isn't visible
+  // For OpenRouter: sync category to the model's natural category whenever value changes
   useEffect(() => {
-    if (isOpenRouter && value && allOptions.some((o) => o.value === value)) {
-      const visible = allOptions.filter(
-        (o) => category === 'all' || o._categories?.includes(category),
-      );
-      if (!visible.some((o) => o.value === value)) {
-        // Find a category that contains this model
-        for (const cat of OR_CATEGORIES) {
-          if (
-            cat.value === 'all' ||
-            allOptions.some(
-              (o) => o.value === value && o._categories?.includes(cat.value),
-            )
-          ) {
-            setCategory(cat.value);
-            break;
-          }
-        }
+    if (!isOpenRouter || !value || !allModels) return;
+    // Find the most specific category that contains this model
+    for (const cat of OR_CATEGORIES) {
+      if (cat.value === 'all') continue;
+      if (
+        allOptions.some(
+          (o) => o.value === value && o._categories?.includes(cat.value),
+        )
+      ) {
+        setCategory(cat.value);
+        return;
       }
+    }
+    // Model exists but has no specific category → show all
+    if (allOptions.some((o) => o.value === value)) {
+      setCategory('all');
     }
   }, [value, allModels]);
 
@@ -198,19 +196,37 @@ export function DynamicModelSelect({
       </button>
     ) : null;
 
-  const effectiveValue = options.some((o) => o.value === value) ? value : '';
+  const valueInFilteredOptions = options.some((o) => o.value === value);
+  const valueExistsInAnyCategory = allOptions.some((o) => o.value === value);
+  // Only add as custom option if the model doesn't exist in the provider's model list at all
+  const effectiveOptions: SelectOption[] =
+    value && !valueInFilteredOptions && !valueExistsInAnyCategory
+      ? [
+          ...options,
+          {
+            value,
+            label: value,
+            icon: <Cpu className="h-3.5 w-3.5 text-amber-400" />,
+          },
+        ]
+      : options;
+  const effectiveValue = value || '';
 
   return (
     <div className={className}>
-      {orCategorySelector && <div className="mb-2">{orCategorySelector}</div>}
       <Select
-        options={options}
+        options={effectiveOptions}
         value={effectiveValue}
         onChange={onChange}
         label={label}
         labelExtra={badgeButton}
         placeholder="Select model..."
+        searchable
+        searchPlaceholder={t('settings.modelFilter.searchPlaceholder', {
+          defaultValue: 'Search model...',
+        })}
       />
+      {orCategorySelector && <div className="mt-2">{orCategorySelector}</div>}
       {!isOpenRouter && showAll && (
         <p className="mt-1 text-[10px] text-amber-400">
           ⚠️{' '}

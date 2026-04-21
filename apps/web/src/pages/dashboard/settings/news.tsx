@@ -7,6 +7,7 @@ import {
   XCircle,
   Rss,
   RefreshCw,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button, InfoTooltip, Input } from '@crypto-trader/ui';
 import { cn } from '../../../lib/utils';
@@ -23,9 +24,12 @@ import { NewsConfigPanel } from '../../../containers/settings/news-config-panel'
 import { useNewsConfig, useUpdateNewsConfig } from '../../../hooks/use-market';
 import { toast } from 'sonner';
 
+type NewsSubTab = 'config' | 'sources';
+
 export function SettingsNewsPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const [newsSubTab, setNewsSubTab] = useState<NewsSubTab>('config');
 
   // News Sources
   const {
@@ -77,19 +81,55 @@ export function SettingsNewsPage() {
         </p>
       </div>
 
+      {/* Sub-tab Navigation */}
+      <div className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1">
+        <button
+          onClick={() => setNewsSubTab('config')}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+            newsSubTab === 'config'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span className="hidden sm:inline">
+            {t('settings.newsSubTabs.config')}
+          </span>
+        </button>
+        <button
+          onClick={() => setNewsSubTab('sources')}
+          className={cn(
+            'flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+            newsSubTab === 'sources'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          <Rss className="h-4 w-4" />
+          <span className="hidden sm:inline">
+            {t('settings.newsSubTabs.sources')}
+          </span>
+        </button>
+      </div>
+
       {/* News Configuration */}
+      {newsSubTab === 'config' && (
       <NewsConfigPanel
         config={newsConfig}
         onSave={(data) =>
           updateNewsConfig.mutate(data, {
-            onSuccess: () => toast.success('Configuración guardada'),
-            onError: () => toast.error('Error al guardar configuración'),
+            onSuccess: () => toast.success(t('settings.newsConfigSaved')),
+            onError: () => toast.error(t('settings.newsConfigError')),
           })
         }
         isSaving={updateNewsConfig.isPending}
       />
+      )}
 
       {/* Free always-on sources */}
+      {newsSubTab === 'sources' && (
+      <>
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -357,6 +397,8 @@ export function SettingsNewsPage() {
           </div>
         );
       })}
+      </>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import {
   BotMessageSquare,
   Maximize2,
@@ -13,12 +13,18 @@ import {
   useChatSession,
   useSaveUserMessage,
   useChatStream,
+  useSelectOption,
+  useCreateChatSession,
 } from '../../hooks/use-chat';
 import type { ChatCapability } from '@crypto-trader/ui';
+import type { InlineOption } from '../../hooks/use-chat';
 import { useChatAgent } from '../../hooks/use-chat-agent';
 import { useLLMKeys } from '../../hooks/use-user';
 import { useAuthStore } from '../../store/auth.store';
+import { useHasActiveLLMKey } from '../../components/llm-key-guard';
 import { ChatMessages } from './chat-messages';
+import { ChatQuickActions } from './chat-quick-actions';
+import { ChatInlineOptions } from './chat-inline-options';
 import {
   ChatInput,
   CapabilityButtons,
@@ -27,8 +33,6 @@ import {
   OrchestratingIndicator,
   AGENTS,
 } from '@crypto-trader/ui';
-import { NewSessionModal } from './llm-selector';
-import { ChatLLMOverride } from './chat-llm-override';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
@@ -36,20 +40,14 @@ import { useGSAP } from '@gsap/react';
 
 gsap.registerPlugin(useGSAP);
 
-const PROVIDER_BADGE: Record<string, string> = {
-  CLAUDE: 'bg-orange-500/15 text-orange-400 ring-orange-500/30',
-  OPENAI: 'bg-emerald-500/15 text-emerald-400 ring-emerald-500/30',
-  GROQ: 'bg-violet-500/15 text-violet-400 ring-violet-500/30',
-};
-
 export function ChatWidget() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { hasKey: hasActiveLLMKey } = useHasActiveLLMKey();
   const { isOpen, activeSessionId, toggle, close, setActiveSession } =
     useChatStore();
-  const [showNewSession, setShowNewSession] = useState(false);
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -96,11 +94,13 @@ export function ChatWidget() {
     handleRoutingEvent,
     handleOrchestratingEvent,
     handleStreamDone,
-  } = useChatAgent();
+  } = useChatAgent(session?.agentId);
   const {
     streamingContent,
     isStreaming,
     streamError,
+    quickActions,
+    inlineOptions,
     startStream,
     stopStream,
   } = useChatStream(activeSessionId ?? '', {
@@ -108,32 +108,40 @@ export function ChatWidget() {
     onOrchestrating: handleOrchestratingEvent,
     onDone: handleStreamDone,
   });
+  const selectOption = useSelectOption(activeSessionId ?? '');
+  const createSession = useCreateChatSession();
 
   // All hooks called above — safe to early-return now
   if (!isAuthenticated) return null;
 
+  // Hide chat entirely if no active LLM key
+  if (!hasActiveLLMKey) return null;
+
   const handleSend = async (content: string, capability?: ChatCapability) => {
-    if (!activeSessionId) {
-      setShowNewSession(true);
-      return;
+    let sid = activeSessionId;
+    // Auto-create session if none exists
+    if (!sid) {
+      try {
+        const newSession = await createSession.mutateAsync({
+          title: content.slice(0, 60) || 'New Chat',
+        });
+        sid = newSession.id;
+        setActiveSession(sid);
+      } catch {
+        return; // error handled by mutation toast
+      }
     }
     try {
       await saveMessage.mutateAsync({ content, capability });
-      const { sessionProvider, sessionModel } = useChatStore.getState();
-      startStream(
-        content,
-        capability,
-        sessionProvider ?? undefined,
-        sessionModel ?? undefined,
-      );
+      startStream(content, capability, selectedAgentId ?? undefined);
     } catch {
       // error handled by mutation
     }
   };
 
-  const providerBadge = session
-    ? (PROVIDER_BADGE[session.provider] ??
-      'bg-primary/15 text-primary ring-primary/30')
+  // Agent display name for header
+  const displayAgent = activeAgentId
+    ? AGENTS.find((a) => a.id === activeAgentId)
     : null;
 
   // Don't render the FAB/widget while the user is already on the chat page
@@ -207,19 +215,16 @@ export function ChatWidget() {
                   <Sparkles className="h-3 w-3 text-primary/60" />
                 </div>
                 {session ? (
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        'rounded-md px-1.5 py-0.5 text-[10px] font-semibold ring-1',
-                        providerBadge,
-                      )}
-                    >
-                      {session.provider}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/70 font-mono truncate max-w-[130px]">
-                      {session.model}
-                    </span>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground/60">
+                    {displayAgent
+                      ? t('chat.activeAgent', {
+                          defaultValue: '{{name}} active',
+                          name: displayAgent.name,
+                        })
+                      : t('chat.resolvingAgent', {
+                          defaultValue: 'Resolving agent…',
+                        })}
+                  </p>
                 ) : (
                   <p className="text-[10px] text-muted-foreground/60">
                     AI Trading Agent
@@ -266,19 +271,19 @@ export function ChatWidget() {
 
           {/* ── Body ────────────────────────────────────────── */}
           {!activeSessionId ? (
-            <WelcomeState
-              onSend={handleSend}
-              onNewSession={() => setShowNewSession(true)}
-            />
+            <WelcomeState onSend={handleSend} />
           ) : (
             <>
               {/* Agent selector — pick which sub-agent to use */}
-              <div className="px-3 py-2 border-b border-border/50">
+              <div className="px-3 py-2 border-b border-border/50 space-y-2">
                 <AgentSelector
                   t={t}
                   selected={selectedAgentId}
                   onSelect={selectAgent}
                 />
+                {isOrchestrating && (
+                  <OrchestratingIndicator t={t} step={orchestratingStep} />
+                )}
               </div>
 
               {/* Agent header inside the chat area */}
@@ -302,17 +307,29 @@ export function ChatWidget() {
                   provider={session?.provider}
                   streamError={streamError}
                 />
+                {/* D: Quick actions / Inline options from agent response */}
+                {!isStreaming && quickActions && (
+                  <ChatQuickActions
+                    actions={quickActions}
+                    onTransferAgent={(target) => selectAgent(target as any)}
+                  />
+                )}
+                {!isStreaming && inlineOptions && (
+                  <ChatInlineOptions
+                    options={inlineOptions}
+                    onSelect={(opt: InlineOption) => {
+                      selectOption.mutate({
+                        optionId: opt.id,
+                        value: opt.value,
+                      });
+                      // Re-send as user message to continue the conversation
+                      handleSend(opt.value);
+                    }}
+                    disabled={selectOption.isPending}
+                  />
+                )}
               </div>
-              {isOrchestrating && (
-                <div className="px-3 pb-2">
-                  <OrchestratingIndicator t={t} step={orchestratingStep} />
-                </div>
-              )}
               <div className="h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
-              <ChatLLMOverride
-                sessionProvider={session?.provider ?? ''}
-                sessionModel={session?.model ?? ''}
-              />
               <ChatInput
                 t={t}
                 onSend={handleSend}
@@ -324,10 +341,6 @@ export function ChatWidget() {
           )}
         </div>
       )}
-
-      {showNewSession && (
-        <NewSessionModal onClose={() => setShowNewSession(false)} />
-      )}
     </>
   );
 }
@@ -335,10 +348,8 @@ export function ChatWidget() {
 // ── Welcome state ─────────────────────────────────────────────────────────
 function WelcomeState({
   onSend,
-  onNewSession,
 }: {
   onSend: (content: string, capability?: ChatCapability) => void;
-  onNewSession: () => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -420,7 +431,11 @@ function WelcomeState({
         </div>
       ) : (
         <button
-          onClick={onNewSession}
+          onClick={() =>
+            onSend(
+              t('chat.defaultGreeting', { defaultValue: 'Hello, KRYPTO!' }),
+            )
+          }
           className={cn(
             'welcome-el w-full rounded-xl px-5 py-3 text-sm font-semibold',
             'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground',

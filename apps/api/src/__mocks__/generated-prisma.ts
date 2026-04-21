@@ -9,6 +9,7 @@ export const $Enums = {
     GEMINI: 'GEMINI',
     MISTRAL: 'MISTRAL',
     TOGETHER: 'TOGETHER',
+    OPENROUTER: 'OPENROUTER',
   },
   LLMSource: { TRADING: 'TRADING', CHAT: 'CHAT', ANALYSIS: 'ANALYSIS' },
   OrderSide: { BUY: 'BUY', SELL: 'SELL' },
@@ -27,6 +28,16 @@ export const $Enums = {
     DAILY_SUMMARY: 'DAILY_SUMMARY',
     SYSTEM: 'SYSTEM',
   },
+  AgentId: {
+    platform: 'platform',
+    operations: 'operations',
+    market: 'market',
+    blockchain: 'blockchain',
+    risk: 'risk',
+    orchestrator: 'orchestrator',
+    routing: 'routing',
+    synthesis: 'synthesis',
+  },
 };
 export const LLMProvider = $Enums.LLMProvider;
 export const LLMSource = $Enums.LLMSource;
@@ -42,3 +53,4 @@ export const RiskProfile = {
   MODERATE: 'MODERATE',
   AGGRESSIVE: 'AGGRESSIVE',
 };
+export const AgentId = $Enums.AgentId;

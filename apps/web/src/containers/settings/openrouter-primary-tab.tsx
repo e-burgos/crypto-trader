@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Star,
   Loader2,
@@ -79,6 +79,13 @@ export function OpenRouterPrimaryTab({
   const [model, setModel] = useState(
     status?.selectedModel || 'anthropic/claude-sonnet-4.6',
   );
+
+  // Sync local model state when server data changes (e.g. after save/invalidation)
+  useEffect(() => {
+    if (status?.selectedModel) {
+      setModel(status.selectedModel);
+    }
+  }, [status?.selectedModel]);
 
   const isActive = status?.isActive ?? false;
   const manualTestFailed =
@@ -216,21 +223,29 @@ export function OpenRouterPrimaryTab({
 
           {/* Model Select */}
           {isActive ? (
-            <DynamicModelSelect
-              provider="OPENROUTER"
-              value={model}
-              label={t('settings.openrouter.primaryModel', {
-                defaultValue: 'Primary Model',
-              })}
-              onChange={(m) => {
-                setModel(m);
-                onUpdateModel({
-                  provider: 'OPENROUTER',
-                  selectedModel: m || null,
-                });
-              }}
-              fallbackModels={OPENROUTER_MODELS}
-            />
+            <>
+              <DynamicModelSelect
+                provider="OPENROUTER"
+                value={model}
+                label={t('settings.openrouter.fallbackModel', {
+                  defaultValue: 'Fallback Model',
+                })}
+                onChange={(m) => {
+                  setModel(m);
+                  onUpdateModel({
+                    provider: 'OPENROUTER',
+                    selectedModel: m || null,
+                  });
+                }}
+                fallbackModels={OPENROUTER_MODELS}
+              />
+              <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-400 leading-relaxed">
+                {t('settings.openrouter.fallbackModelNote', {
+                  defaultValue:
+                    'This model is used only when an agent has no specific configuration. Agents resolve their own LLM via Agent Hub Config.',
+                })}
+              </div>
+            </>
           ) : (
             <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
               {t('settings.activateProviderFirst', {

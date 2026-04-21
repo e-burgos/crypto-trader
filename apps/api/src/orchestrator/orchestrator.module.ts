@@ -11,11 +11,13 @@ import {
 } from './document-processor.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { LlmModule } from '../llm/llm.module';
+import { AgentConfigModule } from '../agents/agent-config.module';
 
 @Module({
   imports: [
     PrismaModule,
     LlmModule,
+    AgentConfigModule,
     BullModule.registerQueue({ name: DOCUMENT_PROCESSING_QUEUE }),
   ],
   providers: [

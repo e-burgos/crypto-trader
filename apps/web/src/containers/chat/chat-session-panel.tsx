@@ -3,7 +3,6 @@ import { Plus, Trash2, MessageSquare } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ChatSessionSummary, useDeleteChatSession } from '../../hooks/use-chat';
 import { useChatStore } from '../../store/chat.store';
-import { NewSessionModal } from './llm-selector';
 import { useTranslation } from 'react-i18next';
 
 const PROVIDER_COLORS: Record<string, string> = {
@@ -51,7 +50,6 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
   const { t } = useTranslation();
   const { activeSessionId, setActiveSession } = useChatStore();
   const deleteSession = useDeleteChatSession();
-  const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const groups = groupByDate(sessions);
@@ -70,7 +68,7 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
             {t('chat.sessions', { defaultValue: 'Conversations' })}
           </span>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => setActiveSession(null)}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
             title={t('chat.newSession', { defaultValue: 'New session' })}
           >
@@ -89,7 +87,7 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
                 })}
               </p>
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => setActiveSession(null)}
                 className="text-primary hover:underline"
               >
                 {t('chat.startFirst', {
@@ -123,11 +121,13 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
                             <span
                               className={cn(
                                 'shrink-0 rounded border px-1 text-[9px] font-semibold',
-                                PROVIDER_COLORS[session.provider] ??
-                                  'bg-muted text-muted-foreground border-border',
+                                session.provider
+                                  ? (PROVIDER_COLORS[session.provider] ??
+                                      'bg-muted text-muted-foreground border-border')
+                                  : 'bg-muted text-muted-foreground border-border',
                               )}
                             >
-                              {session.provider}
+                              {session.provider ?? 'Auto'}
                             </span>
                           </div>
                           <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -157,9 +157,6 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
           )}
         </div>
       </aside>
-
-      {/* New session modal */}
-      {showModal && <NewSessionModal onClose={() => setShowModal(false)} />}
 
       {/* Confirm delete dialog */}
       {confirmDelete && (

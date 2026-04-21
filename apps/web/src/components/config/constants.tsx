@@ -6,7 +6,6 @@ import {
   Clock,
   ListChecks,
   Bot,
-  Brain,
 } from 'lucide-react';
 import { InfoTooltip } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
@@ -99,10 +98,6 @@ export interface ConfigForm {
   minIntervalMinutes: string;
   orderPriceOffsetPct: string;
   riskProfile: RiskProfile;
-  primaryProvider: string;
-  primaryModel: string;
-  fallbackProvider: string;
-  fallbackModel: string;
 }
 
 export const DEFAULT_FORM: ConfigForm = {
@@ -112,10 +107,6 @@ export const DEFAULT_FORM: ConfigForm = {
   mode: 'SANDBOX',
   intervalMode: 'AGENT',
   riskProfile: 'MODERATE',
-  primaryProvider: '',
-  primaryModel: '',
-  fallbackProvider: '',
-  fallbackModel: '',
   ...PRESETS.balanced,
 };
 
@@ -189,7 +180,6 @@ export function SliderField({
 export type StepId =
   | 'preset'
   | 'identity'
-  | 'aiModel'
   | 'thresholds'
   | 'risk'
   | 'timing'
@@ -198,7 +188,6 @@ export type StepId =
 export const STEPS: { id: StepId; icon: typeof Bot }[] = [
   { id: 'preset', icon: Zap },
   { id: 'identity', icon: Bot },
-  { id: 'aiModel', icon: Brain },
   { id: 'thresholds', icon: Target },
   { id: 'risk', icon: Shield },
   { id: 'timing', icon: Clock },

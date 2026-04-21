@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -9,6 +9,121 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
 gsap.registerPlugin(useGSAP);
+
+/* ── Shared markdown components for consistent rich rendering ────────── */
+const markdownComponents: ComponentProps<typeof ReactMarkdown>['components'] = {
+  code: ({ className, children, ...props }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code
+          className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-primary"
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className={cn('block', className)} {...props}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="overflow-x-auto rounded-xl bg-muted p-3 text-xs ring-1 ring-border">
+      {children}
+    </pre>
+  ),
+  table: ({ children }) => (
+    <div className="my-2 overflow-x-auto rounded-lg border border-border/60">
+      <table className="min-w-full text-xs">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-muted/60 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </thead>
+  ),
+  th: ({ children }) => (
+    <th className="whitespace-nowrap border-b border-border/50 px-3 py-2 font-semibold">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="whitespace-nowrap border-b border-border/30 px-3 py-1.5 text-foreground/90">
+      {children}
+    </td>
+  ),
+  tr: ({ children }) => (
+    <tr className="transition-colors hover:bg-muted/30">{children}</tr>
+  ),
+  ul: ({ children }) => (
+    <ul className="my-1.5 list-disc space-y-1 pl-5 marker:text-primary/60">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="my-1.5 list-decimal space-y-1 pl-5 marker:text-primary/60">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li className="text-foreground/90 leading-relaxed">{children}</li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="my-2 border-l-2 border-primary/40 pl-3 italic text-muted-foreground">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-3 border-border/50" />,
+  h1: ({ children }) => (
+    <h1 className="mb-2 mt-3 text-base font-bold text-foreground">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-1.5 mt-2.5 text-sm font-bold text-foreground">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-1 mt-2 text-sm font-semibold text-foreground">
+      {children}
+    </h3>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60"
+    >
+      {children}
+    </a>
+  ),
+  p: ({ children }) => (
+    <p className="my-1 leading-relaxed text-foreground/90">{children}</p>
+  ),
+};
+
+/** Renders markdown content with consistent styling */
+function ChatMarkdown({ content }: { content: string }) {
+  return (
+    <div className="prose prose-sm dark:prose-invert max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        components={markdownComponents}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 interface ChatMessagesProps {
   messages: ChatMessageItem[];
@@ -142,44 +257,7 @@ function MessageBubble({
           )}
         >
           <CopyButton text={message.content} />
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-              components={{
-                code: ({ className, children, ...props }) => {
-                  const isInline = !className;
-                  if (isInline) {
-                    return (
-                      <code
-                        className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-primary"
-                        {...props}
-                      >
-                        {children}
-                      </code>
-                    );
-                  }
-                  return (
-                    <code className={cn('block', className)} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-                pre: ({ children }) => (
-                  <pre className="overflow-x-auto rounded-xl bg-muted p-3 text-xs ring-1 ring-border">
-                    {children}
-                  </pre>
-                ),
-                table: ({ children }) => (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-xs">{children}</table>
-                  </div>
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
-          </div>
+          <ChatMarkdown content={message.content} />
         </div>
         <div className="mt-1 text-[11px] text-muted-foreground/60">{time}</div>
       </div>
@@ -282,9 +360,13 @@ export function ChatMessages({
   const bottomRef = useRef<HTMLDivElement>(null);
   const { glow } = PROVIDER_GLOW[provider ?? ''] ?? DEFAULT_GLOW;
 
+  // Smooth-scroll to bottom on every new message, streaming chunk, or stream state change
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, streamingContent]);
+    const id = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [messages.length, streamingContent, isStreaming]);
 
   const visibleMessages = messages.filter((m) => m.role !== 'SYSTEM');
 
@@ -312,11 +394,13 @@ export function ChatMessages({
           <div className="max-w-[85%]">
             <div
               className={cn(
-                'rounded-2xl rounded-tl-sm bg-white/[0.04] px-4 py-3 text-sm ring-1 ring-white/10 backdrop-blur-sm',
+                'group relative rounded-2xl rounded-tl-sm px-4 py-3 text-sm',
+                'bg-muted/40 ring-1 ring-border/60',
                 glow,
               )}
             >
-              <span className="streaming-cursor">{streamingContent}</span>
+              <CopyButton text={streamingContent} />
+              <ChatMarkdown content={streamingContent} />
             </div>
           </div>
         </div>
@@ -333,11 +417,13 @@ export function ChatMessages({
           <div className="max-w-[85%]">
             <div
               className={cn(
-                'rounded-2xl rounded-tl-sm bg-white/[0.04] px-4 py-3 text-sm ring-1 ring-white/10 backdrop-blur-sm',
+                'group relative rounded-2xl rounded-tl-sm px-4 py-3 text-sm',
+                'bg-muted/40 ring-1 ring-border/60',
                 glow,
               )}
             >
-              <span className="streaming-cursor">{streamingContent}</span>
+              <ChatMarkdown content={streamingContent} />
+              <span className="inline-block w-1.5 h-4 ml-0.5 bg-primary/70 animate-pulse rounded-sm align-text-bottom" />
             </div>
           </div>
         </div>

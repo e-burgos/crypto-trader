@@ -76,6 +76,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get llmUsageLog() {
     return this._client.llmUsageLog;
   }
+  get agentConfig() {
+    return this._client.agentConfig;
+  }
+  get adminAgentConfig() {
+    return this._client.adminAgentConfig;
+  }
 
   $queryRaw<T = unknown>(
     ...args: Parameters<PrismaClientInstance['$queryRaw']>

@@ -13,33 +13,35 @@ export class AdminService {
   ) {}
 
   async getStats() {
-    const [totalUsers, activeUsers, totalTrades, openPositions, totalVolume] =
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const [totalUsers, totalTrades, openPositions, tradesToday, sellsToday] =
       await Promise.all([
         this.prisma.user.count(),
-        this.prisma.user.count({ where: { isActive: true } }),
         this.prisma.trade.count(),
         this.prisma.position.count({ where: { status: 'OPEN' } }),
-        this.prisma.trade.aggregate({ _sum: { quantity: true } }),
+        this.prisma.trade.count({
+          where: { executedAt: { gte: startOfDay } },
+        }),
+        this.prisma.trade.findMany({
+          where: { executedAt: { gte: startOfDay }, type: 'SELL' },
+          select: { price: true, quantity: true },
+        }),
       ]);
 
-    const recentTrades = await this.prisma.trade.findMany({
-      take: 10,
-      orderBy: { executedAt: 'desc' },
-      select: {
-        id: true,
-        type: true,
-        price: true,
-        quantity: true,
-        executedAt: true,
-        mode: true,
-      },
-    });
+    const profitToday = sellsToday.reduce(
+      (sum, t) => sum + t.price * t.quantity,
+      0,
+    );
 
     return {
-      users: { total: totalUsers, active: activeUsers },
-      trades: { total: totalTrades, recentTrades },
-      positions: { open: openPositions },
-      volume: { total: totalVolume._sum.quantity ?? 0 },
+      totalUsers,
+      totalTrades,
+      openPositions,
+      tradesToday,
+      profitToday,
+      systemStatus: 'ok',
     };
   }
 
@@ -72,6 +74,7 @@ export class AdminService {
       select: {
         id: true,
         action: true,
+        adminId: true,
         details: true,
         createdAt: true,
         admin: { select: { email: true } },

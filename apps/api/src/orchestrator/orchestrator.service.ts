@@ -28,11 +28,15 @@ export interface NewsItemInput {
 function safeParseJson<T>(raw: string, fallback: T): T {
   try {
     // Strip markdown code fences if present
-    const cleaned = raw
-      .replace(/^```(?:json)?\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
-    return JSON.parse(cleaned) as T;
+    const cleaned = raw.replace(/```(?:json)?\s*/gi, '').trim();
+    try {
+      return JSON.parse(cleaned) as T;
+    } catch {
+      // Extract the outermost JSON object or array from the text
+      const match = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+      if (match) return JSON.parse(match[0]) as T;
+      return fallback;
+    }
   } catch {
     return fallback;
   }
@@ -154,7 +158,42 @@ export class OrchestratorService {
         }
       : undefined;
 
-    // Parallel sub-agent calls
+    // ── SIGMA sentiment cache ────────────────────────────────────────────────
+    // Reuse a recent SIGMA news_sentiment result from any bot of the same user
+    // if it falls within the user's configured analysis interval (TTL).
+    const newsConfig = await this.prisma.newsConfig.findUnique({
+      where: { userId },
+      select: { intervalMinutes: true },
+    });
+    const sentimentTtlMs = (newsConfig?.intervalMinutes ?? 10) * 60_000;
+
+    let cachedSentiment: string | null = null;
+    const recentDecision = await this.prisma.agentDecision.findFirst({
+      where: {
+        userId,
+        createdAt: { gte: new Date(Date.now() - sentimentTtlMs) },
+        metadata: { not: { equals: null } },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { metadata: true },
+    });
+
+    if (recentDecision?.metadata) {
+      const meta = recentDecision.metadata as {
+        subAgentResults?: SubAgentResult[];
+      };
+      const cached = meta.subAgentResults?.find(
+        (r) => r.task === 'news_sentiment',
+      );
+      if (cached?.output && cached.output !== '{}') {
+        cachedSentiment = cached.output;
+        this.logger.log(
+          `Reusing cached SIGMA news_sentiment for user=${userId} (TTL=${newsConfig?.intervalMinutes ?? 10}min)`,
+        );
+      }
+    }
+
+    // Parallel sub-agent calls (skip SIGMA sentiment if cached)
     const [techRaw, sentimentRaw, forgeRaw, aegisRaw] =
       await Promise.allSettled([
         this.subAgent.call(
@@ -165,14 +204,16 @@ export class OrchestratorService {
           false,
           typedOverride,
         ),
-        this.subAgent.call(
-          'market',
-          'news_sentiment',
-          { news: news.slice(0, 10) },
-          userId,
-          false,
-          typedOverride,
-        ),
+        cachedSentiment
+          ? Promise.resolve(cachedSentiment)
+          : this.subAgent.call(
+              'market',
+              'news_sentiment',
+              { news: news.slice(0, 10) },
+              userId,
+              false,
+              typedOverride,
+            ),
         this.subAgent.call(
           'operations',
           'sizing_suggestion',
@@ -227,7 +268,12 @@ export class OrchestratorService {
 
     subAgentResults.push(
       { agentId: 'market', task: 'technical_signal', output: techOutput },
-      { agentId: 'market', task: 'news_sentiment', output: sentimentOutput },
+      {
+        agentId: 'market',
+        task: 'news_sentiment',
+        output: sentimentOutput,
+        ...(cachedSentiment ? { cached: true } : {}),
+      } as SubAgentResult,
       { agentId: 'operations', task: 'sizing_suggestion', output: forgeOutput },
       { agentId: 'risk', task: 'risk_gate', output: aegisOutput },
     );
@@ -411,11 +457,12 @@ export class OrchestratorService {
     responses: Array<{ agentId: SubAgentId; response: string }>,
     originalQuery: string,
     userId: string,
+    locale?: string,
   ): Promise<string> {
     return this.subAgent.call(
       'orchestrator',
       'cross_agent_synthesis',
-      { responses, originalQuery },
+      { responses, originalQuery, locale },
       userId,
       false,
     );

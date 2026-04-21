@@ -1,6 +1,3 @@
-import { LLMProvider } from '../../generated/prisma/enums';
-import { suggestModel } from '../llm/model-ranking';
-
 const RISK_PROFILES: Record<string, string> = {
   CONSERVATIVE: 'Safe',
   MODERATE: 'Balanced',
@@ -9,64 +6,17 @@ const RISK_PROFILES: Record<string, string> = {
 
 /**
  * Generates an auto-name for a trading agent based on its configuration.
- * Format: {Asset}-{Profile}-{Provider}:{ModelShort}
+ * Format: {Asset}-{Profile}
  *
  * Examples:
- *   "BTC-Safe-CLAUDE:sonnet-4"
- *   "ETH-Alpha-OPENAI:gpt-5"
- *   "BTC-Balanced-Auto:Auto"
+ *   "BTC-Safe"
+ *   "ETH-Alpha"
+ *   "BTC-Balanced"
  */
 export function generateAgentName(config: {
   asset: string;
   riskProfile: string;
-  primaryProvider?: string | null;
-  primaryModel?: string | null;
 }): string {
   const profile = RISK_PROFILES[config.riskProfile] ?? 'Balanced';
-  const model = config.primaryModel
-    ? (config.primaryModel.split('/').pop()?.split('-').slice(0, 2).join('-') ??
-      'Auto')
-    : 'Auto';
-  const provider = config.primaryProvider ?? 'Auto';
-  return `${config.asset}-${profile}-${provider}:${model}`;
-}
-
-/**
- * Resolves the LLM provider/model for a trading config.
- * 3-level fallback: primary → fallback → ranking global.
- */
-export interface ResolvedLLM {
-  provider: LLMProvider;
-  model: string;
-}
-
-export function resolveTradingOverride(config: {
-  primaryProvider?: LLMProvider | null;
-  primaryModel?: string | null;
-  fallbackProvider?: LLMProvider | null;
-  fallbackModel?: string | null;
-}): ResolvedLLM | undefined {
-  if (config.primaryProvider) {
-    const model =
-      config.primaryModel ||
-      suggestModel([config.primaryProvider], 'TRADING', false)?.model;
-    if (model) {
-      return {
-        provider: config.primaryProvider,
-        model,
-      };
-    }
-  }
-  if (config.fallbackProvider) {
-    const model =
-      config.fallbackModel ||
-      suggestModel([config.fallbackProvider], 'TRADING', false)?.model;
-    if (model) {
-      return {
-        provider: config.fallbackProvider,
-        model,
-      };
-    }
-  }
-  return undefined;
+  return `${config.asset}-${profile}`;
 }

@@ -156,14 +156,15 @@ export class ChatController {
     description: 'help | trade | market | blockchain',
   })
   @ApiQuery({
-    name: 'providerOverride',
+    name: 'locale',
     required: false,
-    description: 'Override LLM provider for this request only',
+    description: 'User locale (e.g. es, en, pt)',
   })
   @ApiQuery({
-    name: 'modelOverride',
+    name: 'agentId',
     required: false,
-    description: 'Override LLM model for this request only',
+    description:
+      'Agent ID selected by the user (overrides auto-classification)',
   })
   @ApiQuery({
     name: 'token',
@@ -175,8 +176,8 @@ export class ChatController {
     @Param('id') id: string,
     @Query('content') content: string,
     @Query('capability') capability?: string,
-    @Query('providerOverride') providerOverride?: string,
-    @Query('modelOverride') modelOverride?: string,
+    @Query('locale') locale?: string,
+    @Query('agentId') agentId?: string,
     @Query('token') token?: string,
   ): Observable<MessageEvent> {
     if (!token) throw new UnauthorizedException('Missing token query param');
@@ -192,8 +193,8 @@ export class ChatController {
       id,
       content,
       capability,
-      providerOverride as any,
-      modelOverride,
+      locale,
+      agentId,
     );
   }
 
@@ -218,5 +219,22 @@ export class ChatController {
     @Body() dto: ExecuteToolDto,
   ) {
     return this.chatService.executeTool(user.userId, id, dto);
+  }
+
+  // ── D: Inline option / quick action selection ─────────────────────────────
+
+  @Post('sessions/:id/select')
+  @UseGuards(JwtAuthGuard)
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiOperation({
+    summary: 'User selects a quick action or inline option from agent response',
+  })
+  @ApiResponse({ status: 200, description: 'Selection processed' })
+  selectOption(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() body: { optionId: string; value: string },
+  ) {
+    return this.chatService.processSelection(user.userId, id, body);
   }
 }

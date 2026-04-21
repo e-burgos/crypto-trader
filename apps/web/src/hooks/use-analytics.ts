@@ -101,6 +101,12 @@ export interface AgentDecision {
   configDetails?: AgentDecisionConfigDetails | null;
   llmProvider?: string | null;
   llmModel?: string | null;
+  sigmaSentiment?: {
+    sentiment: number;
+    impact: string;
+    reasoning: string;
+    cached?: boolean;
+  } | null;
 }
 
 export interface TradeInfo {

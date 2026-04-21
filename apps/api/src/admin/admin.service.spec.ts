@@ -43,18 +43,17 @@ describe('AdminService', () => {
   });
 
   it('getStats() returns aggregated platform stats', async () => {
-    mockPrisma.user.count.mockResolvedValueOnce(10).mockResolvedValueOnce(8);
+    mockPrisma.user.count.mockResolvedValue(10);
     mockPrisma.trade.count.mockResolvedValue(200);
     mockPrisma.position.count.mockResolvedValue(3);
-    mockPrisma.trade.aggregate.mockResolvedValue({ _sum: { quantity: 5.0 } });
     mockPrisma.trade.findMany.mockResolvedValue([]);
 
     const stats = await service.getStats();
-    expect(stats.users.total).toBe(10);
-    expect(stats.users.active).toBe(8);
-    expect(stats.trades.total).toBe(200);
-    expect(stats.positions.open).toBe(3);
-    expect(stats.volume.total).toBe(5.0);
+    expect(stats.totalUsers).toBe(10);
+    expect(stats.totalTrades).toBe(200);
+    expect(stats.openPositions).toBe(3);
+    expect(stats.profitToday).toBe(0);
+    expect(stats.systemStatus).toBe('ok');
   });
 
   it('killSwitch() stops all running agents and logs action', async () => {
@@ -68,7 +67,10 @@ describe('AdminService', () => {
         data: expect.objectContaining({ action: 'KILL_SWITCH' }),
       }),
     );
-    expect(mockGateway.server.emit).toHaveBeenCalledWith('agent:killed', expect.any(Object));
+    expect(mockGateway.server.emit).toHaveBeenCalledWith(
+      'agent:killed',
+      expect.any(Object),
+    );
     expect(result.stopped).toBe(3);
   });
 

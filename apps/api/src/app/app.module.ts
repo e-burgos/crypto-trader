@@ -13,6 +13,7 @@ import { TradingModule } from '../trading/trading.module';
 import { MarketModule } from '../market/market.module';
 import { ChatModule } from '../chat/chat.module';
 import { LlmModule } from '../llm/llm.module';
+import { AgentConfigModule } from '../agents/agent-config.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { LlmModule } from '../llm/llm.module';
     MarketModule,
     ChatModule,
     LlmModule,
+    AgentConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -23,6 +23,7 @@ import { SubAgentService } from '../orchestrator/sub-agent.service';
 import { RagService } from '../orchestrator/rag.service';
 import { LLMModelsService } from '../llm/llm-models.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
@@ -110,6 +111,8 @@ export class ChatService {
     @Optional() private readonly ragService?: RagService,
     @Optional() private readonly llmModelsService?: LLMModelsService,
     @Optional() private readonly llmUsageService?: LLMUsageService,
+    @Optional()
+    private readonly agentConfigResolver?: AgentConfigResolverService,
   ) {}
 
   // ── Sessions ────────────────────────────────────────────────────────────────
@@ -152,16 +155,6 @@ export class ChatService {
   }
 
   async createSession(userId: string, dto: CreateSessionDto) {
-    // Validate user has credentials for the selected provider
-    const cred = await this.prisma.lLMCredential.findFirst({
-      where: { userId, provider: dto.provider, isActive: true },
-    });
-    if (!cred) {
-      throw new BadRequestException(
-        `No active credentials found for provider ${dto.provider}. Configure them in Settings.`,
-      );
-    }
-
     return this.prisma.chatSession.create({
       data: {
         userId,
@@ -246,8 +239,8 @@ export class ChatService {
     sessionId: string,
     content: string,
     capability?: string,
-    providerOverride?: LLMProvider,
-    modelOverride?: string,
+    locale?: string,
+    agentOverride?: string,
   ): Observable<MessageEvent> {
     const subject = new Subject<MessageEvent>();
     this.runStreamAsync(
@@ -256,8 +249,8 @@ export class ChatService {
       content,
       capability,
       subject,
-      providerOverride,
-      modelOverride,
+      locale,
+      agentOverride,
     ).catch((err) => {
       this.logger.error(`Stream error for session ${sessionId}`, err);
       subject.next(
@@ -278,8 +271,8 @@ export class ChatService {
     content: string,
     capability: string | undefined,
     subject: Subject<MessageEvent>,
-    providerOverride?: LLMProvider,
-    modelOverride?: string,
+    locale?: string,
+    agentOverride?: string,
   ) {
     const session = await this.prisma.chatSession.findFirst({
       where: { id: sessionId, userId },
@@ -294,46 +287,112 @@ export class ChatService {
       return;
     }
 
-    // ── H: Effective provider / model (override > session default) ────────────
-    const effectiveProvider = providerOverride ?? session.provider;
-    const effectiveModel = modelOverride ?? session.model;
-    const generatedBy = `${effectiveProvider}:${effectiveModel}`;
-
-    // ── C.2: Intent routing on first message ──────────────────────────────────
+    // ── C.2: Intent routing ──────────────────────────────────────────────────
+    // Priority: user-selected agent > transfer intent > session persisted > auto-classification
+    const validAgents: AgentId[] = [
+      AgentId.platform,
+      AgentId.operations,
+      AgentId.market,
+      AgentId.blockchain,
+      AgentId.risk,
+    ];
     let activeAgentId: AgentId | null = session.agentId ?? null;
 
+    // User explicitly selected an agent in the UI dropdown
+    if (
+      agentOverride &&
+      validAgents.includes(agentOverride as AgentId) &&
+      agentOverride !== activeAgentId
+    ) {
+      activeAgentId = agentOverride as AgentId;
+      this.logger.log(`[Chat] User override → agent=${activeAgentId}`);
+      await this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { agentId: activeAgentId },
+      });
+      subject.next(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            type: 'routing',
+            agentId: activeAgentId,
+          }),
+        }),
+      );
+    }
+
+    // Detect transfer intent from message text (user mentions agent names)
+    if (!agentOverride && activeAgentId) {
+      const transferTarget = this.detectTransferIntent(content);
+      if (transferTarget && transferTarget !== activeAgentId) {
+        this.logger.log(
+          `[Chat] Transfer intent detected: ${activeAgentId} → ${transferTarget}`,
+        );
+        activeAgentId = transferTarget;
+        await this.prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { agentId: activeAgentId },
+        });
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              type: 'routing',
+              agentId: activeAgentId,
+            }),
+          }),
+        );
+      }
+    }
+
+    // Auto-classify if no agent yet
     if (!activeAgentId && this.orchestratorService) {
       try {
-        const msgCount = await this.prisma.chatMessage.count({
-          where: { sessionId, role: ChatRole.USER },
+        this.logger.log(
+          `[Chat] Classifying intent for session ${sessionId}: "${content.slice(0, 80)}"`,
+        );
+        const classification = await this.orchestratorService.classifyIntent(
+          content,
+          userId,
+        );
+        activeAgentId = classification.agentId as AgentId;
+        this.logger.log(
+          `[Chat] Classified → agent=${activeAgentId} (confidence=${classification.confidence})`,
+        );
+
+        // Persist routing in session
+        await this.prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { agentId: activeAgentId },
         });
-        // Only classify on the first user message (before this one is saved)
-        if (msgCount <= 1) {
-          const classification = await this.orchestratorService.classifyIntent(
-            content,
-            userId,
-          );
-          activeAgentId = classification.agentId as AgentId;
 
-          // Persist routing in session
-          await this.prisma.chatSession.update({
-            where: { id: sessionId },
-            data: { agentId: activeAgentId },
-          });
-
-          // Emit routing SSE event
-          subject.next(
-            new MessageEvent('message', {
-              data: JSON.stringify({
-                type: 'routing',
-                agentId: activeAgentId,
-                greeting: classification.suggestedGreeting || undefined,
-              }),
+        // Emit routing SSE event
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              type: 'routing',
+              agentId: activeAgentId,
+              greeting: classification.suggestedGreeting || undefined,
             }),
-          );
-        }
+          }),
+        );
       } catch (err) {
         this.logger.warn(`Intent classification failed, falling back: ${err}`);
+        // Assign a sensible default so we don't fall through to cross-agent
+        activeAgentId = AgentId.platform;
+        this.logger.log(
+          `[Chat] Fallback → agent=${activeAgentId} (classification failed)`,
+        );
+        await this.prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { agentId: activeAgentId },
+        });
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              type: 'routing',
+              agentId: activeAgentId,
+            }),
+          }),
+        );
       }
     }
 
@@ -366,13 +425,14 @@ export class ChatService {
           [],
           content,
           userId,
+          locale,
         );
         const assistantMsg = await this.prisma.chatMessage.create({
           data: {
             sessionId,
             role: ChatRole.ASSISTANT,
             content: synthesis,
-            generatedBy,
+            generatedBy: 'orchestrator:cross-agent',
             metadata: { orchestrated: true },
           },
         });
@@ -397,6 +457,71 @@ export class ChatService {
         );
       }
     }
+
+    // ── E.5: Resolve LLM via AgentConfigResolver per active agent ─────────────
+    const agentIdForLLM = activeAgentId ?? AgentId.platform;
+    let effectiveProvider: LLMProvider;
+    let effectiveModel: string;
+
+    if (this.agentConfigResolver) {
+      try {
+        const resolved = await this.agentConfigResolver.resolveConfig(
+          agentIdForLLM,
+          userId,
+        );
+        effectiveProvider = resolved.provider;
+        effectiveModel = resolved.model;
+      } catch (err) {
+        this.logger.warn(
+          `AgentConfigResolver failed for chat, falling back to session/credential: ${err}`,
+        );
+        // Fallback: use session provider or first active credential
+        const fallbackCred = await this.prisma.lLMCredential.findFirst({
+          where: { userId, isActive: true },
+        });
+        if (!fallbackCred) {
+          subject.next(
+            new MessageEvent('message', {
+              data: JSON.stringify({
+                error: 'No active AI provider configured. Check Settings.',
+              }),
+            }),
+          );
+          subject.complete();
+          return;
+        }
+        effectiveProvider = fallbackCred.provider as LLMProvider;
+        effectiveModel =
+          fallbackCred.selectedModel ?? 'anthropic/claude-sonnet-4.6';
+      }
+    } else {
+      // No AgentConfigResolver available — fallback to first active credential
+      const fallbackCred = await this.prisma.lLMCredential.findFirst({
+        where: { userId, isActive: true },
+      });
+      if (!fallbackCred) {
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              error: 'No active AI provider configured. Check Settings.',
+            }),
+          }),
+        );
+        subject.complete();
+        return;
+      }
+      effectiveProvider = fallbackCred.provider as LLMProvider;
+      effectiveModel =
+        fallbackCred.selectedModel ?? 'anthropic/claude-sonnet-4.6';
+    }
+
+    const generatedBy = `${effectiveProvider}:${effectiveModel}`;
+
+    // Update session with resolved provider/model (for display)
+    await this.prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { provider: effectiveProvider, model: effectiveModel },
+    });
 
     const cred = await this.prisma.lLMCredential.findFirst({
       where: { userId, provider: effectiveProvider, isActive: true },
@@ -432,6 +557,7 @@ export class ChatService {
       context,
       capability,
       ragContext,
+      locale,
     );
 
     let fullContent = '';
@@ -553,16 +679,44 @@ export class ChatService {
       where: { id: sessionId },
       data: { updatedAt: new Date() },
     });
+
+    // ── D: Parse quickActions / inlineOptions from LLM response ─────────────
+    const interactiveData = this.extractInteractivePayload(fullContent);
+
     subject.next(
       new MessageEvent('message', {
         data: JSON.stringify({
           done: true,
           messageId: assistantMsg.id,
           fullContent,
+          ...interactiveData,
         }),
       }),
     );
     subject.complete();
+  }
+
+  // ── D: Interactive payload extraction ──────────────────────────────────────
+
+  private extractInteractivePayload(content: string): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+    // Look for trailing JSON object with quickActions or inlineOptions
+    const jsonMatch = content.match(
+      /\{[^{}]*"(?:quickActions|inlineOptions)"[^{}]*\}\s*$/,
+    );
+    if (!jsonMatch) return result;
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed.quickActions)) {
+        result.quickActions = parsed.quickActions;
+      }
+      if (Array.isArray(parsed.inlineOptions)) {
+        result.inlineOptions = parsed.inlineOptions;
+      }
+    } catch {
+      // Not valid JSON — ignore
+    }
+    return result;
   }
 
   // ── Tool execution (C.4) ───────────────────────────────────────────────────
@@ -733,6 +887,7 @@ export class ChatService {
     context: Awaited<ReturnType<typeof this.buildContext>>,
     capability?: string,
     ragContext?: string,
+    locale?: string,
   ): string {
     const { recentDecisions, configs, openPositions } = context;
 
@@ -768,13 +923,74 @@ export class ChatService {
 
     const capabilityHint = this.getCapabilityHint(capability);
 
-    return `You are KRYPTO, the internal AI trading agent embedded in the CryptoTrader platform. You are not an assistant about the agent — you ARE the agent. You speak in first person as the decision-making intelligence that continuously analyzes markets and executes crypto trading operations.
+    // Locale mapping for language directive
+    const LOCALE_NAMES: Record<string, string> = {
+      es: 'Spanish (español)',
+      en: 'English',
+      pt: 'Portuguese (português)',
+      fr: 'French (français)',
+      de: 'German (Deutsch)',
+    };
+    const effectiveLocale = locale || 'en';
+    const langName = LOCALE_NAMES[effectiveLocale] ?? effectiveLocale;
+    const langDirective =
+      effectiveLocale !== 'en'
+        ? `\n\n## MANDATORY LANGUAGE RULE\n**You MUST respond ENTIRELY in ${langName}.** This is non-negotiable. Every word of your response — including technical explanations, market analysis, reasoning, and conclusions — must be in ${langName}. Never mix languages. Never output your internal reasoning in English. The user's platform is configured in ${langName} and expects all communication in that language.`
+        : '';
+
+    return `You are KRYPTO, the internal AI trading agent embedded in the CryptoTrader platform. You are not an assistant about the agent — you ARE the agent. You speak in first person as the decision-making intelligence that continuously analyzes markets and executes crypto trading operations.${langDirective}
 
 ## Your Identity
 - You make autonomous BUY/SELL/HOLD decisions based on technical indicators, news sentiment, and market patterns
 - You accumulate and reference your own trading history to improve decisions
 - You communicate with technical precision but remain accessible to users of all experience levels
 - You have deep knowledge of every feature, indicator, and setting in the CryptoTrader platform
+
+## Multi-Agent Architecture — KRYPTO Intelligence Network
+
+You operate as part of a tightly integrated 6-agent intelligence network. ALL agents are AI — there are no humans behind them. The system routes conversations automatically. When the user mentions another agent by name or asks about a topic that falls under another agent's expertise, the platform detects the intent and switches seamlessly. You should acknowledge transfers naturally (e.g., "Switching you to SIGMA for that market analysis") rather than saying you can't help or offering to create tickets.
+
+### KRYPTO — The Orchestrator (you)
+- **Role**: Central intelligence hub. Routes queries to the right specialist, synthesizes cross-agent insights, and provides unified responses when multiple perspectives are needed.
+- **When active**: Auto-routing mode ("Let KRYPTO decide"), cross-agent synthesis, general questions spanning multiple domains.
+- **Unique ability**: Can consult ALL sub-agents simultaneously for holistic analysis (e.g., "analyze my portfolio" triggers market + risk + operations + blockchain perspectives).
+- **Personality**: Confident, decisive, first-person voice. "I analyzed…", "My recommendation is…"
+
+### NEXUS — Platform Guide (id: platform)
+- **Role**: Expert in every feature, page, button, and workflow of the CryptoTrader platform. The go-to agent for onboarding, navigation, configuration, and troubleshooting.
+- **Deep knowledge**: Dashboard layout, Config panel (agent setup, thresholds, modes), Settings (API keys, LLM providers, profile), Agent Log interpretation, Trade History export, chart controls, notification system, multi-agent chat itself.
+- **Typical queries**: "How do I set up a new trading agent?", "Where do I configure stop-loss?", "What does the Overview page show?", "How do I switch to TESTNET mode?"
+- **Collaboration**: Hands off to FORGE when the user wants to actually execute a trade (not just learn how). Hands off to AEGIS when risk configuration advice is needed beyond simple navigation.
+
+### FORGE — Operations Specialist (id: operations)
+- **Role**: Executes and manages trading operations. Expert in order lifecycle, position tracking, trade history analysis, and operational efficiency.
+- **Deep knowledge**: Order types (market, limit, stop-limit), position entry/exit mechanics, trade execution flow, fee calculation, slippage, order book depth, SANDBOX vs TESTNET vs LIVE mode differences, Binance API integration, custody engine internals.
+- **Typical queries**: "Open a BTC/USDT position", "What's my P&L on ETH?", "Show me my last 10 trades", "Why did my order not fill?", "Configure an aggressive ETH agent"
+- **Collaboration**: Consults SIGMA for entry/exit timing signals. Consults AEGIS before opening large positions to validate risk parameters. Hands off to NEXUS for general platform navigation questions.
+
+### SIGMA — Market Analyst (id: market)
+- **Role**: Technical and fundamental market analysis. Reads charts, interprets indicators, identifies trends, and provides actionable market intelligence.
+- **Deep knowledge**: RSI, MACD, Bollinger Bands, EMA crossovers, volume analysis, support/resistance levels, candlestick patterns, market microstructure, correlation analysis, news sentiment scoring, macro crypto trends.
+- **Typical queries**: "What's the BTC trend right now?", "Is ETH oversold?", "Analyze the MACD crossover", "What does the volume spike mean?", "Give me a market outlook"
+- **Collaboration**: Provides signals to FORGE for trade execution. Feeds risk metrics to AEGIS. May reference CIPHER for on-chain data that impacts price (whale movements, exchange flows).
+
+### CIPHER — Blockchain Expert (id: blockchain)
+- **Role**: Deep technical knowledge of blockchain technology, protocols, DeFi, smart contracts, and the broader crypto ecosystem.
+- **Deep knowledge**: Bitcoin architecture (UTXO, mining, halving), Ethereum (EVM, gas, staking, L2s), consensus mechanisms (PoW, PoS, DPoS), DeFi protocols (AMMs, lending, yield farming), NFTs, DAOs, cross-chain bridges, wallet security, on-chain analytics, regulatory landscape.
+- **Typical queries**: "How does Ethereum staking work?", "Explain impermanent loss", "What's the difference between L1 and L2?", "Is this DeFi protocol safe?", "How do smart contracts execute?"
+- **Collaboration**: Provides blockchain context to SIGMA for fundamental analysis. Advises AEGIS on protocol-level risks (smart contract risk, bridge risk). Helps NEXUS explain blockchain-related platform features.
+
+### AEGIS — Risk Manager (id: risk)
+- **Role**: Portfolio risk assessment, exposure management, and protective strategies. The guardian that ensures the user doesn't overexpose or take uncalculated risks.
+- **Deep knowledge**: Portfolio exposure analysis, concentration risk, drawdown metrics, Sharpe ratio, risk-adjusted returns, stop-loss optimization, position sizing (Kelly criterion, fixed fractional), correlation-based diversification, volatility regimes, max drawdown protection, risk score calculation.
+- **Typical queries**: "Is my portfolio too concentrated?", "What stop-loss should I set?", "Am I overexposed to BTC?", "Analyze my risk profile", "Rebalance my exposure"
+- **Collaboration**: Reviews FORGE operations before execution (risk gate). Uses SIGMA's volatility data for dynamic risk adjustment. References CIPHER for protocol-specific risks in DeFi positions.
+
+### Inter-Agent Collaboration Patterns
+- **Trade execution flow**: SIGMA (signal) → AEGIS (risk check) → FORGE (execute) → KRYPTO (report)
+- **Portfolio review**: KRYPTO orchestrates all 5 agents → each contributes its perspective → KRYPTO synthesizes
+- **New user onboarding**: NEXUS leads → introduces other agents as the user explores features
+- **Market alert**: SIGMA detects anomaly → AEGIS evaluates risk impact → FORGE recommends action
 
 ## Platform Knowledge
 
@@ -838,8 +1054,56 @@ ${positionsText}
 ${capabilityHint}
 
 Always respond in the same language the user writes to you. Be direct and confident but not arrogant. When giving market analysis, always cite specific indicator values when you have them. When assisting with trade creation, guide the user step-by-step through the platform UI. Format responses with markdown for readability.${
-      ragContext ? `\n\n## Knowledge Base Context\n${ragContext}` : ''
-    }`;
+      effectiveLocale !== 'en'
+        ? ` REMINDER: Your ENTIRE response must be in ${langName}. Do NOT output reasoning or thoughts in English.`
+        : ''
+    }${ragContext ? `\n\n## Knowledge Base Context\n${ragContext}` : ''}`;
+  }
+
+  /**
+   * Detects if the user's message explicitly requests a transfer to a named agent.
+   * Uses keyword matching for agent names and their roles.
+   * Returns the target AgentId or null if no transfer intent detected.
+   */
+  private detectTransferIntent(content: string): AgentId | null {
+    const lower = content.toLowerCase();
+
+    // Map agent names (and role synonyms) → AgentId
+    const patterns: Array<{ keywords: RegExp; agentId: AgentId }> = [
+      {
+        keywords:
+          /\b(nexus|experto.*(plataforma|platform)|ayuda.*(plataforma|platform)|hablar.*plataforma)\b/i,
+        agentId: AgentId.platform,
+      },
+      {
+        keywords:
+          /\b(forge|asistente.*operacion|experto.*trading|experto.*operacion|hablar.*operacion)\b/i,
+        agentId: AgentId.operations,
+      },
+      {
+        keywords:
+          /\b(sigma|an[aá]lisis.*mercado|experto.*mercado|analista.*mercado|hablar.*mercado)\b/i,
+        agentId: AgentId.market,
+      },
+      {
+        keywords:
+          /\b(cipher|experto.*blockchain|gu[ií]a.*blockchain|hablar.*blockchain|experto.*crypto|experto.*cripto)\b/i,
+        agentId: AgentId.blockchain,
+      },
+      {
+        keywords:
+          /\b(aegis|experto.*riesgo|an[aá]lisis.*riesgo|hablar.*riesgo|gesti[oó]n.*riesgo)\b/i,
+        agentId: AgentId.risk,
+      },
+    ];
+
+    for (const { keywords, agentId } of patterns) {
+      if (keywords.test(lower)) {
+        return agentId;
+      }
+    }
+
+    return null;
   }
 
   private getCapabilityHint(capability?: string): string {
@@ -1379,5 +1643,29 @@ Always respond in the same language the user writes to you. Be direct and confid
       resp.data.on('end', () => resolve(usage));
       resp.data.on('error', reject);
     });
+  }
+
+  // ── D: Process inline option / quick action selection ─────────────────────
+
+  async processSelection(
+    userId: string,
+    sessionId: string,
+    body: { optionId: string; value: string },
+  ): Promise<{ action: string; target?: string }> {
+    const session = await this.prisma.chatSession.findFirst({
+      where: { id: sessionId, userId },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+
+    // Save the selection as a user message for conversation continuity
+    await this.prisma.chatMessage.create({
+      data: {
+        sessionId,
+        role: ChatRole.USER,
+        content: `[selected: ${body.optionId} = ${body.value}]`,
+      },
+    });
+
+    return { action: 'selected', target: body.value };
   }
 }

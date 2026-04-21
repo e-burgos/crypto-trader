@@ -113,16 +113,12 @@ export class TradingController {
     body: {
       asset: string;
       riskProfile: string;
-      primaryProvider?: string;
-      primaryModel?: string;
     },
   ) {
     return {
       name: generateAgentName({
         asset: body.asset,
         riskProfile: body.riskProfile ?? 'MODERATE',
-        primaryProvider: body.primaryProvider,
-        primaryModel: body.primaryModel,
       }),
     };
   }

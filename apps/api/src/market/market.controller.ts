@@ -83,8 +83,8 @@ export class MarketController {
     schema: {
       type: 'object',
       properties: {
-        intervalMinutes: { type: 'number', example: 30 },
-        newsCount: { type: 'number', example: 40 },
+        intervalMinutes: { type: 'number', example: 10 },
+        newsCount: { type: 'number', example: 15 },
         enabledSources: { type: 'array', items: { type: 'string' } },
         onlySummary: { type: 'boolean', example: true },
         newsWeight: { type: 'number', example: 15 },
@@ -102,13 +102,9 @@ export class MarketController {
       onlySummary?: boolean;
       botEnabled?: boolean;
       newsWeight?: number;
-      primaryProvider?: string | null;
-      primaryModel?: string | null;
-      fallbackProvider?: string | null;
-      fallbackModel?: string | null;
     },
   ) {
-    return this.marketService.updateNewsConfig(user.userId, body as any);
+    return this.marketService.updateNewsConfig(user.userId, body);
   }
 
   @Get('news/analysis')
@@ -133,30 +129,9 @@ export class MarketController {
   @ApiOperation({
     summary: 'Ejecutar análisis IA sobre el último análisis guardado',
   })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['provider'],
-      properties: {
-        provider: { type: 'string', example: 'CLAUDE' },
-        model: {
-          type: 'string',
-          example: 'claude-sonnet-4-20250514',
-          nullable: true,
-        },
-      },
-    },
-  })
   @ApiResponse({ status: 200 })
-  analyzeSentiment(
-    @CurrentUser() user: RequestUser,
-    @Body() body: { provider: string; model?: string },
-  ) {
-    return this.marketService.analyzeSentiment(
-      user.userId,
-      body.provider,
-      body.model,
-    );
+  analyzeSentiment(@CurrentUser() user: RequestUser) {
+    return this.marketService.analyzeSentiment(user.userId);
   }
 
   @Get('snapshot/:symbol')

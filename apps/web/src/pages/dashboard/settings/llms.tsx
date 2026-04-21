@@ -8,6 +8,7 @@ import {
   ExternalLink,
   BarChart3,
   Star,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button, Input } from '@crypto-trader/ui';
 import { cn } from '../../../lib/utils';
@@ -107,6 +108,7 @@ export function SettingsLLMsPage() {
 
   // LLM Keys
   const { data: llmKeys = [] } = useLLMKeys();
+  const hasActiveKey = llmKeys.some((k) => k.isActive);
   const { mutate: saveLLMKey, isPending: savingLLM } = useSetLLMKey();
   const { mutate: deleteLLMKey } = useDeleteLLMKey();
   const { mutate: updateLLMModel } = useUpdateLLMModel();
@@ -155,6 +157,26 @@ export function SettingsLLMsPage() {
           {t('settings.llmsSubtitle')}
         </p>
       </div>
+
+      {/* No-key banner */}
+      {!hasActiveKey && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <div>
+            <p className="font-medium text-amber-300">
+              {t('settings.llms.noKeyBannerTitle', {
+                defaultValue: 'API key required',
+              })}
+            </p>
+            <p className="mt-0.5 text-amber-400/80">
+              {t('settings.llms.noKeyBannerDesc', {
+                defaultValue:
+                  'You need to configure at least one active API key to access the platform. Add your OpenRouter key below and test the connection.',
+              })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* AI Subtab Navigation */}
       <div className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1">

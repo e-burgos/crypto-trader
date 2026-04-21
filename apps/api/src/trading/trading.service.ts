@@ -180,10 +180,6 @@ export class TradingService implements OnModuleInit {
         minIntervalMinutes: incoming.minIntervalMinutes,
         intervalMode: incoming.intervalMode as any,
         orderPriceOffsetPct: incoming.orderPriceOffsetPct,
-        primaryProvider: dto.primaryProvider ?? null,
-        primaryModel: dto.primaryModel ?? null,
-        fallbackProvider: dto.fallbackProvider ?? null,
-        fallbackModel: dto.fallbackModel ?? null,
         riskProfile: (dto.riskProfile ?? 'MODERATE') as any,
       },
     });

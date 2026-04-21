@@ -16,9 +16,11 @@ export interface AdminStats {
 export interface AuditLog {
   id: string;
   action: string;
-  userId: string;
-  metadata: Record<string, unknown>;
+  adminId: string;
+  details: Record<string, unknown>;
   createdAt: string;
+  admin: { email: string };
+  target?: { email: string } | null;
 }
 
 export interface AdminUser {

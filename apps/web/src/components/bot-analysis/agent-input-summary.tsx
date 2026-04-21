@@ -23,6 +23,7 @@ export function AgentInputSummary({
   livePrice,
   newsAnalysis,
   hasAi,
+  hasSigma,
   botNewsEnabled,
   newsWeight,
   agentStatuses,
@@ -32,6 +33,7 @@ export function AgentInputSummary({
   livePrice: number;
   newsAnalysis: NewsAnalysisData;
   hasAi: boolean;
+  hasSigma?: boolean;
   botNewsEnabled: boolean;
   newsWeight: number;
   agentStatuses: AgentStatus[];
@@ -115,8 +117,8 @@ export function AgentInputSummary({
             },
             {
               label: t('botAnalysis.inputAnalysisMethod'),
-              value: hasAi ? '✦ IA' : '⊟ Keyword',
-              color: hasAi ? 'text-violet-400' : 'text-sky-400',
+              value: hasSigma ? '⚡ SIGMA' : hasAi ? '✦ IA' : '⊟ Keyword',
+              color: hasSigma ? 'text-violet-400' : hasAi ? 'text-violet-400' : 'text-sky-400',
             },
             {
               label: t('botAnalysis.inputNewsSentiment'),

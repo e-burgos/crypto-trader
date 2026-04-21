@@ -43,7 +43,7 @@ export class NewsAnalysisScheduler implements OnModuleInit, OnModuleDestroy {
       const now = Date.now();
 
       for (const cfg of configs) {
-        const intervalMs = (cfg.intervalMinutes ?? 30) * 60 * 1000;
+        const intervalMs = (cfg.intervalMinutes ?? 10) * 60 * 1000;
         const latest = await this.prisma.newsAnalysis.findFirst({
           where: { userId: cfg.userId },
           orderBy: { analyzedAt: 'desc' },

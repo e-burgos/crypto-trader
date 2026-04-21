@@ -23,6 +23,7 @@ const es = {
     settingsExchange: 'Exchange',
     settingsLLMs: 'LLMs',
     settingsNews: 'Noticias',
+    settingsAgents: 'Agentes IA',
     notifications: 'Notificaciones',
     positions: 'Posiciones',
     news: 'Análisis de Noticias',
@@ -396,24 +397,34 @@ const es = {
     bullish: 'Alcista',
     bearish: 'Bajista',
     lastAiAnalysis: 'Último análisis IA',
+    lastSigmaAnalysis: 'Último análisis SIGMA',
     lastKeywordAnalysis: 'Último análisis Keyword',
     positiveCount: '{{count}} positivas',
     neutralCount: '{{count}} neutrales',
     negativeCount: '{{count}} negativas',
     newsAnalyzed: '{{count}} noticias analizadas',
+    keywordSummary:
+      '{{positive}} positivas, {{negative}} negativas, {{neutral}} neutrales — score {{score}} sobre {{total}} noticias. Sentimiento general: {{overall}}. Análisis keyword-based sobre titulares y resúmenes.',
     noAnalysis: 'No hay análisis guardado aún.',
     generateAnalysis: 'Generar análisis',
     keywordAnalysis: 'Análisis Keyword',
     aiAnalysis: 'Análisis IA',
+    updateAiAnalysis: 'Actualizar Análisis IA',
     analyzing: 'Analizando…',
     configureAiAnalysis: 'Configurar Análisis IA',
+    configure: 'Configurar',
     aiReclassifications: '{{count}} reclasificaciones por IA',
+    sigmaReclassifications: '{{count}} reclasificaciones SIGMA vs Keyword',
+    aiAnalysisComplete: 'Análisis IA completado y guardado',
+    aiAnalysisError: 'Error al analizar',
+    keywordAnalysisComplete: 'Análisis keyword actualizado',
+    keywordAnalysisError: 'Error al actualizar el análisis',
     configTitle: 'Configuración de Noticias',
     analysisInterval: 'Intervalo de análisis (min)',
     newsCount: 'Cantidad de noticias',
-    botAnalyzesNews: 'Agente analiza noticias antes de decidir',
+    botAnalyzesNews: 'Incluir noticias en las decisiones',
     botAnalyzesNewsDesc:
-      'El bot incluirá el análisis de noticias al tomar decisiones de trading',
+      'Cuando está activo, SIGMA analiza el sentimiento de noticias como parte del ciclo de decisión. Si se desactiva, el agente decide solo con indicadores técnicos.',
     newsWeight: 'Peso de noticias en la decisión',
     newsWeightDesc:
       'Porcentaje de influencia del sentimiento sobre los indicadores técnicos',
@@ -424,6 +435,8 @@ const es = {
     onlySummaryDesc: 'Excluye noticias sin contenido (recomendado)',
     enabledSources: 'Fuentes habilitadas (todas = vacío)',
     saveConfig: 'Guardar configuración',
+    llmConfigNote:
+      'El modelo IA para análisis de noticias lo gestiona el agente SIGMA. Puedes configurarlo en Configuración → Agentes.',
   },
   admin: {
     title: 'Panel de Administración',
@@ -570,7 +583,18 @@ const es = {
     exchangeSubtitle: 'Configura tus claves API de Binance para operar',
     llmsTitle: 'LLMs',
     llmsSubtitle: 'Configura proveedores de modelos IA y claves API',
+    llms: {
+      noKeyBannerTitle: 'Se requiere una clave API',
+      noKeyBannerDesc:
+        'Necesitas configurar al menos una clave API activa para acceder a la plataforma. Agrega tu clave de OpenRouter y prueba la conexión.',
+    },
     newsSubtitle: 'Configura fuentes de noticias y claves API',
+    newsSubTabs: {
+      config: 'Configuración de Noticias',
+      sources: 'Fuentes de Noticias',
+    },
+    newsConfigSaved: 'Configuración guardada',
+    newsConfigError: 'Error al guardar configuración',
     tabProfile: 'Perfil',
     tabExchange: 'Exchange',
     tabAiModels: 'Modelos IA',
@@ -607,6 +631,9 @@ const es = {
       benefit3: 'Facturación unificada en todos los proveedores',
       benefit4: 'Sin necesidad de gestionar múltiples cuentas',
       primaryModel: 'Modelo Principal',
+      fallbackModel: 'Modelo de Respaldo',
+      fallbackModelNote:
+        'Este modelo se usa solo cuando un agente no tiene configuración específica. Los agentes resuelven su propio LLM via Agent Hub Config.',
       bannerHint:
         'Con OpenRouter puedes acceder a todos estos proveedores con una sola API key.',
       configureCta: 'Configurar OpenRouter',
@@ -662,6 +689,39 @@ const es = {
     providerDistribution: 'Distribución por Proveedor',
     tokensByProvider: 'Tokens por Proveedor',
     costByProvider: 'Costo por Proveedor',
+    agents: {
+      title: 'Configuración de Agentes IA',
+      description:
+        'Asigna proveedor y modelo LLM a cada agente. Las decisiones de trading usan los modelos configurados aquí.',
+      provider: 'Proveedor',
+      model: 'Modelo',
+      usingOverride: 'Personalizado',
+      usingAdmin: 'Default Admin',
+      usingDefault: 'Default Sistema',
+      resetToDefault: 'Restablecer',
+      saved: 'Configuración de agente guardada',
+      resetSuccess: 'Configuración restaurada al default',
+      healthWarning:
+        'Algunos agentes no tienen una clave API activa para su proveedor configurado.',
+      orchestrator: 'Orquestador',
+      specialists: 'Agentes Especialistas',
+      riskManager: 'Gestor de Riesgo',
+      presets: {
+        title: 'Configuración rápida',
+        description:
+          'Aplica un set de modelos preconfigurados a todos los agentes de una sola vez.',
+        free: 'Set Gratuito',
+        freeDesc: 'Solo modelos gratuitos de OpenRouter (sin costo)',
+        optimized: 'Set Optimizado',
+        optimizedDesc: 'Los mejores modelos de pago para cada rol',
+        balanced: 'Set Equilibrado',
+        balancedDesc: 'Mix óptimo calidad/costo (gratuitos + pago)',
+        applied: 'Preset "{{name}}" aplicado a todos los agentes',
+        applying: 'Aplicando preset…',
+        confirm:
+          '¿Aplicar el preset "{{name}}" a todos los agentes? Esto sobreescribirá tu configuración actual.',
+      },
+    },
   },
   providerStatus: {
     title: 'Estado de Proveedores LLM',
@@ -1310,6 +1370,8 @@ const es = {
     deleteConfirm: '¿Eliminar esta conversación? No se puede deshacer.',
     openChat: 'Chat IA KRYPTO',
     openFullscreen: 'Abrir pantalla completa',
+    resolvingAgent: 'Resolviendo agente…',
+    defaultGreeting: '¡Hola, KRYPTO!',
     welcomeTitle: 'Hola, soy KRYPTO',
     welcomeDesc:
       'Tu agente de trading interno. Recuerdo mis decisiones pasadas y puedo ayudarte con la plataforma, mercados, operaciones y blockchain.',
@@ -1830,7 +1892,13 @@ const es = {
     sentimentBull: 'Alcista',
     sentimentBear: 'Bajista',
     sentimentNeutral: 'Neutral',
+    badgeAi: 'IA',
     scoreLabel: 'Score',
+    sigmaTitle: 'Conclusión SIGMA',
+    sigmaCached: 'Reutilizado de otro agente',
+    sigmaImpactPositive: 'Impacto positivo',
+    sigmaImpactNegative: 'Impacto negativo',
+    sigmaImpactNeutral: 'Impacto neutral',
     detectedFactors: 'Factores detectados',
     decisionHistory: 'Historial de Decisiones del Agente',
     records: '{{count}} registros',
@@ -1952,7 +2020,8 @@ const es = {
     newsKeyDeleteError: 'Error al eliminar la clave',
     // platform mode
     modeChangeError: 'Error al cambiar el modo de operación',
-    modeFallback: 'Modo {{mode}} no disponible. Cambiado a Sandbox automáticamente.',
+    modeFallback:
+      'Modo {{mode}} no disponible. Cambiado a Sandbox automáticamente.',
   },
 };
 

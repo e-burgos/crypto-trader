@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Newspaper, AlertCircle, Settings } from 'lucide-react';
+import { Newspaper, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -12,6 +12,8 @@ import {
   useRunAiAnalysis,
   type NewsItem,
 } from '../../hooks/use-market';
+import { useAgentDecisions } from '../../hooks/use-analytics';
+import { usePlatformMode } from '../../hooks/use-user';
 import { toast } from 'sonner';
 import {
   AnalysisSummaryCard,
@@ -19,6 +21,7 @@ import {
   NewsCard,
   type SentimentFilter,
 } from '../../components/news-feed';
+import type { SigmaSentiment } from '../../components/bot-analysis';
 
 gsap.registerPlugin(useGSAP);
 
@@ -31,9 +34,35 @@ export function NewsFeedPage() {
 
   const { data: config } = useNewsConfig();
   const { data: analysis } = useNewsAnalysis();
-  const { data: news = [], isLoading } = useMarketNews(config?.newsCount ?? 40);
+  const { data: news = [], isLoading } = useMarketNews(config?.newsCount ?? 15);
   const runKeyword = useRunKeywordAnalysis();
   const runAi = useRunAiAnalysis();
+
+  // SIGMA sentiment from recent agent decisions
+  const { mode: platformMode } = usePlatformMode();
+  const { data: decisions = [] } = useAgentDecisions(10);
+  const latestSigma: SigmaSentiment | null = (() => {
+    const modeFiltered = decisions.filter((d) => {
+      if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX';
+      return d.mode === platformMode;
+    });
+    for (const d of modeFiltered) {
+      if (d.sigmaSentiment) return d.sigmaSentiment;
+    }
+    return null;
+  })();
+
+  // Timestamp of the decision that carried the SIGMA sentiment
+  const sigmaTimestamp: string | null = (() => {
+    const modeFiltered = decisions.filter((d) => {
+      if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX';
+      return d.mode === platformMode;
+    });
+    for (const d of modeFiltered) {
+      if (d.sigmaSentiment) return d.createdAt;
+    }
+    return null;
+  })();
 
   // Build AI overlay map from persisted analysis
   const AI_VALID_MS = 12 * 60 * 60 * 1000;
@@ -60,28 +89,24 @@ export function NewsFeedPage() {
 
   const handleRunKeyword = () => {
     runKeyword.mutate(undefined, {
-      onSuccess: () => toast.success('Análisis keyword actualizado'),
-      onError: () => toast.error('Error al actualizar el análisis'),
+      onSuccess: () => toast.success(t('news.keywordAnalysisComplete')),
+      onError: () => toast.error(t('news.keywordAnalysisError')),
     });
   };
 
-  const handleRunAi = (provider: string, model: string) => {
-    runAi.mutate(
-      { provider, model },
-      {
-        onSuccess: () => toast.success('Análisis IA completado y guardado'),
-        onError: (err) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes('No LLM credential')) {
-            toast.error(
-              `Sin clave para ${provider}. Configurá en Ajustes > LLM.`,
-            );
-          } else {
-            toast.error(`Error al analizar: ${msg}`);
-          }
-        },
+  const handleRunAi = () => {
+    runAi.mutate(undefined, {
+      onSuccess: () => toast.success(t('news.aiAnalysisComplete')),
+      onError: (err: unknown) => {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err !== null && 'message' in err
+              ? String((err as { message: unknown }).message)
+              : String(err);
+        toast.error(`${t('news.aiAnalysisError')}: ${msg}`);
       },
-    );
+    });
   };
 
   useGSAP(
@@ -106,25 +131,29 @@ export function NewsFeedPage() {
           </div>
           <p className="text-sm text-muted-foreground">{t('news.subtitle')}</p>
         </div>
-
-        <a
-          href="/dashboard/settings/news"
-          className="rounded-lg border border-border p-2 text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
-          title={t('news.configure') ?? 'Configuración de noticias'}
-        >
-          <Settings className="h-4 w-4" />
-        </a>
       </div>
 
-      {/* Filters */}
-      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-fit">
+      {/* Analysis Summary + SIGMA */}
+      <AnalysisSummaryCard
+        analysis={analysis}
+        newsConfig={config}
+        onRunKeyword={handleRunKeyword}
+        isRunningKeyword={runKeyword.isPending}
+        onRunAi={handleRunAi}
+        isRunningAi={runAi.isPending}
+        sigmaSentiment={latestSigma}
+        sigmaTimestamp={sigmaTimestamp}
+      />
+
+      {/* Filters — between summary card and news grid */}
+      <div className="mb-6 flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-full">
         {(['ALL', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'] as SentimentFilter[]).map(
           (s) => (
             <button
               key={s}
               onClick={() => setFilter(s)}
               className={cn(
-                'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+                'rounded-lg px-4 py-1.5 text-sm font-medium w-full transition-colors',
                 filter === s
                   ? 'bg-card text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
@@ -141,16 +170,6 @@ export function NewsFeedPage() {
           ),
         )}
       </div>
-
-      {/* Analysis Summary + AI runner */}
-      <AnalysisSummaryCard
-        analysis={analysis}
-        newsConfig={config}
-        onRunKeyword={handleRunKeyword}
-        isRunningKeyword={runKeyword.isPending}
-        onRunAi={handleRunAi}
-        isRunningAi={runAi.isPending}
-      />
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

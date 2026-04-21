@@ -15,6 +15,7 @@ import {
   ListChecks,
   User,
   Rss,
+  Bot,
 } from 'lucide-react';
 import { Sidebar, type NavGroup } from '@crypto-trader/ui';
 import { useAuthStore } from '../store/auth.store';
@@ -148,6 +149,13 @@ export function SidebarContainer() {
           icon: <Rss className="h-4 w-4" />,
           href: '/dashboard/settings/news',
           active: isActive('/dashboard/settings/news'),
+        },
+        {
+          id: 'settings-agents',
+          label: t('sidebar.settingsAgents'),
+          icon: <Bot className="h-4 w-4" />,
+          href: '/dashboard/settings/agents',
+          active: isActive('/dashboard/settings/agents'),
         },
       ],
     },

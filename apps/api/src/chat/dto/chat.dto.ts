@@ -9,14 +9,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { LLMProvider, AgentId } from '../../../generated/prisma/enums';
 
 export class CreateSessionDto {
-  @ApiProperty({ enum: LLMProvider })
+  @ApiPropertyOptional({ enum: LLMProvider })
+  @IsOptional()
   @IsEnum(LLMProvider)
-  provider!: LLMProvider;
+  provider?: LLMProvider;
 
-  @ApiProperty({ example: 'claude-sonnet-4-20250514' })
+  @ApiPropertyOptional({ example: 'claude-sonnet-4-20250514' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  model!: string;
+  model?: string;
 
   @ApiPropertyOptional({ example: 'Market analysis session' })
   @IsOptional()
@@ -46,21 +47,6 @@ export class SendMessageDto {
   @IsOptional()
   @IsString()
   capability?: string;
-
-  @ApiPropertyOptional({
-    enum: LLMProvider,
-    description: 'Override provider for this message',
-  })
-  @IsOptional()
-  @IsEnum(LLMProvider)
-  providerOverride?: LLMProvider;
-
-  @ApiPropertyOptional({
-    description: 'Override model for this message',
-  })
-  @IsOptional()
-  @IsString()
-  modelOverride?: string;
 }
 
 export class UpdateSessionDto {

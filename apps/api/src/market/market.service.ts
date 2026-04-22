@@ -279,26 +279,6 @@ export class MarketService {
     });
   }
 
-  // ── Resolve LLM for News (uses first active credential) ────────────────────
-
-  async resolveLLMForNews(
-    userId: string,
-  ): Promise<{ provider: LLMProvider; model: string; apiKey: string } | null> {
-    // Resolution now handled centrally by AgentConfigResolver for orchestrated calls.
-    // This method provides a simple fallback for direct news AI analysis.
-    const activeCreds = await this.prisma.lLMCredential.findMany({
-      where: { userId, isActive: true },
-    });
-    if (activeCreds.length === 0) return null;
-
-    const cred = activeCreds[0];
-    return {
-      provider: cred.provider as LLMProvider,
-      model: cred.selectedModel,
-      apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-    };
-  }
-
   // ── AI Sentiment Analysis → updates latest DB record ──────────────────────
 
   async analyzeSentiment(userId: string) {

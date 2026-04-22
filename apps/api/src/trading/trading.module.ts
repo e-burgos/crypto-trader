@@ -9,6 +9,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { UsersModule } from '../users/users.module';
 import { MarketModule } from '../market/market.module';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
+import { AgentConfigModule } from '../agents/agent-config.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { OrchestratorModule } from '../orchestrator/orchestrator.module';
     UsersModule,
     MarketModule,
     OrchestratorModule,
+    AgentConfigModule,
   ],
   controllers: [TradingController],
   providers: [TradingService, TradingProcessor],

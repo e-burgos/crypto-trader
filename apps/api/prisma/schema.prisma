@@ -84,6 +84,7 @@ enum DocumentStatus {
   AGENT_STARTED
   AGENT_STOPPED
   AGENT_KILLED
+  LLM_PROVIDER_DISABLED
 }
 
 enum LLMProvider {
@@ -398,6 +399,18 @@ model AdminAction {
 
   @@index([adminId, createdAt])
   @@map("admin_actions")
+}
+
+/// Global toggle for LLM providers — admin can enable/disable providers platform-wide.
+/// Seeded with all LLMProvider enum values on first migration.
+model PlatformLLMProvider {
+  id        String      @id @default(cuid())
+  provider  LLMProvider @unique
+  isActive  Boolean     @default(true)
+  updatedAt DateTime    @updatedAt
+  updatedBy String?
+
+  @@map("platform_llm_providers")
 }
 
 /// Virtual wallet for SANDBOX paper trading.

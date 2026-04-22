@@ -12,7 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { Button } from '@crypto-trader/ui';
+import { Button, DataTable } from '@crypto-trader/ui';
+import type { DataTableColumn } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
@@ -22,6 +23,7 @@ import {
   useAdminAgentsStatus,
   useKillSwitch,
 } from '../../hooks/use-admin';
+import type { AdminAgentStatus } from '../../hooks/use-admin';
 import { useTranslation } from 'react-i18next';
 import { StatCard } from '../../components/admin';
 
@@ -57,6 +59,72 @@ export function AdminStatsPage() {
     },
     { scope: containerRef, dependencies: [isLoading] },
   );
+
+  const agentColumns: DataTableColumn<AdminAgentStatus>[] = [
+    {
+      key: 'pair',
+      header: t('admin.agentColPair', { defaultValue: 'Pair' }),
+      render: (row) => (
+        <span className="font-medium">
+          {row.asset}/{row.pair}
+        </span>
+      ),
+    },
+    {
+      key: 'user',
+      header: t('admin.agentColUser', { defaultValue: 'User' }),
+      render: (row) => (
+        <span className="text-muted-foreground">
+          {row.email ?? row.userId.slice(0, 8)}
+        </span>
+      ),
+    },
+    {
+      key: 'mode',
+      header: t('admin.agentColMode', { defaultValue: 'Mode' }),
+      render: (row) => (
+        <span
+          className={cn(
+            'rounded-full px-2 py-0.5 text-xs font-semibold uppercase',
+            row.mode === 'SANDBOX'
+              ? 'bg-amber-500/10 text-amber-500'
+              : 'bg-blue-500/10 text-blue-500',
+          )}
+        >
+          {row.mode}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: t('admin.agentColStatus', { defaultValue: 'Status' }),
+      render: (row) => (
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-xs font-semibold',
+            row.isRunning ? 'text-emerald-500' : 'text-muted-foreground',
+          )}
+        >
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              row.isRunning ? 'bg-emerald-500' : 'bg-muted',
+            )}
+          />
+          {row.isRunning ? t('admin.agentRunning') : t('admin.agentStopped')}
+        </span>
+      ),
+    },
+    {
+      key: 'updatedAt',
+      header: t('admin.agentColUpdated', { defaultValue: 'Last Update' }),
+      render: (row) => (
+        <span className="text-xs text-muted-foreground">
+          {row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '–'}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div ref={containerRef} className="p-6 space-y-6">
@@ -159,139 +227,61 @@ export function AdminStatsPage() {
       </div>
 
       {/* Active Agents */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Bot className="h-4 w-4 text-primary" />
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <Bot className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold">
             {t('admin.activeAgentsPlatform')}
-            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-500">
-              {agentStatuses.length}
-            </span>
           </h3>
+          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-500">
+            {agentStatuses.length}
+          </span>
         </div>
-        {agentStatuses.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {t('admin.noActiveAgents', {
-              defaultValue: 'No agents running at this time',
-            })}
-          </p>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="px-3 py-2 font-medium text-muted-foreground">
-                      {t('admin.agentColPair', { defaultValue: 'Pair' })}
-                    </th>
-                    <th className="px-3 py-2 font-medium text-muted-foreground">
-                      {t('admin.agentColUser', { defaultValue: 'User' })}
-                    </th>
-                    <th className="px-3 py-2 font-medium text-muted-foreground">
-                      {t('admin.agentColMode', { defaultValue: 'Mode' })}
-                    </th>
-                    <th className="px-3 py-2 font-medium text-muted-foreground">
-                      {t('admin.agentColStatus', { defaultValue: 'Status' })}
-                    </th>
-                    <th className="px-3 py-2 font-medium text-muted-foreground">
-                      {t('admin.agentColUpdated', {
-                        defaultValue: 'Last Update',
-                      })}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {agentsPaginated.map((s, i) => (
-                    <tr
-                      key={s.configId ?? i}
-                      className="agent-row border-b border-border/50 transition-colors hover:bg-muted/30"
-                    >
-                      <td className="px-3 py-2.5 font-medium">
-                        {s.asset}/{s.pair}
-                      </td>
-                      <td className="px-3 py-2.5 text-muted-foreground">
-                        {s.email ?? s.userId.slice(0, 8)}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={cn(
-                            'rounded-full px-2 py-0.5 text-xs font-semibold uppercase',
-                            s.mode === 'SANDBOX'
-                              ? 'bg-amber-500/10 text-amber-500'
-                              : 'bg-blue-500/10 text-blue-500',
-                          )}
-                        >
-                          {s.mode}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className={cn(
-                            'inline-flex items-center gap-1.5 text-xs font-semibold',
-                            s.isRunning
-                              ? 'text-emerald-500'
-                              : 'text-muted-foreground',
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'h-1.5 w-1.5 rounded-full',
-                              s.isRunning ? 'bg-emerald-500' : 'bg-muted',
-                            )}
-                          />
-                          {s.isRunning
-                            ? t('admin.agentRunning')
-                            : t('admin.agentStopped')}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                        {s.updatedAt
-                          ? new Date(s.updatedAt).toLocaleString()
-                          : '–'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <DataTable<AdminAgentStatus>
+          columns={agentColumns}
+          data={agentsPaginated}
+          rowKey={(row, i) => row.configId ?? `${row.userId}-${i}`}
+          isLoading={!stats && isLoading}
+          emptyMessage={t('admin.noActiveAgents', {
+            defaultValue: 'No agents running at this time',
+          })}
+          skeletonRows={5}
+        />
+        {totalAgentPages > 1 && (
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              {t('admin.agentPageInfo', {
+                defaultValue: 'Showing {{from}}-{{to}} of {{total}} agents',
+                from: (agentPage - 1) * AGENTS_PER_PAGE + 1,
+                to: Math.min(
+                  agentPage * AGENTS_PER_PAGE,
+                  agentStatuses.length,
+                ),
+                total: agentStatuses.length,
+              })}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={agentPage <= 1}
+                onClick={() => setAgentPage((p) => p - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="px-2 text-xs font-medium">
+                {agentPage}/{totalAgentPages}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={agentPage >= totalAgentPages}
+                onClick={() => setAgentPage((p) => p + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-            {totalAgentPages > 1 && (
-              <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                <p className="text-xs text-muted-foreground">
-                  {t('admin.agentPageInfo', {
-                    defaultValue:
-                      'Showing {{from}}-{{to}} of {{total}} agents',
-                    from: (agentPage - 1) * AGENTS_PER_PAGE + 1,
-                    to: Math.min(
-                      agentPage * AGENTS_PER_PAGE,
-                      agentStatuses.length,
-                    ),
-                    total: agentStatuses.length,
-                  })}
-                </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={agentPage <= 1}
-                    onClick={() => setAgentPage((p) => p - 1)}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="px-2 text-xs font-medium">
-                    {agentPage}/{totalAgentPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={agentPage >= totalAgentPages}
-                    onClick={() => setAgentPage((p) => p + 1)}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
 

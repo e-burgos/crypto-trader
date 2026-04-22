@@ -14,6 +14,7 @@ import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
 import { LLMSource } from '../../generated/prisma/enums';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
 
 export type SubAgentId =
   | 'platform'
@@ -415,6 +416,8 @@ export class SubAgentService {
     @Optional() private readonly llmUsageService?: LLMUsageService,
     @Optional()
     private readonly agentConfigResolver?: AgentConfigResolverService,
+    @Optional()
+    private readonly platformLLMProviderService?: PlatformLLMProviderService,
   ) {}
 
   /**
@@ -560,12 +563,20 @@ export class SubAgentService {
     provider: LLMProvider;
     model: string;
   }> {
+    // Helper: validate resolved provider is active at platform level (Spec 38, Fix P4)
+    const assertActive = async (provider: LLMProvider) => {
+      if (this.platformLLMProviderService) {
+        await this.platformLLMProviderService.assertProviderActive(provider);
+      }
+    };
+
     // 1. Explicit override
     if (override) {
       const cred = await this.prisma.lLMCredential.findFirst({
         where: { userId, provider: override.provider as any, isActive: true },
       });
       if (cred) {
+        await assertActive(override.provider);
         const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
         const client =
           override.provider === LLMProvider.OPENROUTER
@@ -594,6 +605,7 @@ export class SubAgentService {
           where: { userId, provider: resolved.provider as any, isActive: true },
         });
         if (cred) {
+          await assertActive(resolved.provider as unknown as LLMProvider);
           const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
           const client =
             resolved.provider === (LLMProvider.OPENROUTER as any)
@@ -627,8 +639,9 @@ export class SubAgentService {
 
     if (allCreds.length > 0) {
       const cred = allCreds[0];
-      const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
       const credProvider = cred.provider as LLMProvider;
+      await assertActive(credProvider);
+      const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
       const client =
         credProvider === LLMProvider.OPENROUTER
           ? new OpenRouterProvider({

@@ -282,6 +282,21 @@ export class MarketService {
   // ── AI Sentiment Analysis → updates latest DB record ──────────────────────
 
   async analyzeSentiment(userId: string) {
+    // C1 TTL: Skip LLM call if AI analysis is still fresh (Spec 38, B.5)
+    const ttlCfg = await this.getNewsConfig(userId);
+    const ttlMs = ttlCfg.intervalMinutes * 60_000;
+    const latestForTtl = await this.getLatestAnalysis(userId);
+    if (latestForTtl?.aiAnalyzedAt) {
+      const age =
+        Date.now() - new Date(latestForTtl.aiAnalyzedAt).getTime();
+      if (age < ttlMs) {
+        this.logger.log(
+          `AI analysis still fresh (${Math.round(age / 1000)}s < ${ttlCfg.intervalMinutes}min TTL). Skipping LLM call.`,
+        );
+        return latestForTtl;
+      }
+    }
+
     // Resolve SIGMA agent config (market analysis agent)
     const agentCfg = await this.agentConfigResolver.resolveConfig(
       'market',

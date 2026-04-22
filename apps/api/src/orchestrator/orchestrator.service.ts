@@ -266,6 +266,17 @@ export class OrchestratorService {
     const forgeOutput = forgeRaw.status === 'fulfilled' ? forgeRaw.value : '{}';
     const aegisOutput = aegisRaw.status === 'fulfilled' ? aegisRaw.value : '{}';
 
+    // A2→DB: Persist fresh sentiment to NewsAnalysis (Spec 38, B.4)
+    if (sentimentRaw.status === 'fulfilled' && !cachedSentiment) {
+      try {
+        await this.persistSentimentAsAIAnalysis(userId, sentimentRaw.value);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to persist sentiment A2→DB: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
     subAgentResults.push(
       { agentId: 'market', task: 'technical_signal', output: techOutput },
       {
@@ -465,6 +476,63 @@ export class OrchestratorService {
       { responses, originalQuery, locale },
       userId,
       false,
+    );
+  }
+
+  /**
+   * A2→DB: Persist fresh SIGMA sentiment to NewsAnalysis (Spec 38).
+   * Updates the most recent NewsAnalysis for this user, or creates a minimal one.
+   */
+  private async persistSentimentAsAIAnalysis(
+    userId: string,
+    sentimentResult: string,
+  ): Promise<void> {
+    const parsed = safeParseJson<{
+      score?: number;
+      overallSentiment?: string;
+      summary?: string;
+      headlines?: { id: string; sentiment: string; reasoning?: string }[];
+    }>(sentimentResult, {});
+
+    if (!parsed.score && !parsed.overallSentiment) return;
+
+    const latest = await this.prisma.newsAnalysis.findFirst({
+      where: { userId },
+      orderBy: { analyzedAt: 'desc' },
+    });
+
+    const aiData = {
+      aiAnalyzedAt: new Date(),
+      aiScore: parsed.score ?? null,
+      aiOverallSentiment: parsed.overallSentiment ?? null,
+      aiSummary: parsed.summary ?? null,
+      aiHeadlines: (parsed.headlines as unknown) ?? undefined,
+    };
+
+    if (latest) {
+      await this.prisma.newsAnalysis.update({
+        where: { id: latest.id },
+        data: aiData,
+      });
+    } else {
+      await this.prisma.newsAnalysis.create({
+        data: {
+          userId,
+          newsCount: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          neutralCount: 0,
+          score: parsed.score ?? 50,
+          overallSentiment: parsed.overallSentiment ?? 'neutral',
+          summary: parsed.summary ?? 'AI analysis from trading orchestrator',
+          headlines: [],
+          ...aiData,
+        },
+      });
+    }
+
+    this.logger.log(
+      `A2→DB: Persisted SIGMA sentiment to NewsAnalysis for user=${userId}`,
     );
   }
 }

@@ -35,6 +35,16 @@ const en = {
     groupAgente: 'Agents',
     groupSettings: 'Settings',
     groupPlatform: 'Platform',
+    // Admin sidebar
+    adminGroupManagement: 'Administration',
+    adminOverview: 'Overview',
+    adminUsers: 'Users',
+    adminAgents: 'Agents',
+    adminAuditLog: 'Audit Log',
+    adminGroupConfig: 'Configuration',
+    adminLLMs: 'LLM Providers',
+    adminProfile: 'Profile',
+    adminGroupPlatform: 'Platform',
   },
   dashboard: {
     overview: 'Overview',
@@ -462,6 +472,53 @@ const en = {
     docProcessing: 'Processing',
     docReady: 'Ready',
     docError: 'Error',
+    // Profile page
+    profileTitle: 'Admin Profile',
+    profileSubtitle: 'Manage your administrator account settings',
+    accountInfo: 'Account Information',
+    memberSince: 'Member since',
+    // Notifications
+    notificationsSubtitle: 'Platform notifications and alerts',
+    // LLM Management
+    llmTitle: 'LLM Provider Management',
+    llmSubtitle:
+      'Configure default AI models and monitor provider availability across the platform',
+    llmProviderStatus: 'Provider Availability',
+    llmDefaultModels: 'Default Agent Models',
+    llmDefaultModelsDesc:
+      'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
+    // Audit Log
+    auditLogTitle: 'Audit Log',
+    auditLogSubtitle: 'Complete history of administrative actions on the platform',
+    auditLogEntries: '{{count}} entries',
+    auditAction: 'Action',
+    auditAdmin: 'Administrator',
+    auditDate: 'Date',
+    // Help
+    helpTitle: 'Admin Help & Guide',
+    helpSubtitle: 'Quick reference for platform administration',
+    helpDashboard: 'Dashboard',
+    helpDashboardDesc:
+      'View platform stats, active agents, and use the emergency kill switch.',
+    helpUsers: 'User Management',
+    helpUsersDesc:
+      'Activate or deactivate user accounts. View registration dates and roles.',
+    helpAgents: 'Agent Management',
+    helpAgentsDesc:
+      'Monitor AI agent status, upload documents, and configure agent models.',
+    helpLLMs: 'LLM Providers',
+    helpLLMsDesc:
+      'Set default AI models per agent and monitor provider availability.',
+    helpAuditLog: 'Audit Log',
+    helpAuditLogDesc:
+      'Review all administrative actions with timestamps and admin details.',
+    helpKillSwitch: 'Kill Switch',
+    helpKillSwitchDesc:
+      'Emergency stop for all trading agents across all users. Use with caution.',
+    helpGeneral: 'Platform Documentation',
+    helpGeneralDesc:
+      'For detailed documentation about the trading platform, agent behavior, and configuration concepts, visit the full help guide.',
+    helpGoToGuide: 'Go to Help & Guide',
   },
   connections: {
     title: 'Connection Status',

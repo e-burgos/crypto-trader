@@ -35,6 +35,16 @@ const es = {
     groupAgente: 'Agentes',
     groupSettings: 'Ajustes',
     groupPlatform: 'Plataforma',
+    // Admin sidebar
+    adminGroupManagement: 'Administración',
+    adminOverview: 'Vista General',
+    adminUsers: 'Usuarios',
+    adminAgents: 'Agentes',
+    adminAuditLog: 'Registro de Auditoría',
+    adminGroupConfig: 'Configuración',
+    adminLLMs: 'Proveedores LLM',
+    adminProfile: 'Perfil',
+    adminGroupPlatform: 'Plataforma',
   },
   dashboard: {
     overview: 'Resumen',
@@ -465,6 +475,53 @@ const es = {
     docProcessing: 'Procesando',
     docReady: 'Listo',
     docError: 'Error',
+    // Profile page
+    profileTitle: 'Perfil de Administrador',
+    profileSubtitle: 'Gestiona la configuración de tu cuenta de administrador',
+    accountInfo: 'Información de la Cuenta',
+    memberSince: 'Miembro desde',
+    // Notifications
+    notificationsSubtitle: 'Notificaciones y alertas de la plataforma',
+    // LLM Management
+    llmTitle: 'Gestión de Proveedores LLM',
+    llmSubtitle:
+      'Configura los modelos de IA por defecto y monitorea la disponibilidad de proveedores en la plataforma',
+    llmProviderStatus: 'Disponibilidad de Proveedores',
+    llmDefaultModels: 'Modelos por Defecto de Agentes',
+    llmDefaultModelsDesc:
+      'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
+    // Audit Log
+    auditLogTitle: 'Registro de Auditoría',
+    auditLogSubtitle: 'Historial completo de acciones administrativas en la plataforma',
+    auditLogEntries: '{{count}} entradas',
+    auditAction: 'Acción',
+    auditAdmin: 'Administrador',
+    auditDate: 'Fecha',
+    // Help
+    helpTitle: 'Ayuda del Administrador',
+    helpSubtitle: 'Referencia rápida para la administración de la plataforma',
+    helpDashboard: 'Dashboard',
+    helpDashboardDesc:
+      'Visualiza estadísticas de la plataforma, agentes activos y usa el kill switch de emergencia.',
+    helpUsers: 'Gestión de Usuarios',
+    helpUsersDesc:
+      'Activa o desactiva cuentas de usuario. Consulta fechas de registro y roles.',
+    helpAgents: 'Gestión de Agentes',
+    helpAgentsDesc:
+      'Monitorea el estado de los agentes IA, sube documentos y configura modelos.',
+    helpLLMs: 'Proveedores LLM',
+    helpLLMsDesc:
+      'Establece modelos de IA por defecto por agente y monitorea la disponibilidad.',
+    helpAuditLog: 'Registro de Auditoría',
+    helpAuditLogDesc:
+      'Revisa todas las acciones administrativas con marcas de tiempo y detalles.',
+    helpKillSwitch: 'Kill Switch',
+    helpKillSwitchDesc:
+      'Parada de emergencia para todos los agentes de trading de todos los usuarios. Usar con precaución.',
+    helpGeneral: 'Documentación de la Plataforma',
+    helpGeneralDesc:
+      'Para documentación detallada sobre la plataforma de trading, comportamiento de agentes y conceptos de configuración, visita la guía completa.',
+    helpGoToGuide: 'Ir a Ayuda y Guía',
   },
   connections: {
     title: 'Estado de Conexiones',

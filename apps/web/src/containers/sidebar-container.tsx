@@ -6,14 +6,12 @@ import {
   SlidersHorizontal,
   Briefcase,
   Newspaper,
-  Shield,
   HelpCircle,
   Activity,
   BotMessageSquare,
   Brain,
   Bell,
   ListChecks,
-  User,
   Rss,
   Bot,
 } from 'lucide-react';
@@ -47,7 +45,6 @@ export function SidebarContainer() {
     useSidebarStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'ADMIN';
 
   const isActive = (path: string, end?: boolean) =>
     end ? location.pathname === path : location.pathname.startsWith(path);
@@ -176,18 +173,6 @@ export function SidebarContainer() {
           href: '/help',
           active: isActive('/help'),
         },
-        ...(isAdmin
-          ? [
-              {
-                id: 'admin',
-                label: t('sidebar.admin'),
-                icon: <Shield className="h-4 w-4" />,
-                href: '/admin',
-                active: isActive('/admin'),
-                admin: true,
-              },
-            ]
-          : []),
       ],
     },
   ];

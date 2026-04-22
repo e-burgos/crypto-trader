@@ -26,6 +26,7 @@
 | 34  | feature/ui-design-system-consolidation | 34-ui-design-system-consolidation.md | 33         |
 | 35  | feature/openrouter-integration         | 35-openrouter-integration.md         | 31,34      |
 | 36  | feature/agent-hub-config               | 36-agent-hub-config.md               | 28,31,35   |
+| 37  | feature/role-based-access-separation   | 37-role-based-access-separation.md   | 36         |
 
 ## Flujo recomendado
 

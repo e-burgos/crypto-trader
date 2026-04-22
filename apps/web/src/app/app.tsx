@@ -5,6 +5,7 @@ import { AppThemeProvider } from '../containers/theme-provider-container';
 import { Navbar } from '../containers/navbar-container';
 import { PriceTicker } from '../containers/price-ticker-container';
 import { ProtectedRoute } from '../components/protected-route';
+import { RoleRedirect } from '../components/role-redirect';
 import { GuestRoute } from '../components/guest-route';
 import { LandingPage } from '../pages/landing';
 import { LoginPage } from '../pages/login';
@@ -81,7 +82,9 @@ export function App() {
             path="/"
             element={
               <PublicLayout>
-                <LandingPage />
+                <RoleRedirect>
+                  <LandingPage />
+                </RoleRedirect>
               </PublicLayout>
             }
           />
@@ -124,7 +127,7 @@ export function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['TRADER']}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
@@ -172,7 +175,7 @@ export function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['ADMIN']}>
                 <AdminDashboardLayout />
               </ProtectedRoute>
             }

@@ -13,6 +13,8 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { IsEnum, IsString, IsNotEmpty } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import {
   CurrentUser,
   RequestUser,
@@ -33,7 +35,8 @@ class UpsertAgentConfigDto {
 @ApiTags('agent-config')
 @ApiBearerAuth('access-token')
 @Controller('users/me/agents')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('TRADER')
 export class AgentConfigController {
   constructor(
     private readonly agentConfigService: AgentConfigService,

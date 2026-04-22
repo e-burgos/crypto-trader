@@ -483,7 +483,8 @@ const es = {
     usersSubtitle: 'Ver y gestionar los usuarios registrados en la plataforma',
     // Agents page
     agentsPageTitle: 'Gestión de Agentes',
-    agentsPageSubtitle: 'Monitorea y gestiona todos los agentes de trading en la plataforma',
+    agentsPageSubtitle:
+      'Monitorea y gestiona todos los agentes de trading en la plataforma',
     // Profile page
     profileTitle: 'Perfil de Administrador',
     profileSubtitle: 'Gestiona la configuración de tu cuenta de administrador',

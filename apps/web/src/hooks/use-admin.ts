@@ -34,10 +34,13 @@ export interface AdminUser {
 
 export interface AdminAgentStatus {
   userId: string;
+  email: string;
+  configId: string;
   asset: string;
   pair: string;
   isRunning: boolean;
   mode: string;
+  updatedAt: string;
 }
 
 export function useAdminStats() {

@@ -480,7 +480,8 @@ const en = {
     usersSubtitle: 'View and manage registered users on the platform',
     // Agents page
     agentsPageTitle: 'Agent Management',
-    agentsPageSubtitle: 'Monitor and manage all trading agents across the platform',
+    agentsPageSubtitle:
+      'Monitor and manage all trading agents across the platform',
     // Profile page
     profileTitle: 'Admin Profile',
     profileSubtitle: 'Manage your administrator account settings',

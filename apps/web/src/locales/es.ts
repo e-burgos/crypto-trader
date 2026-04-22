@@ -42,7 +42,8 @@ const es = {
     adminAgents: 'Agentes',
     adminAuditLog: 'Registro de Auditoría',
     adminGroupConfig: 'Configuración',
-    adminLLMs: 'Proveedores LLM',
+    adminLLMProviders: 'Proveedores LLM',
+    adminAgentModels: 'Modelos de Agentes',
     adminProfile: 'Perfil',
     adminGroupPlatform: 'Plataforma',
   },
@@ -509,14 +510,19 @@ const es = {
     llmDefaultModels: 'Modelos por Defecto de Agentes',
     llmDefaultModelsDesc:
       'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
+    agentModelsTitle: 'Modelos por Defecto de Agentes',
+    agentModelsSubtitle:
+      'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
     // Audit Log
     auditLogTitle: 'Registro de Auditoría',
     auditLogSubtitle:
       'Historial completo de acciones administrativas en la plataforma',
     auditLogEntries: '{{count}} entradas',
     auditAction: 'Acción',
+    auditTarget: 'Objetivo',
     auditAdmin: 'Administrador',
     auditDate: 'Fecha',
+    auditPageInfo: 'Mostrando {{from}}-{{to}} de {{total}} entradas',
     // Help
     helpTitle: 'Ayuda del Administrador',
     helpSubtitle: 'Referencia rápida para la administración de la plataforma',
@@ -531,7 +537,10 @@ const es = {
       'Monitorea el estado de los agentes IA, sube documentos y configura modelos.',
     helpLLMs: 'Proveedores LLM',
     helpLLMsDesc:
-      'Establece modelos de IA por defecto por agente y monitorea la disponibilidad.',
+      'Configura claves API y monitorea la disponibilidad de proveedores en la plataforma.',
+    helpAgentModels: 'Modelos de Agentes',
+    helpAgentModelsDesc:
+      'Establece modelos de IA por defecto por agente. Los usuarios pueden sobreescribir con su propia configuración.',
     helpAuditLog: 'Registro de Auditoría',
     helpAuditLogDesc:
       'Revisa todas las acciones administrativas con marcas de tiempo y detalles.',
@@ -542,6 +551,34 @@ const es = {
     helpGeneralDesc:
       'Para documentación detallada sobre la plataforma de trading, comportamiento de agentes y conceptos de configuración, visita la guía completa.',
     helpGoToGuide: 'Ir a Ayuda y Guía',
+    // User table columns
+    userColEmail: 'Email',
+    userColRole: 'Rol',
+    userColStatus: 'Estado',
+    userColConfigs: 'Configs',
+    userColPositions: 'Posiciones',
+    userColJoined: 'Registro',
+    userColMode: 'Modo',
+    noUsers: 'No se encontraron usuarios',
+    // User detail modal
+    userDetailDesc:
+      'Resumen de la cuenta del usuario y estadísticas de trading',
+    userStats: 'Estadísticas de Trading',
+    userNetPnl: 'G/P Neto',
+    userOpenPos: 'Posiciones Abiertas',
+    userClosedPos: 'Posiciones Cerradas',
+    userTotalTrades: 'Total de Trades',
+    userLlmCosts: 'Costos de LLM',
+    userLlmTotalCost: 'Costo Total',
+    userLlmTokens: 'Total de Tokens',
+    userLlmCalls: 'Llamadas a API',
+    userAgents: 'Configuraciones de Agentes',
+    userNoAgents: 'Sin configuraciones de agentes',
+    // LLM Management extras
+    llmNoKeyTitle: 'Sin clave API configurada',
+    llmNoKeyDesc:
+      'Configura al menos una clave API de proveedor LLM para ver los modelos disponibles y gestionar los valores por defecto.',
+    llmApiKeys: 'Claves API',
   },
   connections: {
     title: 'Estado de Conexiones',
@@ -699,6 +736,7 @@ const es = {
       providers: 'Otros Proveedores',
       analytics: 'Analíticas de Proveedores',
     },
+    activateProviderFirst: 'Guarda tu clave API para seleccionar un modelo',
     openrouter: {
       recommended: 'Recomendado',
       subtitle:
@@ -1015,6 +1053,7 @@ const es = {
     delete: 'Eliminar',
     edit: 'Editar',
     close: 'Cerrar',
+    view: 'Ver',
     start: 'Iniciar',
     stop: 'Detener',
     status: 'Estado',
@@ -1505,6 +1544,8 @@ const es = {
   },
   agents: {
     selectAgent: 'Elige tu agente',
+    tabStatus: 'Estado de Agentes',
+    tabModels: 'Modelos por Defecto',
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',
     nexusDesc:
       'Experto en la plataforma — funciones, configuración, navegación',

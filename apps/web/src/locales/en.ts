@@ -42,7 +42,8 @@ const en = {
     adminAgents: 'Agents',
     adminAuditLog: 'Audit Log',
     adminGroupConfig: 'Configuration',
-    adminLLMs: 'LLM Providers',
+    adminLLMProviders: 'LLM Providers',
+    adminAgentModels: 'Agent Models',
     adminProfile: 'Profile',
     adminGroupPlatform: 'Platform',
   },
@@ -506,14 +507,19 @@ const en = {
     llmDefaultModels: 'Default Agent Models',
     llmDefaultModelsDesc:
       'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
+    agentModelsTitle: 'Default Agent Models',
+    agentModelsSubtitle:
+      'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
     // Audit Log
     auditLogTitle: 'Audit Log',
     auditLogSubtitle:
       'Complete history of administrative actions on the platform',
     auditLogEntries: '{{count}} entries',
     auditAction: 'Action',
+    auditTarget: 'Target',
     auditAdmin: 'Administrator',
     auditDate: 'Date',
+    auditPageInfo: 'Showing {{from}}-{{to}} of {{total}} entries',
     // Help
     helpTitle: 'Admin Help & Guide',
     helpSubtitle: 'Quick reference for platform administration',
@@ -528,7 +534,10 @@ const en = {
       'Monitor AI agent status, upload documents, and configure agent models.',
     helpLLMs: 'LLM Providers',
     helpLLMsDesc:
-      'Set default AI models per agent and monitor provider availability.',
+      'Configure API keys and monitor provider availability across the platform.',
+    helpAgentModels: 'Agent Models',
+    helpAgentModelsDesc:
+      'Set default AI models per agent. Users can override with their own configuration.',
     helpAuditLog: 'Audit Log',
     helpAuditLogDesc:
       'Review all administrative actions with timestamps and admin details.',
@@ -539,6 +548,33 @@ const en = {
     helpGeneralDesc:
       'For detailed documentation about the trading platform, agent behavior, and configuration concepts, visit the full help guide.',
     helpGoToGuide: 'Go to Help & Guide',
+    // User table columns
+    userColEmail: 'Email',
+    userColRole: 'Role',
+    userColStatus: 'Status',
+    userColConfigs: 'Configs',
+    userColPositions: 'Positions',
+    userColJoined: 'Joined',
+    userColMode: 'Mode',
+    noUsers: 'No users found',
+    // User detail modal
+    userDetailDesc: 'User account overview and trading statistics',
+    userStats: 'Trading Stats',
+    userNetPnl: 'Net P&L',
+    userOpenPos: 'Open Positions',
+    userClosedPos: 'Closed Positions',
+    userTotalTrades: 'Total Trades',
+    userLlmCosts: 'LLM Costs',
+    userLlmTotalCost: 'Total Cost',
+    userLlmTokens: 'Total Tokens',
+    userLlmCalls: 'API Calls',
+    userAgents: 'Agent Configs',
+    userNoAgents: 'No agent configurations',
+    // LLM Management extras
+    llmNoKeyTitle: 'No API key configured',
+    llmNoKeyDesc:
+      'Configure at least one LLM provider API key to see available models and manage agent defaults.',
+    llmApiKeys: 'API Keys',
   },
   connections: {
     title: 'Connection Status',
@@ -695,6 +731,7 @@ const en = {
       providers: 'Other Providers',
       analytics: 'Provider Analytics',
     },
+    activateProviderFirst: 'Save your API key to select a model',
     openrouter: {
       recommended: 'Recommended',
       subtitle:
@@ -1009,6 +1046,7 @@ const en = {
     delete: 'Delete',
     edit: 'Edit',
     close: 'Close',
+    view: 'View',
     start: 'Start',
     stop: 'Stop',
     status: 'Status',
@@ -1490,6 +1528,8 @@ const en = {
   },
   agents: {
     selectAgent: 'Choose your agent',
+    tabStatus: 'Agent Status',
+    tabModels: 'Default Models',
     kryptoDesc: 'Let KRYPTO decide the best agent for your question',
     nexusDesc: 'Platform expert — features, settings, navigation',
     forgeDesc: 'Operations assistant — start/stop agents, manage configs',

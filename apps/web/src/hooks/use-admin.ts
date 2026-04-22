@@ -29,7 +29,35 @@ export interface AdminUser {
   role: string;
   isActive: boolean;
   createdAt: string;
-  configCount?: number;
+  _count?: { tradingConfigs: number; positions: number };
+}
+
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  platformOperationMode: string;
+  createdAt: string;
+  tradingConfigs: {
+    id: string;
+    name: string;
+    asset: string;
+    pair: string;
+    mode: string;
+    isRunning: boolean;
+    riskProfile: string;
+  }[];
+  stats: {
+    totalPositions: number;
+    totalTrades: number;
+    openPositions: number;
+    closedPositions: number;
+    netPnl: number;
+    llmTotalCostUsd: number;
+    llmTotalTokens: number;
+    llmCallCount: number;
+  };
 }
 
 export interface AdminAgentStatus {
@@ -66,6 +94,15 @@ export function useAdminUsers() {
     queryKey: ['admin', 'users'],
     queryFn: () => api.get('/admin/users'),
     staleTime: 60_000,
+  });
+}
+
+export function useAdminUserDetail(userId: string | null) {
+  return useQuery<AdminUserDetail>({
+    queryKey: ['admin', 'users', userId, 'detail'],
+    queryFn: () => api.get(`/admin/users/${userId}/detail`),
+    enabled: !!userId,
+    staleTime: 30_000,
   });
 }
 

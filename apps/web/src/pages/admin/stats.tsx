@@ -5,7 +5,6 @@ import {
   TrendingUp,
   Users,
   BarChart3,
-  Clock,
   Loader2,
   LayoutDashboard,
   Bot,
@@ -19,7 +18,6 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import {
   useAdminStats,
-  useAuditLog,
   useAdminAgentsStatus,
   useKillSwitch,
 } from '../../hooks/use-admin';
@@ -31,7 +29,6 @@ export function AdminStatsPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const { data: stats, isLoading } = useAdminStats();
-  const { data: auditLog = [] } = useAuditLog();
   const { data: agentStatuses = [] } = useAdminAgentsStatus();
   const { mutate: killSwitch, isPending: killing } = useKillSwitch();
   const [confirmKill, setConfirmKill] = useState(false);
@@ -63,7 +60,7 @@ export function AdminStatsPage() {
   const agentColumns: DataTableColumn<AdminAgentStatus>[] = [
     {
       key: 'pair',
-      header: t('admin.agentColPair', { defaultValue: 'Pair' }),
+      header: t('admin.agentColPair'),
       render: (row) => (
         <span className="font-medium">
           {row.asset}/{row.pair}
@@ -72,7 +69,7 @@ export function AdminStatsPage() {
     },
     {
       key: 'name',
-      header: t('admin.agentColName', { defaultValue: 'Config Name' }),
+      header: t('admin.agentColName'),
       render: (row) => (
         <span className="text-muted-foreground truncate max-w-[160px] block">
           {row.configName}
@@ -81,7 +78,7 @@ export function AdminStatsPage() {
     },
     {
       key: 'user',
-      header: t('admin.agentColUser', { defaultValue: 'User' }),
+      header: t('admin.agentColUser'),
       render: (row) => (
         <span className="text-muted-foreground">
           {row.email ?? row.userId.slice(0, 8)}
@@ -90,7 +87,7 @@ export function AdminStatsPage() {
     },
     {
       key: 'mode',
-      header: t('admin.agentColMode', { defaultValue: 'Mode' }),
+      header: t('admin.agentColMode'),
       render: (row) => (
         <span
           className={cn(
@@ -106,7 +103,7 @@ export function AdminStatsPage() {
     },
     {
       key: 'status',
-      header: t('admin.agentColStatus', { defaultValue: 'Status' }),
+      header: t('admin.agentColStatus'),
       render: (row) => (
         <span
           className={cn(
@@ -126,7 +123,7 @@ export function AdminStatsPage() {
     },
     {
       key: 'updatedAt',
-      header: t('admin.agentColUpdated', { defaultValue: 'Last Update' }),
+      header: t('admin.agentColUpdated'),
       render: (row) => (
         <span className="text-xs text-muted-foreground">
           {row.updatedAt ? new Date(row.updatedAt).toLocaleString() : '–'}
@@ -249,16 +246,13 @@ export function AdminStatsPage() {
           data={agentsPaginated}
           rowKey={(row, i) => row.configId ?? `${row.userId}-${i}`}
           isLoading={!stats && isLoading}
-          emptyMessage={t('admin.noActiveAgents', {
-            defaultValue: 'No agents running at this time',
-          })}
+          emptyMessage={t('admin.noActiveAgents')}
           skeletonRows={5}
         />
         {totalAgentPages > 1 && (
           <div className="mt-3 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
               {t('admin.agentPageInfo', {
-                defaultValue: 'Showing {{from}}-{{to}} of {{total}} agents',
                 from: (agentPage - 1) * AGENTS_PER_PAGE + 1,
                 to: Math.min(agentPage * AGENTS_PER_PAGE, agentStatuses.length),
                 total: agentStatuses.length,
@@ -287,37 +281,6 @@ export function AdminStatsPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Audit Log */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="mb-4 font-semibold flex items-center gap-2">
-          <Clock className="h-4 w-4 text-primary" />
-          {t('admin.auditLog')}
-          <span className="text-xs text-muted-foreground font-normal">
-            {t('admin.auditLogNote')}
-          </span>
-        </h3>
-        <div className="max-h-64 overflow-y-auto space-y-1">
-          {auditLog.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t('admin.noAuditEntries')}
-            </p>
-          ) : (
-            auditLog.slice(0, 50).map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-start justify-between gap-3 rounded-md px-2 py-1.5 text-xs hover:bg-muted/30"
-              >
-                <span className="font-mono text-primary">{entry.action}</span>
-                <div className="text-right text-muted-foreground shrink-0">
-                  <div>{entry.admin?.email ?? entry.adminId}</div>
-                  <div>{new Date(entry.createdAt).toLocaleString()}</div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
       </div>
     </div>
   );

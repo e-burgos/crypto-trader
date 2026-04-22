@@ -77,7 +77,7 @@ export function AdminAgentsPage() {
           )}
         >
           <Users className="h-4 w-4" />
-          {t('agents.tabStatus', { defaultValue: 'Agent Status' })}
+          {t('agents.tabStatus')}
         </button>
         <button
           onClick={() => setTab('models')}
@@ -89,7 +89,7 @@ export function AdminAgentsPage() {
           )}
         >
           <Bot className="h-4 w-4" />
-          {t('agents.tabModels', { defaultValue: 'Default Models' })}
+          {t('agents.tabModels')}
         </button>
       </div>
 

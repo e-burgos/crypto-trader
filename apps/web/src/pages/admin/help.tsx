@@ -24,7 +24,12 @@ export function AdminHelpPage() {
     {
       title: t('admin.helpLLMs'),
       desc: t('admin.helpLLMsDesc'),
-      link: '/admin/llm-management',
+      link: '/admin/llm-providers',
+    },
+    {
+      title: t('admin.helpAgentModels'),
+      desc: t('admin.helpAgentModelsDesc'),
+      link: '/admin/agent-models',
     },
     {
       title: t('admin.helpAuditLog'),

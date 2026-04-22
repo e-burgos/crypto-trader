@@ -10,6 +10,7 @@ import {
   Clock,
   Shield,
   User,
+  Key,
 } from 'lucide-react';
 import { Sidebar, type NavGroup } from '@crypto-trader/ui';
 import { useAuthStore } from '../store/auth.store';
@@ -83,11 +84,18 @@ export function AdminSidebarContainer() {
       label: t('sidebar.adminGroupConfig'),
       items: [
         {
-          id: 'admin-llms',
-          label: t('sidebar.adminLLMs'),
-          icon: <BotMessageSquare className="h-4 w-4" />,
-          href: '/admin/llm-management',
-          active: isActive('/admin/llm-management'),
+          id: 'admin-llm-providers',
+          label: t('sidebar.adminLLMProviders'),
+          icon: <Key className="h-4 w-4" />,
+          href: '/admin/llm-providers',
+          active: isActive('/admin/llm-providers'),
+        },
+        {
+          id: 'admin-agent-models',
+          label: t('sidebar.adminAgentModels'),
+          icon: <Bot className="h-4 w-4" />,
+          href: '/admin/agent-models',
+          active: isActive('/admin/agent-models'),
         },
         {
           id: 'admin-profile',

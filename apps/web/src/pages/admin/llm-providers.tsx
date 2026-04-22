@@ -13,7 +13,6 @@ import {
 import { Button, Input } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
-import { AdminAgentConfigCards } from '../../containers/admin/admin-agent-config-cards';
 import { ProviderStatusGrid } from '../../containers/settings/provider-status-grid';
 import { OpenRouterPrimaryTab } from '../../containers/settings/openrouter-primary-tab';
 import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
@@ -86,11 +85,10 @@ const LLM_PROVIDERS = [
 
 type KeySubTab = 'primary' | 'providers';
 
-export function AdminLLMManagementPage() {
+export function AdminLLMProvidersPage() {
   const { t } = useTranslation();
   const [keySubTab, setKeySubTab] = useState<KeySubTab>('primary');
 
-  // LLM Keys hooks
   const { data: llmKeys = [] } = useLLMKeys();
   const hasActiveKey = llmKeys.some((k) => k.isActive);
   const { mutate: saveLLMKey, isPending: savingLLM } = useSetLLMKey();
@@ -131,7 +129,7 @@ export function AdminLLMManagementPage() {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <BotMessageSquare className="h-5 w-5 text-primary" />
+          <Key className="h-5 w-5 text-primary" />
           <h1 className="text-2xl font-bold">{t('admin.llmTitle')}</h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -145,15 +143,10 @@ export function AdminLLMManagementPage() {
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
           <div>
             <p className="font-medium text-amber-300">
-              {t('admin.llmNoKeyTitle', {
-                defaultValue: 'No API key configured',
-              })}
+              {t('admin.llmNoKeyTitle')}
             </p>
             <p className="mt-0.5 text-amber-400/80">
-              {t('admin.llmNoKeyDesc', {
-                defaultValue:
-                  'Configure at least one LLM provider API key to see available models and manage agent defaults.',
-              })}
+              {t('admin.llmNoKeyDesc')}
             </p>
           </div>
         </div>
@@ -163,7 +156,7 @@ export function AdminLLMManagementPage() {
       <div className="rounded-xl border border-border bg-card p-5">
         <h2 className="mb-4 font-semibold flex items-center gap-2">
           <Key className="h-4 w-4 text-primary" />
-          {t('admin.llmApiKeys', { defaultValue: 'API Keys' })}
+          {t('admin.llmApiKeys')}
         </h2>
 
         {/* Sub-tab nav */}
@@ -178,9 +171,7 @@ export function AdminLLMManagementPage() {
             )}
           >
             <Star className="h-4 w-4" />
-            {t('settings.aiSubTabs.primary', {
-              defaultValue: 'Primary Provider',
-            })}
+            {t('settings.aiSubTabs.primary')}
           </button>
           <button
             onClick={() => setKeySubTab('providers')}
@@ -192,9 +183,7 @@ export function AdminLLMManagementPage() {
             )}
           >
             <Key className="h-4 w-4" />
-            {t('settings.aiSubTabs.providers', {
-              defaultValue: 'Other Providers',
-            })}
+            {t('settings.aiSubTabs.providers')}
           </button>
         </div>
 
@@ -362,9 +351,7 @@ export function AdminLLMManagementPage() {
                         />
                       ) : (
                         <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
-                          {t('settings.activateProviderFirst', {
-                            defaultValue: 'Save your API key to select a model',
-                          })}
+                          {t('settings.activateProviderFirst')}
                         </div>
                       )}
                     </div>
@@ -457,15 +444,6 @@ export function AdminLLMManagementPage() {
           {t('admin.llmProviderStatus')}
         </h2>
         <ProviderStatusGrid />
-      </div>
-
-      {/* Default Agent Models */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-2 font-semibold">{t('admin.llmDefaultModels')}</h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          {t('admin.llmDefaultModelsDesc')}
-        </p>
-        <AdminAgentConfigCards />
       </div>
     </div>
   );

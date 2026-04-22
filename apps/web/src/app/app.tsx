@@ -40,7 +40,8 @@ import {
   AdminAgentsPage,
   AdminProfilePage,
   AdminNotificationsPage,
-  AdminLLMManagementPage,
+  AdminLLMProvidersPage,
+  AdminAgentModelsPage,
   AdminAuditLogPage,
   AdminHelpPage,
 } from '../pages/admin/index';
@@ -183,7 +184,8 @@ export function App() {
             <Route index element={<AdminStatsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="agents" element={<AdminAgentsPage />} />
-            <Route path="llm-management" element={<AdminLLMManagementPage />} />
+            <Route path="llm-providers" element={<AdminLLMProvidersPage />} />
+            <Route path="agent-models" element={<AdminAgentModelsPage />} />
             <Route path="audit-log" element={<AdminAuditLogPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
             <Route path="profile" element={<AdminProfilePage />} />

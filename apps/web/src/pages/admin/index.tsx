@@ -3,6 +3,7 @@ export { AdminUsersPage } from './users';
 export { AdminAgentsPage } from './agents';
 export { AdminProfilePage } from './profile';
 export { AdminNotificationsPage } from './notifications';
-export { AdminLLMManagementPage } from './llm-management';
+export { AdminLLMProvidersPage } from './llm-providers';
+export { AdminAgentModelsPage } from './agent-models';
 export { AdminAuditLogPage } from './audit-log';
 export { AdminHelpPage } from './help';

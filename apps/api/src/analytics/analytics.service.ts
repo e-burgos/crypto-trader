@@ -187,7 +187,7 @@ export class AnalyticsService {
         );
         if (sigmaResult?.output && sigmaResult.output !== '{}') {
           try {
-            let cleaned = sigmaResult.output
+            const cleaned = sigmaResult.output
               .replace(/```(?:json)?\s*/gi, '')
               .trim();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -489,7 +489,8 @@ const en = {
       'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
     // Audit Log
     auditLogTitle: 'Audit Log',
-    auditLogSubtitle: 'Complete history of administrative actions on the platform',
+    auditLogSubtitle:
+      'Complete history of administrative actions on the platform',
     auditLogEntries: '{{count}} entries',
     auditAction: 'Action',
     auditAdmin: 'Administrator',

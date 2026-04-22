@@ -6,7 +6,10 @@ interface ProtectedRouteProps {
   allowedRoles?: ('TRADER' | 'ADMIN')[];
 }
 
-export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  allowedRoles,
+}: ProtectedRouteProps) {
   const { isAuthenticated, user } = useAuthStore();
   const location = useLocation();
 
@@ -14,7 +17,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && user?.role && !allowedRoles.includes(user.role as 'TRADER' | 'ADMIN')) {
+  if (
+    allowedRoles &&
+    user?.role &&
+    !allowedRoles.includes(user.role as 'TRADER' | 'ADMIN')
+  ) {
     const homeRoute = user.role === 'ADMIN' ? '/admin' : '/dashboard';
     return <Navigate to={homeRoute} replace />;
   }

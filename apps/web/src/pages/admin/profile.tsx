@@ -72,9 +72,7 @@ export function AdminProfilePage() {
               });
             }}
           >
-            {savingProfile && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
+            {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t('settings.saveProfile')}
           </Button>
         </div>
@@ -91,9 +89,7 @@ export function AdminProfilePage() {
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              {t('settings.email')}
-            </span>
+            <span className="text-muted-foreground">{t('settings.email')}</span>
             <span className="font-medium">{profile?.email ?? '–'}</span>
           </div>
           {profile?.createdAt && (

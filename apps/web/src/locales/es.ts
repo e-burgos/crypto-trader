@@ -492,7 +492,8 @@ const es = {
       'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
     // Audit Log
     auditLogTitle: 'Registro de Auditoría',
-    auditLogSubtitle: 'Historial completo de acciones administrativas en la plataforma',
+    auditLogSubtitle:
+      'Historial completo de acciones administrativas en la plataforma',
     auditLogEntries: '{{count}} entradas',
     auditAction: 'Acción',
     auditAdmin: 'Administrador',

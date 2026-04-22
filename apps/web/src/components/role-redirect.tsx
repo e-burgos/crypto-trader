@@ -13,9 +13,6 @@ export function RoleRedirect({ children }: { children?: React.ReactNode }) {
   }
 
   return (
-    <Navigate
-      to={user?.role === 'ADMIN' ? '/admin' : '/dashboard'}
-      replace
-    />
+    <Navigate to={user?.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />
   );
 }

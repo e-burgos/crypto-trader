@@ -36,6 +36,7 @@ export interface AdminAgentStatus {
   userId: string;
   email: string;
   configId: string;
+  configName: string;
   asset: string;
   pair: string;
   isRunning: boolean;

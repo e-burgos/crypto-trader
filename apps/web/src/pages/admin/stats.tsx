@@ -71,6 +71,15 @@ export function AdminStatsPage() {
       ),
     },
     {
+      key: 'name',
+      header: t('admin.agentColName', { defaultValue: 'Config Name' }),
+      render: (row) => (
+        <span className="text-muted-foreground truncate max-w-[160px] block">
+          {row.configName}
+        </span>
+      ),
+    },
+    {
       key: 'user',
       header: t('admin.agentColUser', { defaultValue: 'User' }),
       render: (row) => (
@@ -230,9 +239,7 @@ export function AdminStatsPage() {
       <div>
         <div className="mb-3 flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold">
-            {t('admin.activeAgentsPlatform')}
-          </h3>
+          <h3 className="font-semibold">{t('admin.activeAgentsPlatform')}</h3>
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-500">
             {agentStatuses.length}
           </span>
@@ -253,10 +260,7 @@ export function AdminStatsPage() {
               {t('admin.agentPageInfo', {
                 defaultValue: 'Showing {{from}}-{{to}} of {{total}} agents',
                 from: (agentPage - 1) * AGENTS_PER_PAGE + 1,
-                to: Math.min(
-                  agentPage * AGENTS_PER_PAGE,
-                  agentStatuses.length,
-                ),
+                to: Math.min(agentPage * AGENTS_PER_PAGE, agentStatuses.length),
                 total: agentStatuses.length,
               })}
             </p>

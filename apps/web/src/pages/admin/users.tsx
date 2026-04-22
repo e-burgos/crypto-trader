@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Users } from 'lucide-react';
 import { Button } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useGSAP } from '@gsap/react';
@@ -26,8 +26,19 @@ export function AdminUsersPage() {
   );
 
   return (
-    <div ref={containerRef} className="p-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div ref={containerRef} className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold">{t('admin.usersTitle')}</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('admin.usersSubtitle')}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {t('admin.registeredUsers', { count: users.length })}
         </p>

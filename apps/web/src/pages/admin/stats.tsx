@@ -7,6 +7,7 @@ import {
   BarChart3,
   Clock,
   Loader2,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
@@ -43,6 +44,17 @@ export function AdminStatsPage() {
 
   return (
     <div ref={containerRef} className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold">{t('admin.overviewTitle')}</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('admin.overviewSubtitle')}
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatCard

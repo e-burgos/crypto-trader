@@ -472,6 +472,15 @@ const en = {
     docProcessing: 'Processing',
     docReady: 'Ready',
     docError: 'Error',
+    // Overview page
+    overviewTitle: 'Platform Overview',
+    overviewSubtitle: 'Real-time metrics and activity across the platform',
+    // Users page
+    usersTitle: 'User Management',
+    usersSubtitle: 'View and manage registered users on the platform',
+    // Agents page
+    agentsPageTitle: 'Agent Management',
+    agentsPageSubtitle: 'Monitor and manage all trading agents across the platform',
     // Profile page
     profileTitle: 'Admin Profile',
     profileSubtitle: 'Manage your administrator account settings',

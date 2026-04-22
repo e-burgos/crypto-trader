@@ -475,6 +475,15 @@ const es = {
     docProcessing: 'Procesando',
     docReady: 'Listo',
     docError: 'Error',
+    // Overview page
+    overviewTitle: 'Vista General de la Plataforma',
+    overviewSubtitle: 'Métricas y actividad en tiempo real de la plataforma',
+    // Users page
+    usersTitle: 'Gestión de Usuarios',
+    usersSubtitle: 'Ver y gestionar los usuarios registrados en la plataforma',
+    // Agents page
+    agentsPageTitle: 'Gestión de Agentes',
+    agentsPageSubtitle: 'Monitorea y gestiona todos los agentes de trading en la plataforma',
     // Profile page
     profileTitle: 'Perfil de Administrador',
     profileSubtitle: 'Gestiona la configuración de tu cuenta de administrador',

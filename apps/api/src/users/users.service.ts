@@ -425,9 +425,82 @@ export class UsersService {
         role: true,
         isActive: true,
         createdAt: true,
+        _count: {
+          select: {
+            tradingConfigs: true,
+            positions: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getUserDetail(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        platformOperationMode: true,
+        createdAt: true,
+        tradingConfigs: {
+          select: {
+            id: true,
+            name: true,
+            asset: true,
+            pair: true,
+            mode: true,
+            isRunning: true,
+            riskProfile: true,
+          },
+          orderBy: { updatedAt: 'desc' },
+        },
+        _count: {
+          select: {
+            positions: true,
+            trades: true,
+          },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    // Aggregate PnL
+    const pnlResult = await this.prisma.position.aggregate({
+      where: { userId, status: 'CLOSED' },
+      _sum: { pnl: true },
+      _count: true,
+    });
+
+    // LLM costs
+    const llmCosts = await this.prisma.llmUsageLog.aggregate({
+      where: { userId },
+      _sum: { costUsd: true, inputTokens: true, outputTokens: true },
+      _count: true,
+    });
+
+    // Open positions count
+    const openPositions = await this.prisma.position.count({
+      where: { userId, status: 'OPEN' },
+    });
+
+    return {
+      ...user,
+      stats: {
+        totalPositions: user._count.positions,
+        totalTrades: user._count.trades,
+        openPositions,
+        closedPositions: pnlResult._count,
+        netPnl: pnlResult._sum.pnl ?? 0,
+        llmTotalCostUsd: llmCosts._sum.costUsd ?? 0,
+        llmTotalTokens:
+          (llmCosts._sum.inputTokens ?? 0) + (llmCosts._sum.outputTokens ?? 0),
+        llmCallCount: llmCosts._count,
+      },
+    };
   }
 
   async setUserStatus(

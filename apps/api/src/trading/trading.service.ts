@@ -495,6 +495,7 @@ export class TradingService implements OnModuleInit {
       userId: config.userId,
       email: config.user.email,
       configId: config.id,
+      configName: config.name || `${config.asset}/${config.pair}`,
       asset: config.asset,
       pair: config.pair,
       mode: config.mode,

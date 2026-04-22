@@ -9,20 +9,21 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const { login, isLoading, error, clearError, user } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const from =
-    (location.state as { from?: { pathname: string } })?.from?.pathname ||
-    '/dashboard';
+    (location.state as { from?: { pathname: string } })?.from?.pathname || '';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     clearError();
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      const role = useAuthStore.getState().user?.role;
+      const defaultRoute = role === 'ADMIN' ? '/admin' : '/dashboard';
+      navigate(from || defaultRoute, { replace: true });
     } catch {
       // error is set in store
     }

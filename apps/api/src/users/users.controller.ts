@@ -419,6 +419,19 @@ export class UsersController {
     return this.usersService.getAllUsers(user.userId);
   }
 
+  @Get('admin/users/:id/detail')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiTags('admin')
+  @ApiOperation({ summary: '[ADMIN] Detalle completo de un usuario' })
+  @ApiParam({ name: 'id', description: 'ID del usuario' })
+  @ApiResponse({ status: 200, description: 'Detalle del usuario' })
+  @ApiResponse({ status: 403, description: 'Acceso denegado' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  getUserDetail(@Param('id') userId: string) {
+    return this.usersService.getUserDetail(userId);
+  }
+
   @Patch('admin/users/:id/status')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')

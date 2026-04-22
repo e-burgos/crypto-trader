@@ -5,6 +5,7 @@ import { AppThemeProvider } from '../containers/theme-provider-container';
 import { Navbar } from '../containers/navbar-container';
 import { PriceTicker } from '../containers/price-ticker-container';
 import { ProtectedRoute } from '../components/protected-route';
+import { RoleRedirect } from '../components/role-redirect';
 import { GuestRoute } from '../components/guest-route';
 import { LandingPage } from '../pages/landing';
 import { LoginPage } from '../pages/login';
@@ -12,6 +13,7 @@ import { RegisterPage } from '../pages/register';
 import { OnboardingPage } from '../pages/onboarding';
 import { HelpPage } from '../pages/help';
 import { DashboardLayout } from '../layouts/dashboard-layout';
+import { AdminDashboardLayout } from '../layouts/admin-dashboard-layout';
 import { OverviewPage } from '../pages/dashboard/overview';
 import { TradeHistoryPage } from '../pages/dashboard/trade-history';
 import { MarketPage } from '../pages/dashboard/market';
@@ -32,10 +34,17 @@ import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { ChatWidget } from '../containers/chat/chat-widget';
 import { NotificationsPage } from '../pages/dashboard/notifications';
-import { AdminLayout } from '../pages/admin/index';
-import { AdminStatsPage } from '../pages/admin/stats';
-import { AdminUsersPage } from '../pages/admin/users';
-import { AdminAgentsPage } from '../pages/admin/agents';
+import {
+  AdminStatsPage,
+  AdminUsersPage,
+  AdminAgentsPage,
+  AdminProfilePage,
+  AdminNotificationsPage,
+  AdminLLMProvidersPage,
+  AdminAgentModelsPage,
+  AdminAuditLogPage,
+  AdminHelpPage,
+} from '../pages/admin/index';
 import { useWebSocket } from '../hooks/use-websocket';
 import { useAuthStore } from '../store/auth.store';
 import { ScrollToTop } from '../components/scroll-to-top';
@@ -74,7 +83,9 @@ export function App() {
             path="/"
             element={
               <PublicLayout>
-                <LandingPage />
+                <RoleRedirect>
+                  <LandingPage />
+                </RoleRedirect>
               </PublicLayout>
             }
           />
@@ -117,7 +128,7 @@ export function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['TRADER']}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
@@ -165,16 +176,20 @@ export function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute>
-                <DashboardLayout />
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDashboardLayout />
               </ProtectedRoute>
             }
           >
-            <Route path="" element={<AdminLayout />}>
-              <Route index element={<AdminStatsPage />} />
-              <Route path="users" element={<AdminUsersPage />} />
-              <Route path="agents" element={<AdminAgentsPage />} />
-            </Route>
+            <Route index element={<AdminStatsPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="agents" element={<AdminAgentsPage />} />
+            <Route path="llm-providers" element={<AdminLLMProvidersPage />} />
+            <Route path="agent-models" element={<AdminAgentModelsPage />} />
+            <Route path="audit-log" element={<AdminAuditLogPage />} />
+            <Route path="notifications" element={<AdminNotificationsPage />} />
+            <Route path="profile" element={<AdminProfilePage />} />
+            <Route path="help" element={<AdminHelpPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

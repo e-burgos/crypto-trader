@@ -30,6 +30,8 @@ import {
 } from './dto/trading-config.dto';
 import { generateAgentName } from './trading-agent-utils';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import {
   CurrentUser,
   RequestUser,
@@ -38,7 +40,8 @@ import {
 @ApiTags('trading')
 @ApiBearerAuth('access-token')
 @Controller('trading')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('TRADER')
 export class TradingController {
   constructor(private readonly tradingService: TradingService) {}
 

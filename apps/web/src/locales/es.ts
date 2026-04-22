@@ -35,6 +35,17 @@ const es = {
     groupAgente: 'Agentes',
     groupSettings: 'Ajustes',
     groupPlatform: 'Plataforma',
+    // Admin sidebar
+    adminGroupManagement: 'Administración',
+    adminOverview: 'Vista General',
+    adminUsers: 'Usuarios',
+    adminAgents: 'Agentes',
+    adminAuditLog: 'Registro de Auditoría',
+    adminGroupConfig: 'Configuración',
+    adminLLMProviders: 'Proveedores LLM',
+    adminAgentModels: 'Modelos de Agentes',
+    adminProfile: 'Perfil',
+    adminGroupPlatform: 'Plataforma',
   },
   dashboard: {
     overview: 'Resumen',
@@ -461,10 +472,113 @@ const es = {
     deactivate: 'Desactivar',
     agentRunning: '● En ejecución',
     agentStopped: '○ Detenido',
+    // Agent table columns
+    agentColPair: 'Par',
+    agentColName: 'Nombre de Config',
+    agentColUser: 'Usuario',
+    agentColMode: 'Modo',
+    agentColStatus: 'Estado',
+    agentColUpdated: 'Última Actualización',
+    noActiveAgents: 'No hay agentes en ejecución en este momento',
+    agentPageInfo: 'Mostrando {{from}}-{{to}} de {{total}} agentes',
     docPending: 'Pendiente',
     docProcessing: 'Procesando',
     docReady: 'Listo',
     docError: 'Error',
+    // Overview page
+    overviewTitle: 'Vista General de la Plataforma',
+    overviewSubtitle: 'Métricas y actividad en tiempo real de la plataforma',
+    // Users page
+    usersTitle: 'Gestión de Usuarios',
+    usersSubtitle: 'Ver y gestionar los usuarios registrados en la plataforma',
+    // Agents page
+    agentsPageTitle: 'Gestión de Agentes',
+    agentsPageSubtitle:
+      'Monitorea y gestiona todos los agentes de trading en la plataforma',
+    // Profile page
+    profileTitle: 'Perfil de Administrador',
+    profileSubtitle: 'Gestiona la configuración de tu cuenta de administrador',
+    accountInfo: 'Información de la Cuenta',
+    memberSince: 'Miembro desde',
+    // Notifications
+    notificationsSubtitle: 'Notificaciones y alertas de la plataforma',
+    // LLM Management
+    llmTitle: 'Gestión de Proveedores LLM',
+    llmSubtitle:
+      'Configura los modelos de IA por defecto y monitorea la disponibilidad de proveedores en la plataforma',
+    llmProviderStatus: 'Disponibilidad de Proveedores',
+    llmDefaultModels: 'Modelos por Defecto de Agentes',
+    llmDefaultModelsDesc:
+      'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
+    agentModelsTitle: 'Modelos por Defecto de Agentes',
+    agentModelsSubtitle:
+      'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
+    // Audit Log
+    auditLogTitle: 'Registro de Auditoría',
+    auditLogSubtitle:
+      'Historial completo de acciones administrativas en la plataforma',
+    auditLogEntries: '{{count}} entradas',
+    auditAction: 'Acción',
+    auditTarget: 'Objetivo',
+    auditAdmin: 'Administrador',
+    auditDate: 'Fecha',
+    auditPageInfo: 'Mostrando {{from}}-{{to}} de {{total}} entradas',
+    // Help
+    helpTitle: 'Ayuda del Administrador',
+    helpSubtitle: 'Referencia rápida para la administración de la plataforma',
+    helpDashboard: 'Dashboard',
+    helpDashboardDesc:
+      'Visualiza estadísticas de la plataforma, agentes activos y usa el kill switch de emergencia.',
+    helpUsers: 'Gestión de Usuarios',
+    helpUsersDesc:
+      'Activa o desactiva cuentas de usuario. Consulta fechas de registro y roles.',
+    helpAgents: 'Gestión de Agentes',
+    helpAgentsDesc:
+      'Monitorea el estado de los agentes IA, sube documentos y configura modelos.',
+    helpLLMs: 'Proveedores LLM',
+    helpLLMsDesc:
+      'Configura claves API y monitorea la disponibilidad de proveedores en la plataforma.',
+    helpAgentModels: 'Modelos de Agentes',
+    helpAgentModelsDesc:
+      'Establece modelos de IA por defecto por agente. Los usuarios pueden sobreescribir con su propia configuración.',
+    helpAuditLog: 'Registro de Auditoría',
+    helpAuditLogDesc:
+      'Revisa todas las acciones administrativas con marcas de tiempo y detalles.',
+    helpKillSwitch: 'Kill Switch',
+    helpKillSwitchDesc:
+      'Parada de emergencia para todos los agentes de trading de todos los usuarios. Usar con precaución.',
+    helpGeneral: 'Documentación de la Plataforma',
+    helpGeneralDesc:
+      'Para documentación detallada sobre la plataforma de trading, comportamiento de agentes y conceptos de configuración, visita la guía completa.',
+    helpGoToGuide: 'Ir a Ayuda y Guía',
+    // User table columns
+    userColEmail: 'Email',
+    userColRole: 'Rol',
+    userColStatus: 'Estado',
+    userColConfigs: 'Configs',
+    userColPositions: 'Posiciones',
+    userColJoined: 'Registro',
+    userColMode: 'Modo',
+    noUsers: 'No se encontraron usuarios',
+    // User detail modal
+    userDetailDesc:
+      'Resumen de la cuenta del usuario y estadísticas de trading',
+    userStats: 'Estadísticas de Trading',
+    userNetPnl: 'G/P Neto',
+    userOpenPos: 'Posiciones Abiertas',
+    userClosedPos: 'Posiciones Cerradas',
+    userTotalTrades: 'Total de Trades',
+    userLlmCosts: 'Costos de LLM',
+    userLlmTotalCost: 'Costo Total',
+    userLlmTokens: 'Total de Tokens',
+    userLlmCalls: 'Llamadas a API',
+    userAgents: 'Configuraciones de Agentes',
+    userNoAgents: 'Sin configuraciones de agentes',
+    // LLM Management extras
+    llmNoKeyTitle: 'Sin clave API configurada',
+    llmNoKeyDesc:
+      'Configura al menos una clave API de proveedor LLM para ver los modelos disponibles y gestionar los valores por defecto.',
+    llmApiKeys: 'Claves API',
   },
   connections: {
     title: 'Estado de Conexiones',
@@ -622,6 +736,7 @@ const es = {
       providers: 'Otros Proveedores',
       analytics: 'Analíticas de Proveedores',
     },
+    activateProviderFirst: 'Guarda tu clave API para seleccionar un modelo',
     openrouter: {
       recommended: 'Recomendado',
       subtitle:
@@ -938,6 +1053,7 @@ const es = {
     delete: 'Eliminar',
     edit: 'Editar',
     close: 'Cerrar',
+    view: 'Ver',
     start: 'Iniciar',
     stop: 'Detener',
     status: 'Estado',
@@ -1428,6 +1544,8 @@ const es = {
   },
   agents: {
     selectAgent: 'Elige tu agente',
+    tabStatus: 'Estado de Agentes',
+    tabModels: 'Modelos por Defecto',
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',
     nexusDesc:
       'Experto en la plataforma — funciones, configuración, navegación',

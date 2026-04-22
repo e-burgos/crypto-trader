@@ -104,6 +104,8 @@ export type { ThemeProviderProps } from './lib/theme/theme-provider';
 // Domain — Market
 export { StatCard } from './lib/domain/market/stat-card';
 export type { StatCardProps } from './lib/domain/market/stat-card';
+export { StatItem } from './lib/domain/market/stat-item';
+export type { StatItemProps } from './lib/domain/market/stat-item';
 export { PriceTicker } from './lib/domain/market/price-ticker';
 export type {
   PriceTickerProps,

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Bot, Users } from 'lucide-react';
 
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
@@ -13,7 +14,6 @@ import type { AgentId } from '@crypto-trader/ui';
 import { AgentCard } from '../../components/admin';
 import { AdminAgentConfigCards } from '../../containers/admin/admin-agent-config-cards';
 import { cn } from '../../lib/utils';
-import { Bot, Users } from 'lucide-react';
 
 gsap.registerPlugin(useGSAP);
 
@@ -53,13 +53,20 @@ export function AdminAgentsPage() {
   ];
 
   return (
-    <div ref={containerRef}>
-      <div className="mb-4">
-        <p className="text-sm text-muted-foreground">{t('agents.pageDesc')}</p>
+    <div ref={containerRef} className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-primary" />
+          <h1 className="text-2xl font-bold">{t('admin.agentsPageTitle')}</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('admin.agentsPageSubtitle')}
+        </p>
       </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1 mb-6 w-fit">
+      <div className="flex gap-1 rounded-xl border border-border bg-muted/40 p-1 w-fit">
         <button
           onClick={() => setTab('status')}
           className={cn(
@@ -70,7 +77,7 @@ export function AdminAgentsPage() {
           )}
         >
           <Users className="h-4 w-4" />
-          {t('agents.tabStatus', { defaultValue: 'Agent Status' })}
+          {t('agents.tabStatus')}
         </button>
         <button
           onClick={() => setTab('models')}
@@ -82,7 +89,7 @@ export function AdminAgentsPage() {
           )}
         >
           <Bot className="h-4 w-4" />
-          {t('agents.tabModels', { defaultValue: 'Default Models' })}
+          {t('agents.tabModels')}
         </button>
       </div>
 

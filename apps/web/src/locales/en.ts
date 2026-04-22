@@ -504,6 +504,17 @@ const en = {
     llmSubtitle:
       'Configure default AI models and monitor provider availability across the platform',
     llmProviderStatus: 'Provider Availability',
+    // Provider Toggle (Spec 38)
+    providerStatusTitle: 'Provider Status',
+    providerStatusSubtitle:
+      'Enable or disable LLM providers platform-wide. Disabling a provider removes all user agent configurations using it.',
+    providerActive: 'Active',
+    providerInactive: 'Disabled',
+    providerToggleConfirmTitle: 'Disable Provider?',
+    providerToggleConfirmDesc:
+      'Disabling {{provider}} will delete all agent configurations using this provider. Affected users will be notified.',
+    providerToggleConfirmAction: 'Disable Provider',
+    providerToggleSuccess: '{{provider}} is now {{state}}',
     llmDefaultModels: 'Default Agent Models',
     llmDefaultModelsDesc:
       'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
@@ -696,6 +707,9 @@ const en = {
       noKeyBannerTitle: 'API key required',
       noKeyBannerDesc:
         'You need to configure at least one active API key to access the platform. Add your OpenRouter key below and test the connection.',
+      providerDisabledByAdmin: 'Disabled by administrator',
+      providerDisabledOverlay:
+        'This provider has been disabled by the platform administrator.',
     },
     newsSubtitle: 'Configure news sources and API keys',
     newsSubTabs: {
@@ -1524,10 +1538,13 @@ const en = {
       CREATE_SESSION_ERROR:
         'Failed to create session. Check your API key in Settings.',
       DELETE_SESSION_ERROR: 'Failed to delete session.',
+      LLM_PROVIDER_DISABLED:
+        'This LLM provider has been disabled by the administrator.',
     },
   },
   agents: {
     selectAgent: 'Choose your agent',
+    providerNeedsAttention: 'Needs attention — provider disabled',
     tabStatus: 'Agent Status',
     tabModels: 'Default Models',
     kryptoDesc: 'Let KRYPTO decide the best agent for your question',

@@ -141,3 +141,48 @@ export function useToggleUserStatus() {
       toast.error(err?.message || i18n.t('toasts.userStatusError')),
   });
 }
+
+// ── Platform LLM Provider Toggle (Spec 38) ──────────────────────────────────
+
+export interface PlatformLLMProviderStatus {
+  provider: string;
+  isActive: boolean;
+  updatedAt: string;
+}
+
+export interface ToggleLLMProviderResult {
+  provider: string;
+  isActive: boolean;
+  affectedAgentConfigs: number;
+  affectedUsers: number;
+}
+
+export function useAdminLLMProviderStatus() {
+  return useQuery<PlatformLLMProviderStatus[]>({
+    queryKey: ['admin', 'llm-providers'],
+    queryFn: () => api.get('/admin/llm-providers'),
+    staleTime: 30_000,
+  });
+}
+
+export function useToggleLLMProvider() {
+  const qc = useQueryClient();
+  return useMutation<ToggleLLMProviderResult, { message?: string }, string>({
+    mutationFn: (provider: string) =>
+      api.put(`/admin/llm-providers/${provider}/toggle`, {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'llm-providers'] });
+      qc.invalidateQueries({ queryKey: ['llm-provider-status'] });
+      toast.success(
+        i18n.t('admin.providerToggleSuccess', {
+          provider: data.provider,
+          state: data.isActive
+            ? i18n.t('admin.providerActive')
+            : i18n.t('admin.providerInactive'),
+        }),
+      );
+    },
+    onError: (err) =>
+      toast.error(err?.message || i18n.t('toasts.genericError')),
+  });
+}

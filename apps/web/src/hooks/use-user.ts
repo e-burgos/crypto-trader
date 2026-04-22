@@ -392,3 +392,18 @@ export function usePlatformMode() {
     isLoading,
   };
 }
+
+// ── Platform LLM Provider Status (user-facing, Spec 38) ─────────────────────
+
+export interface LLMProviderStatus {
+  provider: string;
+  isActive: boolean;
+}
+
+export function usePlatformLLMStatus() {
+  return useQuery<LLMProviderStatus[]>({
+    queryKey: ['llm-provider-status'],
+    queryFn: () => api.get('/llm-providers/status'),
+    staleTime: 60_000,
+  });
+}

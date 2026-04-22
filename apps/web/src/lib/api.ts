@@ -92,6 +92,12 @@ async function request<T>(
     const err = await res
       .json()
       .catch(() => ({ message: 'Error en la solicitud' }));
+
+    // Spec 38: Handle LLM provider disabled (409)
+    if (res.status === 409 && err.code === 'LLM_PROVIDER_DISABLED') {
+      import('sonner').then(({ toast }) => toast.warning(err.message));
+    }
+
     const errorMessage = Array.isArray(err.message)
       ? err.message.join('\n')
       : err.message || 'Error en la solicitud';

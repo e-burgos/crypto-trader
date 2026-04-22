@@ -507,6 +507,17 @@ const es = {
     llmSubtitle:
       'Configura los modelos de IA por defecto y monitorea la disponibilidad de proveedores en la plataforma',
     llmProviderStatus: 'Disponibilidad de Proveedores',
+    // Provider Toggle (Spec 38)
+    providerStatusTitle: 'Estado de Proveedores',
+    providerStatusSubtitle:
+      'Habilita o deshabilita proveedores LLM a nivel de plataforma. Deshabilitar un proveedor elimina todas las configuraciones de agentes que lo usen.',
+    providerActive: 'Activo',
+    providerInactive: 'Deshabilitado',
+    providerToggleConfirmTitle: '¿Deshabilitar Proveedor?',
+    providerToggleConfirmDesc:
+      'Deshabilitar {{provider}} eliminará todas las configuraciones de agentes que usen este proveedor. Los usuarios afectados serán notificados.',
+    providerToggleConfirmAction: 'Deshabilitar Proveedor',
+    providerToggleSuccess: '{{provider}} ahora está {{state}}',
     llmDefaultModels: 'Modelos por Defecto de Agentes',
     llmDefaultModelsDesc:
       'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
@@ -701,6 +712,9 @@ const es = {
       noKeyBannerTitle: 'Se requiere una clave API',
       noKeyBannerDesc:
         'Necesitas configurar al menos una clave API activa para acceder a la plataforma. Agrega tu clave de OpenRouter y prueba la conexión.',
+      providerDisabledByAdmin: 'Deshabilitado por el administrador',
+      providerDisabledOverlay:
+        'Este proveedor ha sido deshabilitado por el administrador de la plataforma.',
     },
     newsSubtitle: 'Configura fuentes de noticias y claves API',
     newsSubTabs: {
@@ -1540,10 +1554,13 @@ const es = {
       CREATE_SESSION_ERROR:
         'No se pudo crear la sesión. Revisá tu clave de API en Ajustes.',
       DELETE_SESSION_ERROR: 'No se pudo eliminar la sesión.',
+      LLM_PROVIDER_DISABLED:
+        'Este proveedor LLM ha sido deshabilitado por el administrador.',
     },
   },
   agents: {
     selectAgent: 'Elige tu agente',
+    providerNeedsAttention: 'Requiere atención — proveedor deshabilitado',
     tabStatus: 'Estado de Agentes',
     tabModels: 'Modelos por Defecto',
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',

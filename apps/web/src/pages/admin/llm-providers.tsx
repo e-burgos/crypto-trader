@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { ProviderStatusGrid } from '../../containers/settings/provider-status-grid';
 import { OpenRouterPrimaryTab } from '../../containers/settings/openrouter-primary-tab';
 import { DynamicModelSelect } from '../../containers/settings/dynamic-model-select';
+import { AdminProviderStatusPanel } from '../../containers/admin/admin-provider-status-panel';
 import {
   useLLMKeys,
   useSetLLMKey,
@@ -151,6 +152,9 @@ export function AdminLLMProvidersPage() {
           </div>
         </div>
       )}
+
+      {/* Provider Status Toggle (Spec 38) */}
+      <AdminProviderStatusPanel />
 
       {/* API Keys Section */}
       <div className="rounded-xl border border-border bg-card p-5">

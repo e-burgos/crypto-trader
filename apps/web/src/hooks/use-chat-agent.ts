@@ -11,6 +11,8 @@ export type AgentId =
 export interface RoutingEvent {
   agentId: AgentId;
   greeting?: string;
+  provider?: string;
+  model?: string;
 }
 
 export interface OrchestratingEvent {
@@ -21,6 +23,8 @@ export interface OrchestratingEvent {
 export interface UseChatAgentReturn {
   selectedAgentId: AgentId | null;
   routedAgentId: AgentId | null;
+  routedProvider: string | null;
+  routedModel: string | null;
   isOrchestrating: boolean;
   orchestratingStep: string;
   selectAgent: (agentId: AgentId | null) => void;
@@ -35,6 +39,8 @@ export function useChatAgent(
 ): UseChatAgentReturn {
   const [selectedAgentId, setSelectedAgentId] = useState<AgentId | null>(null);
   const [routedAgentId, setRoutedAgentId] = useState<AgentId | null>(null);
+  const [routedProvider, setRoutedProvider] = useState<string | null>(null);
+  const [routedModel, setRoutedModel] = useState<string | null>(null);
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [orchestratingStep, setOrchestratingStep] = useState('');
 
@@ -52,6 +58,8 @@ export function useChatAgent(
 
   const handleRoutingEvent = useCallback((event: RoutingEvent) => {
     setRoutedAgentId(event.agentId);
+    if (event.provider) setRoutedProvider(event.provider);
+    if (event.model) setRoutedModel(event.model);
     setIsOrchestrating(false);
   }, []);
 
@@ -70,6 +78,8 @@ export function useChatAgent(
   return {
     selectedAgentId,
     routedAgentId,
+    routedProvider,
+    routedModel,
     isOrchestrating,
     orchestratingStep,
     selectAgent,

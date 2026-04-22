@@ -30,7 +30,7 @@ export function AdminAuditLogPage() {
   );
 
   return (
-    <div ref={containerRef} className="space-y-6">
+    <div ref={containerRef} className="p-6 space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">

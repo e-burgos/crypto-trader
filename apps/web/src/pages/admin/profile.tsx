@@ -12,7 +12,7 @@ export function AdminProfilePage() {
   const [profileForm, setProfileForm] = useState({ email: '', password: '' });
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">

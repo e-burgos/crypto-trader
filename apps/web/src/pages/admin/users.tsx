@@ -26,7 +26,7 @@ export function AdminUsersPage() {
   );
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {t('admin.registeredUsers', { count: users.length })}

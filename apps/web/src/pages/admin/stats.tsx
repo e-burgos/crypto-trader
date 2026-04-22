@@ -42,7 +42,7 @@ export function AdminStatsPage() {
   );
 
   return (
-    <div ref={containerRef} className="space-y-6">
+    <div ref={containerRef} className="p-6 space-y-6">
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <StatCard

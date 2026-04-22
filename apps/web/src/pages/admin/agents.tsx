@@ -53,7 +53,7 @@ export function AdminAgentsPage() {
   ];
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="p-6">
       <div className="mb-4">
         <p className="text-sm text-muted-foreground">{t('agents.pageDesc')}</p>
       </div>

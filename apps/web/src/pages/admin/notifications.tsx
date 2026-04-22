@@ -59,7 +59,7 @@ export function AdminNotificationsPage() {
   const unreadInTab = filtered.filter((n) => !n.read).length;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto max-w-2xl p-6 space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

@@ -127,7 +127,7 @@ export function AdminLLMManagementPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
@@ -363,8 +363,7 @@ export function AdminLLMManagementPage() {
                       ) : (
                         <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
                           {t('settings.activateProviderFirst', {
-                            defaultValue:
-                              'Save your API key to select a model',
+                            defaultValue: 'Save your API key to select a model',
                           })}
                         </div>
                       )}

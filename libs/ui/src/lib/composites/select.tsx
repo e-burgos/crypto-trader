@@ -37,9 +37,21 @@ export function Select({
 }: SelectProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const [dropUp, setDropUp] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
   const selected = options.find((o) => o.value === value);
+
+  // Detect if dropdown should open upward
+  React.useEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const dropdownHeight = 280; // max-h-60 (240px) + search bar + margin
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    setDropUp(spaceBelow < dropdownHeight && spaceAbove > spaceBelow);
+  }, [open]);
 
   React.useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -83,6 +95,7 @@ export function Select({
       )}
       <div className="relative">
         <button
+          ref={triggerRef}
           type="button"
           disabled={disabled}
           onClick={() => setOpen(!open)}
@@ -95,7 +108,12 @@ export function Select({
         >
           <span className="flex items-center gap-2 truncate">
             {selected?.icon}
-            <span className={cn(!selected && 'text-muted-foreground/60')}>
+            <span
+              className={cn(
+                'truncate',
+                !selected && 'text-muted-foreground/60',
+              )}
+            >
               {selected?.label ?? placeholder}
             </span>
           </span>
@@ -108,7 +126,14 @@ export function Select({
         </button>
 
         {open && (
-          <div className="absolute z-50 mt-1.5 w-full overflow-hidden rounded-lg border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95 slide-in-from-top-2">
+          <div
+            className={cn(
+              'absolute z-50 w-full overflow-hidden rounded-lg border border-border bg-card shadow-lg animate-in fade-in-0 zoom-in-95',
+              dropUp
+                ? 'bottom-full mb-1.5 slide-in-from-bottom-2'
+                : 'top-full mt-1.5 slide-in-from-top-2',
+            )}
+          >
             {searchable && (
               <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
                 <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

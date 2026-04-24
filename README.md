@@ -1,17 +1,20 @@
 # Crypto Trader
 
-Plataforma fullstack de **trading autónomo de criptomonedas** impulsada por un agente de IA híbrida. El agente combina análisis técnico clásico (RSI, MACD, Bollinger Bands, EMA, Volumen, S&R) con razonamiento LLM multi-proveedor (Claude, OpenAI, Groq) para tomar decisiones de compra/venta de BTC y ETH en Binance.
+Plataforma fullstack de **trading autónomo de criptomonedas** impulsada por un agente de IA híbrida. El agente combina análisis técnico clásico (RSI, MACD, Bollinger Bands, EMA, Volumen, S&R) con razonamiento LLM multi-proveedor (OpenRouter, Claude, OpenAI, Groq, Gemini, Mistral, Together) para tomar decisiones de compra/venta de BTC y ETH en Binance.
 
 ---
 
 ## Características principales
 
 - **Agente autónomo** — opera sin intervención manual; detecta oportunidades de BTC/ETH vs USDT/USDC.
-- **IA híbrida** — indicadores técnicos + LLM (Claude / OpenAI / Groq) con claves propias por usuario.
+- **IA híbrida** — indicadores técnicos + LLM multi-proveedor (OpenRouter, Claude, OpenAI, Groq, Gemini, Mistral, Together) con claves propias por usuario.
+- **OpenRouter como hub** — 200+ modelos con una sola API key, catálogo dinámico con cache 15min.
+- **Multi-agente configurable** — cada agente (orchestrator, market, risk, technical, fundamentals, chat) tiene su propio par proveedor/modelo.
+- **Toggle admin de proveedores** — el admin puede activar/desactivar proveedores LLM globalmente; los usuarios afectados reciben notificación.
 - **Multi-usuario aislado** — cada usuario gestiona su propia cuenta Binance, configuraciones y fondos.
 - **Tres modos de operación** — Sandbox (paper trading), Testnet (Binance Testnet) y Live.
 - **Seguro por defecto** — sandbox obligatorio al inicio; live requiere activación explícita.
-- **Transparencia total** — cada decisión del agente se registra con indicadores, razonamiento y noticias.
+- **Transparencia total** — cada decisión del agente se registra con indicadores, razonamiento, proveedor/modelo y noticias.
 - **Dashboard en tiempo real** — gráficos de velas, P&L, posiciones abiertas y log de decisiones via WebSocket.
 - **Internacionalización** — interfaz en Español e Inglés (~1400 claves i18n).
 
@@ -19,19 +22,19 @@ Plataforma fullstack de **trading autónomo de criptomonedas** impulsada por un 
 
 ## Stack
 
-| Capa | Tecnología |
-|------|-----------|
-| Monorepo | NX 22 + pnpm workspaces |
-| Frontend | React 19, Vite, React Router, TanStack Query, Zustand |
-| UI / Animaciones | Tailwind CSS, GSAP, Lucide React, lightweight-charts |
-| Backend | NestJS 11, Bull queues, Socket.io |
-| ORM / DB | Prisma 7, PostgreSQL 16 |
-| Cache / Colas | Redis 7 |
-| Auth | JWT (15min) + refresh tokens, bcrypt |
-| LLM | Claude (`@anthropic-ai/sdk`), OpenAI, Groq — por usuario |
-| Trading API | Binance REST + WebSocket |
-| Tests | Vitest (frontend), Jest (backend), Playwright (E2E) |
-| CI/CD | GitHub Actions → GitHub Pages (web) + Railway (api) |
+| Capa             | Tecnología                                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| Monorepo         | NX 22 + pnpm workspaces                                                                       |
+| Frontend         | React 19, Vite, React Router, TanStack Query, Zustand                                         |
+| UI / Animaciones | Tailwind CSS, GSAP, Lucide React, lightweight-charts                                          |
+| Backend          | NestJS 11, Bull queues, Socket.io                                                             |
+| ORM / DB         | Prisma 7, PostgreSQL 16                                                                       |
+| Cache / Colas    | Redis 7                                                                                       |
+| Auth             | JWT (15min) + refresh tokens, bcrypt                                                          |
+| LLM              | OpenRouter (`@openrouter/sdk`), Claude, OpenAI, Groq, Gemini, Mistral, Together — por usuario |
+| Trading API      | Binance REST + WebSocket                                                                      |
+| Tests            | Vitest (frontend), Jest (backend), Playwright (E2E)                                           |
+| CI/CD            | GitHub Actions → GitHub Pages (web) + Railway (api)                                           |
 
 ---
 
@@ -99,7 +102,7 @@ NODE_ENV=development
 PORT=3000
 ```
 
-> Las claves de LLM (Claude, OpenAI, Groq) y NewsAPI se configuran **por usuario** desde la interfaz — no van en `.env`.
+> Las claves de LLM (OpenRouter, Claude, OpenAI, Groq, Gemini, Mistral, Together) y NewsAPI se configuran **por usuario** desde la interfaz — no van en `.env`.
 
 ---
 
@@ -157,6 +160,7 @@ crypto-trader/
 │   ├── analysis/          Indicadores técnicos + integración LLM
 │   ├── data-fetcher/      Binance OHLCV, noticias (CryptoPanic, RSS)
 │   ├── trading-engine/    Lógica de órdenes y posiciones
+│   ├── openrouter/        Catálogo dinámico de modelos OpenRouter (cache + tipos)
 │   ├── shared/            Types, DTOs, constantes, utils
 │   └── ui/                Componentes React compartidos
 ├── docs/
@@ -177,36 +181,37 @@ Cada N minutos (adaptativo por volatilidad):
 1. Fetch OHLCV velas  →  Binance REST API
 2. Calcular indicadores  →  RSI, MACD, BB, EMA (9/21/50/200), Volumen, S&R
 3. Obtener noticias  →  CryptoPanic / NewsData / RSS
-4. LLM analysis  →  Claude / OpenAI / Groq
+4. AgentConfigResolver  →  resolver proveedor/modelo por agente
+5. LLM analysis  →  OpenRouter / Claude / OpenAI / Groq / Gemini / Mistral / Together
          prompt: indicadores + velas + noticias + historial últimas 10 ops
          respuesta: { decision, confidence, reasoning, waitMinutes }
-5. ¿confidence ≥ threshold?  →  Ejecutar orden BUY/SELL en Binance
-6. Guardar AgentDecision + Trade + actualizar Position en DB
-7. Emitir eventos WebSocket al dashboard
-8. Reprogramar próximo análisis según waitMinutes
+6. ¿confidence ≥ threshold?  →  Ejecutar orden BUY/SELL en Binance
+7. Guardar AgentDecision + Trade + actualizar Position en DB
+8. Emitir eventos WebSocket al dashboard
+9. Reprogramar próximo análisis según waitMinutes
 ```
 
 ---
 
 ## Despliegue
 
-| Entorno | Servicio | Trigger |
-|---------|----------|---------|
-| Frontend (prod) | GitHub Pages | Push a `main` |
-| Backend (prod) | Railway | Push a `main` |
-| DB + Cache | Railway (PostgreSQL 16 + Redis 7) | Provisionado manualmente |
-| Local dev | Docker Compose | `pnpm docker:infra` |
+| Entorno         | Servicio                          | Trigger                  |
+| --------------- | --------------------------------- | ------------------------ |
+| Frontend (prod) | GitHub Pages                      | Push a `main`            |
+| Backend (prod)  | Railway                           | Push a `main`            |
+| DB + Cache      | Railway (PostgreSQL 16 + Redis 7) | Provisionado manualmente |
+| Local dev       | Docker Compose                    | `pnpm docker:infra`      |
 
 ---
 
 ## Documentación
 
-| Documento | Descripción |
-|-----------|-------------|
-| [docs/CONSTITUTION.md](docs/CONSTITUTION.md) | Arquitectura, stack detallado, convenciones y decisiones |
-| [docs/specs/crypto-trader-spec.md](docs/specs/crypto-trader-spec.md) | Especificación completa v1.2 |
-| [docs/plans/crypto-trader-implementation-plan.md](docs/plans/crypto-trader-implementation-plan.md) | Plan de implementación por tareas |
-| `http://localhost:3000/api/docs` | Swagger / OpenAPI (solo en dev) |
+| Documento                                                                                          | Descripción                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [docs/CONSTITUTION.md](docs/CONSTITUTION.md)                                                       | Arquitectura, stack detallado, convenciones y decisiones |
+| [docs/specs/crypto-trader-spec.md](docs/specs/crypto-trader-spec.md)                               | Especificación completa v1.2                             |
+| [docs/plans/crypto-trader-implementation-plan.md](docs/plans/crypto-trader-implementation-plan.md) | Plan de implementación por tareas                        |
+| `http://localhost:3000/api/docs`                                                                   | Swagger / OpenAPI (solo en dev)                          |
 
 ---
 

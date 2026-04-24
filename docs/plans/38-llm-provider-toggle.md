@@ -1,6 +1,6 @@
 # Plan 38 — Toggle Global de Proveedores LLM + Hardening LLM Pipeline
 
-**Spec:** docs/specs/branches/38-llm-provider-toggle.md (v2.0)  
+**Spec:** docs/specs/branches/38-llm-provider-toggle.md (v3.0)  
 **Branch:** feature/llm-provider-toggle  
 **Depende de:** Spec 35 (openrouter-integration), Spec 37 (role-based-access-separation)
 
@@ -475,49 +475,224 @@ pnpm nx build web
 
 ---
 
+## Fase E — Modelos OpenRouter dinámicos
+
+### E.1 — Crear librería `libs/openrouter`
+
+Usar `nx g @nx/js:library openrouter` para crear la lib. Estructura:
+
+```
+libs/openrouter/
+  src/
+    index.ts              # barrel export
+    lib/
+      openrouter-models.service.ts  # servicio principal con cache
+      openrouter.types.ts           # tipos compartidos
+      openrouter.constants.ts       # categorías, defaults
+```
+
+**Dependencia:** `@openrouter/sdk` (instalar en workspace root)
+
+**`OpenRouterModelsService`:**
+
+```typescript
+export interface OpenRouterModelInfo {
+  id: string;
+  name: string;
+  contextLength: number;
+  maxCompletionTokens: number | null;
+  pricing: { prompt: number; completion: number };
+  isFree: boolean;
+  categories: string[];
+  supportedParameters: string[];
+  description?: string;
+}
+
+export interface OpenRouterModelsFilter {
+  category?: string;
+  freeOnly?: boolean;
+  textOnly?: boolean;
+  supportedParams?: string[];
+}
+
+export class OpenRouterModelsService {
+  private cache: { data: OpenRouterModelInfo[]; fetchedAt: number } | null =
+    null;
+  private readonly CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
+  async listModels(
+    filter?: OpenRouterModelsFilter,
+  ): Promise<OpenRouterModelInfo[]>;
+  async getFreeModels(): Promise<OpenRouterModelInfo[]>;
+  async getModelById(modelId: string): Promise<OpenRouterModelInfo | null>;
+  async isModelAvailable(modelId: string): Promise<boolean>;
+  invalidateCache(): void;
+}
+```
+
+### E.2 — Backend: nuevo módulo `OpenRouterModule` + endpoint
+
+**Archivo nuevo:** `apps/api/src/openrouter/openrouter.module.ts`
+
+```typescript
+@Module({
+  providers: [OpenRouterModelsApiService],
+  controllers: [OpenRouterModelsController],
+  exports: [OpenRouterModelsApiService],
+})
+export class OpenRouterModule {}
+```
+
+**Archivo nuevo:** `apps/api/src/openrouter/openrouter-models.controller.ts`
+
+```typescript
+@Controller('openrouter')
+@UseGuards(JwtAuthGuard)
+export class OpenRouterModelsController {
+  @Get('models')
+  async getModels(@Query() query: { category?: string; freeOnly?: string })
+}
+```
+
+**Archivo nuevo:** `apps/api/src/openrouter/openrouter-models-api.service.ts`
+
+Wrapper NestJS que usa `OpenRouterModelsService` de `libs/openrouter`.
+
+### E.3 — Refactorizar `model-pricing.ts`
+
+- Eliminar TODAS las entradas de OpenRouter (las que tienen IDs con `/` como `anthropic/claude-sonnet-4.6`)
+- Mantener entradas de providers nativos (CLAUDE, OPENAI, GROQ, GEMINI, MISTRAL, TOGETHER)
+- La info de pricing de OpenRouter viene dinámicamente de la API
+
+### E.4 — Refactorizar `model-ranking.ts`
+
+- Eliminar entradas con `provider: LLMProvider.OPENROUTER` de `MODEL_RANKING[]`
+- Crear función `buildDynamicRanking()` que combina:
+  - `MODEL_RANKING` estático (providers nativos)
+  - Modelos OpenRouter dinámicos convertidos a `ModelRank` con scoring heurístico basado en pricing, context_length, y categoría
+- `suggestModel()` y `suggestModels()` usan el ranking combinado
+
+### E.5 — Refactorizar `agent-presets.ts`
+
+- `PRESET_FREE`, `PRESET_OPTIMIZED`, `PRESET_BALANCED` mantienen IDs estáticos como default
+- Crear función `validatePreset(preset, availableModels)` que verifica cada modelo del preset contra la API
+- Si un modelo no existe → buscar alternativa por categoría/precio similar
+- Esta validación se ejecuta cuando el usuario aplica un preset
+
+### E.6 — Frontend: reemplazar listas hardcoded
+
+**Archivos afectados:**
+
+- `apps/web/src/containers/settings/openrouter-primary-tab.tsx` — eliminar `OPENROUTER_MODELS` hardcoded, usar hook
+- `apps/web/src/components/config/constants.tsx` — eliminar array hardcoded
+- `apps/web/src/components/onboarding/types.ts` — eliminar array hardcoded
+- `apps/web/src/pages/dashboard/settings.tsx` — eliminar array hardcoded
+- `apps/web/src/pages/dashboard/settings/llms.tsx` — eliminar array hardcoded
+
+**Nuevo hook:** `apps/web/src/hooks/use-openrouter-models.ts`
+
+```typescript
+export function useOpenRouterModels(filter?: {
+  category?: string;
+  freeOnly?: boolean;
+}) {
+  return useQuery({
+    queryKey: ['openrouter-models', filter],
+    queryFn: () => api.get('/openrouter/models', { params: filter }),
+    staleTime: 15 * 60 * 1000, // match server cache
+  });
+}
+```
+
+### E.7 — Refactorizar `fetchOpenRouter` en `LLMModelsService`
+
+`apps/api/src/llm/llm-models.service.ts` → `fetchOpenRouter()` ya hace fetch directo con axios. Refactorizar para usar `OpenRouterModelsService` de `libs/openrouter` en vez de duplicar lógica.
+
+### E.8 — Tests
+
+- Test `OpenRouterModelsService`: mock de SDK, cache hit/miss, filtros
+- Test endpoint `GET /openrouter/models`: response shape
+- Test `suggestModel` con ranking dinámico
+- Test `validatePreset` con modelos faltantes
+
+**Verificación Fase E:**
+
+```bash
+pnpm nx test api
+pnpm nx build api
+pnpm nx build web
+```
+
+---
+
 ## Criterios de aceptación
 
 ### Toggle Admin (core)
 
-- [ ] Modelo `PlatformLLMProvider` creado con migración y seed
-- [ ] Admin puede ver tabla con estado de todos los providers en `/admin/llm-providers`
-- [ ] Admin puede toggle on/off cada provider con confirmación
-- [ ] Al desactivar: AgentConfigs limpiados, notificaciones enviadas, AdminAction registrada
-- [ ] `setLLMKey` rechaza providers desactivados con 400
-- [ ] Endpoints LLM-dependientes rechazan providers desactivados con 409
-- [ ] Frontend intercepta 409 y redirige a settings/llms
-- [ ] Cards de providers inactivos aparecen disabled en settings/llms del usuario
-- [ ] Agentes con provider inactivo muestran badge de atención
+- [x] Modelo `PlatformLLMProvider` creado con migración y seed
+- [x] Admin puede ver tabla con estado de todos los providers en `/admin/llm-providers`
+- [x] Admin puede toggle on/off cada provider con confirmación
+- [x] Al desactivar: AgentConfigs limpiados, notificaciones enviadas, AdminAction registrada
+- [x] `setLLMKey` rechaza providers desactivados con 400
+- [x] Endpoints LLM-dependientes rechazan providers desactivados con 409
+- [x] Frontend intercepta 409 y redirige a settings/llms
+- [x] Cards de providers inactivos aparecen disabled en settings/llms del usuario
+- [x] Agentes con provider inactivo muestran badge de atención
 
 ### Fixes Pipeline LLM (P1-P4)
 
-- [ ] P1: `llmApiKey` eliminado de `TradingProcessor` (código muerto removido)
-- [ ] P2: `TradingProcessor` usa `checkHealth(userId)` en vez de `findFirst({ isActive: true })`
-- [ ] P3: `resolveLLMForNews()` eliminado de `MarketService`
-- [ ] P4: `SubAgentService.getProvider()` valida provider activo vía `assertProviderActive()`
+- [x] P1: `llmApiKey` eliminado de `TradingProcessor` (código muerto removido)
+- [x] P2: `TradingProcessor` usa `checkHealth(userId)` en vez de `findFirst({ isActive: true })`
+- [x] P3: `resolveLLMForNews()` eliminado de `MarketService`
+- [x] P4: `SubAgentService.getProvider()` valida provider activo vía `assertProviderActive()`
 
 ### Persistencia sentimiento A2→DB
 
-- [ ] `orchestrateDecision` persiste el sentimiento en `NewsAnalysis` cuando no es cache
-- [ ] `NewsAnalysis.aiAnalyzedAt` refleja la fecha del análisis trading
+- [x] `orchestrateDecision` persiste el sentimiento en `NewsAnalysis` cuando no es cache
+- [x] `NewsAnalysis.aiAnalyzedAt` refleja la fecha del análisis trading
 
 ### TTL análisis noticias C1
 
-- [ ] `analyzeSentiment` verifica `aiAnalyzedAt` vs `intervalMinutes` antes de llamar al LLM
-- [ ] Si el análisis es reciente (trading A2 o manual), retorna el existente sin nueva llamada
+- [x] `analyzeSentiment` verifica `aiAnalyzedAt` vs `intervalMinutes` antes de llamar al LLM
+- [x] Si el análisis es reciente (trading A2 o manual), retorna el existente sin nueva llamada
 
 ### Chat visual B2
 
-- [ ] Evento SSE de routing incluye `provider` y `model`
-- [ ] `useChatAgent` propaga `provider`/`model` del routing event
-- [ ] `AgentHeader` muestra provider/model inmediatamente al cambio de agente
+- [x] Evento SSE de routing incluye `provider` y `model`
+- [x] `useChatAgent` propaga `provider`/`model` del routing event
+- [x] `AgentHeader` muestra provider/model inmediatamente al cambio de agente
+
+### Modelos OpenRouter dinámicos (Fase E)
+
+- [x] Lib `libs/openrouter` creada con `OpenRouterModelsService` y tipos
+- [x] `@openrouter/sdk` instalado en workspace
+- [x] Endpoint `GET /openrouter/models` funcional con cache 15min
+- [x] `model-pricing.ts` sin entradas hardcoded de OpenRouter
+- [x] `model-ranking.ts` sin entradas estáticas de OpenRouter, usa ranking dinámico
+- [x] `agent-presets.ts` tiene validación de disponibilidad de modelos (`buildDynamicPreset` + `resolveFallbackModel`)
+- [x] Frontend: `OPENROUTER_MODELS` eliminado de todos los archivos
+- [x] Frontend: hook `useOpenRouterModels` consume endpoint dinámico
+- [x] `fetchOpenRouter` en `LLMModelsService` usa lib compartida
+- [x] Tests unitarios del servicio de modelos
+
+### Mejoras UX adicionales (Fase F — v4.0)
+
+- [x] SIGMA conclusion bug fix (`effectiveSigma` en news-sentiment-panel y analysis-summary-card)
+- [x] Agent decision model display (`llmProvider`/`llmModel` en DecisionPayload, trading.processor, analytics.service)
+- [x] Vertical tabs layout en settings/agents y admin/agent-models
+- [x] Select auto dropdown direction (up/down)
+- [x] Model name truncation en Select
+- [x] Responsive filters en OpenRouterModelSelect
+- [x] Equal height cards + full-width provider selector
+- [x] ESLint config fix (package.json ignores)
 
 ### General
 
-- [ ] Traducciones completas en.ts + es.ts
-- [ ] Build api + web pasan sin errores
-- [ ] Tests unitarios del service pasan
-- [ ] Todos los procesos LLM usan `AgentConfigResolver` (ver tabla normativa en spec)
+- [x] Traducciones completas en.ts + es.ts
+- [x] Build api + web pasan sin errores
+- [x] Tests unitarios del service pasan (16 suites, 135 tests)
+- [x] Lint pasa en todos los proyectos (10/10, 0 errores)
+- [x] Todos los procesos LLM usan `AgentConfigResolver` (ver tabla normativa en spec)
 
 ---
 
@@ -532,7 +707,7 @@ gh pr create \
   --base main \
   --head feature/llm-provider-toggle \
   --title "feat: Toggle global de proveedores LLM + hardening pipeline — Spec 38" \
-  --body "## Spec 38 — Toggle Global de Proveedores LLM + Hardening LLM Pipeline (v2.0)
+  --body "## Spec 38 — Toggle Global de Proveedores LLM + Hardening LLM Pipeline (v4.0)
 
 ### Cambios principales
 - Nuevo modelo PlatformLLMProvider con seed
@@ -556,12 +731,27 @@ gh pr create \
 - C1 TTL: analyzeSentiment respeta intervalMinutes del usuario
 - B2 visual: Evento SSE routing incluye provider/model para AgentHeader
 
+### Modelos OpenRouter dinámicos (Fase E)
+- Nueva lib libs/openrouter con OpenRouterModelsService + cache 15min
+- Endpoint GET /openrouter/models con filtros
+- Eliminadas todas las entradas hardcoded de OpenRouter en model-pricing/ranking
+- agent-presets con validación dinámica de disponibilidad de modelos
+- Frontend: useOpenRouterModels hook, OPENROUTER_MODELS eliminado
+
+### Mejoras UX adicionales (Fase F — v4.0)
+- SIGMA conclusion bug fix (effectiveSigma derivado de AI analysis)
+- Agent decision model display (llmProvider/llmModel en metadata)
+- Vertical tabs layout en settings/agents y admin/agent-models
+- Select auto dropdown direction + model name truncation
+- Responsive filters en OpenRouterModelSelect
+- ESLint config fix (package.json ignores)
+
 ### i18n
-- Traducciones en/es completas
+- Traducciones en/es completas (incluye agents.agentSwitched)
 
 ### Testing
-- Tests unitarios PlatformLLMProviderService
-- Tests persistencia A2, TTL C1, routing SSE
+- 16 suites, 135 tests — todos pasan
+- Lint 10/10 proyectos — 0 errores
 - Build api ✅ + Build web ✅
 
 Closes #XX"

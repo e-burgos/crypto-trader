@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Save,
   Loader2,
@@ -7,6 +7,9 @@ import {
   Scale,
   DollarSign,
   RotateCcw,
+  ShieldAlert,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { Button, Select, type SelectOption } from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
@@ -14,9 +17,12 @@ import {
   useAdminAgentConfigs,
   useUpdateAdminAgentConfig,
   useApplyAdminPreset,
+  useAutoResolveFallback,
   type AgentPresetName,
 } from '../../hooks/use-agent-config';
+import { useLLMKeys, useUpdateLLMModel } from '../../hooks/use-user';
 import { DynamicModelSelect } from '../settings/dynamic-model-select';
+import { OpenRouterModelSelect } from '../settings/openrouter-model-select';
 import { cn } from '../../lib/utils';
 import { Dialog } from '@crypto-trader/ui';
 
@@ -78,19 +84,26 @@ function AdminAgentConfigCard({
   const canSave = isDirty && model.trim() !== '';
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        {meta.locked && <Lock className="h-4 w-4 text-red-500" />}
-        <span className={cn('font-bold text-sm', meta.color)}>
-          {meta.codename}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          ({config.agentId})
-        </span>
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3 h-full">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {meta.locked && <Lock className="h-4 w-4 text-red-500" />}
+          <span className={cn('font-bold text-sm', meta.color)}>
+            {meta.codename}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            ({config.agentId})
+          </span>
+        </div>
+        {isDirty && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            {t('settings.agents.unsaved', { defaultValue: 'Unsaved' })}
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
+      <div className="space-y-3">
+        <div className="w-full">
           <Select
             label={t('settings.agents.provider')}
             value={provider}
@@ -98,15 +111,13 @@ function AdminAgentConfigCard({
             options={PROVIDERS}
           />
         </div>
-        <div>
-          <DynamicModelSelect
-            provider={provider}
-            value={model}
-            onChange={setModel}
-            fallbackModels={[]}
-            label={t('settings.agents.model')}
-          />
-        </div>
+        <DynamicModelSelect
+          provider={provider}
+          value={model}
+          onChange={setModel}
+          fallbackModels={[]}
+          label={t('settings.agents.model')}
+        />
       </div>
 
       <div className="flex items-center gap-2 pt-1">
@@ -123,6 +134,21 @@ function AdminAgentConfigCard({
           )}
           <span className="ml-1">{t('common.save')}</span>
         </Button>
+        {isDirty && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setProvider(config.provider || 'OPENROUTER');
+              setModel(config.model || '');
+            }}
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span className="ml-1">
+              {t('settings.agents.reset', { defaultValue: 'Reset' })}
+            </span>
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -133,10 +159,29 @@ export function AdminAgentConfigCards() {
   const { data: configs, isLoading } = useAdminAgentConfigs();
   const updateMutation = useUpdateAdminAgentConfig();
   const applyPreset = useApplyAdminPreset();
+  const autoResolve = useAutoResolveFallback();
+  const { data: llmKeys } = useLLMKeys();
+  const updateLLMModel = useUpdateLLMModel();
   const [pendingPreset, setPendingPreset] = useState<{
     id: AgentPresetName;
     name: string;
   } | null>(null);
+
+  // Fallback model state
+  const openRouterCred = (llmKeys ?? []).find(
+    (k) => k.provider === 'OPENROUTER' && k.isActive,
+  );
+  const [fallbackModel, setFallbackModel] = useState(
+    openRouterCred?.selectedModel ?? '',
+  );
+  const [fallbackDirty, setFallbackDirty] = useState(false);
+
+  useEffect(() => {
+    if (openRouterCred?.selectedModel) {
+      setFallbackModel(openRouterCred.selectedModel);
+      setFallbackDirty(false);
+    }
+  }, [openRouterCred?.selectedModel]);
 
   const PRESET_OPTIONS: Array<{
     id: AgentPresetName;
@@ -194,6 +239,17 @@ export function AdminAgentConfigCards() {
       </div>
     );
   }
+
+  const allConfigs = useMemo(() => configs ?? [], [configs]);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+
+  useEffect(() => {
+    if (allConfigs.length > 0 && !selectedAgentId) {
+      setSelectedAgentId(allConfigs[0].agentId);
+    }
+  }, [allConfigs, selectedAgentId]);
+
+  const selectedConfig = allConfigs.find((c) => c.agentId === selectedAgentId);
 
   return (
     <div className="space-y-6">
@@ -276,6 +332,84 @@ export function AdminAgentConfigCards() {
         </div>
       </div>
 
+      {/* ── Fallback Model ──────────────────────────────────────────── */}
+      {openRouterCred && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-500" />
+              <h2 className="text-sm font-semibold">
+                {t('settings.agents.fallback.title', {
+                  defaultValue: 'Fallback Model',
+                })}
+              </h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={autoResolve.isPending}
+              onClick={() => autoResolve.mutate()}
+            >
+              {autoResolve.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : (
+                <Sparkles className="h-3 w-3 mr-1" />
+              )}
+              {t('settings.agents.fallback.autoResolve', {
+                defaultValue: 'Auto-resolve',
+              })}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t('admin.fallbackDescription', {
+              defaultValue:
+                'Default fallback model used platform-wide when a user has no custom configuration. Applied automatically by presets.',
+            })}
+          </p>
+          <OpenRouterModelSelect
+            value={fallbackModel}
+            onChange={(m) => {
+              setFallbackModel(m);
+              setFallbackDirty(true);
+            }}
+            compact
+          />
+          {fallbackDirty && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                disabled={updateLLMModel.isPending || !fallbackModel}
+                onClick={() =>
+                  updateLLMModel.mutate(
+                    {
+                      provider: 'OPENROUTER',
+                      selectedModel: fallbackModel,
+                    },
+                    { onSuccess: () => setFallbackDirty(false) },
+                  )
+                }
+              >
+                {updateLLMModel.isPending && (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                )}
+                <Save className="h-3 w-3 mr-1" />
+                {t('common.save')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFallbackModel(openRouterCred?.selectedModel ?? '');
+                  setFallbackDirty(false);
+                }}
+              >
+                {t('common.cancel', { defaultValue: 'Cancel' })}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Description */}
       <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
         {t('agents.modelsTabDesc', {
@@ -284,18 +418,76 @@ export function AdminAgentConfigCards() {
         })}
       </div>
 
-      {/* Agent cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {(configs ?? []).map((cfg) => (
-          <AdminAgentConfigCard
-            key={cfg.agentId}
-            config={cfg}
-            onSave={(agentId, provider, model) =>
-              updateMutation.mutate({ agentId, provider, model })
-            }
-            isSaving={updateMutation.isPending}
+      {/* ── Agent Configuration — Vertical Tabs ─────────────────── */}
+      <div className="space-y-3">
+        {/* Mobile: dropdown selector */}
+        <div className="block md:hidden">
+          <Select
+            value={selectedAgentId}
+            onChange={setSelectedAgentId}
+            options={allConfigs.map((cfg) => {
+              const m = AGENT_META[cfg.agentId] ?? {
+                codename: cfg.agentId,
+                color: '',
+              };
+              return {
+                value: cfg.agentId,
+                label: `${m.codename} (${cfg.agentId})`,
+              };
+            })}
           />
-        ))}
+        </div>
+
+        <div className="flex gap-4 items-stretch">
+          {/* Desktop: vertical nav */}
+          <div className="hidden md:flex flex-col gap-1 w-48 shrink-0 rounded-xl border border-border bg-card p-2">
+            {allConfigs.map((cfg) => {
+              const m = AGENT_META[cfg.agentId] ?? {
+                codename: cfg.agentId,
+                color: 'text-muted-foreground',
+              };
+              const isActive = cfg.agentId === selectedAgentId;
+              return (
+                <button
+                  key={cfg.agentId}
+                  type="button"
+                  onClick={() => setSelectedAgentId(cfg.agentId)}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-150',
+                    isActive
+                      ? 'bg-primary/10 text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  )}
+                >
+                  {m.locked && (
+                    <Lock className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                  )}
+                  <span className={cn('font-bold', m.color)}>{m.codename}</span>
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {cfg.agentId}
+                  </span>
+                  {isActive && (
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Card content */}
+          <div className="flex-1 min-w-0">
+            {selectedConfig && (
+              <AdminAgentConfigCard
+                key={selectedConfig.agentId}
+                config={selectedConfig}
+                onSave={(agentId, provider, model) =>
+                  updateMutation.mutate({ agentId, provider, model })
+                }
+                isSaving={updateMutation.isPending}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Confirmation dialog */}

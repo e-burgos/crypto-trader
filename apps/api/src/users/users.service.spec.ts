@@ -2,6 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
+
+const mockPlatformLLMProviderService = {
+  assertProviderActive: jest.fn().mockResolvedValue(undefined),
+  isProviderActive: jest.fn().mockResolvedValue(true),
+};
 
 const mockPrismaService = {
   user: {
@@ -36,6 +42,10 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: PlatformLLMProviderService,
+          useValue: mockPlatformLLMProviderService,
+        },
       ],
     }).compile();
 

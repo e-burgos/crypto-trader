@@ -44,6 +44,9 @@ importers:
       '@nestjs/websockets':
         specifier: ^11.1.17
         version: 11.1.17(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.17)(@nestjs/platform-socket.io@11.1.17)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@openrouter/sdk':
+        specifier: ^0.12.20
+        version: 0.12.20
       '@prisma/adapter-pg':
         specifier: ^7.6.0
         version: 7.6.0
@@ -2136,6 +2139,9 @@ packages:
 
   '@nx/workspace@22.6.3':
     resolution: {integrity: sha512-Tdu3K6mpRAU0LI2gpi61WLY7mPR61nj1Szvhwj4T88PhGQXSlN6PuUhb5nMPHnZG/bDmUFeTSv/+MCgbEm563A==}
+
+  '@openrouter/sdk@0.12.20':
+    resolution: {integrity: sha512-5CrbvQS/02sko455TIpzieHnYwDYH+bn7bn+CS/5d/2YtTGOhyI5yq2jIn/ux2poeNg62vGuUA2dNNeCyfIo2A==}
 
   '@oxc-project/types@0.122.0':
     resolution: {integrity: sha512-oLAl5kBpV4w69UtFZ9xqcmTi+GENWOcPF7FCrczTiBbmC0ibXxCwyvZGbO39rCVEuLGAZM84DH0pUIyyv/YJzA==}
@@ -11785,6 +11791,10 @@ snapshots:
       - '@swc-node/register'
       - '@swc/core'
       - debug
+
+  '@openrouter/sdk@0.12.20':
+    dependencies:
+      zod: 4.3.6
 
   '@oxc-project/types@0.122.0': {}
 

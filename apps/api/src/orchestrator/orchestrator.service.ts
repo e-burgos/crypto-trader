@@ -266,6 +266,17 @@ export class OrchestratorService {
     const forgeOutput = forgeRaw.status === 'fulfilled' ? forgeRaw.value : '{}';
     const aegisOutput = aegisRaw.status === 'fulfilled' ? aegisRaw.value : '{}';
 
+    // A2→DB: Persist fresh sentiment to NewsAnalysis (Spec 38, B.4)
+    if (sentimentRaw.status === 'fulfilled' && !cachedSentiment) {
+      try {
+        await this.persistSentimentAsAIAnalysis(userId, sentimentRaw.value);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to persist sentiment A2→DB: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
     subAgentResults.push(
       { agentId: 'market', task: 'technical_signal', output: techOutput },
       {
@@ -312,6 +323,22 @@ export class OrchestratorService {
 
     // Synthesis call via orchestrator
     let synthesisRaw: string;
+    let synthesisProvider: string | undefined;
+    let synthesisModel: string | undefined;
+
+    // Resolve model info before the synthesis call
+    try {
+      const resolved = await this.subAgent.getProvider(
+        userId,
+        'synthesis',
+        typedOverride,
+      );
+      synthesisProvider = resolved.provider;
+      synthesisModel = resolved.model;
+    } catch {
+      // Non-blocking — we'll still attempt the call
+    }
+
     try {
       synthesisRaw = await this.subAgent.call(
         'orchestrator',
@@ -383,6 +410,8 @@ export class OrchestratorService {
         typeof synthesis.waitMinutes === 'number' ? synthesis.waitMinutes : 15,
       orchestrated: true,
       subAgentResults,
+      llmProvider: synthesisProvider,
+      llmModel: synthesisModel,
     };
   }
 
@@ -465,6 +494,80 @@ export class OrchestratorService {
       { responses, originalQuery, locale },
       userId,
       false,
+    );
+  }
+
+  /**
+   * A2→DB: Persist fresh SIGMA sentiment to NewsAnalysis (Spec 38).
+   * Updates the most recent NewsAnalysis for this user, or creates a minimal one.
+   */
+  private async persistSentimentAsAIAnalysis(
+    userId: string,
+    sentimentResult: string,
+  ): Promise<void> {
+    // SIGMA returns: { sentiment: number, impact: "positive|negative|neutral", reasoning: string }
+    // We also accept the alternate format: { score, overallSentiment, summary, headlines }
+    const parsed = safeParseJson<{
+      sentiment?: number;
+      impact?: string;
+      reasoning?: string;
+      score?: number;
+      overallSentiment?: string;
+      summary?: string;
+      headlines?: { id: string; sentiment: string; reasoning?: string }[];
+    }>(sentimentResult, {});
+
+    // Map SIGMA fields to NewsAnalysis AI fields
+    // SIGMA returns sentiment as float (-1 to 1) or integer (-100 to 100)
+    let aiScore: number | null = parsed.score ?? null;
+    if (aiScore == null && parsed.sentiment != null) {
+      aiScore =
+        Math.abs(parsed.sentiment) <= 1
+          ? Math.round(parsed.sentiment * 100)
+          : Math.round(parsed.sentiment);
+    }
+    const aiOverallSentiment = parsed.overallSentiment ?? parsed.impact ?? null;
+    const aiSummary = parsed.summary ?? parsed.reasoning ?? null;
+
+    if (aiScore == null && !aiOverallSentiment) return;
+
+    const latest = await this.prisma.newsAnalysis.findFirst({
+      where: { userId },
+      orderBy: { analyzedAt: 'desc' },
+    });
+
+    const aiData = {
+      aiAnalyzedAt: new Date(),
+      aiScore,
+      aiOverallSentiment,
+      aiSummary,
+      aiHeadlines: (parsed.headlines as unknown) ?? undefined,
+    };
+
+    if (latest) {
+      await this.prisma.newsAnalysis.update({
+        where: { id: latest.id },
+        data: aiData,
+      });
+    } else {
+      await this.prisma.newsAnalysis.create({
+        data: {
+          userId,
+          newsCount: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          neutralCount: 0,
+          score: aiScore ?? 50,
+          overallSentiment: aiOverallSentiment ?? 'neutral',
+          summary: aiSummary ?? 'AI analysis from trading orchestrator',
+          headlines: [],
+          ...aiData,
+        },
+      });
+    }
+
+    this.logger.log(
+      `A2→DB: Persisted SIGMA sentiment to NewsAnalysis for user=${userId} (score=${aiScore}, sentiment=${aiOverallSentiment})`,
     );
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Bot, Activity, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -28,7 +28,14 @@ export function AgentCountdownCard({
   }, [serverNextRunAt, lastDecision, config.minIntervalMinutes]);
 
   const countdown = useCountdown(nextCycleAt);
-  const isPast = nextCycleAt !== null && nextCycleAt <= Date.now();
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isPast = nextCycleAt !== null && nextCycleAt <= now;
   const progress = useMemo(() => {
     if (!nextCycleAt) return 0;
     if (serverNextRunAt) {
@@ -37,15 +44,21 @@ export function AgentCountdownCard({
         : nextCycleAt - 15 * 60_000;
       const total = nextCycleAt - start;
       if (total <= 0) return 100;
-      const elapsed = Date.now() - start;
+      const elapsed = now - start;
       return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)));
     }
     if (!lastDecision) return 0;
     const wait =
       (lastDecision.waitMinutes ?? config.minIntervalMinutes ?? 30) * 60_000;
-    const elapsed = Date.now() - new Date(lastDecision.createdAt).getTime();
+    const elapsed = now - new Date(lastDecision.createdAt).getTime();
     return Math.min(100, Math.round((elapsed / wait) * 100));
-  }, [nextCycleAt, serverNextRunAt, lastDecision, config.minIntervalMinutes]);
+  }, [
+    nextCycleAt,
+    serverNextRunAt,
+    lastDecision,
+    config.minIntervalMinutes,
+    now,
+  ]);
 
   const [showStateModal, setShowStateModal] = useState(false);
 

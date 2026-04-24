@@ -4,25 +4,7 @@ import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
 import { Select, type SelectOption } from '@crypto-trader/ui';
 import { Cpu, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-// ── OpenRouter category filters (driven by backend `categories` field) ──────
-
-type ORCategory =
-  | 'top-paid'
-  | 'free'
-  | 'all'
-  | 'reasoning'
-  | 'fast'
-  | 'analytics';
-
-const OR_CATEGORIES: { value: ORCategory; labelKey: string }[] = [
-  { value: 'top-paid', labelKey: 'settings.orCategory.topPaid' },
-  { value: 'free', labelKey: 'settings.orCategory.free' },
-  { value: 'all', labelKey: 'settings.orCategory.all' },
-  { value: 'reasoning', labelKey: 'settings.orCategory.reasoning' },
-  { value: 'fast', labelKey: 'settings.orCategory.fast' },
-  { value: 'analytics', labelKey: 'settings.orCategory.analytics' },
-];
+import { OpenRouterModelSelect } from './openrouter-model-select';
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -44,10 +26,28 @@ export function DynamicModelSelect({
   className = '',
 }: DynamicModelSelectProps) {
   const { t } = useTranslation();
-  const { data: models, isLoading, isError } = useLLMProviderModels(provider);
   const isOpenRouter = provider === 'OPENROUTER';
-  const [category, setCategory] = useState<ORCategory>('top-paid');
+
+  // For non-OpenRouter providers, fetch models from the provider-specific endpoint
+  const {
+    data: models,
+    isLoading,
+    isError,
+  } = useLLMProviderModels(provider, !isOpenRouter);
   const [showAll, setShowAll] = useState(false);
+
+  // Delegate to dedicated OpenRouter component for rich filtering
+  if (isOpenRouter) {
+    return (
+      <OpenRouterModelSelect
+        value={value}
+        onChange={onChange}
+        label={label}
+        className={className}
+        compact
+      />
+    );
+  }
 
   const autoOption: SelectOption = {
     value: '',
@@ -60,7 +60,6 @@ export function DynamicModelSelect({
   // Build all options, excluding deprecated
   const allOptions: (SelectOption & {
     _recommended?: boolean;
-    _categories?: string[];
   })[] = allModels
     ? allModels
         .filter((m) => !m.deprecated)
@@ -73,7 +72,6 @@ export function DynamicModelSelect({
           icon: <Cpu className="h-3.5 w-3.5 text-muted-foreground" />,
           disabled: false,
           _recommended: m.recommended,
-          _categories: m.categories,
         }))
     : fallbackModels.map((m) => ({
         value: m,
@@ -83,10 +81,9 @@ export function DynamicModelSelect({
 
   const hasRecommended = allOptions.some((o) => o._recommended);
 
-  // For non-OpenRouter: auto-expand if saved model isn't in recommended
+  // Auto-expand if saved model isn't in recommended
   useEffect(() => {
     if (
-      !isOpenRouter &&
       value &&
       allOptions.some((o) => o.value === value) &&
       hasRecommended &&
@@ -98,44 +95,12 @@ export function DynamicModelSelect({
     }
   }, [value, allModels]);
 
-  // For OpenRouter: sync category to the model's natural category whenever value changes
-  useEffect(() => {
-    if (!isOpenRouter || !value || !allModels) return;
-    // Find the most specific category that contains this model
-    for (const cat of OR_CATEGORIES) {
-      if (cat.value === 'all') continue;
-      if (
-        allOptions.some(
-          (o) => o.value === value && o._categories?.includes(cat.value),
-        )
-      ) {
-        setCategory(cat.value);
-        return;
-      }
-    }
-    // Model exists but has no specific category → show all
-    if (allOptions.some((o) => o.value === value)) {
-      setCategory('all');
-    }
-  }, [value, allModels]);
-
   // Apply filtering
-  let filteredModels: SelectOption[];
-  if (isOpenRouter) {
-    if (category === 'all') {
-      filteredModels = allOptions;
-    } else {
-      filteredModels = allOptions.filter((o) =>
-        o._categories?.includes(category),
+  const filteredModels = showAll
+    ? allOptions
+    : allOptions.filter(
+        (o) => !o.disabled && (!hasRecommended || o._recommended),
       );
-    }
-  } else {
-    filteredModels = showAll
-      ? allOptions
-      : allOptions.filter(
-          (o) => !o.disabled && (!hasRecommended || o._recommended),
-        );
-  }
 
   const options: SelectOption[] = [autoOption, ...filteredModels];
 
@@ -154,53 +119,31 @@ export function DynamicModelSelect({
     );
   }
 
-  // OpenRouter: category pills
-  const orCategorySelector = isOpenRouter ? (
-    <div className="flex flex-wrap gap-1">
-      {OR_CATEGORIES.map((cat) => (
-        <button
-          key={cat.value}
-          type="button"
-          onClick={() => setCategory(cat.value)}
-          className={cn(
-            'text-[10px] px-2 py-0.5 rounded-full border transition-colors',
-            category === cat.value
-              ? 'bg-primary/10 border-primary/30 text-primary'
-              : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground',
-          )}
-        >
-          {t(cat.labelKey, { defaultValue: cat.value })}
-        </button>
-      ))}
-    </div>
+  // Recommended/all toggle
+  const badgeButton = hasRecommended ? (
+    <button
+      type="button"
+      onClick={() => setShowAll(!showAll)}
+      className={cn(
+        'text-[10px] px-2 py-0.5 rounded-full border transition-colors',
+        showAll
+          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+          : 'bg-primary/10 border-primary/30 text-primary',
+      )}
+    >
+      {showAll
+        ? t('settings.modelFilter.all', { defaultValue: 'Todos' })
+        : t('settings.modelFilter.recommended', {
+            defaultValue: 'Recomendados',
+          })}
+    </button>
   ) : null;
 
-  // Other providers: recommended/all toggle
-  const badgeButton =
-    !isOpenRouter && hasRecommended ? (
-      <button
-        type="button"
-        onClick={() => setShowAll(!showAll)}
-        className={cn(
-          'text-[10px] px-2 py-0.5 rounded-full border transition-colors',
-          showAll
-            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-            : 'bg-primary/10 border-primary/30 text-primary',
-        )}
-      >
-        {showAll
-          ? t('settings.modelFilter.all', { defaultValue: 'Todos' })
-          : t('settings.modelFilter.recommended', {
-              defaultValue: 'Recomendados',
-            })}
-      </button>
-    ) : null;
-
-  const valueInFilteredOptions = options.some((o) => o.value === value);
-  const valueExistsInAnyCategory = allOptions.some((o) => o.value === value);
+  const valueInOptions = options.some((o) => o.value === value);
+  const valueExistsInAll = allOptions.some((o) => o.value === value);
   // Only add as custom option if the model doesn't exist in the provider's model list at all
   const effectiveOptions: SelectOption[] =
-    value && !valueInFilteredOptions && !valueExistsInAnyCategory
+    value && !valueInOptions && !valueExistsInAll
       ? [
           ...options,
           {
@@ -226,8 +169,7 @@ export function DynamicModelSelect({
           defaultValue: 'Search model...',
         })}
       />
-      {orCategorySelector && <div className="mt-2">{orCategorySelector}</div>}
-      {!isOpenRouter && showAll && (
+      {showAll && (
         <p className="mt-1 text-[10px] text-amber-400">
           ⚠️{' '}
           {t('settings.modelFilter.warning', {

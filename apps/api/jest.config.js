@@ -19,5 +19,7 @@ module.exports = {
       '<rootDir>/../../libs/data-fetcher/src/index.ts',
     '^@crypto-trader/trading-engine$':
       '<rootDir>/../../libs/trading-engine/src/index.ts',
+    '^@crypto-trader/openrouter$':
+      '<rootDir>/src/__mocks__/crypto-trader-openrouter.ts',
   },
 };

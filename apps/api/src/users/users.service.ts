@@ -20,10 +20,14 @@ import { encrypt, decrypt } from './utils/encryption.util';
 import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import { recordCall } from '../llm/provider-health.service';
+import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly platformLLMProviderService: PlatformLLMProviderService,
+  ) {}
 
   // ── Profile ────────────────────────────────────────────────────────────────
 
@@ -208,6 +212,10 @@ export class UsersService {
 
   async setLLMKey(userId: string, dto: LLMKeyDto) {
     const provider = dto.provider as LLMProvider;
+
+    // Validate provider is active at platform level (Spec 38)
+    await this.platformLLMProviderService.assertProviderActive(provider);
+
     const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
 
     return this.prisma.lLMCredential.upsert({

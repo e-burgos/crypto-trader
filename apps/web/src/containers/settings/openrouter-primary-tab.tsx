@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Star,
   Loader2,
@@ -14,7 +14,6 @@ import {
 import { Button, Input } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
-import { DynamicModelSelect } from './dynamic-model-select';
 
 interface OpenRouterPrimaryTabProps {
   llmKeys: Array<{
@@ -37,25 +36,7 @@ interface OpenRouterPrimaryTabProps {
   }) => void;
   onTest: (provider: string) => void;
   onDelete: (provider: string) => void;
-  onUpdateModel: (data: {
-    provider: string;
-    selectedModel: string | null;
-  }) => void;
 }
-
-// Curated ranking: best paid (by Finance rank) then best free
-const OPENROUTER_MODELS = [
-  // ── Top Paid ──
-  'anthropic/claude-sonnet-4.6',
-  'google/gemini-3-flash-preview',
-  'anthropic/claude-opus-4.6',
-  'deepseek/deepseek-v3.2',
-  'google/gemini-2.5-flash-lite',
-  // ── Top Free ──
-  'openrouter/elephant-alpha',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'google/gemma-4-31b-it:free',
-];
 
 export function OpenRouterPrimaryTab({
   llmKeys,
@@ -68,7 +49,6 @@ export function OpenRouterPrimaryTab({
   onSave,
   onTest,
   onDelete,
-  onUpdateModel,
 }: OpenRouterPrimaryTabProps) {
   const { t } = useTranslation();
   const status = llmKeys.find((k) => k.provider === 'OPENROUTER');
@@ -76,16 +56,6 @@ export function OpenRouterPrimaryTab({
     (r) => r.provider === 'OPENROUTER',
   );
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState(
-    status?.selectedModel || 'anthropic/claude-sonnet-4.6',
-  );
-
-  // Sync local model state when server data changes (e.g. after save/invalidation)
-  useEffect(() => {
-    if (status?.selectedModel) {
-      setModel(status.selectedModel);
-    }
-  }, [status?.selectedModel]);
 
   const isActive = status?.isActive ?? false;
   const manualTestFailed =
@@ -223,29 +193,12 @@ export function OpenRouterPrimaryTab({
 
           {/* Model Select */}
           {isActive ? (
-            <>
-              <DynamicModelSelect
-                provider="OPENROUTER"
-                value={model}
-                label={t('settings.openrouter.fallbackModel', {
-                  defaultValue: 'Fallback Model',
-                })}
-                onChange={(m) => {
-                  setModel(m);
-                  onUpdateModel({
-                    provider: 'OPENROUTER',
-                    selectedModel: m || null,
-                  });
-                }}
-                fallbackModels={OPENROUTER_MODELS}
-              />
-              <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-400 leading-relaxed">
-                {t('settings.openrouter.fallbackModelNote', {
-                  defaultValue:
-                    'This model is used only when an agent has no specific configuration. Agents resolve their own LLM via Agent Hub Config.',
-                })}
-              </div>
-            </>
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-400 leading-relaxed">
+              {t('settings.openrouter.agentHubNote', {
+                defaultValue:
+                  'Models are configured per agent in Settings → AI Agents. A fallback model is auto-resolved there too.',
+              })}
+            </div>
           ) : (
             <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
               {t('settings.activateProviderFirst', {
@@ -263,7 +216,7 @@ export function OpenRouterPrimaryTab({
                 onSave({
                   provider: 'OPENROUTER',
                   apiKey,
-                  selectedModel: model || null,
+                  selectedModel: status?.selectedModel || null,
                 })
               }
             >

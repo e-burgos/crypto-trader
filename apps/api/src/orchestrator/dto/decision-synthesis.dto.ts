@@ -22,4 +22,8 @@ export interface DecisionPayload {
   waitMinutes: number;
   orchestrated: boolean;
   subAgentResults: SubAgentResult[];
+  /** LLM provider used for the synthesis call */
+  llmProvider?: string;
+  /** LLM model used for the synthesis call */
+  llmModel?: string;
 }

@@ -239,58 +239,7 @@ export const MODEL_PRICING: Record<
     contextWindow: 131_072,
     recommended: true,
   },
-  // ── OpenRouter — Top Paid (prices from openrouter.ai, Apr 2026) ──
-  'anthropic/claude-sonnet-4.6': {
-    input: 3.0,
-    output: 15.0,
-    label: 'Claude Sonnet 4.6 (OpenRouter)',
-    contextWindow: 1_000_000,
-    recommended: true,
-  },
-  'google/gemini-3-flash-preview': {
-    input: 0.5,
-    output: 3.0,
-    label: 'Gemini 3 Flash Preview (OpenRouter)',
-    contextWindow: 1_000_000,
-    recommended: true,
-  },
-  'anthropic/claude-opus-4.6': {
-    input: 5.0,
-    output: 25.0,
-    label: 'Claude Opus 4.6 (OpenRouter)',
-    contextWindow: 1_000_000,
-  },
-  'deepseek/deepseek-v3.2': {
-    input: 0.259,
-    output: 0.42,
-    label: 'DeepSeek V3.2 (OpenRouter)',
-    contextWindow: 164_000,
-    recommended: true,
-  },
-  'google/gemini-2.5-flash-lite': {
-    input: 0.1,
-    output: 0.4,
-    label: 'Gemini 2.5 Flash Lite (OpenRouter)',
-    contextWindow: 1_000_000,
-  },
-  // ── OpenRouter — Top Free ──
-  'openrouter/elephant-alpha': {
-    input: 0,
-    output: 0,
-    label: 'Elephant Alpha (OpenRouter, free)',
-    contextWindow: 262_000,
-    recommended: true,
-  },
-  'nvidia/nemotron-3-super-120b-a12b:free': {
-    input: 0,
-    output: 0,
-    label: 'Nemotron 3 Super 120B (OpenRouter, free)',
-    contextWindow: 262_000,
-  },
-  'google/gemma-4-31b-it:free': {
-    input: 0,
-    output: 0,
-    label: 'Gemma 4 31B (OpenRouter, free)',
-    contextWindow: 262_000,
-  },
+  // ── OpenRouter ──────────────────────────────────────────
+  // OpenRouter models are resolved dynamically via @crypto-trader/openrouter.
+  // No hardcoded entries — pricing comes from the OpenRouter API at runtime.
 };

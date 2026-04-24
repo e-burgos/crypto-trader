@@ -34,8 +34,6 @@ export const SENTIMENT_COLOR: Record<string, string> = {
   NEUTRAL: 'text-muted-foreground',
 };
 
-export const AI_VALID_MS = 12 * 60 * 60 * 1000;
-
 export type StateModalTab = 'estado' | 'indicadores' | 'noticias' | 'config';
 
 export const STATE_MODAL_TABS: {

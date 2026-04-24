@@ -7,21 +7,31 @@ import {
   Zap,
   DollarSign,
   Scale,
+  ShieldAlert,
+  Sparkles,
+  ChevronRight,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button, Dialog, Select, type SelectOption } from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   useAgentConfigs,
   useAgentHealth,
   useUpdateAgentConfig,
   useResetAgentConfig,
   useApplyPreset,
+  useAutoResolveFallback,
   ResolvedAgentConfig,
   AgentPresetName,
 } from '../../../hooks/use-agent-config';
-import { useLLMKeys } from '../../../hooks/use-user';
+import {
+  useLLMKeys,
+  useUpdateLLMModel,
+  usePlatformLLMStatus,
+} from '../../../hooks/use-user';
 import { DynamicModelSelect } from '../../../containers/settings/dynamic-model-select';
+import { OpenRouterModelSelect } from '../../../containers/settings/openrouter-model-select';
 import { cn } from '../../../lib/utils';
 
 const AGENT_META: Record<
@@ -86,7 +96,7 @@ function AgentConfigCard({
   const isOverridden = config.source === 'user';
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-3 h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {meta.locked && <Lock className="h-4 w-4 text-red-500" />}
@@ -111,7 +121,7 @@ function AgentConfigCard({
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="space-y-3">
         <div>
           <Select
             label={t('settings.agents.provider')}
@@ -177,11 +187,41 @@ export function SettingsAgentsPage() {
   const updateMutation = useUpdateAgentConfig();
   const resetMutation = useResetAgentConfig();
   const applyPreset = useApplyPreset();
+  const autoResolve = useAutoResolveFallback();
+  const updateLLMModel = useUpdateLLMModel();
+  const { data: platformStatus } = usePlatformLLMStatus();
+
+  // Build a set of inactive providers for quick lookup
+  const inactiveProviders = useMemo(
+    () =>
+      new Set(
+        (platformStatus ?? [])
+          .filter((p) => !p.isActive)
+          .map((p) => p.provider),
+      ),
+    [platformStatus],
+  );
 
   const [pendingPreset, setPendingPreset] = useState<{
     id: AgentPresetName;
     name: string;
   } | null>(null);
+
+  // Fallback model state
+  const openRouterCred = (llmKeys ?? []).find(
+    (k) => k.provider === 'OPENROUTER' && k.isActive,
+  );
+  const [fallbackModel, setFallbackModel] = useState(
+    openRouterCred?.selectedModel ?? '',
+  );
+  const [fallbackDirty, setFallbackDirty] = useState(false);
+
+  useEffect(() => {
+    if (openRouterCred?.selectedModel) {
+      setFallbackModel(openRouterCred.selectedModel);
+      setFallbackDirty(false);
+    }
+  }, [openRouterCred?.selectedModel]);
 
   const activeProviders = (llmKeys ?? [])
     .filter((k) => k.isActive)
@@ -260,6 +300,28 @@ export function SettingsAgentsPage() {
   );
   const aegisConfig = (configs ?? []).find((c) => c.agentId === 'risk');
 
+  // All agents in display order for the vertical nav
+  const allAgentConfigs = useMemo(() => {
+    const list: ResolvedAgentConfig[] = [];
+    list.push(...kryptoConfigs);
+    list.push(...standardConfigs);
+    if (aegisConfig) list.push(aegisConfig);
+    return list;
+  }, [kryptoConfigs, standardConfigs, aegisConfig]);
+
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+
+  // Set initial selected agent once loaded
+  useEffect(() => {
+    if (allAgentConfigs.length > 0 && !selectedAgentId) {
+      setSelectedAgentId(allAgentConfigs[0].agentId);
+    }
+  }, [allAgentConfigs, selectedAgentId]);
+
+  const selectedConfig = allAgentConfigs.find(
+    (c) => c.agentId === selectedAgentId,
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -316,6 +378,84 @@ export function SettingsAgentsPage() {
         </div>
       </div>
 
+      {/* ── Fallback Model ──────────────────────────────────────────── */}
+      {openRouterCred && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-500" />
+              <h2 className="text-sm font-semibold">
+                {t('settings.agents.fallback.title', {
+                  defaultValue: 'Fallback Model',
+                })}
+              </h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={autoResolve.isPending}
+              onClick={() => autoResolve.mutate()}
+            >
+              {autoResolve.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : (
+                <Sparkles className="h-3 w-3 mr-1" />
+              )}
+              {t('settings.agents.fallback.autoResolve', {
+                defaultValue: 'Auto-resolve',
+              })}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t('settings.agents.fallback.description', {
+              defaultValue:
+                'Safety net model used when an agent has no specific configuration. Applied automatically by presets.',
+            })}
+          </p>
+          <OpenRouterModelSelect
+            value={fallbackModel}
+            onChange={(m) => {
+              setFallbackModel(m);
+              setFallbackDirty(true);
+            }}
+            compact
+          />
+          {fallbackDirty && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                disabled={updateLLMModel.isPending || !fallbackModel}
+                onClick={() =>
+                  updateLLMModel.mutate(
+                    {
+                      provider: 'OPENROUTER',
+                      selectedModel: fallbackModel,
+                    },
+                    { onSuccess: () => setFallbackDirty(false) },
+                  )
+                }
+              >
+                {updateLLMModel.isPending && (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                )}
+                <Save className="h-3 w-3 mr-1" />
+                {t('common.save')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFallbackModel(openRouterCred?.selectedModel ?? '');
+                  setFallbackDirty(false);
+                }}
+              >
+                {t('common.cancel', { defaultValue: 'Cancel' })}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Health warning */}
       {health && !health.healthy && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-600 dark:text-yellow-400">
@@ -323,64 +463,97 @@ export function SettingsAgentsPage() {
         </div>
       )}
 
-      {/* KRYPTO — dual model (routing + synthesis) */}
-      {kryptoConfigs.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-yellow-500">
-            KRYPTO — {t('settings.agents.orchestrator')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {kryptoConfigs.map((cfg) => (
+      {/* ── Agent Configuration — Vertical Tabs ─────────────────── */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-semibold">
+          {t('settings.agents.specialists')}
+        </h2>
+
+        {/* Mobile: dropdown selector */}
+        <div className="block md:hidden">
+          <Select
+            value={selectedAgentId}
+            onChange={setSelectedAgentId}
+            options={allAgentConfigs.map((cfg) => {
+              const m = AGENT_META[cfg.agentId] ?? {
+                codename: cfg.agentId,
+                color: '',
+              };
+              const needsAttention =
+                cfg.provider && inactiveProviders.has(cfg.provider);
+              return {
+                value: cfg.agentId,
+                label: needsAttention
+                  ? `⚠️ ${m.codename} (${cfg.agentId})`
+                  : `${m.codename} (${cfg.agentId})`,
+              };
+            })}
+          />
+        </div>
+
+        <div className="flex gap-4 items-stretch">
+          {/* Desktop: vertical nav */}
+          <div className="hidden md:flex flex-col gap-1 w-48 shrink-0 rounded-xl border border-border bg-card p-2">
+            {allAgentConfigs.map((cfg) => {
+              const m = AGENT_META[cfg.agentId] ?? {
+                codename: cfg.agentId,
+                color: 'text-muted-foreground',
+              };
+              const isActive = cfg.agentId === selectedAgentId;
+              const needsAttention =
+                cfg.provider && inactiveProviders.has(cfg.provider);
+              return (
+                <button
+                  key={cfg.agentId}
+                  type="button"
+                  onClick={() => setSelectedAgentId(cfg.agentId)}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-150',
+                    isActive
+                      ? 'bg-primary/10 text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  )}
+                >
+                  {needsAttention ? (
+                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                  ) : (
+                    m.locked && (
+                      <Lock className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    )
+                  )}
+                  <span className={cn('font-bold', m.color)}>{m.codename}</span>
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {cfg.agentId}
+                  </span>
+                  {needsAttention && (
+                    <span className="ml-auto text-[9px] text-amber-500 font-semibold shrink-0">
+                      {t('agents.providerNeedsAttention')}
+                    </span>
+                  )}
+                  {isActive && !needsAttention && (
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-primary shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Card content */}
+          <div className="flex-1 min-w-0">
+            {selectedConfig && (
               <AgentConfigCard
-                key={cfg.agentId}
-                config={cfg}
+                key={selectedConfig.agentId}
+                config={selectedConfig}
                 activeProviders={activeProviders}
                 onSave={handleSave}
                 onReset={handleReset}
                 isSaving={updateMutation.isPending}
                 t={t}
               />
-            ))}
+            )}
           </div>
         </div>
-      )}
-
-      {/* Standard agents: NEXUS, FORGE, SIGMA, CIPHER */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">
-          {t('settings.agents.specialists')}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {standardConfigs.map((cfg) => (
-            <AgentConfigCard
-              key={cfg.agentId}
-              config={cfg}
-              activeProviders={activeProviders}
-              onSave={handleSave}
-              onReset={handleReset}
-              isSaving={updateMutation.isPending}
-              t={t}
-            />
-          ))}
-        </div>
       </div>
-
-      {/* AEGIS — locked */}
-      {aegisConfig && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-red-500">
-            AEGIS — {t('settings.agents.riskManager')}
-          </h2>
-          <AgentConfigCard
-            config={aegisConfig}
-            activeProviders={activeProviders}
-            onSave={handleSave}
-            onReset={handleReset}
-            isSaving={updateMutation.isPending}
-            t={t}
-          />
-        </div>
-      )}
 
       {/* Preset confirmation dialog */}
       <Dialog

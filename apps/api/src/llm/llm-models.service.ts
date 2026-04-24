@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LLMProvider } from '../../generated/prisma/enums';
 import { decrypt } from '../users/utils/encryption.util';
 import { MODEL_PRICING } from './model-pricing';
+import { OpenRouterModelsService } from '@crypto-trader/openrouter';
 
 interface ProviderModel {
   id: string;
@@ -35,6 +36,7 @@ export class LLMModelsService {
     { data: ProviderModel[]; fetchedAt: number }
   >();
   private readonly CACHE_TTL = 5 * 60 * 1000;
+  private readonly openRouterModels = new OpenRouterModelsService();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -271,74 +273,31 @@ export class LLMModelsService {
       );
   }
 
-  private async fetchOpenRouter(apiKey: string): Promise<ProviderModel[]> {
-    const { data } = await axios.get('https://openrouter.ai/api/v1/models', {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      timeout: 15000,
-    });
+  private async fetchOpenRouter(_apiKey: string): Promise<ProviderModel[]> {
+    const models = await this.openRouterModels.listModels({ textOnly: true });
 
-    const textModels = (data.data ?? []).filter(
-      (m: any) =>
-        m.id &&
-        m.architecture?.modality === 'text->text' &&
-        m.top_provider?.is_moderated !== undefined &&
-        !m.expiration_date, // exclude deprecated/expiring models
-    );
-
-    // Sort by weekly usage (position in API response = popularity) and build models
-    const models: ProviderModel[] = textModels.slice(0, 150).map((m: any) => {
-      const inputPrice = m.pricing
-        ? parseFloat(m.pricing.prompt) * 1_000_000
-        : 0;
-      const outputPrice = m.pricing
-        ? parseFloat(m.pricing.completion) * 1_000_000
-        : 0;
-      const isFree = inputPrice === 0 && outputPrice === 0;
-      const supportedParams: string[] = m.supported_parameters ?? [];
-      const hasReasoning =
-        supportedParams.includes('reasoning') ||
-        supportedParams.includes('include_reasoning');
-      const hasTools = supportedParams.includes('tools');
-      const contextLen = m.context_length ?? 128_000;
-
-      // Dynamic category classification
-      const categories: string[] = [];
-      if (isFree) categories.push('free');
-      if (!isFree) categories.push('paid');
-      if (hasReasoning) categories.push('reasoning');
-      if (hasTools) categories.push('analytics');
-      // "fast" heuristic: low price + high context or known fast providers
-      if ((inputPrice < 1.0 && outputPrice < 5.0) || isFree) {
-        categories.push('fast');
-      }
-
-      return {
-        id: m.id,
-        name: m.name ?? m.id,
-        contextWindow: contextLen,
-        pricing: { input: inputPrice, output: outputPrice },
-        deprecated: false,
-        recommended: MODEL_PRICING[m.id]?.recommended ?? false,
-        categories,
-      } as ProviderModel;
-    });
-
-    // Build top-paid: non-free sorted by output price desc (most capable first), limit 10
-    const paidModels = models.filter((m) => m.categories?.includes('paid'));
+    // Build top-paid: non-free sorted by output price desc, limit 10
+    const paidModels = models.filter((m) => !m.isFree);
     const topPaidIds = new Set(
       [...paidModels]
-        .sort((a, b) => (b.pricing?.output ?? 0) - (a.pricing?.output ?? 0))
+        .sort((a, b) => b.pricing.completion - a.pricing.completion)
         .slice(0, 10)
         .map((m) => m.id),
     );
 
-    // Tag top-paid
-    for (const m of models) {
-      if (topPaidIds.has(m.id)) {
-        m.categories!.push('top-paid');
-      }
-    }
+    return models.slice(0, 150).map((m) => {
+      const categories: string[] = [...m.categories];
+      if (topPaidIds.has(m.id)) categories.push('top-paid');
 
-    return models;
+      return {
+        id: m.id,
+        name: m.name,
+        contextWindow: m.contextLength,
+        pricing: { input: m.pricing.prompt, output: m.pricing.completion },
+        deprecated: false,
+        recommended: false,
+        categories,
+      } as ProviderModel;
+    });
   }
 }

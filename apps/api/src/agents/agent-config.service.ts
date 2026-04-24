@@ -5,11 +5,21 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgentId, LLMProvider } from '../../generated/prisma/enums';
-import { AGENT_PRESETS, AgentPresetName } from './agent-presets';
+import {
+  AGENT_PRESETS_STATIC,
+  AgentPresetName,
+  STATIC_FALLBACK_MODEL,
+  buildDynamicPreset,
+  resolveFallbackModel,
+} from './agent-presets';
+import { OpenRouterModelsApiService } from '../openrouter/openrouter-models-api.service';
 
 @Injectable()
 export class AgentConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly openRouterModels: OpenRouterModelsApiService,
+  ) {}
 
   // ── User configs ───────────────────────────────────────────────────────────
 
@@ -73,12 +83,18 @@ export class AgentConfigService {
   // ── Presets ────────────────────────────────────────────────────────────────
 
   async applyPreset(userId: string, presetName: AgentPresetName) {
-    const preset = AGENT_PRESETS[presetName];
-    if (!preset) {
+    if (!['free', 'optimized', 'balanced'].includes(presetName)) {
       throw new BadRequestException(
         `Unknown preset "${presetName}". Valid values: free, optimized, balanced`,
       );
     }
+
+    // Resolve preset dynamically from live OpenRouter models
+    const models = await this.openRouterModels.getModels();
+    const preset =
+      models.length > 0
+        ? buildDynamicPreset(presetName, models)
+        : AGENT_PRESETS_STATIC[presetName];
 
     const results: Array<{ agentId: string; provider: string; model: string }> =
       [];
@@ -101,7 +117,58 @@ export class AgentConfigService {
       results.push({ agentId, provider: entry.provider, model: entry.model });
     }
 
-    return { applied: presetName, count: results.length, agents: results };
+    // Also update the fallback model on the user's OpenRouter credential
+    const fallbackModel =
+      models.length > 0
+        ? resolveFallbackModel(presetName, models)
+        : STATIC_FALLBACK_MODEL;
+
+    let appliedFallback: string | null = null;
+    if (fallbackModel) {
+      const updated = await this.prisma.lLMCredential.updateMany({
+        where: {
+          userId,
+          provider: LLMProvider.OPENROUTER,
+          isActive: true,
+        },
+        data: { selectedModel: fallbackModel },
+      });
+      if (updated.count > 0) appliedFallback = fallbackModel;
+    }
+
+    return {
+      applied: presetName,
+      count: results.length,
+      agents: results,
+      fallbackModel: appliedFallback,
+    };
+  }
+
+  /**
+   * Auto-resolve the best fallback model from the live OpenRouter catalog
+   * and save it to the user's OpenRouter credential.
+   */
+  async autoResolveFallback(
+    userId: string,
+  ): Promise<{ fallbackModel: string }> {
+    const models = await this.openRouterModels.getModels();
+    const resolved =
+      models.length > 0
+        ? resolveFallbackModel('balanced', models)
+        : STATIC_FALLBACK_MODEL;
+
+    const fallbackModel = resolved ?? STATIC_FALLBACK_MODEL;
+
+    await this.prisma.lLMCredential.updateMany({
+      where: {
+        userId,
+        provider: LLMProvider.OPENROUTER,
+        isActive: true,
+      },
+      data: { selectedModel: fallbackModel },
+    });
+
+    return { fallbackModel };
   }
 
   // ── Admin configs ──────────────────────────────────────────────────────────
@@ -141,12 +208,18 @@ export class AgentConfigService {
   }
 
   async applyAdminPreset(presetName: AgentPresetName, adminUserId: string) {
-    const preset = AGENT_PRESETS[presetName];
-    if (!preset) {
+    if (!['free', 'optimized', 'balanced'].includes(presetName)) {
       throw new BadRequestException(
         `Unknown preset "${presetName}". Valid values: free, optimized, balanced`,
       );
     }
+
+    // Resolve preset dynamically from live OpenRouter models
+    const models = await this.openRouterModels.getModels();
+    const preset =
+      models.length > 0
+        ? buildDynamicPreset(presetName, models)
+        : AGENT_PRESETS_STATIC[presetName];
     const results: AgentId[] = [];
     for (const [agentIdStr, entry] of Object.entries(preset)) {
       const agentId = agentIdStr as AgentId;
@@ -166,6 +239,31 @@ export class AgentConfigService {
       });
       results.push(agentId);
     }
-    return { applied: presetName, count: results.length, agents: results };
+
+    // Also update the fallback model on the admin's OpenRouter credential
+    const fallbackModel =
+      models.length > 0
+        ? resolveFallbackModel(presetName, models)
+        : STATIC_FALLBACK_MODEL;
+
+    let appliedFallback: string | null = null;
+    if (fallbackModel) {
+      const updated = await this.prisma.lLMCredential.updateMany({
+        where: {
+          userId: adminUserId,
+          provider: LLMProvider.OPENROUTER,
+          isActive: true,
+        },
+        data: { selectedModel: fallbackModel },
+      });
+      if (updated.count > 0) appliedFallback = fallbackModel;
+    }
+
+    return {
+      applied: presetName,
+      count: results.length,
+      agents: results,
+      fallbackModel: appliedFallback,
+    };
   }
 }

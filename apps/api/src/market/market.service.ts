@@ -279,29 +279,23 @@ export class MarketService {
     });
   }
 
-  // ── Resolve LLM for News (uses first active credential) ────────────────────
-
-  async resolveLLMForNews(
-    userId: string,
-  ): Promise<{ provider: LLMProvider; model: string; apiKey: string } | null> {
-    // Resolution now handled centrally by AgentConfigResolver for orchestrated calls.
-    // This method provides a simple fallback for direct news AI analysis.
-    const activeCreds = await this.prisma.lLMCredential.findMany({
-      where: { userId, isActive: true },
-    });
-    if (activeCreds.length === 0) return null;
-
-    const cred = activeCreds[0];
-    return {
-      provider: cred.provider as LLMProvider,
-      model: cred.selectedModel,
-      apiKey: decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-    };
-  }
-
   // ── AI Sentiment Analysis → updates latest DB record ──────────────────────
 
   async analyzeSentiment(userId: string) {
+    // C1 TTL: Skip LLM call if AI analysis is still fresh (Spec 38, B.5)
+    const ttlCfg = await this.getNewsConfig(userId);
+    const ttlMs = ttlCfg.intervalMinutes * 60_000;
+    const latestForTtl = await this.getLatestAnalysis(userId);
+    if (latestForTtl?.aiAnalyzedAt) {
+      const age = Date.now() - new Date(latestForTtl.aiAnalyzedAt).getTime();
+      if (age < ttlMs) {
+        this.logger.log(
+          `AI analysis still fresh (${Math.round(age / 1000)}s < ${ttlCfg.intervalMinutes}min TTL). Skipping LLM call.`,
+        );
+        return latestForTtl;
+      }
+    }
+
     // Resolve SIGMA agent config (market analysis agent)
     const agentCfg = await this.agentConfigResolver.resolveConfig(
       'market',
@@ -438,10 +432,9 @@ ${numbered}`;
     const aiHeadlines = headlines.map((h, i) => {
       const result = parsed.find((p) => p.index === i + 1);
       const rawSentiment = result?.sentiment?.toUpperCase?.() ?? '';
-      const sentiment =
-        validSentiments.has(rawSentiment)
-          ? (rawSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL')
-          : 'NEUTRAL';
+      const sentiment = validSentiments.has(rawSentiment)
+        ? (rawSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL')
+        : 'NEUTRAL';
       return { id: h.id, sentiment, reasoning: result?.reasoning ?? '' };
     });
 

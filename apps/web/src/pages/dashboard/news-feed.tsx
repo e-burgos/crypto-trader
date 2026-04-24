@@ -65,11 +65,7 @@ export function NewsFeedPage() {
   })();
 
   // Build AI overlay map from persisted analysis
-  const AI_VALID_MS = 12 * 60 * 60 * 1000;
-  const hasValidAi = !!(
-    analysis?.aiAnalyzedAt &&
-    Date.now() - new Date(analysis.aiAnalyzedAt).getTime() < AI_VALID_MS
-  );
+  const hasValidAi = !!analysis?.aiAnalyzedAt;
   const aiMap = new Map((analysis?.aiHeadlines ?? []).map((a) => [a.id, a]));
 
   const effectiveNews = news.map((n) => ({

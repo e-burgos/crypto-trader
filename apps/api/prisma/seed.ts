@@ -156,6 +156,19 @@ async function main() {
       }
     }
 
+    // ── PlatformLLMProvider: seed all providers as active (Spec 38) ──────────
+    const allProviders = Object.values(LLMProvider);
+    for (const provider of allProviders) {
+      await prisma.platformLLMProvider.upsert({
+        where: { provider },
+        update: {},
+        create: { provider, isActive: true },
+      });
+    }
+    console.log(
+      `PlatformLLMProvider seeded: ${allProviders.length} providers (all active)`,
+    );
+
     console.log('\n✅ Seed completado!');
     console.log('─────────────────────────────────────────');
     console.log('  admin@crypto.com        / Admin1234!  (ADMIN)');

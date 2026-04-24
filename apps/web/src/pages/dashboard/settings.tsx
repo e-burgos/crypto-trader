@@ -16,6 +16,7 @@ import {
   TableConfig,
   BarChart3,
   Star,
+  Ban,
 } from 'lucide-react';
 import { Button, InfoTooltip, Input } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
@@ -40,6 +41,7 @@ import {
   useTestBinanceConnection,
   useTestLLMKey,
   useValidateAllLLMKeys,
+  usePlatformLLMStatus,
   useNewsSourcesStatus,
   useNewsApiKeys,
   useSetNewsApiKey,
@@ -113,16 +115,7 @@ const LLM_PROVIDERS = [
   {
     value: 'OPENROUTER',
     label: 'OpenRouter',
-    models: [
-      'anthropic/claude-sonnet-4.6',
-      'google/gemini-3-flash-preview',
-      'anthropic/claude-opus-4.6',
-      'deepseek/deepseek-v3.2',
-      'google/gemini-2.5-flash-lite',
-      'openrouter/elephant-alpha',
-      'nvidia/nemotron-3-super-120b-a12b:free',
-      'google/gemma-4-31b-it:free',
-    ],
+    models: [], // Resolved dynamically via useOpenRouterModels hook
     helpLink: 'https://openrouter.ai/keys',
     helpLinkText: 'openrouter.ai',
   },
@@ -181,6 +174,7 @@ export function SettingsPage() {
 
   // LLM Keys
   const { data: llmKeys = [] } = useLLMKeys();
+  const { data: platformStatus = [] } = usePlatformLLMStatus();
   const { mutate: saveLLMKey, isPending: savingLLM } = useSetLLMKey();
   const { mutate: deleteLLMKey } = useDeleteLLMKey();
   const { mutate: updateLLMModel } = useUpdateLLMModel();
@@ -752,7 +746,6 @@ export function SettingsPage() {
                 }
                 onTest={(provider) => testLLM(provider)}
                 onDelete={(provider) => deleteLLMKey(provider)}
-                onUpdateModel={(data) => updateLLMModel(data)}
               />
             )}
 
@@ -822,26 +815,45 @@ export function SettingsPage() {
                         const validation = llmValidation?.results.find(
                           (r) => r.provider === provider.value,
                         );
+                        const platformProvider = platformStatus.find(
+                          (p) => p.provider === provider.value,
+                        );
+                        const isDisabledByAdmin =
+                          platformProvider?.isActive === false;
                         // Priority: manual test > auto-validation > DB isActive flag
                         const manualTestFailed =
                           status?.isActive &&
                           llmTestResult &&
                           llmTestProvider === provider.value &&
                           !llmTestResult.connected;
-                        const resolvedStatus = manualTestFailed
-                          ? 'INVALID'
-                          : (validation?.status ??
-                            (status?.isActive ? 'ACTIVE' : 'INACTIVE'));
+                        const resolvedStatus = isDisabledByAdmin
+                          ? 'DISABLED'
+                          : manualTestFailed
+                            ? 'INVALID'
+                            : (validation?.status ??
+                              (status?.isActive ? 'ACTIVE' : 'INACTIVE'));
                         return (
                           <div
                             key={provider.value}
-                            className="rounded-lg border border-border p-4"
+                            className={cn(
+                              'rounded-lg border p-4',
+                              isDisabledByAdmin
+                                ? 'border-red-500/20 bg-red-500/5 opacity-70'
+                                : 'border-border',
+                            )}
                           >
                             <div className="mb-3 flex items-center justify-between">
                               <span className="font-medium text-sm">
                                 {provider.label}
                               </span>
-                              {validatingLLMKeys && status?.isActive ? (
+                              {isDisabledByAdmin ? (
+                                <span className="flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-400">
+                                  <Ban className="h-3 w-3" />
+                                  {t('settings.disabledByAdmin', {
+                                    defaultValue: 'Disabled',
+                                  })}
+                                </span>
+                              ) : validatingLLMKeys && status?.isActive ? (
                                 <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-500">
                                   <Loader2 className="h-3 w-3 animate-spin" />
                                   {t('settings.validating')}
@@ -865,160 +877,176 @@ export function SettingsPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-1">
-                              <div>
-                                <label className="mb-1 block text-xs font-medium">
-                                  API Key
-                                </label>
-                                <Input
-                                  type="password"
-                                  placeholder="sk-..."
-                                  value={form.apiKey}
-                                  onChange={(e) =>
-                                    setLlmForms((f) => ({
-                                      ...f,
-                                      [provider.value]: {
-                                        ...(f[provider.value] ?? {
-                                          model: provider.models[0],
-                                        }),
-                                        apiKey: e.target.value,
-                                      },
-                                    }))
-                                  }
-                                  className="px-2 py-2"
-                                />
-                                <p className="mt-1.5 text-xs text-muted-foreground">
-                                  {t('settings.getApiKeyAt')}{' '}
-                                  <a
-                                    href={provider.helpLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
-                                  >
-                                    {provider.helpLinkText}
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </p>
+
+                            {isDisabledByAdmin ? (
+                              <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400 leading-relaxed">
+                                <Ban className="inline h-3 w-3 mr-1 -mt-0.5" />
+                                {t('settings.providerDisabledNotice', {
+                                  defaultValue:
+                                    'This provider has been temporarily disabled by the administrator. For more details, please contact us.',
+                                })}
                               </div>
-                              {status?.isActive ? (
-                                <div>
-                                  <DynamicModelSelect
-                                    provider={provider.value}
-                                    value={form.model}
-                                    label={t('settings.model')}
-                                    onChange={(model) => {
-                                      setLlmForms((f) => ({
-                                        ...f,
-                                        [provider.value]: {
-                                          ...(f[provider.value] ?? {
-                                            apiKey: '',
-                                          }),
-                                          model,
-                                        },
-                                      }));
-                                      updateLLMModel({
-                                        provider: provider.value,
-                                        selectedModel: model || null,
-                                      });
-                                    }}
-                                    fallbackModels={provider.models}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
-                                  {t('settings.activateProviderFirst', {
-                                    defaultValue:
-                                      'Guarda tu API key para seleccionar un modelo',
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <Button
-                                size="sm"
-                                disabled={savingLLM || !form.apiKey}
-                                onClick={() =>
-                                  saveLLMKey(
-                                    {
-                                      provider: provider.value,
-                                      apiKey: form.apiKey,
-                                      selectedModel: form.model || null,
-                                    },
-                                    {
-                                      onSuccess: () => {
+                            ) : (
+                              <>
+                                <div className="grid gap-3 sm:grid-cols-1">
+                                  <div>
+                                    <label className="mb-1 block text-xs font-medium">
+                                      API Key
+                                    </label>
+                                    <Input
+                                      type="password"
+                                      placeholder="sk-..."
+                                      value={form.apiKey}
+                                      onChange={(e) =>
                                         setLlmForms((f) => ({
                                           ...f,
                                           [provider.value]: {
-                                            apiKey: '',
-                                            model: '',
+                                            ...(f[provider.value] ?? {
+                                              model: provider.models[0],
+                                            }),
+                                            apiKey: e.target.value,
                                           },
-                                        }));
-                                        resetLLMTest();
-                                      },
-                                    },
-                                  )
-                                }
-                              >
-                                {savingLLM && (
-                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                )}
-                                {t('common.save')}
-                              </Button>
-                              {status?.isActive && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={testingLLM}
-                                    onClick={() => testLLM(provider.value)}
-                                  >
-                                    {testingLLM &&
-                                      llmTestProvider === provider.value && (
-                                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                      )}
-                                    {testingLLM &&
-                                    llmTestProvider === provider.value
-                                      ? t('settings.testing')
-                                      : t('settings.testConnection')}
-                                  </Button>
-                                  {llmTestResult &&
-                                    llmTestProvider === provider.value && (
-                                      <span
-                                        className={cn(
-                                          'text-xs font-medium',
-                                          llmTestResult.connected
-                                            ? 'text-emerald-500'
-                                            : 'text-red-500',
-                                        )}
+                                        }))
+                                      }
+                                      className="px-2 py-2"
+                                    />
+                                    <p className="mt-1.5 text-xs text-muted-foreground">
+                                      {t('settings.getApiKeyAt')}{' '}
+                                      <a
+                                        href={provider.helpLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
                                       >
-                                        {llmTestResult.connected
-                                          ? t('settings.testSuccess')
-                                          : `${t('settings.testFailed')}: ${llmTestResult.error}`}
-                                      </span>
-                                    )}
-                                  {validation?.status === 'INVALID' &&
-                                    validation.error &&
-                                    !(
-                                      llmTestResult &&
-                                      llmTestProvider === provider.value
-                                    ) && (
-                                      <span className="text-xs font-medium text-red-500">
-                                        {t('settings.autoValidationFailed')}:{' '}
-                                        {validation.error}
-                                      </span>
-                                    )}
+                                        {provider.helpLinkText}
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    </p>
+                                  </div>
+                                  {status?.isActive ? (
+                                    <div>
+                                      <DynamicModelSelect
+                                        provider={provider.value}
+                                        value={form.model}
+                                        label={t('settings.model')}
+                                        onChange={(model) => {
+                                          setLlmForms((f) => ({
+                                            ...f,
+                                            [provider.value]: {
+                                              ...(f[provider.value] ?? {
+                                                apiKey: '',
+                                              }),
+                                              model,
+                                            },
+                                          }));
+                                          updateLLMModel({
+                                            provider: provider.value,
+                                            selectedModel: model || null,
+                                          });
+                                        }}
+                                        fallbackModels={provider.models}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground italic text-center">
+                                      {t('settings.activateProviderFirst', {
+                                        defaultValue:
+                                          'Guarda tu API key para seleccionar un modelo',
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
                                   <Button
                                     size="sm"
-                                    variant="ghost"
-                                    className="gap-1.5 text-red-500 hover:text-red-600"
-                                    onClick={() => deleteLLMKey(provider.value)}
+                                    disabled={savingLLM || !form.apiKey}
+                                    onClick={() =>
+                                      saveLLMKey(
+                                        {
+                                          provider: provider.value,
+                                          apiKey: form.apiKey,
+                                          selectedModel: form.model || null,
+                                        },
+                                        {
+                                          onSuccess: () => {
+                                            setLlmForms((f) => ({
+                                              ...f,
+                                              [provider.value]: {
+                                                apiKey: '',
+                                                model: '',
+                                              },
+                                            }));
+                                            resetLLMTest();
+                                          },
+                                        },
+                                      )
+                                    }
                                   >
-                                    <Trash2 className="h-3 w-3" />
-                                    {t('settings.remove')}
+                                    {savingLLM && (
+                                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                    )}
+                                    {t('common.save')}
                                   </Button>
-                                </>
-                              )}
-                            </div>
+                                  {status?.isActive && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={testingLLM}
+                                        onClick={() => testLLM(provider.value)}
+                                      >
+                                        {testingLLM &&
+                                          llmTestProvider ===
+                                            provider.value && (
+                                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                          )}
+                                        {testingLLM &&
+                                        llmTestProvider === provider.value
+                                          ? t('settings.testing')
+                                          : t('settings.testConnection')}
+                                      </Button>
+                                      {llmTestResult &&
+                                        llmTestProvider === provider.value && (
+                                          <span
+                                            className={cn(
+                                              'text-xs font-medium',
+                                              llmTestResult.connected
+                                                ? 'text-emerald-500'
+                                                : 'text-red-500',
+                                            )}
+                                          >
+                                            {llmTestResult.connected
+                                              ? t('settings.testSuccess')
+                                              : `${t('settings.testFailed')}: ${llmTestResult.error}`}
+                                          </span>
+                                        )}
+                                      {validation?.status === 'INVALID' &&
+                                        validation.error &&
+                                        !(
+                                          llmTestResult &&
+                                          llmTestProvider === provider.value
+                                        ) && (
+                                          <span className="text-xs font-medium text-red-500">
+                                            {t('settings.autoValidationFailed')}
+                                            : {validation.error}
+                                          </span>
+                                        )}
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="gap-1.5 text-red-500 hover:text-red-600"
+                                        onClick={() =>
+                                          deleteLLMKey(provider.value)
+                                        }
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                        {t('settings.remove')}
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </>
+                            )}
                           </div>
                         );
                       },

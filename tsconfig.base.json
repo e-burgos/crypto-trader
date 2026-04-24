@@ -22,6 +22,7 @@
       "@crypto-trader/analysis": ["libs/analysis/src/index.ts"],
       "@crypto-trader/data-fetcher": ["libs/data-fetcher/src/index.ts"],
       "@crypto-trader/ui": ["libs/ui/src/index.ts"],
+      "@crypto-trader/openrouter": ["libs/openrouter/src/index.ts"],
       "shared": ["libs/shared/src/index.ts"],
       "trading-engine": ["libs/trading-engine/src/index.ts"],
       "analysis": ["libs/analysis/src/index.ts"],

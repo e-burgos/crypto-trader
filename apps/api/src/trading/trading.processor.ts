@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
 import { MarketService } from '../market/market.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -28,6 +29,7 @@ import {
 } from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
+import type { AgentHealthReport } from '../agents/agent-config-resolver.service';
 
 interface AgentJobData {
   userId: string;
@@ -46,6 +48,7 @@ export class TradingProcessor {
     private readonly usersService: UsersService,
     private readonly marketService: MarketService,
     private readonly orchestratorService: OrchestratorService,
+    private readonly agentConfigResolver: AgentConfigResolverService,
   ) {}
 
   @Process('run-cycle')
@@ -117,14 +120,16 @@ export class TradingProcessor {
         );
       }
 
-      // 3. Decrypt LLM credentials
-      const llmCred = await this.prisma.lLMCredential.findFirst({
-        where: { userId, isActive: true },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (!llmCred) {
+      // 3. Verify LLM health — agent-aware check (Spec 38, Fix P2)
+      const healthReport: AgentHealthReport =
+        await this.agentConfigResolver.checkHealth(userId);
+      if (!healthReport.healthy) {
+        const unhealthy = healthReport.agents
+          .filter((a) => !a.healthy)
+          .map((a) => a.agentId)
+          .join(', ');
         this.logger.warn(
-          `No LLM credentials for user ${userId} — pausing agent`,
+          `Agent config health check failed for user ${userId} — unhealthy agents: ${unhealthy} — pausing`,
         );
         await this.prisma.tradingConfig.update({
           where: { id: configId },
@@ -137,7 +142,6 @@ export class TradingProcessor {
         );
         return;
       }
-      const llmApiKey = decrypt(llmCred.apiKeyEncrypted, llmCred.apiKeyIv);
 
       // 4. Fetch candles
       // Klines is a PUBLIC endpoint — no auth or testnet URL needed.
@@ -163,9 +167,8 @@ export class TradingProcessor {
       // 5. Build indicator snapshot
       const indicatorSnapshot = calculateIndicatorSnapshot(candles);
 
-      // 6. Load news analysis from DB (AI if within 12h, else keyword-based)
+      // 6. Load news analysis from DB (AI if available, else keyword-based)
       //    Respects botEnabled: if disabled, bot runs without news context
-      const AI_VALID_MS = 12 * 60 * 60 * 1000;
       const newsConfig = await this.marketService.getNewsConfig(userId);
       const dbAnalysis = newsConfig.botEnabled
         ? await this.marketService.getLatestAnalysis(userId)
@@ -182,12 +185,7 @@ export class TradingProcessor {
       }> = [];
 
       if (dbAnalysis) {
-        const hasRecentAI =
-          dbAnalysis.aiAnalyzedAt &&
-          Date.now() - new Date(dbAnalysis.aiAnalyzedAt).getTime() <
-            AI_VALID_MS;
-
-        if (hasRecentAI && dbAnalysis.aiHeadlines) {
+        if (dbAnalysis.aiAnalyzedAt && dbAnalysis.aiHeadlines) {
           // Merge AI overrides into headlines
           const aiMap = new Map(
             (
@@ -284,6 +282,8 @@ export class TradingProcessor {
         suggestedWaitMinutes: orchestratedDecision.waitMinutes,
         orchestrated: orchestratedDecision.orchestrated,
         subAgentResults: orchestratedDecision.subAgentResults,
+        llmProvider: orchestratedDecision.llmProvider,
+        llmModel: orchestratedDecision.llmModel,
       };
 
       // Compute effective wait: AGENT mode respects LLM suggestion, CUSTOM mode uses user config.
@@ -316,6 +316,8 @@ export class TradingProcessor {
           metadata: {
             orchestrated: decision.orchestrated,
             subAgentResults: decision.subAgentResults,
+            llmProvider: decision.llmProvider ?? null,
+            llmModel: decision.llmModel ?? null,
           } as any,
         },
       });

@@ -507,12 +507,25 @@ const es = {
     llmSubtitle:
       'Configura los modelos de IA por defecto y monitorea la disponibilidad de proveedores en la plataforma',
     llmProviderStatus: 'Disponibilidad de Proveedores',
+    // Provider Toggle (Spec 38)
+    providerStatusTitle: 'Estado de Proveedores',
+    providerStatusSubtitle:
+      'Habilita o deshabilita proveedores LLM a nivel de plataforma. Deshabilitar un proveedor elimina todas las configuraciones de agentes que lo usen.',
+    providerActive: 'Activo',
+    providerInactive: 'Deshabilitado',
+    providerToggleConfirmTitle: '¿Deshabilitar Proveedor?',
+    providerToggleConfirmDesc:
+      'Deshabilitar {{provider}} eliminará todas las configuraciones de agentes que usen este proveedor. Los usuarios afectados serán notificados.',
+    providerToggleConfirmAction: 'Deshabilitar Proveedor',
+    providerToggleSuccess: '{{provider}} ahora está {{state}}',
     llmDefaultModels: 'Modelos por Defecto de Agentes',
     llmDefaultModelsDesc:
       'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
     agentModelsTitle: 'Modelos por Defecto de Agentes',
     agentModelsSubtitle:
       'Establece el proveedor y modelo por defecto para cada agente de IA. Los usuarios pueden sobreescribir esto con su propia configuración.',
+    fallbackDescription:
+      'Modelo de respaldo por defecto usado a nivel de plataforma cuando un usuario no tiene configuración personalizada. Se aplica automáticamente con los presets.',
     // Audit Log
     auditLogTitle: 'Registro de Auditoría',
     auditLogSubtitle:
@@ -701,6 +714,9 @@ const es = {
       noKeyBannerTitle: 'Se requiere una clave API',
       noKeyBannerDesc:
         'Necesitas configurar al menos una clave API activa para acceder a la plataforma. Agrega tu clave de OpenRouter y prueba la conexión.',
+      providerDisabledByAdmin: 'Deshabilitado por el administrador',
+      providerDisabledOverlay:
+        'Este proveedor ha sido deshabilitado por el administrador de la plataforma.',
     },
     newsSubtitle: 'Configura fuentes de noticias y claves API',
     newsSubTabs: {
@@ -760,8 +776,31 @@ const es = {
       free: 'Ranking Gratuitos',
       all: 'Todos los Modelos',
       reasoning: 'Razonamiento',
-      fast: 'Rápidos',
-      analytics: 'Analíticos',
+      fast: 'Rápidos y Baratos',
+      toolUse: 'Uso de Herramientas',
+      longContext: 'Contexto Largo (200K+)',
+      premium: 'Premium',
+      allCategories: 'Todas las Categorías',
+    },
+    orPrice: {
+      all: 'Todos',
+      free: 'Solo Gratis',
+      paid: 'Solo Pagos',
+    },
+    orSort: {
+      smart: 'Ranking Inteligente',
+      cheapest: 'Más Baratos',
+      mostCapable: 'Más Capaces',
+      longestContext: 'Mayor Contexto',
+    },
+    orFilter: {
+      category: 'Categoría',
+      price: 'Precio',
+      sort: 'Ordenar',
+      modelsAvailable: 'modelos disponibles',
+    },
+    modelInfo: {
+      viewDetails: 'Ver detalles del modelo',
     },
     provider: 'Proveedor',
     model: 'Modelo',
@@ -769,6 +808,9 @@ const es = {
     active: 'Activo',
     inactive: 'Inactivo',
     invalid: 'Inválido',
+    disabledByAdmin: 'Deshabilitado',
+    providerDisabledNotice:
+      'Este proveedor fue desactivado temporalmente por el administrador, para conocer más detalles ponte en contacto con nosotros.',
     newsSources: 'Fuentes de Noticias',
     freeSource: 'Gratis · Sin clave API requerida',
     reachable: 'Alcanzable',
@@ -835,6 +877,13 @@ const es = {
         applying: 'Aplicando preset…',
         confirm:
           '¿Aplicar el preset "{{name}}" a todos los agentes? Esto sobreescribirá tu configuración actual.',
+      },
+      fallback: {
+        title: 'Modelo Fallback',
+        description:
+          'Modelo de respaldo usado cuando un agente no tiene configuración específica. Se aplica automáticamente con los presets.',
+        autoResolve: 'Auto-resolver',
+        resolved: 'Modelo fallback configurado: {{model}}',
       },
     },
   },
@@ -1540,10 +1589,13 @@ const es = {
       CREATE_SESSION_ERROR:
         'No se pudo crear la sesión. Revisá tu clave de API en Ajustes.',
       DELETE_SESSION_ERROR: 'No se pudo eliminar la sesión.',
+      LLM_PROVIDER_DISABLED:
+        'Este proveedor LLM ha sido deshabilitado por el administrador.',
     },
   },
   agents: {
     selectAgent: 'Elige tu agente',
+    providerNeedsAttention: 'Requiere atención — proveedor deshabilitado',
     tabStatus: 'Estado de Agentes',
     tabModels: 'Modelos por Defecto',
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',
@@ -1564,6 +1616,7 @@ const es = {
     blockchainDesc: 'Experto en blockchain — DeFi, wallets, smart contracts',
     riskDesc:
       'Gestor de riesgo — stop-loss, exposición, seguridad del portafolio',
+    agentSwitched: 'Agente cambiado a {{agent}} ({{provider}}/{{model}})',
     routedByKrypto: 'Enrutado por KRYPTO',
     orchestrating: 'KRYPTO coordinando…',
     toolCall: 'Solicitud de herramienta FORGE',

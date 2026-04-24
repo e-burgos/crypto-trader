@@ -24,6 +24,7 @@ import { RagService } from '../orchestrator/rag.service';
 import { LLMModelsService } from '../llm/llm-models.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
@@ -68,16 +69,10 @@ const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
     'meta-llama/Llama-3.3-70B-Instruct-Turbo',
   ],
   [LLMProvider.OPENROUTER]: [
-    // Top Paid
+    // Resolved dynamically via OpenRouterModelsService at runtime.
+    // Static fallbacks only used if dynamic fetch fails.
     'anthropic/claude-sonnet-4.6',
     'google/gemini-3-flash-preview',
-    'anthropic/claude-opus-4.6',
-    'deepseek/deepseek-v3.2',
-    'google/gemini-2.5-flash-lite',
-    // Top Free
-    'openrouter/elephant-alpha',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    'google/gemma-4-31b-it:free',
   ],
 };
 
@@ -113,6 +108,8 @@ export class ChatService {
     @Optional() private readonly llmUsageService?: LLMUsageService,
     @Optional()
     private readonly agentConfigResolver?: AgentConfigResolverService,
+    @Optional()
+    private readonly platformLLMProviderService?: PlatformLLMProviderService,
   ) {}
 
   // ── Sessions ────────────────────────────────────────────────────────────────
@@ -517,6 +514,18 @@ export class ChatService {
 
     const generatedBy = `${effectiveProvider}:${effectiveModel}`;
 
+    // Emit resolved provider/model to client (Spec 38, B.6)
+    subject.next(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'routing',
+          agentId: activeAgentId,
+          provider: effectiveProvider,
+          model: effectiveModel,
+        }),
+      }),
+    );
+
     // Update session with resolved provider/model (for display)
     await this.prisma.chatSession.update({
       where: { id: sessionId },
@@ -537,6 +546,29 @@ export class ChatService {
       subject.complete();
       return;
     }
+
+    // Validate provider is active at platform level (Spec 38)
+    if (this.platformLLMProviderService) {
+      try {
+        await this.platformLLMProviderService.assertProviderActive(
+          effectiveProvider,
+        );
+      } catch (err) {
+        subject.next(
+          new MessageEvent('message', {
+            data: JSON.stringify({
+              error:
+                err instanceof Error
+                  ? err.message
+                  : `Provider ${effectiveProvider} is disabled`,
+            }),
+          }),
+        );
+        subject.complete();
+        return;
+      }
+    }
+
     const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
 
     // Last 30 messages for context

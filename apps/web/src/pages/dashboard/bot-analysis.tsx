@@ -23,7 +23,6 @@ import {
   AgentInputSummary,
   CombinedScoreBanner,
   NextDecisionBanner,
-  AI_VALID_MS,
   type NewsAnalysisData,
   type SigmaSentiment,
 } from '../../components/bot-analysis';
@@ -108,10 +107,7 @@ export function BotAnalysisPage() {
 
   const { data: pageNewsConfig } = useNewsConfig();
   const { data: pageAnalysis } = useNewsAnalysis();
-  const pageHasAi = !!(
-    pageAnalysis?.aiAnalyzedAt &&
-    Date.now() - new Date(pageAnalysis.aiAnalyzedAt).getTime() < AI_VALID_MS
-  );
+  const pageHasAi = !!pageAnalysis?.aiAnalyzedAt;
   const newsAnalysisData: NewsAnalysisData = {
     positive: pageHasAi
       ? (pageAnalysis?.aiPositiveCount ?? 0)

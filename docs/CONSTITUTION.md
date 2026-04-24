@@ -13,11 +13,12 @@
 **Principios fundacionales:**
 
 1. **Autonomía** — el agente opera sin intervención manual una vez configurado.
-2. **Inteligencia híbrida** — análisis técnico clásico + LLM multi-proveedor (Claude, OpenAI, Groq).
+2. **Inteligencia híbrida** — análisis técnico clásico + LLM multi-proveedor (OpenRouter, Claude, OpenAI, Groq, Gemini, Mistral, Together).
 3. **Multi-usuario aislado** — cada usuario gestiona sus propias claves, configuraciones y fondos independientes.
 4. **Seguro por defecto** — modo Sandbox obligatorio hasta que el usuario elija explícitamente modo Live.
-5. **Transparencia total** — cada decisión del agente queda registrada con razonamiento, indicadores y contexto de noticias.
+5. **Transparencia total** — cada decisión del agente queda registrada con razonamiento, indicadores, proveedor/modelo y contexto de noticias.
 6. **Adaptable** — el agente aprende intervalos óptimos de análisis basados en experiencia acumulada.
+7. **Gobernanza admin** — el administrador controla qué proveedores LLM están activos globalmente; los usuarios reciben notificación al desactivar uno.
 
 ---
 
@@ -32,6 +33,7 @@ crypto-trader/                    ← raíz del workspace NX
 │   ├── analysis/                 ← Indicadores técnicos + integración LLM
 │   ├── data-fetcher/             ← Binance OHLCV, noticias, RSS
 │   ├── trading-engine/           ← Lógica de órdenes y posiciones
+│   ├── openrouter/               ← Catálogo dinámico de modelos OpenRouter (SDK + cache)
 │   ├── shared/                   ← Types, DTOs, constantes, utils
 │   └── ui/                       ← Design system React (52 componentes stateless)
 ├── docs/
@@ -48,10 +50,11 @@ crypto-trader/                    ← raíz del workspace NX
 ### Reglas de dependencias entre libs
 
 ```
-web  →  shared, ui, analysis (tipos)
-api  →  shared, analysis, data-fetcher, trading-engine
+web  →  shared, ui, analysis (tipos), openrouter (tipos)
+api  →  shared, analysis, data-fetcher, trading-engine, openrouter
 analysis   →  shared, data-fetcher
 trading-engine  →  shared, analysis, data-fetcher
+openrouter →  (ninguna dep interna)
 data-fetcher  →  shared
 ui  →  shared
 ```
@@ -112,15 +115,15 @@ ui  →  shared
 
 ### 3.4 Proveedores LLM (multi-proveedor, por usuario)
 
-| Proveedor              | SDK                     | Modelos soportados                  |
-| ---------------------- | ----------------------- | ----------------------------------- |
-| **OpenRouter** ⭐      | HTTP (OpenAI-compat)    | 200+ modelos de todos los providers |
-| **Anthropic (Claude)** | `@anthropic-ai/sdk`     | claude-sonnet-4-6, claude-haiku-4-5 |
-| **OpenAI**             | `openai`                | gpt-4o, gpt-4o-mini                 |
-| **Groq**               | `groq-sdk`              | llama-3.3-70b, mixtral-8x7b         |
-| **Google (Gemini)**    | `@google/generative-ai` | gemini-2.5-flash, gemini-2.5-pro    |
-| **Mistral**            | `@mistralai/mistralai`  | mistral-large, mistral-small        |
-| **Together**           | HTTP (OpenAI-compat)    | llama, mixtral, qwen                |
+| Proveedor              | SDK                     | Modelos soportados                                                      |
+| ---------------------- | ----------------------- | ----------------------------------------------------------------------- |
+| **OpenRouter** ⭐      | `@openrouter/sdk`       | 200+ modelos de todos los providers (catálogo dinámico con cache 15min) |
+| **Anthropic (Claude)** | `@anthropic-ai/sdk`     | claude-sonnet-4-6, claude-haiku-4-5                                     |
+| **OpenAI**             | `openai`                | gpt-4o, gpt-4o-mini                                                     |
+| **Groq**               | `groq-sdk`              | llama-3.3-70b, mixtral-8x7b                                             |
+| **Google (Gemini)**    | `@google/generative-ai` | gemini-2.5-flash, gemini-2.5-pro                                        |
+| **Mistral**            | `@mistralai/mistralai`  | mistral-large, mistral-small                                            |
+| **Together**           | HTTP (OpenAI-compat)    | llama, mixtral, qwen                                                    |
 
 > **OpenRouter** es el proveedor **primario recomendado**: una sola API key da acceso a todos los modelos con fallback automático y billing unificado. Los proveedores directos siguen soportados como alternativa.
 
@@ -168,7 +171,10 @@ api/src/
 ├── users/              UsersModule      — CRUD, Binance keys (AES-256), LLM keys
 ├── trading/            TradingModule    — Ciclo de vida agente, órdenes, posiciones
 ├── analysis/           AnalysisModule   — LLM, indicadores, noticias
-├── market/             MarketModule     — OHLCV, Market snapshot, noticias caché
+├── llm/                LlmModule        — Modelos, pricing, ranking, provider toggle admin
+├── orchestrator/       OrchestratorModule — Agente multi-sub (orchestrator, market, risk, tech, fundamentals)
+├── openrouter/         OpenRouterModule — Catálogo dinámico de modelos vía @openrouter/sdk
+├── market/             MarketModule     — OHLCV, Market snapshot, noticias caché, sentimiento AI
 ├── notifications/      NotificationsModule — Centro de notificaciones + WebSocket
 ├── analytics/          AnalyticsModule  — P&L, win rate, decisiones
 ├── admin/              AdminModule      — Kill-switch global, gestión de usuarios
@@ -184,10 +190,11 @@ api/src/
 3. analysis: Calcular indicadores (RSI, MACD, BB, EMA, Volumen, S&R)
 4. data-fetcher: Noticias recientes (CryptoPanic / RSS)
 5. AgentConfigResolver: resolver proveedor/modelo por agente (usuario > admin > fallback)
-6. LLM call → { decision, confidence, reasoning, waitMinutes }
-6. trading-engine: Si confidence ≥ threshold → ejecutar orden en Binance
-7. DB: Guardar AgentDecision + Trade + actualizar Position
-8. WebSocket: Emitir eventos al frontend (trade:executed, agent:decision)
+6. PlatformLLMProviderService: verificar que el provider está activo globalmente
+7. LLM call → { decision, confidence, reasoning, waitMinutes, llmProvider, llmModel }
+7. trading-engine: Si confidence ≥ threshold → ejecutar orden en Binance
+8. DB: Guardar AgentDecision + Trade + actualizar Position + persistir sentimiento en NewsAnalysis
+9. WebSocket: Emitir eventos al frontend (trade:executed, agent:decision)
 9. Bull: Reprogramar siguiente job según waitMinutes
 ```
 
@@ -269,7 +276,7 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 | **Theme**         | ThemeProvider                                                                                                                                   |
 | **Charts**        | ChartCard, ChartTooltip, ChartTheme (constantes)                                                                                                |
 | **Domain/Market** | StatCard, PriceTicker, IndicatorInfoModal                                                                                                       |
-| **Domain/Agent**  | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets, AgentConfigCard, ProviderSearchSelect, ModelSearchSelect                    |
+| **Domain/Agent**  | DecisionFlowDiagram, ExplainPanel, ParameterCards, StrategyPresets, AgentConfigCard, ProviderSearchSelect, ModelSearchSelect, ModelInfoModal    |
 | **Domain/Chat**   | AgentHeader, AgentSelector, CapabilityButtons, ChatInput, OrchestratingIndicator, ToolCallCard, QuickActionButtons, ChatInlineOptions           |
 | **Domain/Help**   | HelpSidebar                                                                                                                                     |
 
@@ -331,6 +338,7 @@ Todos los componentes de UI stateless viven en `libs/ui`. Las apps consumen vía
 | `ChatSession` / `ChatMessage` | Historial del chat con el asistente IA (provider/model opcionales, resueltos por agente)                    |
 | `AgentConfig`                 | Override de proveedor/modelo por agente por usuario                                                         |
 | `AdminAgentConfig`            | Defaults globales de proveedor/modelo por agente (solo OpenRouter, seteados por Admin)                      |
+| `PlatformLLMProvider`         | Estado global de cada proveedor LLM (activo/inactivo), controlado por Admin                                 |
 | `SandboxWallet`               | Wallet virtual para modo Sandbox                                                                            |
 | `NewsConfig`                  | Config de noticias por usuario (botEnabled, newsWeight)                                                     |
 | `NewsAnalysis`                | Análisis de noticias generado por LLM                                                                       |
@@ -477,23 +485,25 @@ pnpm nx affected --target=test   # Solo testear lo afectado por cambios
 
 ## 11. Decisiones Arquitecturales Clave
 
-| #   | Decisión                                  | Razón                                                                                                                                          |
-| --- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Monorepo NX                               | Compartir tipos y lógica entre web/api sin duplicación                                                                                         |
-| 2   | pnpm workspaces                           | Performance y correctness en resolución de dependencias                                                                                        |
-| 3   | NestJS para API                           | DI robusto, módulos, decoradores — ideal para arquitectura multi-dominio                                                                       |
-| 4   | Prisma ORM                                | Type-safety end-to-end, migraciones declarativas                                                                                               |
-| 5   | Bull + Redis para colas                   | Garantía de entrega de trabajos de análisis; reintentos automáticos                                                                            |
-| 6   | AES-256-GCM para claves                   | Estándar de la industria; clave maestra separada de los datos                                                                                  |
-| 7   | LLM por usuario (no global)               | Costos atribuibles al usuario; flexibilidad de proveedor                                                                                       |
-| 8   | GitHub Pages para web                     | Cero costo; build estático compatible con React Router                                                                                         |
-| 9   | Railway para API                          | Deploy desde Dockerfile; PostgreSQL + Redis incluidos                                                                                          |
-| 10  | Sandbox server-side enforced              | Nunca confiar en el cliente para prevenir órdenes reales                                                                                       |
-| 11  | TanStack Query para server state          | Caché, refetch, stale-time — evita useEffect para fetching                                                                                     |
-| 12  | i18n desde el inicio                      | Evitar deuda de localización; arquitectura bilingüe nativa                                                                                     |
-| 13  | OpenRouter como provider recomendado      | Una API key → 200+ modelos, fallback automático, billing unificado; reduce fricción de onboarding                                              |
-| 14  | Agent Hub: config centralizada por agente | Un agente = un par proveedor/modelo. Resolución: usuario > admin > hardcoded fallback. Elimina config LLM dispersa en TradingConfig/NewsConfig |
-| 15  | Chat resuelve LLM por agente (no manual)  | El chat usa `AgentConfigResolver` según el agente activo. Sin selección manual de provider/model. "Primary Model" en settings es solo fallback |
+| #   | Decisión                                  | Razón                                                                                                                                                                                                  |
+| --- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Monorepo NX                               | Compartir tipos y lógica entre web/api sin duplicación                                                                                                                                                 |
+| 2   | pnpm workspaces                           | Performance y correctness en resolución de dependencias                                                                                                                                                |
+| 3   | NestJS para API                           | DI robusto, módulos, decoradores — ideal para arquitectura multi-dominio                                                                                                                               |
+| 4   | Prisma ORM                                | Type-safety end-to-end, migraciones declarativas                                                                                                                                                       |
+| 5   | Bull + Redis para colas                   | Garantía de entrega de trabajos de análisis; reintentos automáticos                                                                                                                                    |
+| 6   | AES-256-GCM para claves                   | Estándar de la industria; clave maestra separada de los datos                                                                                                                                          |
+| 7   | LLM por usuario (no global)               | Costos atribuibles al usuario; flexibilidad de proveedor                                                                                                                                               |
+| 8   | GitHub Pages para web                     | Cero costo; build estático compatible con React Router                                                                                                                                                 |
+| 9   | Railway para API                          | Deploy desde Dockerfile; PostgreSQL + Redis incluidos                                                                                                                                                  |
+| 10  | Sandbox server-side enforced              | Nunca confiar en el cliente para prevenir órdenes reales                                                                                                                                               |
+| 11  | TanStack Query para server state          | Caché, refetch, stale-time — evita useEffect para fetching                                                                                                                                             |
+| 12  | i18n desde el inicio                      | Evitar deuda de localización; arquitectura bilingüe nativa                                                                                                                                             |
+| 13  | OpenRouter como provider recomendado      | Una API key → 200+ modelos, fallback automático, billing unificado; reduce fricción de onboarding                                                                                                      |
+| 14  | Agent Hub: config centralizada por agente | Un agente = un par proveedor/modelo. Resolución: usuario > admin > hardcoded fallback. Elimina config LLM dispersa en TradingConfig/NewsConfig                                                         |
+| 15  | Chat resuelve LLM por agente (no manual)  | El chat usa `AgentConfigResolver` según el agente activo. Sin selección manual de provider/model. "Primary Model" en settings es solo fallback                                                         |
+| 16  | Toggle admin de proveedores LLM           | El admin puede activar/desactivar proveedores globalmente. Al desactivar: limpia AgentConfigs afectados, notifica usuarios, registra AdminAction. Endpoints validan vía `assertProviderActive()` (409) |
+| 17  | Catálogo OpenRouter dinámico              | Los modelos OpenRouter no están hardcoded — se obtienen de la API con cache 15min (`libs/openrouter`). Pricing, ranking y presets se construyen dinámicamente                                          |
 
 ---
 

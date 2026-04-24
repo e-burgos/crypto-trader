@@ -99,6 +99,7 @@ export function useApplyPreset() {
       ),
     onSuccess: (_, preset) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
       const names: Record<AgentPresetName, string> = {
         free: t('settings.agents.presets.free'),
         optimized: t('settings.agents.presets.optimized'),
@@ -108,6 +109,31 @@ export function useApplyPreset() {
         t('settings.agents.presets.applied', {
           name: names[preset],
           defaultValue: `Preset "${names[preset]}" aplicado correctamente`,
+        }),
+      );
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('common.error'));
+    },
+  });
+}
+
+export function useAutoResolveFallback() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: () =>
+      api.post<{ fallbackModel: string }>(
+        '/users/me/agents/config/resolve-fallback',
+        {},
+      ),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      toast.success(
+        t('settings.agents.fallback.resolved', {
+          model: data.fallbackModel,
+          defaultValue: `Fallback model set to ${data.fallbackModel}`,
         }),
       );
     },
@@ -131,12 +157,13 @@ export function useApplyAdminPreset() {
 
   return useMutation({
     mutationFn: (preset: AgentPresetName) =>
-      api.post<{ applied: string; count: number }>(
+      api.post<{ applied: string; count: number; fallbackModel?: string }>(
         `/admin/agent-configs/preset/${preset}`,
         {},
       ),
     onSuccess: (_, preset) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
       const names: Record<AgentPresetName, string> = {
         free: t('settings.agents.presets.free'),
         optimized: t('settings.agents.presets.optimized'),

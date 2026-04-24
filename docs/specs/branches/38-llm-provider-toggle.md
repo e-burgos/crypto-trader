@@ -1,15 +1,17 @@
 # Spec 38 — Toggle Global de Proveedores LLM + Hardening LLM Pipeline
 
-**Fecha:** 2026-04-22  
-**Versión:** 2.0  
-**Estado:** Propuesto  
+**Fecha:** 2026-04-23  
+**Versión:** 4.0  
+**Estado:** Implementado  
 **Branch:** `feature/llm-provider-toggle`  
 **Dependencias:** Spec 35 (openrouter-integration), Spec 31 (llm-provider-dashboard), Spec 36 (agent-hub-config)
 
-| Versión | Fecha      | Cambios                                                                                                                    |
-| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 1.0     | 2026-04-22 | Versión inicial: toggle admin, validaciones, UI admin/user                                                                 |
-| 2.0     | 2026-04-22 | Amplía scope: fixes P1-P4, persistencia de sentimiento A2, chat agent/model header, TTL C1, tabla normativa agente→proceso |
+| Versión | Fecha      | Cambios                                                                                                                                                                                  |
+| ------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2026-04-22 | Versión inicial: toggle admin, validaciones, UI admin/user                                                                                                                               |
+| 2.0     | 2026-04-22 | Amplía scope: fixes P1-P4, persistencia de sentimiento A2, chat agent/model header, TTL C1, tabla normativa agente→proceso                                                               |
+| 3.0     | 2026-04-22 | Sección F: modelos OpenRouter dinámicos via SDK, eliminación de hardcodeo, nueva lib `libs/openrouter`                                                                                   |
+| 4.0     | 2026-04-23 | Estado → Implementado. Agrega sección G: mejoras UX adicionales (SIGMA bug, agent model display, vertical tabs, Select auto-direction, responsive filters). Correcciones de lint ESLint. |
 
 ---
 
@@ -50,6 +52,17 @@ Esta spec introduce:
 ### E. Chat: indicador visual de agente/modelo activo (B2)
 
 - En la UI de chat, al cambiar de agente vía routing de KRYPTO, mostrar visualmente el cambio incluyendo el provider/modelo que está respondiendo.
+
+### F. Modelos OpenRouter dinámicos — eliminación de hardcodeo
+
+**Problema:** Los modelos OpenRouter están hardcoded en `model-pricing.ts`, `model-ranking.ts`, `agent-presets.ts` y múltiples archivos frontend. Cuando un modelo se depreca o se revela (ej: `openrouter/elephant-alpha`), todo el sistema rompe con 404.
+
+**Solución:** Reemplazar todas las listas hardcoded de OpenRouter con fetching dinámico via `@openrouter/sdk`:
+
+- **Nueva lib `libs/openrouter`:** Encapsula el SDK de OpenRouter (`@openrouter/sdk`), expone un servicio con cache (TTL 15min) que lista modelos, filtra por categoría/precio, y provee tipos compartidos.
+- **Backend:** Nuevo endpoint `GET /openrouter/models` que proxy-a la API con cache server-side. `model-pricing.ts` y `model-ranking.ts` mantienen datos estáticos solo para providers non-OpenRouter; las entradas de OpenRouter se resuelven dinámicamente.
+- **`agent-presets.ts`:** Los presets validan que los modelos existan contra la API en runtime (fallback a modelo similar si el preset queda obsoleto).
+- **Frontend:** Los selectores de modelo OpenRouter consumen el endpoint dinámico en vez de arrays hardcoded.
 
 ---
 
@@ -480,6 +493,29 @@ subject.next(
 5. **B2 UI:** Propagar `provider`/`model` del evento routing en `useChatAgent` → `AgentHeader`
 6. Traducciones en.ts / es.ts
 
+### Fase E — Modelos OpenRouter dinámicos
+
+1. Crear `libs/openrouter` con servicio de fetching + cache + tipos
+2. Backend: endpoint `GET /openrouter/models` con filtros (category, free, text-only)
+3. Backend: refactorizar `model-pricing.ts` — eliminar entradas hardcoded de OpenRouter
+4. Backend: refactorizar `model-ranking.ts` — entradas OpenRouter se resuelven dinámicamente
+5. Backend: `agent-presets.ts` — validación en runtime de disponibilidad de modelos
+6. Frontend: reemplazar `OPENROUTER_MODELS` hardcoded por fetch dinámico
+7. Frontend: reemplazar listas en `settings.tsx`, `llms.tsx`, `constants.tsx`, `types.ts`
+
+### Fase F — Mejoras UX adicionales (v4.0)
+
+1. **SIGMA conclusion bug fix:** `news-sentiment-panel.tsx` y `analysis-summary-card.tsx` — derivar `effectiveSigma` desde AI analysis (`useNewsAnalysis()`) cuando `hasAi` es true, en vez de leer de metadata de decisiones del agente (que tenía score 0.00).
+2. **Agent decision model display:** Nuevos campos `llmProvider`/`llmModel` en `DecisionPayload`, `trading.processor.ts`, y `analytics.service.ts` — persiste el modelo usado en síntesis para mostrarlo en detalle del agente (en vez de mostrar el modelo fallback).
+3. **Vertical tabs layout:** `/dashboard/settings/agents` y `/admin/agent-models` — reemplazar grid de cards por sidebar vertical con navegación tipo tabs (desktop: sidebar w-48, mobile: Select dropdown).
+4. **Select auto dropdown direction:** `libs/ui/src/lib/composites/select.tsx` — detección automática del espacio disponible para abrir el dropdown hacia arriba o abajo (umbral 280px).
+5. **Model name truncation:** `Select` component — clase CSS `truncate` en label para nombres largos de modelos OpenRouter.
+6. **Responsive filters:** `openrouter-model-select.tsx` — filtros pasan de `grid-cols-3` a `grid-cols-1 sm:grid-cols-3`.
+7. **Equal height cards:** `items-stretch` + `h-full` en contenedores de AgentConfigCard y AdminAgentConfigCard.
+8. **Full-width provider selector:** Eliminado `max-w-[240px]` para que el selector de provider use ancho completo.
+9. **Badge "Requiere atención"** en `/dashboard/settings/agents` — sidebar y mobile Select muestran alerta amber cuando un agente tiene provider desactivado por admin.
+10. **ESLint fix:** `eslint.config.mjs` — ignorar `**/package.json` para evitar parsing error en libs.
+
 ---
 
 ## 12. Out of scope
@@ -495,15 +531,18 @@ subject.next(
 
 ## 13. Decisiones de diseño
 
-| #   | Decisión                                                               | Alternativa                                 | Razón                                                                               |
-| --- | ---------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| 1   | Modelo `PlatformLLMProvider` dedicado vs JSON config                   | JSON en tabla de settings                   | Queries eficientes, auditable, extensible                                           |
-| 2   | Validación en endpoints específicos vs Guard global                    | Guard global en todos los endpoints         | Guard global bloquearía settings/profile; solo endpoints LLM necesitan validación   |
-| 3   | Limpiar AgentConfig.provider/model al desactivar vs bloquear ejecución | Solo bloquear sin limpiar                   | Limpiar + notificar es más claro para el usuario; evita estado zombie               |
-| 4   | 409 Conflict para provider disabled vs 403 Forbidden                   | 403                                         | 409 semánticamente correcto (conflicto de estado), 403 implicaría falta de permisos |
-| 5   | Seed automático en migración vs creación on-demand                     | On-demand (crear registro al primer toggle) | Seed garantiza consistencia; todos los providers existen siempre                    |
-| 6   | Notificación tipo `LLM_PROVIDER_DISABLED` vs reusar `AGENT_ERROR`      | Reusar tipo existente                       | Tipo dedicado permite filtrar y personalizar el mensaje/link en frontend            |
-| 7   | Persistir sentimiento A2 en `NewsAnalysis` vs tabla separada           | Tabla dedicada de sentiment cache           | Reusar modelo existente, misma estructura AI ya definida                            |
-| 8   | TTL de análisis AI basado en `intervalMinutes` vs TTL fijo             | TTL hardcoded de 10 min                     | Respetar configuración del usuario; flexibilidad                                    |
-| 9   | Incluir provider/model en evento SSE routing vs solo agentId           | Frontend lo consulta después                | Evita roundtrip extra; dato ya disponible en backend al momento del routing         |
-| 10  | Eliminar `resolveLLMForNews` vs marcar deprecated                      | Solo deprecar                               | Código muerto que puede confundir; eliminarlo es más seguro                         |
+| #   | Decisión                                                               | Alternativa                                 | Razón                                                                                 |
+| --- | ---------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| 1   | Modelo `PlatformLLMProvider` dedicado vs JSON config                   | JSON en tabla de settings                   | Queries eficientes, auditable, extensible                                             |
+| 2   | Validación en endpoints específicos vs Guard global                    | Guard global en todos los endpoints         | Guard global bloquearía settings/profile; solo endpoints LLM necesitan validación     |
+| 3   | Limpiar AgentConfig.provider/model al desactivar vs bloquear ejecución | Solo bloquear sin limpiar                   | Limpiar + notificar es más claro para el usuario; evita estado zombie                 |
+| 4   | 409 Conflict para provider disabled vs 403 Forbidden                   | 403                                         | 409 semánticamente correcto (conflicto de estado), 403 implicaría falta de permisos   |
+| 5   | Seed automático en migración vs creación on-demand                     | On-demand (crear registro al primer toggle) | Seed garantiza consistencia; todos los providers existen siempre                      |
+| 6   | Notificación tipo `LLM_PROVIDER_DISABLED` vs reusar `AGENT_ERROR`      | Reusar tipo existente                       | Tipo dedicado permite filtrar y personalizar el mensaje/link en frontend              |
+| 7   | Persistir sentimiento A2 en `NewsAnalysis` vs tabla separada           | Tabla dedicada de sentiment cache           | Reusar modelo existente, misma estructura AI ya definida                              |
+| 8   | TTL de análisis AI basado en `intervalMinutes` vs TTL fijo             | TTL hardcoded de 10 min                     | Respetar configuración del usuario; flexibilidad                                      |
+| 9   | Incluir provider/model en evento SSE routing vs solo agentId           | Frontend lo consulta después                | Evita roundtrip extra; dato ya disponible en backend al momento del routing           |
+| 10  | Eliminar `resolveLLMForNews` vs marcar deprecated                      | Solo deprecar                               | Código muerto que puede confundir; eliminarlo es más seguro                           |
+| 11  | Lib `libs/openrouter` dedicada vs integrar en `libs/analysis`          | Añadir al módulo analysis existente         | Separación de responsabilidades; openrouter tiene SDK propio, tipos, cache propia     |
+| 12  | SDK `@openrouter/sdk` vs REST directo con axios                        | axios a `/api/v1/models`                    | SDK provee tipos TypeScript, validación Zod, mantiene paridad con API automáticamente |
+| 13  | Cache server-side 15min vs cache frontend-only                         | Solo cache en React Query                   | Backend como proxy permite compartir cache entre usuarios, reduce calls a OpenRouter  |

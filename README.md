@@ -22,19 +22,19 @@ Plataforma fullstack de **trading autónomo de criptomonedas** impulsada por un 
 
 ## Stack
 
-| Capa | Tecnología |
-|------|-----------|
-| Monorepo | NX 22 + pnpm workspaces |
-| Frontend | React 19, Vite, React Router, TanStack Query, Zustand |
-| UI / Animaciones | Tailwind CSS, GSAP, Lucide React, lightweight-charts |
-| Backend | NestJS 11, Bull queues, Socket.io |
-| ORM / DB | Prisma 7, PostgreSQL 16 |
-| Cache / Colas | Redis 7 |
-| Auth | JWT (15min) + refresh tokens, bcrypt |
-| LLM | OpenRouter (`@openrouter/sdk`), Claude, OpenAI, Groq, Gemini, Mistral, Together — por usuario |
-| Trading API | Binance REST + WebSocket |
-| Tests | Vitest (frontend), Jest (backend), Playwright (E2E) |
-| CI/CD | GitHub Actions → GitHub Pages (web) + Railway (api) |
+| Capa             | Tecnología                                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| Monorepo         | NX 22 + pnpm workspaces                                                                       |
+| Frontend         | React 19, Vite, React Router, TanStack Query, Zustand                                         |
+| UI / Animaciones | Tailwind CSS, GSAP, Lucide React, lightweight-charts                                          |
+| Backend          | NestJS 11, Bull queues, Socket.io                                                             |
+| ORM / DB         | Prisma 7, PostgreSQL 16                                                                       |
+| Cache / Colas    | Redis 7                                                                                       |
+| Auth             | JWT (15min) + refresh tokens, bcrypt                                                          |
+| LLM              | OpenRouter (`@openrouter/sdk`), Claude, OpenAI, Groq, Gemini, Mistral, Together — por usuario |
+| Trading API      | Binance REST + WebSocket                                                                      |
+| Tests            | Vitest (frontend), Jest (backend), Playwright (E2E)                                           |
+| CI/CD            | GitHub Actions → GitHub Pages (web) + Railway (api)                                           |
 
 ---
 
@@ -195,23 +195,23 @@ Cada N minutos (adaptativo por volatilidad):
 
 ## Despliegue
 
-| Entorno | Servicio | Trigger |
-|---------|----------|---------|
-| Frontend (prod) | GitHub Pages | Push a `main` |
-| Backend (prod) | Railway | Push a `main` |
-| DB + Cache | Railway (PostgreSQL 16 + Redis 7) | Provisionado manualmente |
-| Local dev | Docker Compose | `pnpm docker:infra` |
+| Entorno         | Servicio                          | Trigger                  |
+| --------------- | --------------------------------- | ------------------------ |
+| Frontend (prod) | GitHub Pages                      | Push a `main`            |
+| Backend (prod)  | Railway                           | Push a `main`            |
+| DB + Cache      | Railway (PostgreSQL 16 + Redis 7) | Provisionado manualmente |
+| Local dev       | Docker Compose                    | `pnpm docker:infra`      |
 
 ---
 
 ## Documentación
 
-| Documento | Descripción |
-|-----------|-------------|
-| [docs/CONSTITUTION.md](docs/CONSTITUTION.md) | Arquitectura, stack detallado, convenciones y decisiones |
-| [docs/specs/crypto-trader-spec.md](docs/specs/crypto-trader-spec.md) | Especificación completa v1.2 |
-| [docs/plans/crypto-trader-implementation-plan.md](docs/plans/crypto-trader-implementation-plan.md) | Plan de implementación por tareas |
-| `http://localhost:3000/api/docs` | Swagger / OpenAPI (solo en dev) |
+| Documento                                                                                          | Descripción                                              |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [docs/CONSTITUTION.md](docs/CONSTITUTION.md)                                                       | Arquitectura, stack detallado, convenciones y decisiones |
+| [docs/specs/crypto-trader-spec.md](docs/specs/crypto-trader-spec.md)                               | Especificación completa v1.2                             |
+| [docs/plans/crypto-trader-implementation-plan.md](docs/plans/crypto-trader-implementation-plan.md) | Plan de implementación por tareas                        |
+| `http://localhost:3000/api/docs`                                                                   | Swagger / OpenAPI (solo en dev)                          |
 
 ---
 

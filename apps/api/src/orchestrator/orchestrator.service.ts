@@ -323,6 +323,22 @@ export class OrchestratorService {
 
     // Synthesis call via orchestrator
     let synthesisRaw: string;
+    let synthesisProvider: string | undefined;
+    let synthesisModel: string | undefined;
+
+    // Resolve model info before the synthesis call
+    try {
+      const resolved = await this.subAgent.getProvider(
+        userId,
+        'synthesis',
+        typedOverride,
+      );
+      synthesisProvider = resolved.provider;
+      synthesisModel = resolved.model;
+    } catch {
+      // Non-blocking — we'll still attempt the call
+    }
+
     try {
       synthesisRaw = await this.subAgent.call(
         'orchestrator',
@@ -394,6 +410,8 @@ export class OrchestratorService {
         typeof synthesis.waitMinutes === 'number' ? synthesis.waitMinutes : 15,
       orchestrated: true,
       subAgentResults,
+      llmProvider: synthesisProvider,
+      llmModel: synthesisModel,
     };
   }
 
@@ -487,14 +505,31 @@ export class OrchestratorService {
     userId: string,
     sentimentResult: string,
   ): Promise<void> {
+    // SIGMA returns: { sentiment: number, impact: "positive|negative|neutral", reasoning: string }
+    // We also accept the alternate format: { score, overallSentiment, summary, headlines }
     const parsed = safeParseJson<{
+      sentiment?: number;
+      impact?: string;
+      reasoning?: string;
       score?: number;
       overallSentiment?: string;
       summary?: string;
       headlines?: { id: string; sentiment: string; reasoning?: string }[];
     }>(sentimentResult, {});
 
-    if (!parsed.score && !parsed.overallSentiment) return;
+    // Map SIGMA fields to NewsAnalysis AI fields
+    // SIGMA returns sentiment as float (-1 to 1) or integer (-100 to 100)
+    let aiScore: number | null = parsed.score ?? null;
+    if (aiScore == null && parsed.sentiment != null) {
+      aiScore =
+        Math.abs(parsed.sentiment) <= 1
+          ? Math.round(parsed.sentiment * 100)
+          : Math.round(parsed.sentiment);
+    }
+    const aiOverallSentiment = parsed.overallSentiment ?? parsed.impact ?? null;
+    const aiSummary = parsed.summary ?? parsed.reasoning ?? null;
+
+    if (aiScore == null && !aiOverallSentiment) return;
 
     const latest = await this.prisma.newsAnalysis.findFirst({
       where: { userId },
@@ -503,9 +538,9 @@ export class OrchestratorService {
 
     const aiData = {
       aiAnalyzedAt: new Date(),
-      aiScore: parsed.score ?? null,
-      aiOverallSentiment: parsed.overallSentiment ?? null,
-      aiSummary: parsed.summary ?? null,
+      aiScore,
+      aiOverallSentiment,
+      aiSummary,
       aiHeadlines: (parsed.headlines as unknown) ?? undefined,
     };
 
@@ -522,9 +557,9 @@ export class OrchestratorService {
           positiveCount: 0,
           negativeCount: 0,
           neutralCount: 0,
-          score: parsed.score ?? 50,
-          overallSentiment: parsed.overallSentiment ?? 'neutral',
-          summary: parsed.summary ?? 'AI analysis from trading orchestrator',
+          score: aiScore ?? 50,
+          overallSentiment: aiOverallSentiment ?? 'neutral',
+          summary: aiSummary ?? 'AI analysis from trading orchestrator',
           headlines: [],
           ...aiData,
         },
@@ -532,7 +567,7 @@ export class OrchestratorService {
     }
 
     this.logger.log(
-      `A2→DB: Persisted SIGMA sentiment to NewsAnalysis for user=${userId}`,
+      `A2→DB: Persisted SIGMA sentiment to NewsAnalysis for user=${userId} (score=${aiScore}, sentiment=${aiOverallSentiment})`,
     );
   }
 }

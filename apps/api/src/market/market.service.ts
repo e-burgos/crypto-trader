@@ -287,8 +287,7 @@ export class MarketService {
     const ttlMs = ttlCfg.intervalMinutes * 60_000;
     const latestForTtl = await this.getLatestAnalysis(userId);
     if (latestForTtl?.aiAnalyzedAt) {
-      const age =
-        Date.now() - new Date(latestForTtl.aiAnalyzedAt).getTime();
+      const age = Date.now() - new Date(latestForTtl.aiAnalyzedAt).getTime();
       if (age < ttlMs) {
         this.logger.log(
           `AI analysis still fresh (${Math.round(age / 1000)}s < ${ttlCfg.intervalMinutes}min TTL). Skipping LLM call.`,
@@ -433,10 +432,9 @@ ${numbered}`;
     const aiHeadlines = headlines.map((h, i) => {
       const result = parsed.find((p) => p.index === i + 1);
       const rawSentiment = result?.sentiment?.toUpperCase?.() ?? '';
-      const sentiment =
-        validSentiments.has(rawSentiment)
-          ? (rawSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL')
-          : 'NEUTRAL';
+      const sentiment = validSentiments.has(rawSentiment)
+        ? (rawSentiment as 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL')
+        : 'NEUTRAL';
       return { id: h.id, sentiment, reasoning: result?.reasoning ?? '' };
     });
 

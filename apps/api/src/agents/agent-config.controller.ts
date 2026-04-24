@@ -110,4 +110,13 @@ export class AgentConfigController {
       preset as 'free' | 'optimized' | 'balanced',
     );
   }
+
+  @Post('config/resolve-fallback')
+  @ApiOperation({
+    summary:
+      'Auto-resolve the best fallback model from live OpenRouter catalog',
+  })
+  resolveFallback(@CurrentUser() user: RequestUser) {
+    return this.agentConfigService.autoResolveFallback(user.userId);
+  }
 }

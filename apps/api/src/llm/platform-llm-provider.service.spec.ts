@@ -175,7 +175,6 @@ describe('PlatformLLMProviderService', () => {
 
       const result: ToggleResult = await service.toggle(
         LLMProvider.GROQ,
-        true,
         adminId,
       );
 
@@ -217,7 +216,6 @@ describe('PlatformLLMProviderService', () => {
 
       const result: ToggleResult = await service.toggle(
         LLMProvider.GROQ,
-        false,
         adminId,
       );
 
@@ -253,7 +251,7 @@ describe('PlatformLLMProviderService', () => {
       mockPrisma.adminAction.create.mockResolvedValue({});
       mockPrisma.agentConfig.findMany.mockResolvedValue([]);
 
-      const result = await service.toggle(LLMProvider.CLAUDE, false, adminId);
+      const result = await service.toggle(LLMProvider.CLAUDE, adminId);
 
       expect(result.affectedAgentConfigs).toBe(0);
       expect(result.affectedUsers).toBe(0);
@@ -264,9 +262,9 @@ describe('PlatformLLMProviderService', () => {
     it('should throw NotFoundException for unknown provider', async () => {
       mockPrisma.platformLLMProvider.findUnique.mockResolvedValue(null);
 
-      await expect(
-        service.toggle(LLMProvider.GROQ, false, adminId),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.toggle(LLMProvider.GROQ, adminId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

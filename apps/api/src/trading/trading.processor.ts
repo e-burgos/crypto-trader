@@ -167,9 +167,8 @@ export class TradingProcessor {
       // 5. Build indicator snapshot
       const indicatorSnapshot = calculateIndicatorSnapshot(candles);
 
-      // 6. Load news analysis from DB (AI if within 12h, else keyword-based)
+      // 6. Load news analysis from DB (AI if available, else keyword-based)
       //    Respects botEnabled: if disabled, bot runs without news context
-      const AI_VALID_MS = 12 * 60 * 60 * 1000;
       const newsConfig = await this.marketService.getNewsConfig(userId);
       const dbAnalysis = newsConfig.botEnabled
         ? await this.marketService.getLatestAnalysis(userId)
@@ -186,12 +185,7 @@ export class TradingProcessor {
       }> = [];
 
       if (dbAnalysis) {
-        const hasRecentAI =
-          dbAnalysis.aiAnalyzedAt &&
-          Date.now() - new Date(dbAnalysis.aiAnalyzedAt).getTime() <
-            AI_VALID_MS;
-
-        if (hasRecentAI && dbAnalysis.aiHeadlines) {
+        if (dbAnalysis.aiAnalyzedAt && dbAnalysis.aiHeadlines) {
           // Merge AI overrides into headlines
           const aiMap = new Map(
             (
@@ -288,6 +282,8 @@ export class TradingProcessor {
         suggestedWaitMinutes: orchestratedDecision.waitMinutes,
         orchestrated: orchestratedDecision.orchestrated,
         subAgentResults: orchestratedDecision.subAgentResults,
+        llmProvider: orchestratedDecision.llmProvider,
+        llmModel: orchestratedDecision.llmModel,
       };
 
       // Compute effective wait: AGENT mode respects LLM suggestion, CUSTOM mode uses user config.
@@ -320,6 +316,8 @@ export class TradingProcessor {
           metadata: {
             orchestrated: decision.orchestrated,
             subAgentResults: decision.subAgentResults,
+            llmProvider: decision.llmProvider ?? null,
+            llmModel: decision.llmModel ?? null,
           } as any,
         },
       });

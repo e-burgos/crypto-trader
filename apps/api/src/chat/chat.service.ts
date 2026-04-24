@@ -69,16 +69,10 @@ const PROVIDER_MODELS: Record<LLMProvider, string[]> = {
     'meta-llama/Llama-3.3-70B-Instruct-Turbo',
   ],
   [LLMProvider.OPENROUTER]: [
-    // Top Paid
+    // Resolved dynamically via OpenRouterModelsService at runtime.
+    // Static fallbacks only used if dynamic fetch fails.
     'anthropic/claude-sonnet-4.6',
     'google/gemini-3-flash-preview',
-    'anthropic/claude-opus-4.6',
-    'deepseek/deepseek-v3.2',
-    'google/gemini-2.5-flash-lite',
-    // Top Free
-    'openrouter/elephant-alpha',
-    'nvidia/nemotron-3-super-120b-a12b:free',
-    'google/gemma-4-31b-it:free',
   ],
 };
 

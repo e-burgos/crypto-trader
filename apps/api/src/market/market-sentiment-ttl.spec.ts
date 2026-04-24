@@ -99,9 +99,7 @@ describe('MarketService.analyzeSentiment — TTL check (Spec 38, B.5)', () => {
       score: 60,
       overallSentiment: 'positive',
       summary: 'Test',
-      headlines: [
-        { id: '1', headline: 'Test news', sentiment: 'positive' },
-      ],
+      headlines: [{ id: '1', headline: 'Test news', sentiment: 'positive' }],
       aiAnalyzedAt: new Date(Date.now() - 20 * 60_000), // 20 min ago
       aiScore: 70,
     };

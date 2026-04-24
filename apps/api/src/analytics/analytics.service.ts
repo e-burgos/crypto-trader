@@ -210,6 +210,12 @@ export class AnalyticsService {
         }
       }
 
+      // Extract LLM provider/model from decision metadata (if saved), otherwise fall back to active credential
+      const decisionMeta = d.metadata as {
+        llmProvider?: string;
+        llmModel?: string;
+      } | null;
+
       return {
         ...d,
         metadata: undefined, // don't leak raw metadata to frontend
@@ -233,8 +239,8 @@ export class AnalyticsService {
               updatedAt: cfg.updatedAt,
             }
           : null,
-        llmProvider: activeLlm?.provider ?? null,
-        llmModel: activeLlm?.selectedModel ?? null,
+        llmProvider: decisionMeta?.llmProvider ?? activeLlm?.provider ?? null,
+        llmModel: decisionMeta?.llmModel ?? activeLlm?.selectedModel ?? null,
       };
     });
   }

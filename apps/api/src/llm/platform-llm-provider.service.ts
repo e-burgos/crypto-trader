@@ -6,10 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import {
-  LLMProvider,
-  NotificationType,
-} from '../../generated/prisma/enums';
+import { LLMProvider, NotificationType } from '../../generated/prisma/enums';
 import type { PlatformLLMProvider } from '../../generated/prisma/client';
 
 export interface ToggleResult {
@@ -64,11 +61,7 @@ export class PlatformLLMProviderService {
     }
   }
 
-  async toggle(
-    provider: LLMProvider,
-    isActive: boolean,
-    adminId: string,
-  ): Promise<ToggleResult> {
+  async toggle(provider: LLMProvider, adminId: string): Promise<ToggleResult> {
     // Verify provider exists
     const existing = await this.prisma.platformLLMProvider.findUnique({
       where: { provider },
@@ -76,6 +69,8 @@ export class PlatformLLMProviderService {
     if (!existing) {
       throw new NotFoundException(`Provider ${provider} not found`);
     }
+
+    const isActive = !existing.isActive;
 
     // Update provider status
     await this.prisma.platformLLMProvider.update({
@@ -112,9 +107,7 @@ export class PlatformLLMProviderService {
         });
 
         // Group by userId and send one notification per user
-        const uniqueUserIds = [
-          ...new Set(affected.map((a) => a.userId)),
-        ];
+        const uniqueUserIds = [...new Set(affected.map((a) => a.userId))];
         affectedUsers = uniqueUserIds.length;
 
         await Promise.all(

@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Get,
   Param,
@@ -37,11 +36,7 @@ export class PlatformLLMProviderController {
   @ApiResponse({ status: 200, description: 'Toggle result with impact' })
   @ApiResponse({ status: 400, description: 'Invalid provider' })
   @ApiResponse({ status: 404, description: 'Provider not found' })
-  toggle(
-    @Param('provider') provider: string,
-    @Body() dto: { isActive: boolean },
-    @Req() req: any,
-  ) {
+  toggle(@Param('provider') provider: string, @Req() req: any) {
     // Validate provider is a valid enum value
     if (!Object.values(LLMProvider).includes(provider as LLMProvider)) {
       throw new BadRequestException(`Invalid LLM provider: ${provider}`);
@@ -49,7 +44,6 @@ export class PlatformLLMProviderController {
 
     return this.platformLLMProviderService.toggle(
       provider as LLMProvider,
-      dto.isActive,
       req.user.userId,
     );
   }

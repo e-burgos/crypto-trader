@@ -877,6 +877,7 @@ const en = {
           'Safety net model used when an agent has no specific configuration. Applied automatically by presets.',
         autoResolve: 'Auto-resolve',
         resolved: 'Fallback model set to {{model}}',
+        recommendedTitle: 'Recommended fallback models (all-rounder):',
       },
     },
   },
@@ -920,7 +921,7 @@ const en = {
     paginationInfo: '{{from}}–{{to}} of {{total}}',
   },
   help: {
-    title: 'Help & Guide',
+    title: 'Documentation',
     subtitle: 'Everything you need to know about operating the platform',
     gettingStarted: 'Getting Started',
     platformBehavior: 'Platform Behavior',
@@ -1083,6 +1084,47 @@ const en = {
       minProfitNote:
         'The agent never sells autonomously if the position is at a loss. There is a minimum profitability threshold (default 0.3%) that must be exceeded before an automatic sell is executed. Manual close has no such restriction.',
     },
+    operationModesTitle: 'Operation Modes',
+    operationModesDesc:
+      'The platform supports three operation modes. Each mode changes how the trading engine executes orders.',
+    operationModes: {
+      sandboxDesc:
+        'Simulated trading with virtual balance ($10,000 default). No real orders placed. Perfect for testing strategies.',
+      testnetDesc:
+        'Connects to Binance Testnet API. Real order flow with fake funds. Validates API integration without financial risk.',
+      liveDesc:
+        'Real trading with real funds on Binance. Market orders are executed instantly. Use with caution.',
+      warningTitle: 'Mode switching',
+      warningDesc:
+        'Switching from SANDBOX/TESTNET to LIVE requires Binance API keys with Spot trading permissions. All open sandbox positions are preserved but paused.',
+    },
+    llmProvidersTitle: 'LLM Providers',
+    llmProvidersDesc:
+      'Each agent can be powered by a different LLM provider. OpenRouter is the recommended default — it gives access to 300+ models from a single API key.',
+    llmProviders: {
+      openrouterDesc: '300+ models, single API key. Free models available.',
+      claudeDesc: 'Claude models via Anthropic API.',
+      openaiDesc: 'GPT-4o, GPT-4 Turbo, and more.',
+      groqDesc: 'Ultra-fast inference with Llama, Mixtral.',
+      geminiDesc: 'Google Gemini models.',
+      mistralDesc: 'Mistral AI models.',
+      togetherDesc: 'Open-source model hosting.',
+      tipTitle: 'Smart Presets',
+      tipDesc:
+        'Use the preset system (Free / Balanced / Optimized) to auto-assign recommended models to all agents at once. Each preset selects the best model per agent role.',
+      recommendedTitle: 'Recommended Models by Agent',
+      tableAgent: 'Agent',
+      tableFree: 'Free',
+      tableBalanced: 'Balanced',
+      tableOptimized: 'Optimized',
+    },
+    openrouterStep1: 'Create an account at openrouter.ai',
+    openrouterStep2: 'Go to Keys → Create Key',
+    openrouterStep3: 'Copy the key (starts with sk-or-)',
+    openrouterStep4: 'Paste in Settings → LLM Providers → OpenRouter',
+    openrouterTip: 'Free models available',
+    openrouterTipDesc:
+      'Many models on OpenRouter are free. Use the "Free" preset to configure all agents with $0 cost models.',
   },
   common: {
     save: 'Save',
@@ -1582,6 +1624,26 @@ const en = {
     providerNeedsAttention: 'Needs attention — provider disabled',
     tabStatus: 'Agent Status',
     tabModels: 'Default Models',
+    recommendedModels: 'Recommended models:',
+    validated: 'Validated',
+    deprecated: 'Deprecated',
+    roles: {
+      routing:
+        'Fast classifier — routes each request to the best specialist agent. Needs low latency.',
+      orchestrator:
+        'Central coordinator — decomposes complex tasks, merges multi-agent results, produces final answers.',
+      synthesis:
+        'Deep synthesizer — generates comprehensive written reports from multi-agent analysis.',
+      platform:
+        'Platform expert — manages features, settings, navigation, and user onboarding.',
+      operations:
+        'Operations assistant — starts/stops agents, applies configs, executes maintenance tasks.',
+      market:
+        'Market analyst — price analysis, technical indicators, trend signals, and trading insights.',
+      blockchain:
+        'Blockchain expert — DeFi protocols, wallets, smart contracts, and on-chain data interpretation.',
+      risk: 'Risk manager — stop-loss validation, exposure calculation, portfolio safety enforcement.',
+    },
     kryptoDesc: 'Let KRYPTO decide the best agent for your question',
     nexusDesc: 'Platform expert — features, settings, navigation',
     forgeDesc: 'Operations assistant — start/stop agents, manage configs',

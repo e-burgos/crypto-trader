@@ -884,6 +884,7 @@ const es = {
           'Modelo de respaldo usado cuando un agente no tiene configuración específica. Se aplica automáticamente con los presets.',
         autoResolve: 'Auto-resolver',
         resolved: 'Modelo fallback configurado: {{model}}',
+        recommendedTitle: 'Modelos fallback recomendados (todo-terreno):',
       },
     },
   },
@@ -927,7 +928,7 @@ const es = {
     paginationInfo: '{{from}}–{{to}} de {{total}}',
   },
   help: {
-    title: 'Ayuda y Guía',
+    title: 'Documentación',
     subtitle: 'Todo lo que necesitas saber para operar en la plataforma',
     gettingStarted: 'Primeros Pasos',
     platformBehavior: 'Comportamiento de la Plataforma',
@@ -1090,6 +1091,48 @@ const es = {
       minProfitNote:
         'El agente nunca vende de forma autónoma si la posición está en pérdida. Hay un umbral mínimo de rentabilidad (por defecto 0,3%) que debe superarse antes de ejecutar una venta automática. El cierre manual no tiene esta restricción.',
     },
+    operationModesTitle: 'Modos de Operación',
+    operationModesDesc:
+      'La plataforma soporta tres modos de operación. Cada modo cambia cómo el motor de trading ejecuta las órdenes.',
+    operationModes: {
+      sandboxDesc:
+        'Trading simulado con balance virtual ($10,000 por defecto). No se colocan órdenes reales. Perfecto para probar estrategias.',
+      testnetDesc:
+        'Se conecta a la API Testnet de Binance. Flujo de órdenes real con fondos ficticios. Valida la integración API sin riesgo financiero.',
+      liveDesc:
+        'Trading real con fondos reales en Binance. Las órdenes de mercado se ejecutan al instante. Usar con precaución.',
+      warningTitle: 'Cambio de modo',
+      warningDesc:
+        'Cambiar de SANDBOX/TESTNET a LIVE requiere claves API de Binance con permisos de trading Spot. Las posiciones abiertas en sandbox se preservan pero se pausan.',
+    },
+    llmProvidersTitle: 'Proveedores LLM',
+    llmProvidersDesc:
+      'Cada agente puede funcionar con un proveedor LLM diferente. OpenRouter es el recomendado por defecto — da acceso a más de 300 modelos con una sola API key.',
+    llmProviders: {
+      openrouterDesc:
+        'Más de 300 modelos, una sola API key. Modelos gratuitos disponibles.',
+      claudeDesc: 'Modelos Claude vía la API de Anthropic.',
+      openaiDesc: 'GPT-4o, GPT-4 Turbo y más.',
+      groqDesc: 'Inferencia ultra-rápida con Llama, Mixtral.',
+      geminiDesc: 'Modelos Google Gemini.',
+      mistralDesc: 'Modelos Mistral AI.',
+      togetherDesc: 'Hosting de modelos open-source.',
+      tipTitle: 'Presets Inteligentes',
+      tipDesc:
+        'Usa el sistema de presets (Gratis / Equilibrado / Optimizado) para asignar automáticamente modelos recomendados a todos los agentes. Cada preset selecciona el mejor modelo según el rol del agente.',
+      recommendedTitle: 'Modelos Recomendados por Agente',
+      tableAgent: 'Agente',
+      tableFree: 'Gratis',
+      tableBalanced: 'Equilibrado',
+      tableOptimized: 'Optimizado',
+    },
+    openrouterStep1: 'Crea una cuenta en openrouter.ai',
+    openrouterStep2: 'Ve a Keys → Create Key',
+    openrouterStep3: 'Copia la key (empieza con sk-or-)',
+    openrouterStep4: 'Pega en Configuración → Proveedores LLM → OpenRouter',
+    openrouterTip: 'Modelos gratuitos disponibles',
+    openrouterTipDesc:
+      'Muchos modelos en OpenRouter son gratuitos. Usa el preset "Gratis" para configurar todos los agentes con modelos de costo $0.',
   },
   common: {
     save: 'Guardar',
@@ -1598,6 +1641,26 @@ const es = {
     providerNeedsAttention: 'Requiere atención — proveedor deshabilitado',
     tabStatus: 'Estado de Agentes',
     tabModels: 'Modelos por Defecto',
+    recommendedModels: 'Modelos recomendados:',
+    validated: 'Validado',
+    deprecated: 'Deprecado',
+    roles: {
+      routing:
+        'Clasificador rápido — enruta cada solicitud al agente especialista óptimo. Requiere baja latencia.',
+      orchestrator:
+        'Coordinador central — descompone tareas complejas, fusiona resultados multi-agente, produce respuestas finales.',
+      synthesis:
+        'Sintetizador profundo — genera reportes escritos comprensivos a partir del análisis multi-agente.',
+      platform:
+        'Experto en plataforma — gestiona funciones, configuración, navegación y onboarding de usuarios.',
+      operations:
+        'Asistente de operaciones — inicia/detiene agentes, aplica configs, ejecuta tareas de mantenimiento.',
+      market:
+        'Analista de mercado — análisis de precios, indicadores técnicos, señales de tendencia e insights de trading.',
+      blockchain:
+        'Experto en blockchain — protocolos DeFi, wallets, smart contracts e interpretación de datos on-chain.',
+      risk: 'Gestor de riesgo — validación de stop-loss, cálculo de exposición, cumplimiento de seguridad del portafolio.',
+    },
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',
     nexusDesc:
       'Experto en la plataforma — funciones, configuración, navegación',

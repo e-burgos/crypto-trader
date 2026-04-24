@@ -100,7 +100,7 @@ export function AvatarDropdown({ size = 'md' }: AvatarDropdownProps) {
 
             {/* Help */}
             <Link
-              to="/help"
+              to="/docs"
               onClick={close}
               className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >

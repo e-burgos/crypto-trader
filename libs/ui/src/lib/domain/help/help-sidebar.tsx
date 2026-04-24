@@ -13,6 +13,8 @@ import {
   BarChart2,
   ChevronDown,
   Sparkles,
+  Radio,
+  Cpu,
 } from 'lucide-react';
 import { cn } from '../../utils';
 
@@ -262,10 +264,23 @@ export function HelpSidebar({ t, activeId, onNavigate }: HelpSidebarProps) {
           icon: <BarChart2 className="h-4 w-4" />,
         },
         {
+          id: 'operation-modes',
+          label: t('help.operationModesTitle', {
+            defaultValue: 'Operation Modes',
+          }),
+          icon: <Radio className="h-4 w-4" />,
+        },
+        {
+          id: 'llm-providers',
+          label: t('help.llmProvidersTitle', { defaultValue: 'LLM Providers' }),
+          icon: <Cpu className="h-4 w-4" />,
+        },
+        {
           id: 'api-keys',
           label: t('help.apiKeys'),
           icon: <Key className="h-4 w-4" />,
           children: [
+            { id: 'openrouter', label: 'OpenRouter' },
             { id: 'binance', label: 'Binance' },
             { id: 'claude', label: 'Claude (Anthropic)' },
             { id: 'openai', label: 'OpenAI' },

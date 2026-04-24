@@ -940,7 +940,7 @@ export function LandingPage() {
                 </li>
                 <li>
                   <Link
-                    to="/help"
+                    to="/docs"
                     className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <HelpCircle className="h-3.5 w-3.5" />

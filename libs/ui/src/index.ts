@@ -147,6 +147,31 @@ export { HelpSidebar } from './lib/domain/help/help-sidebar';
 
 // Charts
 export { ChartCard } from './lib/charts/chart-card';
+
+// Docs
+export {
+  DocsCallout,
+  DocsCodeBlock,
+  DocsCard,
+  DocsSectionHeader,
+  DocsSteps,
+  DocsTable,
+  DocsBadge,
+  DocsPageFeedback,
+} from './lib/docs';
+export type {
+  DocsCalloutProps,
+  DocsCalloutVariant,
+  DocsCodeBlockProps,
+  DocsCardProps,
+  DocsSectionHeaderProps,
+  DocsStepsProps,
+  DocsStep,
+  DocsTableProps,
+  DocsBadgeProps,
+  DocsBadgeVariant,
+  DocsPageFeedbackProps,
+} from './lib/docs';
 export type { ChartCardProps } from './lib/charts/chart-card';
 export { ChartTooltip } from './lib/charts/chart-tooltip';
 export type { ChartTooltipProps } from './lib/charts/chart-tooltip';

@@ -11,7 +11,7 @@ import { LandingPage } from '../pages/landing';
 import { LoginPage } from '../pages/login';
 import { RegisterPage } from '../pages/register';
 import { OnboardingPage } from '../pages/onboarding';
-import { HelpPage } from '../pages/help';
+import { DocsPage } from '../pages/docs';
 import { DashboardLayout } from '../layouts/dashboard-layout';
 import { AdminDashboardLayout } from '../layouts/admin-dashboard-layout';
 import { OverviewPage } from '../pages/dashboard/overview';
@@ -110,13 +110,14 @@ export function App() {
             }
           />
           <Route
-            path="/help"
+            path="/docs"
             element={
               <PublicLayout>
-                <HelpPage />
+                <DocsPage />
               </PublicLayout>
             }
           />
+          <Route path="/help" element={<Navigate to="/docs" replace />} />
           <Route
             path="/onboarding"
             element={
@@ -153,7 +154,7 @@ export function App() {
             <Route path="agent-log" element={<AgentLogPage />} />
             <Route
               path="agents"
-              element={<Navigate to="/help#agents-showcase" replace />}
+              element={<Navigate to="/docs#agents-showcase" replace />}
             />
             <Route path="live-chart" element={<LiveChartPage />} />
             <Route path="news" element={<NewsFeedPage />} />

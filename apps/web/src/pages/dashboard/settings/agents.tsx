@@ -11,6 +11,8 @@ import {
   Sparkles,
   ChevronRight,
   AlertTriangle,
+  Info,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button, Dialog, Select, type SelectOption } from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
@@ -20,32 +22,165 @@ import {
   useAgentHealth,
   useUpdateAgentConfig,
   useResetAgentConfig,
-  useApplyPreset,
+  useApplyRecommendedPreset,
   useAutoResolveFallback,
   ResolvedAgentConfig,
   AgentPresetName,
+  type RecommendedModelMap,
 } from '../../../hooks/use-agent-config';
 import {
   useLLMKeys,
   useUpdateLLMModel,
   usePlatformLLMStatus,
 } from '../../../hooks/use-user';
+import { useOpenRouterModels } from '../../../hooks/use-openrouter-models';
 import { DynamicModelSelect } from '../../../containers/settings/dynamic-model-select';
 import { OpenRouterModelSelect } from '../../../containers/settings/openrouter-model-select';
 import { cn } from '../../../lib/utils';
 
-const AGENT_META: Record<
-  string,
-  { codename: string; color: string; locked?: boolean; dual?: boolean }
-> = {
-  routing: { codename: 'KRYPTO', color: 'text-yellow-500', dual: true },
-  synthesis: { codename: 'KRYPTO', color: 'text-yellow-500', dual: true },
-  platform: { codename: 'NEXUS', color: 'text-blue-500' },
-  operations: { codename: 'FORGE', color: 'text-orange-500' },
-  market: { codename: 'SIGMA', color: 'text-green-500' },
-  blockchain: { codename: 'CIPHER', color: 'text-purple-500' },
-  risk: { codename: 'AEGIS', color: 'text-red-500', locked: true },
+interface AgentMetaInfo {
+  codename: string;
+  color: string;
+  locked?: boolean;
+  dual?: boolean;
+  roleKey: string;
+  freeModel: string;
+  balancedModel: string;
+  optimizedModel: string;
+}
+
+const AGENT_META: Record<string, AgentMetaInfo> = {
+  routing: {
+    codename: 'KRYPTO',
+    color: 'text-yellow-500',
+    dual: true,
+    roleKey: 'agents.roles.routing',
+    freeModel: 'google/gemma-4-26b-a4b-it:free',
+    balancedModel: 'qwen/qwen3.5-9b',
+    optimizedModel: 'deepseek/deepseek-v4-flash',
+  },
+  synthesis: {
+    codename: 'KRYPTO',
+    color: 'text-yellow-500',
+    dual: true,
+    roleKey: 'agents.roles.synthesis',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-pro',
+    optimizedModel: 'moonshotai/kimi-k2.6',
+  },
+  platform: {
+    codename: 'NEXUS',
+    color: 'text-blue-500',
+    roleKey: 'agents.roles.platform',
+    freeModel: 'google/gemma-4-31b-it:free',
+    balancedModel: 'qwen/qwen3.5-35b-a3b',
+    optimizedModel: 'deepseek/deepseek-v4-flash',
+  },
+  operations: {
+    codename: 'FORGE',
+    color: 'text-orange-500',
+    roleKey: 'agents.roles.operations',
+    freeModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
+    balancedModel: 'deepseek/deepseek-v4-flash',
+    optimizedModel: 'qwen/qwen3.6-plus',
+  },
+  market: {
+    codename: 'SIGMA',
+    color: 'text-green-500',
+    roleKey: 'agents.roles.market',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-flash',
+    optimizedModel: 'deepseek/deepseek-v4-pro',
+  },
+  blockchain: {
+    codename: 'CIPHER',
+    color: 'text-purple-500',
+    roleKey: 'agents.roles.blockchain',
+    freeModel: 'minimax/minimax-m2.5:free',
+    balancedModel: 'minimax/minimax-m2.7',
+    optimizedModel: 'qwen/qwen3.6-plus',
+  },
+  risk: {
+    codename: 'AEGIS',
+    color: 'text-red-500',
+    locked: true,
+    roleKey: 'agents.roles.risk',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-pro',
+    optimizedModel: 'moonshotai/kimi-k2.6',
+  },
 };
+
+const FALLBACK_RECOMMENDED = {
+  free: 'nvidia/nemotron-3-super-120b-a12b:free',
+  balanced: 'deepseek/deepseek-v4-flash',
+  optimized: 'moonshotai/kimi-k2.6',
+} as const;
+
+function ModelValidationBadge({
+  modelId,
+  availableModelIds,
+  t,
+}: {
+  modelId: string;
+  availableModelIds: Set<string> | null;
+  t: (key: string) => string;
+}) {
+  if (!availableModelIds) return null;
+  const exists = availableModelIds.has(modelId);
+  return exists ? (
+    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+      <CheckCircle2 className="h-2.5 w-2.5" />
+      {t('agents.validated')}
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+      <AlertTriangle className="h-2.5 w-2.5" />
+      {t('agents.deprecated')}
+    </span>
+  );
+}
+
+function ModelRecommendationRow({
+  tier,
+  tierColor,
+  modelId,
+  availableModelIds,
+  onApply,
+  t,
+}: {
+  tier: string;
+  tierColor: string;
+  modelId: string;
+  availableModelIds: Set<string> | null;
+  onApply: (modelId: string) => void;
+  t: (key: string) => string;
+}) {
+  const isAvailable = availableModelIds?.has(modelId) ?? false;
+  return (
+    <p className="flex items-center gap-1 flex-wrap">
+      <span className={cn('font-semibold', tierColor)}>{tier}:</span>
+      <button
+        type="button"
+        disabled={!isAvailable}
+        onClick={() => onApply(modelId)}
+        className={cn(
+          'font-mono text-foreground/70 transition-colors',
+          isAvailable
+            ? 'hover:text-primary hover:underline cursor-pointer'
+            : 'opacity-50 cursor-not-allowed line-through',
+        )}
+      >
+        {modelId}
+      </button>
+      <ModelValidationBadge
+        modelId={modelId}
+        availableModelIds={availableModelIds}
+        t={t}
+      />
+    </p>
+  );
+}
 
 const PROVIDERS = [
   { value: 'OPENROUTER', label: 'OpenRouter' },
@@ -64,6 +199,7 @@ function AgentConfigCard({
   onReset,
   isSaving,
   t,
+  availableModelIds,
 }: {
   config: ResolvedAgentConfig;
   activeProviders: string[];
@@ -71,6 +207,7 @@ function AgentConfigCard({
   onReset: (agentId: string) => void;
   isSaving: boolean;
   t: (key: string) => string;
+  availableModelIds: Set<string> | null;
 }) {
   const meta = AGENT_META[config.agentId] ?? {
     codename: config.agentId,
@@ -120,6 +257,58 @@ function AgentConfigCard({
               : t('settings.agents.usingDefault')}
         </span>
       </div>
+
+      {/* Agent role description */}
+      {'roleKey' in meta && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t(meta.roleKey)}
+        </p>
+      )}
+
+      {/* Recommended models — click to apply */}
+      {'balancedModel' in meta && (
+        <div className="flex items-start gap-1.5 rounded-lg bg-primary/5 border border-primary/10 p-2.5">
+          <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+          <div className="text-[11px] text-muted-foreground leading-snug space-y-1">
+            <p className="font-medium text-foreground/80">
+              {t('agents.recommendedModels')}
+            </p>
+            <ModelRecommendationRow
+              tier="Free"
+              tierColor="text-emerald-500"
+              modelId={meta.freeModel}
+              availableModelIds={availableModelIds}
+              onApply={(m) => {
+                setProvider('OPENROUTER');
+                setModel(m);
+              }}
+              t={t}
+            />
+            <ModelRecommendationRow
+              tier="Balanced"
+              tierColor="text-blue-500"
+              modelId={meta.balancedModel}
+              availableModelIds={availableModelIds}
+              onApply={(m) => {
+                setProvider('OPENROUTER');
+                setModel(m);
+              }}
+              t={t}
+            />
+            <ModelRecommendationRow
+              tier="Optimized"
+              tierColor="text-yellow-500"
+              modelId={meta.optimizedModel}
+              availableModelIds={availableModelIds}
+              onApply={(m) => {
+                setProvider('OPENROUTER');
+                setModel(m);
+              }}
+              t={t}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <div>
@@ -186,10 +375,17 @@ export function SettingsAgentsPage() {
   const { data: llmKeys } = useLLMKeys();
   const updateMutation = useUpdateAgentConfig();
   const resetMutation = useResetAgentConfig();
-  const applyPreset = useApplyPreset();
+  const applyRecommended = useApplyRecommendedPreset();
   const autoResolve = useAutoResolveFallback();
   const updateLLMModel = useUpdateLLMModel();
   const { data: platformStatus } = usePlatformLLMStatus();
+  const { data: orModels } = useOpenRouterModels();
+
+  // Build a set of available model IDs for validation
+  const availableModelIds = useMemo(
+    () => (orModels ? new Set(orModels.map((m) => m.id)) : null),
+    [orModels],
+  );
 
   // Build a set of inactive providers for quick lookup
   const inactiveProviders = useMemo(
@@ -239,11 +435,46 @@ export function SettingsAgentsPage() {
     setPendingPreset({ id: preset, name });
   };
 
+  // Build recommended model map from AGENT_META for preset application
+  const recommendedModels = useMemo<RecommendedModelMap>(() => {
+    const map: RecommendedModelMap = {};
+    for (const [agentId, meta] of Object.entries(AGENT_META)) {
+      if ('freeModel' in meta) {
+        map[agentId] = {
+          free: meta.freeModel,
+          balanced: meta.balancedModel,
+          optimized: meta.optimizedModel,
+        };
+      }
+    }
+    return map;
+  }, []);
+
   const handleConfirmPreset = () => {
     if (!pendingPreset) return;
-    applyPreset.mutate(pendingPreset.id, {
-      onSettled: () => setPendingPreset(null),
-    });
+    applyRecommended.mutate(
+      {
+        tier: pendingPreset.id,
+        models: recommendedModels,
+        availableModelIds,
+      },
+      {
+        onSettled: () => setPendingPreset(null),
+        onSuccess: () => {
+          // Also update the fallback model to the recommended one for this tier
+          const fallback =
+            FALLBACK_RECOMMENDED[
+              pendingPreset.id as keyof typeof FALLBACK_RECOMMENDED
+            ];
+          if (fallback) {
+            updateLLMModel.mutate({
+              provider: 'OPENROUTER',
+              selectedModel: fallback,
+            });
+          }
+        },
+      },
+    );
   };
 
   const PRESET_OPTIONS: Array<{
@@ -282,15 +513,7 @@ export function SettingsAgentsPage() {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Split configs into groups
+  // Split configs into groups (must be before early return — Rules of Hooks)
   const kryptoConfigs = (configs ?? []).filter(
     (c) => c.agentId === 'routing' || c.agentId === 'synthesis',
   );
@@ -322,6 +545,14 @@ export function SettingsAgentsPage() {
     (c) => c.agentId === selectedAgentId,
   );
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -351,7 +582,7 @@ export function SettingsAgentsPage() {
             return (
               <button
                 key={preset.id}
-                disabled={applyPreset.isPending}
+                disabled={applyRecommended.isPending}
                 onClick={() => handleApplyPreset(preset.id, label)}
                 className={cn(
                   'flex flex-col gap-1.5 rounded-lg border p-3 text-left transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
@@ -360,8 +591,8 @@ export function SettingsAgentsPage() {
               >
                 <div className="flex items-center gap-2">
                   <span className={cn('rounded-md p-1', preset.badgeStyle)}>
-                    {applyPreset.isPending &&
-                    applyPreset.variables === preset.id ? (
+                    {applyRecommended.isPending &&
+                    pendingPreset?.id === preset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       preset.icon
@@ -412,6 +643,49 @@ export function SettingsAgentsPage() {
                 'Safety net model used when an agent has no specific configuration. Applied automatically by presets.',
             })}
           </p>
+          <div className="flex items-start gap-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10 p-2.5">
+            <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-muted-foreground leading-snug space-y-1">
+              <p className="font-medium text-foreground/80">
+                {t('settings.agents.fallback.recommendedTitle', {
+                  defaultValue: 'Recommended fallback models (all-rounder):',
+                })}
+              </p>
+              <ModelRecommendationRow
+                tier="Free"
+                tierColor="text-emerald-500"
+                modelId={FALLBACK_RECOMMENDED.free}
+                availableModelIds={availableModelIds}
+                onApply={(m) => {
+                  setFallbackModel(m);
+                  setFallbackDirty(true);
+                }}
+                t={t}
+              />
+              <ModelRecommendationRow
+                tier="Balanced"
+                tierColor="text-blue-500"
+                modelId={FALLBACK_RECOMMENDED.balanced}
+                availableModelIds={availableModelIds}
+                onApply={(m) => {
+                  setFallbackModel(m);
+                  setFallbackDirty(true);
+                }}
+                t={t}
+              />
+              <ModelRecommendationRow
+                tier="Optimized"
+                tierColor="text-yellow-500"
+                modelId={FALLBACK_RECOMMENDED.optimized}
+                availableModelIds={availableModelIds}
+                onApply={(m) => {
+                  setFallbackModel(m);
+                  setFallbackDirty(true);
+                }}
+                t={t}
+              />
+            </div>
+          </div>
           <OpenRouterModelSelect
             value={fallbackModel}
             onChange={(m) => {
@@ -549,6 +823,7 @@ export function SettingsAgentsPage() {
                 onReset={handleReset}
                 isSaving={updateMutation.isPending}
                 t={t}
+                availableModelIds={availableModelIds}
               />
             )}
           </div>
@@ -572,7 +847,7 @@ export function SettingsAgentsPage() {
           defaultValue: 'Apply',
         })}
         cancelLabel={t('common.cancel', { defaultValue: 'Cancel' })}
-        isPending={applyPreset.isPending}
+        isPending={applyRecommended.isPending}
       >
         <span />
       </Dialog>

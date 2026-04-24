@@ -98,7 +98,7 @@ export function Navbar() {
               {/* Desktop-only buttons */}
               <div className="hidden sm:flex items-center gap-2">
                 <Link
-                  to="/help"
+                  to="/docs"
                   className="rounded-md border border-border p-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
                   aria-label="Help"
                 >

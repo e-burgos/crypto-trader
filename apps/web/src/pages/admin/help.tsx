@@ -79,7 +79,7 @@ export function AdminHelpPage() {
           {t('admin.helpGeneralDesc')}
         </p>
         <Link
-          to="/help"
+          to="/docs"
           className="text-sm font-medium text-primary hover:underline"
         >
           {t('admin.helpGoToGuide')} →

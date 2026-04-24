@@ -205,3 +205,141 @@ export function useUpdateAdminAgentConfig() {
     },
   });
 }
+
+// ── Recommended preset hooks ────────────────────────────────────────────────
+
+export interface RecommendedModelMap {
+  [agentId: string]: { free: string; balanced: string; optimized: string };
+}
+
+/**
+ * Apply a recommended preset by setting each agent's model individually.
+ * Falls back to the dynamic backend preset if any model is unavailable.
+ */
+export function useApplyRecommendedPreset() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async ({
+      tier,
+      models,
+      availableModelIds,
+    }: {
+      tier: AgentPresetName;
+      models: RecommendedModelMap;
+      availableModelIds: Set<string> | null;
+    }) => {
+      const entries = Object.entries(models).map(([agentId, tiers]) => ({
+        agentId,
+        model: tiers[tier],
+      }));
+
+      const allValidated =
+        availableModelIds != null &&
+        entries.every((e) => availableModelIds.has(e.model));
+
+      if (allValidated) {
+        await Promise.all(
+          entries.map((e) =>
+            api.put(`/users/me/agents/${e.agentId}/config`, {
+              provider: 'OPENROUTER',
+              model: e.model,
+            }),
+          ),
+        );
+        return { mode: 'recommended' as const, count: entries.length };
+      } else {
+        const res = await api.post<{ applied: string; count: number }>(
+          `/users/me/agents/config/preset/${tier}`,
+          {},
+        );
+        return { mode: 'dynamic' as const, count: res.count };
+      }
+    },
+    onSuccess: (_, { tier }) => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      const names: Record<AgentPresetName, string> = {
+        free: t('settings.agents.presets.free'),
+        optimized: t('settings.agents.presets.optimized'),
+        balanced: t('settings.agents.presets.balanced'),
+      };
+      toast.success(
+        t('settings.agents.presets.applied', {
+          name: names[tier],
+          defaultValue: `Preset "${names[tier]}" applied`,
+        }),
+      );
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('common.error'));
+    },
+  });
+}
+
+/**
+ * Admin version — apply recommended preset to platform defaults.
+ */
+export function useApplyRecommendedAdminPreset() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: async ({
+      tier,
+      models,
+      availableModelIds,
+    }: {
+      tier: AgentPresetName;
+      models: RecommendedModelMap;
+      availableModelIds: Set<string> | null;
+    }) => {
+      const entries = Object.entries(models).map(([agentId, tiers]) => ({
+        agentId,
+        model: tiers[tier],
+      }));
+
+      const allValidated =
+        availableModelIds != null &&
+        entries.every((e) => availableModelIds.has(e.model));
+
+      if (allValidated) {
+        await Promise.all(
+          entries.map((e) =>
+            api.put(`/admin/agent-configs/${e.agentId}`, {
+              provider: 'OPENROUTER',
+              model: e.model,
+            }),
+          ),
+        );
+        return { mode: 'recommended' as const, count: entries.length };
+      } else {
+        const res = await api.post<{
+          applied: string;
+          count: number;
+          fallbackModel?: string;
+        }>(`/admin/agent-configs/preset/${tier}`, {});
+        return { mode: 'dynamic' as const, count: res.count };
+      }
+    },
+    onSuccess: (_, { tier }) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'llm-keys'] });
+      const names: Record<AgentPresetName, string> = {
+        free: t('settings.agents.presets.free'),
+        optimized: t('settings.agents.presets.optimized'),
+        balanced: t('settings.agents.presets.balanced'),
+      };
+      toast.success(
+        t('settings.agents.presets.applied', {
+          name: names[tier],
+          defaultValue: `Preset "${names[tier]}" applied to all agents`,
+        }),
+      );
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || t('common.error'));
+    },
+  });
+}

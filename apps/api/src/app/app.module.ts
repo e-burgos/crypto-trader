@@ -14,6 +14,7 @@ import { MarketModule } from '../market/market.module';
 import { ChatModule } from '../chat/chat.module';
 import { LlmModule } from '../llm/llm.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
+import { OpenRouterModule } from '../openrouter/openrouter.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AgentConfigModule } from '../agents/agent-config.module';
     ChatModule,
     LlmModule,
     AgentConfigModule,
+    OpenRouterModule,
   ],
   controllers: [AppController],
   providers: [AppService],

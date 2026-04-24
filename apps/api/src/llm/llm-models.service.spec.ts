@@ -5,6 +5,36 @@ import { PrismaService } from '../prisma/prisma.service';
 
 jest.mock('@prisma/adapter-pg', () => ({ PrismaPg: jest.fn() }));
 
+jest.mock('@crypto-trader/openrouter', () => ({
+  OpenRouterModelsService: jest.fn().mockImplementation(() => ({
+    listModels: jest.fn().mockResolvedValue([
+      {
+        id: 'test/model-1',
+        name: 'Test Model 1',
+        contextLength: 128000,
+        maxCompletionTokens: 8192,
+        pricing: { prompt: 3, completion: 15 },
+        isFree: false,
+        categories: ['programming'],
+        supportedParameters: ['temperature'],
+        description: 'Test',
+      },
+      {
+        id: 'test/free-model:free',
+        name: 'Free Model',
+        contextLength: 32000,
+        maxCompletionTokens: 4096,
+        pricing: { prompt: 0, completion: 0 },
+        isFree: true,
+        categories: [],
+        supportedParameters: [],
+        description: '',
+      },
+    ]),
+    invalidateCache: jest.fn(),
+  })),
+}));
+
 jest.mock('../users/utils/encryption.util', () => ({
   decrypt: jest.fn(() => 'decrypted-api-key'),
 }));

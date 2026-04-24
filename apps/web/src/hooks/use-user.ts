@@ -137,7 +137,9 @@ export function useTestTestnetBinanceConnection() {
         toast.success(i18n.t('toasts.testnetConnectionSuccess'));
       } else {
         toast.error(
-          i18n.t('toasts.testnetConnectionError', { error: data.error ?? 'unknown' }),
+          i18n.t('toasts.testnetConnectionError', {
+            error: data.error ?? 'unknown',
+          }),
         );
       }
     },
@@ -375,9 +377,7 @@ export function usePlatformMode() {
     if (!isLoading && mode !== 'SANDBOX' && !availableModes.includes(mode)) {
       updateMode.mutate('SANDBOX', {
         onSuccess: () => {
-          toast.warning(
-            i18n.t('toasts.modeFallback', { mode }),
-          );
+          toast.warning(i18n.t('toasts.modeFallback', { mode }));
         },
       });
     }

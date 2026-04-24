@@ -8,7 +8,6 @@ import {
   RefreshCw,
   XCircle,
   Hash,
-  Zap,
   Settings,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +16,7 @@ import { type NewsAnalysis } from '../../hooks/use-market';
 import { timeAgo, SENTIMENT_CONFIG } from './news-utils';
 import type { SigmaSentiment } from '../bot-analysis';
 
-type AnalysisTab = 'sigma' | 'keyword';
+type AnalysisTab = 'ai' | 'keyword';
 
 export function AnalysisSummaryCard({
   analysis,
@@ -39,12 +38,31 @@ export function AnalysisSummaryCard({
   sigmaTimestamp?: string | null;
 }) {
   const { t } = useTranslation();
-  const hasSigma = !!sigmaSentiment;
+  const hasAi = !!analysis?.aiAnalyzedAt;
+
+  // Derive effective SIGMA from AI analysis when available; fall back to agent decision sigma
+  const effectiveSigma: SigmaSentiment | null = hasAi
+    ? {
+        sentiment: analysis?.aiScore ?? 0,
+        impact:
+          analysis?.aiOverallSentiment === 'POSITIVE' ||
+          analysis?.aiOverallSentiment === 'BULLISH'
+            ? 'positive'
+            : analysis?.aiOverallSentiment === 'NEGATIVE' ||
+                analysis?.aiOverallSentiment === 'BEARISH'
+              ? 'negative'
+              : 'neutral',
+        reasoning: analysis?.aiSummary ?? '',
+      }
+    : (sigmaSentiment ?? null);
+
+  const hasSigma = !!effectiveSigma;
+  const hasAnyAi = hasSigma || hasAi;
 
   const [activeTab, setActiveTab] = useState<AnalysisTab>(
-    hasSigma ? 'sigma' : 'keyword',
+    hasAnyAi ? 'ai' : 'keyword',
   );
-  const effectiveTab = hasSigma ? activeTab : 'keyword';
+  const effectiveTab = hasAnyAi ? activeTab : 'keyword';
 
   // Keyword data
   const kwPositive = analysis?.positiveCount ?? 0;
@@ -54,9 +72,25 @@ export function AnalysisSummaryCard({
   const kwScore = analysis?.score ?? 0;
   const kwOverall = analysis?.overallSentiment ?? 'NEUTRAL';
 
-  // SIGMA overall
-  const sigmaImpact = sigmaSentiment?.impact ?? 'neutral';
-  const sigmaScore = sigmaSentiment?.sentiment ?? 0;
+  // AI data (from manual AI analysis or A2→DB)
+  const aiPositive = analysis?.aiPositiveCount ?? 0;
+  const aiNegative = analysis?.aiNegativeCount ?? 0;
+  const aiNeutral = analysis?.aiNeutralCount ?? 0;
+  const aiTotal = aiPositive + aiNegative + aiNeutral;
+  const aiScore = analysis?.aiScore ?? 0;
+  const rawAiOverall = (
+    analysis?.aiOverallSentiment ?? 'NEUTRAL'
+  ).toUpperCase();
+  const aiOverall =
+    rawAiOverall === 'POSITIVE' || rawAiOverall === 'BULLISH'
+      ? 'BULLISH'
+      : rawAiOverall === 'NEGATIVE' || rawAiOverall === 'BEARISH'
+        ? 'BEARISH'
+        : 'NEUTRAL';
+
+  // SIGMA overall (used within the AI tab)
+  const sigmaImpact = effectiveSigma?.impact ?? 'neutral';
+  const sigmaScore = effectiveSigma?.sentiment ?? 0;
   const sigmaOverall =
     sigmaImpact === 'positive'
       ? 'BULLISH'
@@ -64,7 +98,10 @@ export function AnalysisSummaryCard({
         ? 'BEARISH'
         : 'NEUTRAL';
 
-  const displayOverall = effectiveTab === 'sigma' ? sigmaOverall : kwOverall;
+  // For the AI tab, prefer SIGMA overall if available, else AI overall
+  const aiTabOverall = hasSigma ? sigmaOverall : aiOverall;
+
+  const displayOverall = effectiveTab === 'ai' ? aiTabOverall : kwOverall;
 
   const overallColor =
     displayOverall === 'BULLISH'
@@ -95,10 +132,10 @@ export function AnalysisSummaryCard({
         <span className="text-sm font-semibold">
           {t('news.sentimentSummary')}
         </span>
-        {effectiveTab === 'sigma' && hasSigma && (
-          <span className="flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[11px] font-semibold text-violet-400">
-            <Zap className="h-3 w-3" />
-            SIGMA
+        {effectiveTab === 'ai' && hasAnyAi && (
+          <span className="flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] font-semibold text-primary">
+            <Sparkles className="h-3 w-3" />
+            IA
           </span>
         )}
         <span
@@ -117,24 +154,24 @@ export function AnalysisSummaryCard({
       </div>
 
       <div className="p-5 space-y-4">
-        {/* Tabs: SIGMA | Keyword */}
-        {(hasSigma || analysis) && (
+        {/* Tabs: IA | Keyword */}
+        {(hasAnyAi || analysis) && (
           <div className="flex gap-1 rounded-lg border border-border bg-muted/20 p-0.5 w-fit">
-            {hasSigma && (
+            {hasAnyAi && (
               <button
-                onClick={() => setActiveTab('sigma')}
+                onClick={() => setActiveTab('ai')}
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                  effectiveTab === 'sigma'
+                  effectiveTab === 'ai'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <Zap className="h-3 w-3 text-violet-400 shrink-0" />
-                {t('news.lastSigmaAnalysis')}
-                {sigmaTimestamp && (
+                <Sparkles className="h-3 w-3 text-primary shrink-0" />
+                {t('news.lastAiAnalysis')}
+                {(sigmaTimestamp || analysis?.aiAnalyzedAt) && (
                   <span className="text-[10px] text-muted-foreground/70 ml-1">
-                    {timeAgo(sigmaTimestamp)}
+                    {timeAgo(sigmaTimestamp ?? analysis!.aiAnalyzedAt!)}
                   </span>
                 )}
               </button>
@@ -159,71 +196,148 @@ export function AnalysisSummaryCard({
           </div>
         )}
 
-        {/* ── SIGMA Tab Content ── */}
-        {effectiveTab === 'sigma' && sigmaSentiment && (
+        {/* ── IA Tab Content (SIGMA + AI analysis combined) ── */}
+        {effectiveTab === 'ai' && hasAnyAi && (
           <>
-            <div
-              className={cn(
-                'rounded-lg border p-3 space-y-1.5',
-                sigmaSentiment.impact === 'positive'
-                  ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
-                  : sigmaSentiment.impact === 'negative'
-                    ? 'border-red-500/20 bg-red-500/[0.06]'
-                    : 'border-amber-500/20 bg-amber-500/[0.06]',
-              )}
-            >
-              <div className="flex items-center gap-1.5">
-                <Brain className="h-3 w-3 text-violet-400" />
-                <span className="text-[10px] font-bold uppercase tracking-wide text-violet-400">
-                  {t('botAnalysis.sigmaTitle')}
-                </span>
-                <span
-                  className={cn(
-                    'ml-1 text-[10px] font-semibold',
-                    sigmaSentiment.impact === 'positive'
-                      ? 'text-emerald-400'
-                      : sigmaSentiment.impact === 'negative'
-                        ? 'text-red-400'
-                        : 'text-amber-400',
-                  )}
-                >
-                  {sigmaSentiment.impact === 'positive'
-                    ? t('botAnalysis.sigmaImpactPositive')
-                    : sigmaSentiment.impact === 'negative'
-                      ? t('botAnalysis.sigmaImpactNegative')
-                      : t('botAnalysis.sigmaImpactNeutral')}
-                </span>
-                {sigmaSentiment.cached && (
-                  <span className="ml-auto inline-flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
-                    <RefreshCw className="h-2.5 w-2.5" />
-                    {t('botAnalysis.sigmaCached')}
+            {/* SIGMA insight block */}
+            {hasSigma && (
+              <div
+                className={cn(
+                  'rounded-lg border p-3 space-y-1.5',
+                  effectiveSigma.impact === 'positive'
+                    ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+                    : effectiveSigma.impact === 'negative'
+                      ? 'border-red-500/20 bg-red-500/[0.06]'
+                      : 'border-amber-500/20 bg-amber-500/[0.06]',
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Brain className="h-3 w-3 text-violet-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-violet-400">
+                    {t('botAnalysis.sigmaTitle')}
                   </span>
+                  <span
+                    className={cn(
+                      'ml-1 text-[10px] font-semibold',
+                      effectiveSigma.impact === 'positive'
+                        ? 'text-emerald-400'
+                        : effectiveSigma.impact === 'negative'
+                          ? 'text-red-400'
+                          : 'text-amber-400',
+                    )}
+                  >
+                    {effectiveSigma.impact === 'positive'
+                      ? t('botAnalysis.sigmaImpactPositive')
+                      : effectiveSigma.impact === 'negative'
+                        ? t('botAnalysis.sigmaImpactNegative')
+                        : t('botAnalysis.sigmaImpactNeutral')}
+                  </span>
+                  {effectiveSigma.cached && (
+                    <span className="ml-auto inline-flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
+                      <RefreshCw className="h-2.5 w-2.5" />
+                      {t('botAnalysis.sigmaCached')}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] leading-relaxed text-foreground/80">
+                  {effectiveSigma.reasoning}
+                </p>
+                <div className="text-right">
+                  <span
+                    className={cn(
+                      'text-[10px] font-mono font-bold',
+                      sigmaScore > 0
+                        ? 'text-emerald-400'
+                        : sigmaScore < 0
+                          ? 'text-red-400'
+                          : 'text-amber-400',
+                    )}
+                  >
+                    Score: {sigmaScore > 0 ? '+' : ''}
+                    {typeof sigmaScore === 'number'
+                      ? sigmaScore.toFixed(2)
+                      : sigmaScore}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* AI headline counts (from manual AI or A2→DB) */}
+            {hasAi && aiTotal > 0 && (
+              <div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-2">
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-emerald-400" />
+                    <span className="font-semibold text-emerald-400">
+                      {t('news.positiveCount', { count: aiPositive })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Minus className="h-3 w-3 text-amber-400" />
+                    <span className="text-amber-400">
+                      {t('news.neutralCount', { count: aiNeutral })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <TrendingDown className="h-3 w-3 text-red-400" />
+                    <span className="font-semibold text-red-400">
+                      {t('news.negativeCount', { count: aiNegative })}
+                    </span>
+                  </div>
+                </div>
+                <div className="h-3 rounded-full bg-muted overflow-hidden flex">
+                  {aiPositive > 0 && (
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-700"
+                      style={{
+                        width: `${aiTotal ? (aiPositive / aiTotal) * 100 : 0}%`,
+                      }}
+                    />
+                  )}
+                  {aiNeutral > 0 && (
+                    <div
+                      className="h-full bg-amber-500/50 transition-all duration-700"
+                      style={{
+                        width: `${aiTotal ? (aiNeutral / aiTotal) * 100 : 0}%`,
+                      }}
+                    />
+                  )}
+                  {aiNegative > 0 && (
+                    <div
+                      className="h-full bg-red-500 transition-all duration-700"
+                      style={{
+                        width: `${aiTotal ? (aiNegative / aiTotal) * 100 : 0}%`,
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="flex items-center justify-between mt-1.5 text-[11px]">
+                  <span className="text-muted-foreground">
+                    {t('news.newsAnalyzed', { count: aiTotal })}
+                  </span>
+                  <span
+                    className={cn(
+                      'font-bold',
+                      aiOverall === 'BULLISH'
+                        ? 'text-emerald-400'
+                        : aiOverall === 'BEARISH'
+                          ? 'text-red-400'
+                          : 'text-amber-400',
+                    )}
+                  >
+                    Score: {aiScore > 0 ? '+' : ''}
+                    {aiScore}
+                  </span>
+                </div>
+                {analysis?.aiSummary && (
+                  <p className="mt-2 text-[11px] text-muted-foreground/70 leading-relaxed">
+                    {analysis.aiSummary}
+                  </p>
                 )}
               </div>
-              <p className="text-[11px] leading-relaxed text-foreground/80">
-                {sigmaSentiment.reasoning}
-              </p>
-              <div className="text-right">
-                <span
-                  className={cn(
-                    'text-[10px] font-mono font-bold',
-                    sigmaScore > 0
-                      ? 'text-emerald-400'
-                      : sigmaScore < 0
-                        ? 'text-red-400'
-                        : 'text-amber-400',
-                  )}
-                >
-                  Score:{' '}
-                  {sigmaScore > 0 ? '+' : ''}
-                  {typeof sigmaScore === 'number'
-                    ? sigmaScore.toFixed(2)
-                    : sigmaScore}
-                </span>
-              </div>
-            </div>
+            )}
 
-            {/* SIGMA reclassifications vs keyword */}
+            {/* AI reclassifications vs keyword */}
             {changed.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -350,11 +464,12 @@ export function AnalysisSummaryCard({
                     neutral: kwNeutral,
                     score: `${kwScore > 0 ? '+' : ''}${kwScore}`,
                     total: kwTotal,
-                    overall: kwOverall === 'BULLISH'
-                      ? t('news.bullish')
-                      : kwOverall === 'BEARISH'
-                        ? t('news.bearish')
-                        : t('news.neutral'),
+                    overall:
+                      kwOverall === 'BULLISH'
+                        ? t('news.bullish')
+                        : kwOverall === 'BEARISH'
+                          ? t('news.bearish')
+                          : t('news.neutral'),
                   })}
                 </p>
               )}

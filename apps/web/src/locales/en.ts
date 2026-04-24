@@ -519,6 +519,8 @@ const en = {
     llmDefaultModelsDesc:
       'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
     agentModelsTitle: 'Default Agent Models',
+    fallbackDescription:
+      'Default fallback model used platform-wide when a user has no custom configuration. Applied automatically by presets.',
     agentModelsSubtitle:
       'Set the default provider and model for each AI agent. Users can override these with their own configuration.',
     // Audit Log
@@ -769,8 +771,31 @@ const en = {
       free: 'Free Ranking',
       all: 'All Models',
       reasoning: 'Reasoning',
-      fast: 'Fast',
-      analytics: 'Analytics',
+      fast: 'Fast & Cheap',
+      toolUse: 'Tool Use',
+      longContext: 'Long Context (200K+)',
+      premium: 'Premium',
+      allCategories: 'All Categories',
+    },
+    orPrice: {
+      all: 'All',
+      free: 'Free Only',
+      paid: 'Paid Only',
+    },
+    orSort: {
+      smart: 'Smart Ranking',
+      cheapest: 'Cheapest First',
+      mostCapable: 'Most Capable',
+      longestContext: 'Longest Context',
+    },
+    orFilter: {
+      category: 'Category',
+      price: 'Price',
+      sort: 'Sort By',
+      modelsAvailable: 'models available',
+    },
+    modelInfo: {
+      viewDetails: 'View model details',
     },
     provider: 'Provider',
     model: 'Model',
@@ -778,6 +803,9 @@ const en = {
     active: 'Active',
     inactive: 'Inactive',
     invalid: 'Invalid',
+    disabledByAdmin: 'Disabled',
+    providerDisabledNotice:
+      'This provider has been temporarily disabled by the administrator. For more details, please contact us.',
     newsSources: 'News Sources',
     freeSource: 'Free · No API key required',
     reachable: 'Reachable',
@@ -842,6 +870,13 @@ const en = {
         applying: 'Applying preset…',
         confirm:
           'Apply the "{{name}}" preset to all agents? This will overwrite your current configuration.',
+      },
+      fallback: {
+        title: 'Fallback Model',
+        description:
+          'Safety net model used when an agent has no specific configuration. Applied automatically by presets.',
+        autoResolve: 'Auto-resolve',
+        resolved: 'Fallback model set to {{model}}',
       },
     },
   },
@@ -1559,6 +1594,7 @@ const en = {
     marketDesc: 'Market analyst — prices, indicators, technical analysis',
     blockchainDesc: 'Blockchain expert — DeFi, wallets, smart contracts',
     riskDesc: 'Risk manager — stop-loss, exposure, portfolio safety',
+    agentSwitched: 'Agent switched to {{agent}} ({{provider}}/{{model}})',
     routedByKrypto: 'Routed by KRYPTO',
     orchestrating: 'KRYPTO coordinating…',
     toolCall: 'FORGE tool request',

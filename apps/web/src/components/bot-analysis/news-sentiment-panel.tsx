@@ -17,7 +17,7 @@ import {
   useNewsAnalysis,
   type NewsItem,
 } from '../../hooks/use-market';
-import { SENTIMENT_COLOR, AI_VALID_MS } from './constants';
+import { SENTIMENT_COLOR } from './constants';
 
 export interface SigmaSentiment {
   sentiment: number;
@@ -37,10 +37,23 @@ export function NewsSentimentPanel({
   const { data: config } = useNewsConfig();
   const { data: analysis } = useNewsAnalysis();
 
-  const hasAi = !!(
-    analysis?.aiAnalyzedAt &&
-    Date.now() - new Date(analysis.aiAnalyzedAt).getTime() < AI_VALID_MS
-  );
+  const hasAi = !!analysis?.aiAnalyzedAt;
+
+  // Derive SIGMA from AI analysis when available; fall back to agent decision sigma
+  const effectiveSigma: SigmaSentiment | null = hasAi
+    ? {
+        sentiment: analysis?.aiScore ?? 0,
+        impact:
+          analysis?.aiOverallSentiment === 'POSITIVE' ||
+          analysis?.aiOverallSentiment === 'BULLISH'
+            ? 'positive'
+            : analysis?.aiOverallSentiment === 'NEGATIVE' ||
+                analysis?.aiOverallSentiment === 'BEARISH'
+              ? 'negative'
+              : 'neutral',
+        reasoning: analysis?.aiSummary ?? '',
+      }
+    : (sigmaSentiment ?? null);
 
   const positive = hasAi
     ? (analysis?.aiPositiveCount ?? 0)
@@ -115,10 +128,8 @@ export function NewsSentimentPanel({
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('botAnalysis.newsSentimentTitle')}
         </span>
-        {sigmaSentiment ? (
-          <span
-            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-violet-500/10 text-violet-400 border-violet-500/20"
-          >
+        {effectiveSigma ? (
+          <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-violet-500/10 text-violet-400 border-violet-500/20">
             <Brain className="h-2.5 w-2.5" /> SIGMA
           </span>
         ) : analysis ? (
@@ -264,13 +275,13 @@ export function NewsSentimentPanel({
         )}
 
         {/* SIGMA AI Conclusion */}
-        {sigmaSentiment && (
+        {effectiveSigma && (
           <div
             className={cn(
               'shrink-0 rounded-lg border p-3 space-y-1.5',
-              sigmaSentiment.impact === 'positive'
+              effectiveSigma.impact === 'positive'
                 ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
-                : sigmaSentiment.impact === 'negative'
+                : effectiveSigma.impact === 'negative'
                   ? 'border-red-500/20 bg-red-500/[0.06]'
                   : 'border-amber-500/20 bg-amber-500/[0.06]',
             )}
@@ -283,20 +294,20 @@ export function NewsSentimentPanel({
               <span
                 className={cn(
                   'ml-1 text-[10px] font-semibold',
-                  sigmaSentiment.impact === 'positive'
+                  effectiveSigma.impact === 'positive'
                     ? 'text-emerald-400'
-                    : sigmaSentiment.impact === 'negative'
+                    : effectiveSigma.impact === 'negative'
                       ? 'text-red-400'
                       : 'text-amber-400',
                 )}
               >
-                {sigmaSentiment.impact === 'positive'
+                {effectiveSigma.impact === 'positive'
                   ? t('botAnalysis.sigmaImpactPositive')
-                  : sigmaSentiment.impact === 'negative'
+                  : effectiveSigma.impact === 'negative'
                     ? t('botAnalysis.sigmaImpactNegative')
                     : t('botAnalysis.sigmaImpactNeutral')}
               </span>
-              {sigmaSentiment.cached && (
+              {effectiveSigma.cached && (
                 <span className="ml-auto inline-flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
                   <RefreshCw className="h-2.5 w-2.5" />
                   {t('botAnalysis.sigmaCached')}
@@ -304,24 +315,24 @@ export function NewsSentimentPanel({
               )}
             </div>
             <p className="text-[11px] leading-relaxed text-foreground/80">
-              {sigmaSentiment.reasoning}
+              {effectiveSigma.reasoning}
             </p>
             <div className="text-right">
               <span
                 className={cn(
                   'text-[10px] font-mono font-bold',
-                  sigmaSentiment.sentiment > 0
+                  effectiveSigma.sentiment > 0
                     ? 'text-emerald-400'
-                    : sigmaSentiment.sentiment < 0
+                    : effectiveSigma.sentiment < 0
                       ? 'text-red-400'
                       : 'text-amber-400',
                 )}
               >
                 {t('botAnalysis.scoreLabel')}:{' '}
-                {sigmaSentiment.sentiment > 0 ? '+' : ''}
-                {typeof sigmaSentiment.sentiment === 'number'
-                  ? sigmaSentiment.sentiment.toFixed(2)
-                  : sigmaSentiment.sentiment}
+                {effectiveSigma.sentiment > 0 ? '+' : ''}
+                {typeof effectiveSigma.sentiment === 'number'
+                  ? effectiveSigma.sentiment.toFixed(2)
+                  : effectiveSigma.sentiment}
               </span>
             </div>
           </div>

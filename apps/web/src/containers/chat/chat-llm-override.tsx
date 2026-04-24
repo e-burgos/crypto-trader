@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Search } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { ChevronDown, Search, Coins, Zap } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
   useChatLLMOptions,
@@ -7,6 +7,10 @@ import {
   LLMOption,
 } from '../../hooks/use-chat';
 import { useLLMProviderModels, type LLMModel } from '../../hooks/use-llm';
+import {
+  useOpenRouterModels,
+  type OpenRouterModelInfo,
+} from '../../hooks/use-openrouter-models';
 import { useChatStore } from '../../store/chat.store';
 import { useTranslation } from 'react-i18next';
 
@@ -20,24 +24,17 @@ const PROVIDER_COLORS: Record<string, string> = {
   OPENROUTER: 'text-purple-400',
 };
 
-// ── OpenRouter category filters ─────────────────────────────────────────────
+// ── OpenRouter category labels (mapped from API-derived categories) ──────────
 
-type ORCategory =
-  | 'top-paid'
-  | 'free'
-  | 'all'
-  | 'reasoning'
-  | 'fast'
-  | 'analytics';
-
-const OR_CATEGORIES: { value: ORCategory; labelKey: string }[] = [
-  { value: 'top-paid', labelKey: 'settings.orCategory.topPaid' },
-  { value: 'free', labelKey: 'settings.orCategory.free' },
-  { value: 'all', labelKey: 'settings.orCategory.all' },
-  { value: 'reasoning', labelKey: 'settings.orCategory.reasoning' },
-  { value: 'fast', labelKey: 'settings.orCategory.fast' },
-  { value: 'analytics', labelKey: 'settings.orCategory.analytics' },
-];
+// i18n label map — categories come from model data, not hardcoded
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  free: 'settings.orPrice.free',
+  reasoning: 'settings.orCategory.reasoning',
+  'tool-use': 'settings.orCategory.toolUse',
+  fast: 'settings.orCategory.fast',
+  'long-context': 'settings.orCategory.longContext',
+  premium: 'settings.orCategory.premium',
+};
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -59,17 +56,33 @@ export function ChatLLMOverride({
 
   const [providerOpen, setProviderOpen] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
-  const [category, setCategory] = useState<ORCategory>('top-paid');
+  const [category, setCategory] = useState<string>('');
   const [search, setSearch] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isOpenRouter = sessionProvider === 'OPENROUTER';
 
-  // Fetch dynamic models for OpenRouter
-  const { data: orModels } = useLLMProviderModels(
-    isOpenRouter ? 'OPENROUTER' : '',
-  );
+  // Fetch dynamic models from new OpenRouter endpoint
+  const { data: orModelsRaw } = useOpenRouterModels();
+
+  // Derive available categories dynamically from model data
+  const orCategories = useMemo(() => {
+    if (!orModelsRaw) return [];
+    const catSet = new Set<string>();
+    for (const m of orModelsRaw) {
+      for (const c of m.categories) catSet.add(c);
+    }
+    return [
+      { value: '', labelKey: 'settings.orCategory.allCategories' },
+      ...Array.from(catSet)
+        .sort()
+        .map((c) => ({
+          value: c,
+          labelKey: CATEGORY_LABEL_MAP[c] || c,
+        })),
+    ];
+  }, [orModelsRaw]);
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -90,12 +103,22 @@ export function ChatLLMOverride({
 
   // For OpenRouter: filter models by selected category
   const orFiltered =
-    isOpenRouter && orModels
-      ? category === 'all'
-        ? orModels.filter((m) => !m.deprecated)
-        : orModels.filter(
-            (m) => !m.deprecated && m.categories?.includes(category),
-          )
+    isOpenRouter && orModelsRaw
+      ? (() => {
+          let models = [...orModelsRaw];
+          if (category === 'free') {
+            models = models.filter((m) => m.isFree);
+          } else if (category) {
+            models = models.filter((m) => m.categories.includes(category));
+          }
+          // Sort: paid by price desc, free by context desc
+          models.sort((a, b) => {
+            if (a.isFree !== b.isFree) return a.isFree ? 1 : -1;
+            if (!a.isFree) return b.pricing.completion - a.pricing.completion;
+            return b.contextLength - a.contextLength;
+          });
+          return models;
+        })()
       : [];
 
   // For non-OpenRouter providers
@@ -103,25 +126,28 @@ export function ChatLLMOverride({
 
   // Auto-switch category if current model is not visible
   useEffect(() => {
-    if (!isOpenRouter || !orModels?.length || !sessionModel) return;
+    if (!isOpenRouter || !orModelsRaw?.length || !sessionModel) return;
     const visible = orFiltered.some((m) => m.id === sessionModel);
     if (!visible) {
-      for (const cat of OR_CATEGORIES) {
-        if (cat.value === 'all') {
-          setCategory('all');
-          break;
-        }
-        if (
-          orModels.some(
-            (m) => m.id === sessionModel && m.categories?.includes(cat.value),
-          )
-        ) {
-          setCategory(cat.value);
-          break;
+      // Try to find a specific category that contains this model
+      const model = orModelsRaw.find((m) => m.id === sessionModel);
+      if (model) {
+        if (model.isFree) {
+          setCategory('free');
+        } else if (model.categories.length > 0) {
+          const matchedCat = orCategories.find(
+            (c) =>
+              c.value &&
+              c.value !== 'free' &&
+              model.categories.includes(c.value),
+          );
+          setCategory(matchedCat?.value ?? '');
+        } else {
+          setCategory('');
         }
       }
     }
-  }, [sessionModel, orModels]);
+  }, [sessionModel, orModelsRaw]);
 
   const handleProviderSelect = (opt: LLMOption) => {
     const newModel = opt.models[0] ?? sessionModel;
@@ -135,7 +161,7 @@ export function ChatLLMOverride({
     setSearch('');
   };
 
-  const handleCategorySelect = (cat: ORCategory) => {
+  const handleCategorySelect = (cat: string) => {
     setCategory(cat);
     setProviderOpen(false);
   };
@@ -147,8 +173,8 @@ export function ChatLLMOverride({
   // Active category label for display
   const activeCategoryLabel = isOpenRouter
     ? t(
-        OR_CATEGORIES.find((c) => c.value === category)?.labelKey ??
-          'settings.orCategory.topPaid',
+        orCategories.find((c) => c.value === category)?.labelKey ??
+          'settings.orCategory.allCategories',
       )
     : null;
 
@@ -190,7 +216,7 @@ export function ChatLLMOverride({
           <div className="absolute bg-background bottom-full left-0 z-50 mb-1 min-w-[140px] rounded-lg border border-border bg-popover p-1 shadow-lg">
             {isOpenRouter && options.length <= 1
               ? /* Category list for OpenRouter-only */
-                OR_CATEGORIES.map((cat) => (
+                orCategories.map((cat) => (
                   <button
                     key={cat.value}
                     type="button"
@@ -238,7 +264,7 @@ export function ChatLLMOverride({
       {isOpenRouter && options.length > 1 && (
         <div className="flex items-center gap-0.5">
           <span className="text-muted-foreground/40 mx-0.5">·</span>
-          {OR_CATEGORIES.map((cat) => (
+          {orCategories.map((cat) => (
             <button
               key={cat.value}
               type="button"
@@ -302,7 +328,7 @@ export function ChatLLMOverride({
                       (m) =>
                         !q ||
                         m.id.toLowerCase().includes(q) ||
-                        (m.label ?? '').toLowerCase().includes(q),
+                        m.name.toLowerCase().includes(q),
                     );
                     return visible.length > 0 ? (
                       visible.map((m) => (
@@ -316,12 +342,23 @@ export function ChatLLMOverride({
                             m.id === sessionModel && 'bg-muted/40 font-medium',
                           )}
                         >
-                          <span className="truncate">{m.label ?? m.id}</span>
-                          {m.contextWindow && (
-                            <span className="ml-2 shrink-0 text-[10px] text-muted-foreground/50">
-                              {(m.contextWindow / 1000).toFixed(0)}K
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1.5 truncate">
+                            {m.isFree ? (
+                              <Zap className="h-3 w-3 shrink-0 text-emerald-400" />
+                            ) : (
+                              <Coins className="h-3 w-3 shrink-0 text-amber-400" />
+                            )}
+                            <span className="truncate">{m.name}</span>
+                          </span>
+                          <span className="ml-2 shrink-0 text-[10px] text-muted-foreground/50">
+                            {m.isFree
+                              ? 'Free'
+                              : `$${m.pricing.completion < 1 ? m.pricing.completion.toFixed(2) : m.pricing.completion.toFixed(1)}/M`}
+                            {' · '}
+                            {m.contextLength >= 1_000_000
+                              ? `${(m.contextLength / 1_000_000).toFixed(1)}M`
+                              : `${(m.contextLength / 1000).toFixed(0)}K`}
+                          </span>
                         </button>
                       ))
                     ) : (

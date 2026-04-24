@@ -7,11 +7,13 @@ import { AvatarDropdown } from './avatar-dropdown';
 import { Link } from 'react-router-dom';
 import { ConnectionStatusDropdown } from './connection-status-dropdown';
 import { ModeSelector } from './mode-selector';
+import { useAuthStore } from '../store/auth.store';
 
 export function DashboardHeader() {
   const unreadCount = useUnreadCount();
   const [notifOpen, setNotifOpen] = useState(false);
   const { openMobile } = useSidebarStore();
+  const user = useAuthStore((s) => s.user);
 
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-1 border-b border-border/60 bg-card/50 px-4 backdrop-blur-sm">
@@ -33,8 +35,8 @@ export function DashboardHeader() {
 
       {/* Right actions */}
       <div className="flex items-center gap-1.5">
-        {/* Operation mode selector */}
-        <ModeSelector />
+        {/* Operation mode selector — only for traders */}
+        {user?.role !== 'ADMIN' && <ModeSelector />}
 
         {/* Connection status */}
         <ConnectionStatusDropdown />

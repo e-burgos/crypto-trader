@@ -10,6 +10,7 @@ export default [
       '**/out-tsc',
       '**/vite.config.*.timestamp*',
       '**/vitest.config.*.timestamp*',
+      '**/package.json',
     ],
   },
   {
@@ -29,13 +30,6 @@ export default [
         },
       ],
       // All libs are private/internal — dependencies are managed at the root level
-      '@nx/dependency-checks': 'off',
-    },
-  },
-  {
-    // Disable dependency-checks for private lib package.json files
-    files: ['libs/*/package.json'],
-    rules: {
       '@nx/dependency-checks': 'off',
     },
   },

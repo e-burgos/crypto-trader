@@ -10,7 +10,7 @@ interface DialogProps {
   onClose: () => void;
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg';
   variant?: DialogVariant;
   /** For confirm/danger variants */

@@ -119,6 +119,11 @@ export { DecisionFlowDiagram } from './lib/domain/agent/decision-flow-diagram';
 export { ExplainPanel } from './lib/domain/agent/explain-panel';
 export { ParameterCards } from './lib/domain/agent/parameter-cards';
 export { StrategyPresets, PRESETS } from './lib/domain/agent/strategy-presets';
+export { ModelInfoModal } from './lib/domain/agent/model-info-modal';
+export type {
+  ModelInfoModalProps,
+  ModelInfoData,
+} from './lib/domain/agent/model-info-modal';
 
 // Domain — Chat
 export type {

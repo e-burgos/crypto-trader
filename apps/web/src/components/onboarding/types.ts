@@ -37,14 +37,7 @@ export const LLM_PROVIDERS: {
   {
     value: 'OPENROUTER',
     label: 'OpenRouter',
-    models: [
-      'anthropic/claude-sonnet-4.6',
-      'google/gemini-3-flash-preview',
-      'deepseek/deepseek-v3.2',
-      'google/gemini-2.5-flash-lite',
-      'openrouter/elephant-alpha',
-      'nvidia/nemotron-3-super-120b-a12b:free',
-    ],
+    models: [], // Resolved dynamically via useOpenRouterModels hook
     helpLink: 'https://openrouter.ai/keys',
     helpLinkText: 'openrouter.ai',
   },

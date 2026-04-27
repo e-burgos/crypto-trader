@@ -1,6 +1,6 @@
 {
   "installation": {
-    "version": "22.6.3"
+    "version": "22.7.0"
   },
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "targetDefaults": {

@@ -28,6 +28,7 @@
 | 36  | feature/agent-hub-config               | 36-agent-hub-config.md               | 28,31,35   |
 | 37  | feature/role-based-access-separation   | 37-role-based-access-separation.md   | 36         |
 | 38  | feature/llm-provider-toggle            | 38-llm-provider-toggle.md            | 35,37      |
+| 39  | feature/docs-overhaul                  | 39-docs-overhaul.md                  | 38         |
 
 ## Flujo recomendado
 

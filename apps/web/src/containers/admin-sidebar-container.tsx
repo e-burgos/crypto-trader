@@ -5,7 +5,7 @@ import {
   Bot,
   BotMessageSquare,
   Bell,
-  HelpCircle,
+  BookOpen,
   TrendingUp,
   Clock,
   Shield,
@@ -119,7 +119,7 @@ export function AdminSidebarContainer() {
         {
           id: 'admin-help',
           label: t('sidebar.help'),
-          icon: <HelpCircle className="h-4 w-4" />,
+          icon: <BookOpen className="h-4 w-4" />,
           href: '/admin/help',
           active: isActive('/admin/help'),
         },

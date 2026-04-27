@@ -105,14 +105,14 @@ test.describe('Help Page', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test('help page is accessible without auth', async ({ page }) => {
-    await page.goto('/help');
+    await page.goto('/docs');
     await expect(
-      page.getByRole('heading', { name: /help|faq|guide/i }),
+      page.getByRole('heading', { name: /help|faq|guide|docs/i }),
     ).toBeVisible({ timeout: 8_000 });
   });
 
   test('FAQ accordion items are visible', async ({ page }) => {
-    await page.goto('/help');
+    await page.goto('/docs');
     // FAQ items should be listed
     await expect(page.getByText(/crypto|trader|what is/i).first()).toBeVisible({
       timeout: 5_000,
@@ -120,7 +120,7 @@ test.describe('Help Page', () => {
   });
 
   test('clicking a FAQ item expands the answer', async ({ page }) => {
-    await page.goto('/help');
+    await page.goto('/docs');
     const firstFaq = page
       .locator('[class*="faq"], button[class*="flex"]')
       .first();
@@ -132,7 +132,7 @@ test.describe('Help Page', () => {
   });
 
   test('Getting Started guide steps are visible', async ({ page }) => {
-    await page.goto('/help');
+    await page.goto('/docs');
     await expect(
       page.getByText(/register|connect|configure/i).first(),
     ).toBeVisible({ timeout: 5_000 });

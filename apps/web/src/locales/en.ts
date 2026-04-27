@@ -5,7 +5,7 @@ const en = {
     getStarted: 'Get Started',
     signOut: 'Sign Out',
     profile: 'Profile',
-    help: 'Help',
+    help: 'Docs',
     lightMode: 'Light mode',
     darkMode: 'Dark mode',
   },
@@ -30,7 +30,7 @@ const en = {
     chat: 'KRYPTO AI',
     agents: 'Agents',
     admin: 'Admin',
-    help: 'Help & Guide',
+    help: 'Docs',
     groupTrading: 'Trading',
     groupAgente: 'Agents',
     groupSettings: 'Settings',
@@ -877,6 +877,7 @@ const en = {
           'Safety net model used when an agent has no specific configuration. Applied automatically by presets.',
         autoResolve: 'Auto-resolve',
         resolved: 'Fallback model set to {{model}}',
+        recommendedTitle: 'Recommended fallback models (all-rounder):',
       },
     },
   },
@@ -920,7 +921,7 @@ const en = {
     paginationInfo: '{{from}}–{{to}} of {{total}}',
   },
   help: {
-    title: 'Help & Guide',
+    title: 'Documentation',
     subtitle: 'Everything you need to know about operating the platform',
     gettingStarted: 'Getting Started',
     platformBehavior: 'Platform Behavior',
@@ -1083,6 +1084,47 @@ const en = {
       minProfitNote:
         'The agent never sells autonomously if the position is at a loss. There is a minimum profitability threshold (default 0.3%) that must be exceeded before an automatic sell is executed. Manual close has no such restriction.',
     },
+    operationModesTitle: 'Operation Modes',
+    operationModesDesc:
+      'The platform supports three operation modes. Each mode changes how the trading engine executes orders.',
+    operationModes: {
+      sandboxDesc:
+        'Simulated trading with virtual balance ($10,000 default). No real orders placed. Perfect for testing strategies.',
+      testnetDesc:
+        'Connects to Binance Testnet API. Real order flow with fake funds. Validates API integration without financial risk.',
+      liveDesc:
+        'Real trading with real funds on Binance. Market orders are executed instantly. Use with caution.',
+      warningTitle: 'Mode switching',
+      warningDesc:
+        'Switching from SANDBOX/TESTNET to LIVE requires Binance API keys with Spot trading permissions. All open sandbox positions are preserved but paused.',
+    },
+    llmProvidersTitle: 'LLM Providers',
+    llmProvidersDesc:
+      'Each agent can be powered by a different LLM provider. OpenRouter is the recommended default — it gives access to 300+ models from a single API key.',
+    llmProviders: {
+      openrouterDesc: '300+ models, single API key. Free models available.',
+      claudeDesc: 'Claude models via Anthropic API.',
+      openaiDesc: 'GPT-4o, GPT-4 Turbo, and more.',
+      groqDesc: 'Ultra-fast inference with Llama, Mixtral.',
+      geminiDesc: 'Google Gemini models.',
+      mistralDesc: 'Mistral AI models.',
+      togetherDesc: 'Open-source model hosting.',
+      tipTitle: 'Smart Presets',
+      tipDesc:
+        'Use the preset system (Free / Balanced / Optimized) to auto-assign recommended models to all agents at once. Each preset selects the best model per agent role.',
+      recommendedTitle: 'Recommended Models by Agent',
+      tableAgent: 'Agent',
+      tableFree: 'Free',
+      tableBalanced: 'Balanced',
+      tableOptimized: 'Optimized',
+    },
+    openrouterStep1: 'Create an account at openrouter.ai',
+    openrouterStep2: 'Go to Keys → Create Key',
+    openrouterStep3: 'Copy the key (starts with sk-or-)',
+    openrouterStep4: 'Paste in Settings → LLM Providers → OpenRouter',
+    openrouterTip: 'Free models available',
+    openrouterTipDesc:
+      'Many models on OpenRouter are free. Use the "Free" preset to configure all agents with $0 cost models.',
   },
   common: {
     save: 'Save',
@@ -1582,6 +1624,26 @@ const en = {
     providerNeedsAttention: 'Needs attention — provider disabled',
     tabStatus: 'Agent Status',
     tabModels: 'Default Models',
+    recommendedModels: 'Recommended models:',
+    validated: 'Validated',
+    deprecated: 'Deprecated',
+    roles: {
+      routing:
+        'Fast classifier — routes each request to the best specialist agent. Needs low latency.',
+      orchestrator:
+        'Central coordinator — decomposes complex tasks, merges multi-agent results, produces final answers.',
+      synthesis:
+        'Deep synthesizer — generates comprehensive written reports from multi-agent analysis.',
+      platform:
+        'Platform expert — manages features, settings, navigation, and user onboarding.',
+      operations:
+        'Operations assistant — starts/stops agents, applies configs, executes maintenance tasks.',
+      market:
+        'Market analyst — price analysis, technical indicators, trend signals, and trading insights.',
+      blockchain:
+        'Blockchain expert — DeFi protocols, wallets, smart contracts, and on-chain data interpretation.',
+      risk: 'Risk manager — stop-loss validation, exposure calculation, portfolio safety enforcement.',
+    },
     kryptoDesc: 'Let KRYPTO decide the best agent for your question',
     nexusDesc: 'Platform expert — features, settings, navigation',
     forgeDesc: 'Operations assistant — start/stop agents, manage configs',
@@ -2164,6 +2226,750 @@ const en = {
     modeChangeError: 'Failed to change operation mode',
     modeFallback:
       'Mode {{mode}} unavailable. Switched to Sandbox automatically.',
+  },
+  docs: {
+    pagination: {
+      previous: 'Previous',
+      next: 'Next',
+    },
+    feedback: {
+      question: 'Was this page helpful?',
+      yes: 'Yes',
+      no: 'No',
+      thanksYes: 'Thanks for your feedback!',
+      thanksNo: "Thanks — we'll work on improving this page.",
+    },
+    group: {
+      gettingStarted: 'Getting Started',
+      platform: 'Platform',
+      integration: 'Integration',
+      integrations: 'Integrations',
+      configuration: 'Configuration',
+      reference: 'Reference',
+      support: 'Support',
+    },
+    quickstart: {
+      title: 'Quickstart',
+      intro:
+        'Get up and running with CryptoTrader in minutes. This guide walks you through account creation, configuring your AI provider, and launching your first trading agent.',
+      whatIsTitle: 'What is CryptoTrader?',
+      whatIsDesc:
+        'CryptoTrader is an AI-powered cryptocurrency trading platform that uses a multi-agent system to analyze markets, manage risk, and execute trades on Binance. The platform supports three operation modes (Sandbox, Testnet, Live) and integrates with 7 LLM providers to power its 8 specialized AI agents.',
+      createAccountTitle: 'Create your account',
+      step1: 'Navigate to the registration page',
+      step1Desc:
+        'Go to /register and create your account with email and password.',
+      step2: 'Complete the onboarding wizard',
+      step2Desc:
+        'Choose your operation mode (Sandbox recommended), set up exchange keys, configure your LLM provider, and create your first agent.',
+      configureLlmTitle: 'Configure your LLM provider',
+      configureLlmDesc:
+        'The AI agents need an LLM provider to function. OpenRouter is recommended — one API key gives access to 300+ models, including free ones.',
+      llmStep1: 'Go to Settings → LLM Providers',
+      llmStep2: 'Enter your OpenRouter API key',
+      llmStep2Desc: 'Get one at openrouter.ai/keys — starts with sk-or-',
+      llmStep3: 'Use a Preset to auto-assign models',
+      llmStep3Desc:
+        'Free ($0 cost), Balanced (good ratio), or Optimized (best quality).',
+      firstAgentTitle: 'Create your first trading agent',
+      agentStep1: 'Go to Agent Config in the dashboard',
+      agentStep2: 'Click "New Agent" to open the creation wizard',
+      agentStep3: 'Choose a name, trading pair (e.g. BTCUSDT), and mode',
+      agentStep4: 'Configure parameters or use defaults',
+      agentStep4Desc:
+        'Buy/Sell Threshold: 70%, Stop Loss: 3%, Take Profit: 5%, Max Trade: 5% of capital.',
+      agentStep5: 'Click Create — the agent is ready',
+      startAgentTitle: 'Start the agent',
+      startStep1: 'Find your agent card on the Agent Config page',
+      startStep2: 'Click the Play button to start',
+      startStep3: 'Monitor activity in Agent Log and Positions',
+      startStep3Desc:
+        'The agent will fetch market data, consult the AI multi-agent system, and execute trades automatically based on your thresholds.',
+      tipTitle: 'Tip',
+      tipContent:
+        'Start with Sandbox mode and the Free preset to learn the platform without any cost. You can switch to Live trading once you are comfortable with the system.',
+    },
+    platformBehavior: {
+      title: 'Platform Behavior',
+      intro:
+        'Important behaviors, warnings, and mechanisms you should understand before trading.',
+      stopAllWarning: 'Important',
+      stopAllNote:
+        'Existing open positions remain open after Stop All. You must manually close positions or restart agents to resume trading.',
+      lifecycleTitle: 'Position lifecycle',
+      lifecycleDesc:
+        'Positions follow a strict lifecycle: OPEN when a BUY trade executes, monitored each cycle, and CLOSED when a SELL trade executes (manual or automatic).',
+      lifecycleAutoSell:
+        'Automatic sell conditions: take-profit threshold reached, stop-loss threshold reached, or AI agent recommends SELL with sufficient confidence AND minimum profit threshold is met (default 0.3%).',
+      noLossTitle: 'No autonomous loss selling',
+      rateLimitTitle: 'Rate limiting',
+      rateLimitDesc:
+        'Each agent has a configurable minimum interval between analysis cycles (default: 5 minutes). In AGENT mode, the AI suggests optimal wait time based on market volatility. In CUSTOM mode, a fixed interval is used.',
+      dataRefreshTitle: 'Data refresh',
+      dataRefreshDesc:
+        'Market prices update via WebSocket in real-time. Portfolio data refreshes every 30 seconds. Agent decisions appear in the Agent Log immediately after each cycle.',
+      autoStopTitle: 'Auto-stop on configuration changes',
+      autoStopDesc:
+        'The platform automatically stops an agent when you modify its configuration. This prevents the agent from trading with outdated parameters. After saving changes, you must manually restart the agent.',
+    },
+    agents: {
+      title: 'Agents',
+      intro:
+        'CryptoTrader uses a multi-agent system where each agent is a specialized AI with a specific role. The agents collaborate through an orchestration layer to produce trading decisions.',
+      architectureTitle: 'Multi-agent architecture',
+      architectureDesc:
+        'The system has three layers: (1) Routing Layer — classifies user intent and routes to the right agent, (2) Specialist Agents — domain experts that analyze specific aspects, (3) Synthesis Layer — combines agent outputs into a final decision.',
+      kryptoRole: 'The Orchestrator (2 configurable roles)',
+      kryptoDesc:
+        'KRYPTO is the backbone of the multi-agent system. It operates in two independently-configurable LLM roles. The orchestration coordination itself is handled internally by the framework.',
+      kryptoRouting:
+        'Classifies incoming requests, routes to appropriate specialist',
+      kryptoSynth:
+        'Combines outputs into final BUY/SELL/HOLD with confidence score',
+      ultraFast: 'Ultra-fast (Gemma 4, Qwen 3.5)',
+      highQuality: 'High quality (DeepSeek V4 Pro, Kimi K2)',
+      role: 'Role',
+      function: 'Function',
+      modelType: 'Model recommendation',
+      specialistsTitle: 'Specialist Agents',
+      agent: 'Agent',
+      codename: 'Codename',
+      domain: 'Domain',
+      specialty: 'Specialty',
+      nexusDomain: 'Platform functionality',
+      nexusSpec:
+        'Knows the platform inside-out, explains features and settings',
+      forgeDomain: 'Trade execution',
+      forgeSpec: 'Order types, execution timing, operational constraints',
+      sigmaDomain: 'Market data analysis',
+      sigmaSpec:
+        'RSI, MACD, Bollinger Bands, volume profiles, support/resistance',
+      cipherDomain: 'Blockchain & on-chain',
+      cipherSpec: 'On-chain metrics, whale movements, DeFi trends',
+      aegisDomain: 'Risk assessment',
+      aegisSpec: 'Position sizing, exposure limits, drawdown management',
+      showcaseTitle: 'Agents Showcase',
+      configTitle: 'Agent configuration',
+      configInfoTitle: 'Per-agent customization',
+      configInfo:
+        'Each agent can be individually configured with its own LLM Provider, specific model, and recommended models set by the admin. Go to Settings → Agents to customize.',
+    },
+    agentFlow: {
+      title: 'Agent Decision Flow',
+      intro:
+        'Understand how the agent makes trading decisions step by step, from data collection to trade execution.',
+      cycleTitle: 'The decision cycle',
+      step1: 'Data Collection',
+      step1Desc:
+        'Fetch latest market data, OHLCV candles, and technical indicators for the configured pair.',
+      step2: 'Multi-Agent Consultation',
+      step2Desc:
+        'The orchestrator (KRYPTO) routes market data to relevant specialists: SIGMA for market analysis, AEGIS for risk, CIPHER for blockchain.',
+      step3: 'Synthesis',
+      step3Desc:
+        'KRYPTO synthesizes specialist opinions into a single recommendation: BUY, SELL, or HOLD.',
+      step4: 'Confidence Check',
+      step4Desc:
+        'The recommendation includes a confidence score (0-100%). Compared against the agent buy/sell thresholds.',
+      step5: 'Execution',
+      step5Desc:
+        'If confidence exceeds threshold AND all safety checks pass, the trade is executed.',
+      step6: 'Wait',
+      step6Desc:
+        'The agent waits for the next cycle (fixed interval or AI-suggested).',
+      waitTitle: 'The wait time',
+      agentMode: 'AGENT mode (default)',
+      agentModeDesc:
+        'The AI suggests a wait time based on market volatility. High volatility = shorter wait (2-5 min). Low volatility = longer wait (10-30 min).',
+      customMode: 'CUSTOM mode',
+      customModeDesc:
+        'Fixed interval set by the user (minimum 5 minutes). The AI does not adjust the frequency.',
+      outcomesTitle: 'Decision outcomes',
+      scenario: 'Scenario',
+      decision: 'Decision',
+      confidence: 'Confidence',
+      threshold: 'Threshold',
+      result: 'Result',
+      strongBuy: 'Strong buy signal',
+      executed: 'Trade executed',
+      executedProfit: 'Executed (if min profit met)',
+      weakBuy: 'Weak buy signal',
+      skipped: 'Skipped — below threshold',
+      neutral: 'Market neutral',
+      noAction: 'No action — wait',
+      sellLoss: 'Sell at loss',
+      sellProfit: 'Sell with profit',
+      blocked: 'Blocked — never sells at loss via LLM',
+    },
+    agentConfig: {
+      title: 'Agent Configuration',
+      intro:
+        'Configure agent parameters, use presets for quick setup, and understand the key concepts behind each setting.',
+      presetsDesc:
+        'CryptoTrader offers three built-in presets that configure all agent parameters at once. Choose based on your risk tolerance.',
+      paramsTitle: 'Configuration parameters',
+      paramsDesc:
+        'Every trading agent has these configurable parameters. Click on each card to learn more.',
+      conceptsTitle: 'Key concepts explained',
+    },
+    tradeExecution: {
+      title: 'Trade Execution',
+      intro:
+        'How trades are executed, buy/sell rules, fee calculations, and real examples.',
+      buyTitle: 'Buy execution flow',
+      buyStep1: 'Confidence check — Agent confidence must exceed buy threshold',
+      buyStep2:
+        'Capital check — Verify sufficient balance (available × maxTradePct)',
+      buyStep3: 'Position check — Open positions < maxConcurrentPositions',
+      buyStep4:
+        'Execute order — Market order on Binance (LIVE/TESTNET) or simulate (SANDBOX)',
+      buyStep5: 'Create position — Record entry price, quantity, and fees',
+      sellTitle: 'Sell execution paths',
+      sellPath1: '1. AI-recommended SELL',
+      sellPath1Desc:
+        'Agent analyzes market and recommends selling. Requires: confidence > sell threshold AND profit > minProfitPct (0.3%). Will NEVER sell at loss via LLM.',
+      sellPath2: '2. Take-profit trigger',
+      sellPath2Desc:
+        'Automatic: when price rises by takeProfitPct from entry. No AI needed — triggers on price alone.',
+      sellPath3: '3. Stop-loss trigger',
+      sellPath3Desc:
+        'Automatic: when price drops by stopLossPct from entry. The only mechanism that can close at a loss. Hard safety limit.',
+      sellPath4: '4. Manual close',
+      sellPath4Desc:
+        'User clicks "Close Position". No restrictions — can close at any price. Useful for emergency exits.',
+      priorityTitle: 'Execution priority',
+      priority: 'Priority',
+      mechanism: 'Mechanism',
+      canLoss: 'Can close at loss?',
+      needsAI: 'Needs AI?',
+      formulas: 'Formulas',
+    },
+    operationModes: {
+      title: 'Operation Modes',
+      intro:
+        'CryptoTrader supports three operation modes. Each mode determines how trades are executed and whether real money is at risk.',
+      overviewTitle: 'Modes overview',
+      mode: 'Mode',
+      exchange: 'Exchange',
+      realMoney: 'Real money?',
+      useCase: 'Use case',
+      simulated: 'Simulated',
+      sandboxUse: 'Learning, testing strategies',
+      testnetUse: 'API integration testing',
+      liveUse: 'Real trading',
+      sandboxTitle: 'Sandbox mode',
+      sandboxDesc:
+        'All trades are simulated in the database. No exchange connection needed, no API keys required. Perfect for learning and strategy testing. Uses real market prices from Binance WebSocket.',
+      sandboxTip:
+        'Start here to understand how the agents work, test configurations, and learn the platform without any risk.',
+      sandboxTipTitle: 'Best for beginners',
+      testnetTitle: 'Testnet mode',
+      testnetDesc:
+        'Connects to Binance Testnet — a separate environment with fake money. Orders are placed on a real exchange API but with test funds. Good for validating API key setup and order execution without risk.',
+      testnetLimitations:
+        'Testnet prices may differ from production. Liquidity is limited. Some pairs may not be available.',
+      testnetNote: 'Testnet limitations',
+      liveTitle: 'Live mode',
+      liveDesc:
+        'Real money trading on Binance production. Every trade uses your actual balance. Requires a Binance account with real funds and properly configured API keys.',
+      liveRisk:
+        'Live trading involves real financial risk. Start with small amounts. The platform provides stop-loss protection but losses are still possible. Only trade what you can afford to lose.',
+      liveWarning: 'Risk warning',
+      switchingTitle: 'Switching between modes',
+    },
+    binance: {
+      title: 'Binance Integration',
+      intro:
+        'How CryptoTrader integrates with Binance for data feeds and trade execution.',
+      pairsTitle: 'Supported trading pairs',
+      pair: 'Pair',
+      base: 'Base',
+      quote: 'Quote',
+      minOrder: 'Min order',
+      permissionsTitle: 'Required API permissions',
+      permission: 'Permission',
+      why: 'Why',
+      sandbox: 'Sandbox',
+      readInfo: 'Read Info',
+      readInfoWhy: 'Balance, order history',
+      notNeeded: 'Not needed',
+      enableTrading: 'Enable Trading',
+      enableTradingWhy: 'Place buy/sell orders',
+      noWithdrawal: 'Never enable "Enable Withdrawals"',
+      noWithdrawalDesc:
+        'CryptoTrader never needs withdrawal permissions. Never grant this. IP-restrict your keys to an additional layer of protection.',
+      pipelineTitle: 'Data pipeline',
+      data: 'Data',
+      source: 'Source',
+      frequency: 'Frequency',
+      ohlcv: 'OHLCV candles',
+      realTime: 'Real-time',
+      realTimePrice: 'Real-time price',
+      every30s: 'Every 30 seconds',
+      perCycle: 'Per analysis cycle',
+      accountBalance: 'Account balance',
+      rateLimitsTitle: 'Rate limits',
+      rateLimitsDesc:
+        'Binance imposes rate limits on API usage. The platform manages this automatically:',
+      rateLimitsCode: 'Binance limits',
+    },
+    apiKeys: {
+      title: 'API Keys',
+      intro:
+        'How to generate, configure, and secure your API keys for Binance and LLM providers.',
+      binanceTitle: 'Binance API keys',
+      binanceStep1: 'Log in to your Binance account',
+      binanceStep2: 'Go to API Management (Settings → API Management)',
+      binanceStep3: 'Click "Create API" — choose System Generated',
+      binanceStep4: 'Enable "Read Info" and "Enable Trading" ONLY',
+      binanceStep4Desc: 'Never enable Withdrawals or Universal Transfer',
+      binanceStep5: 'Set IP restrictions for additional security',
+      binanceStep6: 'Copy both the API Key and Secret Key',
+      secretWarning: 'Secret key shown once',
+      secretWarningDesc:
+        'The Secret Key is only shown once at creation. Save it immediately in a secure location. If lost, you must delete the key and create a new one.',
+      testnetTitle: 'Testnet API keys',
+      testnetDesc:
+        'For TESTNET mode, you need keys from the Binance Testnet — a separate environment from production.',
+      testnetStep1: 'Go to testnet.binance.vision',
+      testnetStep1Desc: 'This is the Binance Spot Test Network',
+      testnetStep2: 'Log in with your GitHub account',
+      testnetStep3: 'Generate HMAC_SHA256 Key',
+      testnetStep4: 'Copy the API Key and Secret Key',
+      testnetNote: 'Testnet funds',
+      llmTitle: 'LLM provider keys',
+      llmDesc:
+        'Each LLM provider requires its own API key. OpenRouter is recommended as it gives access to 300+ models with a single key.',
+      keyFormats: 'Key formats by provider',
+      securityTitle: 'Key security best practices',
+      securityBestPractices: 'Security best practices',
+      sec1: 'Never share your API keys',
+      sec2: 'Use IP restrictions on Binance keys',
+      sec3: 'Never enable withdrawal permissions',
+      sec4: 'Rotate keys periodically',
+      sec5: 'Use separate keys for testnet and production',
+      sec6: 'Monitor your Binance API key usage in the Binance dashboard',
+    },
+    llmProviders: {
+      title: 'LLM Providers',
+      intro:
+        'CryptoTrader supports 7 LLM providers. Each agent can use a different provider and model.',
+      supportedTitle: 'Supported providers',
+      provider: 'Provider',
+      models: 'Notable models',
+      cost: 'Cost',
+      notes: 'Notes',
+      varies: 'Varies (free options)',
+      openrouterNote: '300+ models, one API key',
+      openrouterDesc:
+        'OpenRouter acts as a unified gateway to 300+ models from multiple providers. One API key gives you access to free models (DeepSeek, Gemma, Qwen) and premium models (GPT-4o, Claude).',
+      paid: 'Paid',
+      openaiNote: 'Highest quality, higher cost',
+      claudeNote: 'Excellent reasoning',
+      freeTier: 'Free tier',
+      geminiNote: 'Good free option',
+      groqNote: 'Ultra-fast inference',
+      mistralNote: 'European provider',
+      togetherNote: 'Open-source models',
+      best: 'Best',
+      good: 'Good',
+      veryGood: 'Very good',
+      freeFor: 'Testing, learning, low-volume',
+      balancedFor: 'Regular trading, cost-effective',
+      optimizedFor: 'Serious trading, maximum accuracy',
+      openrouterBenefit: 'Why OpenRouter?',
+      openrouterBenefitDesc:
+        'Single API key, model presets (Free/Balanced/Optimized), per-agent model assignment, and automatic fallback if a model is down.',
+      validationTitle: 'Live model validation',
+      validationDesc:
+        'In Settings → Agents, each recommended model shows a validation badge (✓ Available / ⚠ Deprecated) checked against the live OpenRouter catalog. Click any model name to apply it instantly.',
+      presetsTitle: 'Model presets',
+      preset: 'Preset',
+      quality: 'Quality',
+      bestFor: 'Best for',
+      agentModelTitle: 'Agent-to-model mapping',
+      agentModelDesc:
+        'Not all agents need the same model quality. KRYPTO Routing processes simple classifications — a fast, free model works well. KRYPTO Synthesis makes the final decision — it benefits from a higher-quality model.',
+      agent: 'Agent',
+    },
+    faq: {
+      title: 'FAQ',
+      intro: 'Frequently asked questions about CryptoTrader.',
+      q1: 'Is CryptoTrader free?',
+      a1: 'The platform is free to use. You only pay for LLM API usage (optional — free models available via OpenRouter) and Binance trading fees (0.1% per trade).',
+      q2: 'Can I lose money?',
+      a2: 'In SANDBOX mode — no. In LIVE mode — yes. While the platform has stop-loss protection and never sells at a loss via AI, stop-loss itself can and will close positions at a loss to limit damage. Only trade what you can afford to lose.',
+      q3: 'Which exchanges are supported?',
+      a3: 'Currently Binance only (Spot trading). Support for Binance Futures and other exchanges is on the roadmap.',
+      q4: 'Which cryptocurrencies can I trade?',
+      a4: 'BTC and ETH with USDT or USDC as quote currencies. Four pairs: BTCUSDT, BTCUSDC, ETHUSDT, ETHUSDC.',
+      q5: 'How does stop-loss work?',
+      a5: 'Stop-loss is a hard circuit breaker. When the price drops by the configured percentage from your entry price, the position is immediately closed — no AI decision involved. This is the only mechanism that can close at a loss.',
+      q6: 'Can the AI sell at a loss?',
+      a6: 'No. The AI (LLM) never sells at a loss. There is a minimum profitability threshold (default 0.3%) that must be exceeded. Only stop-loss or manual close can exit at a loss.',
+      q7: 'Can I run multiple agents simultaneously?',
+      a7: 'Yes. Each agent operates independently with its own configuration, trading pair, and LLM provider. You can have agents in different modes (e.g., one SANDBOX, one LIVE).',
+      q8: 'How long does a trade cycle take?',
+      a8: 'A single analysis cycle takes 10-30 seconds depending on the LLM provider speed. The interval between cycles is configurable (minimum 5 minutes, or AI-determined in AGENT mode).',
+      q9: 'Is my data safe?',
+      a9: 'API keys are encrypted at rest. Market analysis data is sent to LLM providers but never includes your personal information or account details. The platform never has access to withdraw funds from your exchange account.',
+      q10: 'Can I self-host?',
+      a10: 'Yes. CryptoTrader is open-source. You can deploy it on your own infrastructure using Docker. See the README for deployment instructions.',
+      q11: 'What happens if the platform goes offline?',
+      a11: 'All agents stop. Open positions remain open on the exchange. Stop-loss is managed by the platform, not the exchange, so it will not trigger while offline. You should monitor positions and set exchange-level stop-losses for critical trades.',
+      generalTitle: 'General',
+      tradingTitle: 'Trading',
+      technicalTitle: 'Technical',
+      moreHelp: 'Need more help?',
+      moreHelpDesc:
+        'If your question is not answered here, use the multi-agent chat to ask any question about the platform. The AI agents can provide personalized answers based on your configuration.',
+    },
+    dashboard: {
+      title: 'Dashboard Overview',
+      intro:
+        'The Overview page is your central command center. It shows your portfolio performance, real-time PnL, asset breakdown, and quick access to all platform sections.',
+      kpiTitle: 'Performance metrics',
+      kpiDesc:
+        'The top row shows four key metrics for the current operation mode. All metrics update automatically as agents execute trades.',
+      metric: 'Metric',
+      description: 'Description',
+      source: 'Source',
+      netPnl: 'Net PnL',
+      netPnlDesc: 'Total profit/loss after fees across all closed positions',
+      winRate: 'Win Rate',
+      winRateDesc: 'Percentage of profitable closed positions',
+      openPositions: 'Open Positions',
+      openPositionsDesc: 'Number of currently active positions',
+      totalTrades: 'Total Trades',
+      totalTradesDesc: 'All buy + sell orders executed in current mode',
+      closedPositions: 'Closed positions',
+      liveData: 'Live data',
+      tradeHistory: 'Trade history',
+      modeNote: 'Mode-aware data',
+      modeNoteDesc:
+        'All metrics reflect only the current operation mode (SANDBOX, TESTNET, or LIVE). Switching modes shows separate data sets. Use the mode selector in the top navigation to switch.',
+      pnlChartTitle: 'PnL over time chart',
+      pnlChartDesc:
+        'The area chart shows your cumulative net profit/loss over time. Each point represents a closed trade. A rising line means profitable activity; flat or declining means losses or no trades.',
+      pnlChartTip: 'No data yet?',
+      pnlChartTipDesc:
+        'The chart only appears after at least one closed trade. Start an agent in SANDBOX mode, let it complete at least one full BUY → SELL cycle, then return to see the chart.',
+      assetTitle: 'Asset breakdown',
+      assetDesc:
+        'The bar chart shows PnL broken down by trading pair (BTCUSDT, BTCUSDC, ETHUSDT, ETHUSDC). This lets you compare which pairs are most profitable for your strategy.',
+      quickActionsTitle: 'Quick navigation',
+      quickActionsDesc:
+        'The Overview links to all key sections. Use the sidebar for quick access to Agent Config, Market, Positions, and Agent Log.',
+      section: 'Section',
+      path: 'Path',
+      purpose: 'Purpose',
+      marketPurpose: 'Live prices, OHLCV charts, technical indicators',
+      botAnalysisPurpose: 'Combined technical + news + agent score',
+      agentLogPurpose: 'Review all agent decisions with reasoning',
+      positionsPurpose: 'View open and closed trading positions',
+      configPurpose: 'Create, start, stop and manage trading agents',
+      chatPurpose: 'Ask AI agents anything about the platform',
+      balanceTitle: 'Balance display',
+      balanceDesc: 'The balance shown depends on your operation mode:',
+      sandboxBalance: 'Sandbox balance',
+      sandboxBalanceDesc:
+        'Virtual wallet starting at $10,000. Increases/decreases as sandbox trades close. Resets when you change mode.',
+      testnetBalance: 'Testnet balance',
+      testnetBalanceDesc:
+        'Balance from your Binance Testnet account. Shows real USDT/USDC from test funds. Requires testnet API keys configured in Settings → Exchange.',
+      liveBalance: 'Live balance',
+      liveBalanceDesc:
+        'Real Binance balance. Shows actual USDT/USDC available. Requires live API keys. This is real money.',
+    },
+    market: {
+      title: 'Market & Charts',
+      intro:
+        'The Market page provides real-time price data, OHLCV candlestick charts, and a full technical analysis panel for the four supported trading pairs.',
+      tickerTitle: 'Live ticker',
+      tickerDesc:
+        'At the top of the Market page, the live ticker shows real-time price data for the selected pair via Binance WebSocket. Data updates in milliseconds as the market moves.',
+      field: 'Field',
+      description: 'Description',
+      currentPrice: 'Current Price',
+      currentPriceDesc: 'Last traded price, updates in real-time via WebSocket',
+      priceChange: '24h Change',
+      priceChangeDesc: 'Price change and percentage over the last 24 hours',
+      high24h: '24h High',
+      high24hDesc: 'Highest price in the last 24 hours',
+      low24h: '24h Low',
+      low24hDesc: 'Lowest price in the last 24 hours',
+      volume: '24h Volume',
+      volumeDesc: 'Total traded volume in 24 hours',
+      pairTitle: 'Pair selector',
+      pairDesc:
+        'Use the pill buttons at the top to switch between the four supported pairs. The chart, ticker, and indicators all update for the selected pair.',
+      chartTitle: 'Price chart',
+      chartDesc:
+        'The Chart tab shows OHLCV (Open, High, Low, Close, Volume) candlestick data for the selected pair. Candles represent 4-hour intervals by default. Volume bars appear below the price chart.',
+      ohlcvNote: 'What is OHLCV?',
+      ohlcvDesc:
+        'Each candlestick shows: Open (price at start of period), High (maximum price), Low (minimum price), Close (price at end). Green candles = price went up; red candles = price went down.',
+      indicatorsTitle: 'Technical indicators',
+      indicatorsDesc:
+        'Switch to the "Technical Analysis" tab to see all indicators the AI agents use when making trading decisions. These are the exact same indicators passed to SIGMA (market analyst) on each cycle.',
+      indicator: 'Indicator',
+      type: 'Type',
+      signals: 'Signals',
+      indicatorsTip: 'How the AI uses indicators',
+      indicatorsTipDesc:
+        'SIGMA (market analyst) receives all indicator values and interprets them holistically — it does not use hard-coded rules like "RSI > 70 = sell". Instead, it considers all signals together with recent price action and volume to provide a nuanced market assessment.',
+      rsiSignals:
+        '>70 overbought (potential sell), <30 oversold (potential buy)',
+      macdSignals: 'MACD line crossing above signal = bullish, below = bearish',
+      bbSignals:
+        'Price near upper band = overbought; near lower band = oversold',
+      emaSignals: 'Short EMA crossing above long EMA = bullish signal',
+      stochSignals: 'Combines RSI and stochastic for finer momentum readings',
+      volumeSignals:
+        'High volume confirms price moves; low volume = weak signal',
+      trend: 'Trend',
+      momentum: 'Momentum',
+      volatility: 'Volatility',
+      movingAvg: 'Moving Average',
+      volumeType: 'Volume',
+      analysisTitle: 'From market to decision',
+      analysisDesc:
+        'The technical data from the Market page feeds directly into the Bot Analysis page, which combines it with news sentiment and agent history to produce a combined confidence score. Navigate to Bot Analysis to see the full picture.',
+    },
+    botAnalysis: {
+      title: 'Bot Analysis',
+      infoTitle: 'What this page is for',
+      infoDesc:
+        'Use Bot Analysis to understand WHY the agent is likely to BUY, SELL, or HOLD. It gives you transparency into the AI reasoning before decisions happen.',
+      combinedScoreTitle: 'Combined score banner',
+      combinedScoreDesc:
+        'The top banner shows an overall market signal (BULLISH, BEARISH, or NEUTRAL) derived from combining technical indicators and news sentiment. This is an informational signal — it does not directly execute trades. The final decision is always made by the AI agents.',
+      techSummaryTitle: 'Technical summary',
+      techSummaryDesc:
+        'The Technical Summary panel aggregates all active indicators for the selected pair into a single readable verdict. Each indicator is shown with its current value and a BUY/SELL/NEUTRAL signal.',
+      indicator: 'Indicator',
+      value: 'Value shown',
+      signal: 'Signal',
+      rsiValue: '0–100 numeric value',
+      rsiSignal: 'OVERBOUGHT / OVERSOLD / NEUTRAL',
+      macdValue: 'MACD line, signal line, histogram',
+      macdSignal: 'BULLISH / BEARISH / NEUTRAL',
+      bbValue: 'Upper/lower band position',
+      bbSignal: 'NEAR_UPPER / NEAR_LOWER / NEUTRAL',
+      volume: 'Volume',
+      volumeValue: '24h volume vs average',
+      volumeSignal: 'HIGH / LOW / NORMAL',
+      emaValue: 'EMA crossover status',
+      emaSignal: 'BULLISH / BEARISH',
+      newsSentimentTitle: 'News sentiment panel',
+      newsSentimentDesc:
+        'This panel shows the sentiment of recent crypto news and how it aligns with technical signals. SIGMA processes news headlines to gauge market mood, which is one of the inputs for trading decisions.',
+      newsCount: 'News count',
+      newsCountDesc: 'How many recent articles are included in the analysis',
+      overallSentiment: 'Overall Sentiment',
+      overallSentimentDesc:
+        'Aggregate sentiment score across recent news (POSITIVE / NEGATIVE / NEUTRAL)',
+      sigmaOpinion: 'SIGMA opinion',
+      agentInputTitle: 'Agent input summary',
+      agentInputDesc:
+        'This section shows a summary of the recent agent decisions: BUY/SELL/HOLD counts, average confidence, and which trading pairs are most active. It helps you understand whether agents have been consistently bullish, bearish, or neutral recently.',
+      element: 'Element',
+      description: 'Description',
+      nextDecisionTitle: 'Next decision countdown',
+      nextDecisionDesc:
+        'If any agent is currently running, the Next Decision banner shows a countdown to when the agent will next analyze the market. In AGENT interval mode, this time is dynamically set by the AI based on volatility.',
+      nextDecisionTip: 'No countdown?',
+      nextDecisionTipDesc:
+        'The countdown only appears when at least one agent is actively running. Go to Agent Config, find your agent, and click Play to start it.',
+      pairSelectionTitle: 'Pair selection',
+      pairSelectionDesc:
+        'Use the pair selector at the top to switch between BTCUSDT, BTCUSDC, ETHUSDT, and ETHUSDC. The technical summary and news sentiment update to reflect the selected pair.',
+    },
+    agentDecisions: {
+      title: 'Agent Log',
+      cardTitle: 'Decision card anatomy',
+      cardDesc:
+        'Each entry in the Agent Log is a decision card. Click any card to expand the full reasoning from the AI.',
+      field: 'Field',
+      description: 'Description',
+      decisionBadge: 'Decision badge',
+      decisionBadgeDesc:
+        'BUY (green), SELL (red), or HOLD (gray) — the final recommendation',
+      confidence: 'Confidence',
+      confidenceDesc:
+        'Score from 0–100%. How certain the AI was about its decision',
+      pair: 'Trading pair',
+      pairDesc: 'The asset pair analyzed (e.g., BTC/USDT)',
+      price: 'Price at decision',
+      priceDesc: 'Market price when the decision was made',
+      mode: 'Operation mode',
+      modeDesc:
+        'SANDBOX, TESTNET, or LIVE — which environment the agent was running in',
+      timestamp: 'Timestamp',
+      timestampDesc: 'When the decision cycle completed',
+      suggestedWait: 'Suggested wait',
+      suggestedWaitDesc:
+        'How long the AI suggested waiting before the next analysis (in AGENT mode)',
+      typesTitle: 'Understanding each decision type',
+      buyDesc:
+        'Agent decided to buy. A trade was executed ONLY IF: confidence exceeded the buy threshold AND available capital ≥ minimum trade size AND open positions < max concurrent.',
+      sellDesc:
+        'Agent decided to sell. A trade was executed ONLY IF: confidence exceeded the sell threshold AND the position profit ≥ minProfitPct (0.3%). The agent never sells at a loss.',
+      holdDesc:
+        'No action taken. Market conditions did not meet the criteria for BUY or SELL. The agent will wait and re-analyze at the next interval.',
+      filtersTitle: 'Filtering decisions',
+      filtersDesc:
+        'Use the filter panel to narrow down the decision log. You can filter by decision type, trading pair, and which agent produced the decision.',
+      filter: 'Filter',
+      options: 'Options',
+      decisionFilter: 'Decision type',
+      assetFilter: 'Asset / Pair',
+      agentFilter: 'Agent',
+      agentFilterDesc: 'ALL or specific agent configuration name',
+      detailTitle: 'Decision detail modal',
+      detailTip: 'Reading the reasoning',
+      modeAwarenessTitle: 'Mode-filtered display',
+      modeAwarenessDesc:
+        'The Agent Log automatically filters to show only decisions from the current operation mode. Switch between SANDBOX, TESTNET, and LIVE using the platform mode selector in the top navigation to see decisions from each environment.',
+    },
+    chat: {
+      title: 'Multi-Agent Chat',
+      intro:
+        'The Chat page gives you direct access to the multi-agent system for conversational interaction. Ask questions about the platform, request market analysis, or get explanations of recent decisions.',
+      useCaseTitle: 'What to use Chat for',
+      useCaseDesc:
+        'Chat is ideal for: understanding a specific decision the agent made, asking for a market analysis on demand, learning about platform features, or troubleshooting configuration.',
+      sessionsTitle: 'Chat sessions',
+      sessionsDesc:
+        'Conversations are organized into sessions. Each session maintains its own context — the AI remembers what was discussed within a session. You can create multiple sessions to keep different conversations separate.',
+      sessionStep1: 'Sessions panel',
+      sessionStep1Desc:
+        'The left sidebar (collapsible on mobile) shows all your sessions. Click one to load it.',
+      sessionStep2: 'New session',
+      sessionStep2Desc:
+        'Typing your first message in an empty input automatically creates a new session titled with the beginning of your message.',
+      sessionStep3: 'Session persistence',
+      sessionStep3Desc:
+        'Sessions are saved permanently. Return to any previous conversation to continue the context.',
+      capabilitiesTitle: 'Capability shortcuts',
+      capabilitiesDesc:
+        'Above the input field, quick-action buttons inject structured context into your message automatically. This gives the agents the data they need without you having to describe it.',
+      capability: 'Capability',
+      whatItDoes: 'What it does',
+      bestFor: 'Best for',
+      capAnalysis: 'Market Analysis',
+      capAnalysisDesc:
+        'Attaches current market snapshot: price, indicators, recent candles',
+      capAnalysisFor:
+        '"Why did the agent BUY?" or "What does the market look like now?"',
+      capNews: 'News Analysis',
+      capNewsDesc:
+        'Attaches recent crypto news headlines and their sentiment scores',
+      capNewsFor: '"What news is driving BTC today?" or sentiment analysis',
+      capTrades: 'Trade History',
+      capTradesDesc: 'Attaches recent agent decisions and executed trades',
+      capTradesFor: '"Analyze my last 10 trades" or strategy review',
+      agentSelectionTitle: 'Choosing an agent',
+      agentSelectionDesc:
+        'By default, NEXUS (the platform expert) handles general questions. You can switch to a specific agent using the agent selector dropdown above the chat. Each agent excels in its domain:',
+      agent: 'Agent',
+      bestAt: 'Best for asking about',
+      nexusBest: 'Platform features, settings, how-to questions',
+      sigmaBest: 'Market analysis, technical indicators, price action',
+      forgeBest: 'Trade execution, order management, portfolio operations',
+      cipherBest: 'Blockchain data, on-chain metrics, crypto fundamentals',
+      aegisBest: 'Risk management, position sizing, drawdown analysis',
+      orchestratingTitle: 'Orchestrating indicator',
+      orchestratingDesc:
+        'When you send a complex message, you may see an "Orchestrating..." indicator. This means KRYPTO is routing your request to the most appropriate specialist agent. The step shown (e.g., "Consulting SIGMA...") tells you which agent is currently working on your query.',
+      streamingNote: 'Streaming responses',
+      streamingNoteDesc:
+        'Responses stream in real-time as the AI generates them. You can see the text appear word by word. If you want to stop the response early, click the Stop button.',
+    },
+    newsFeed: {
+      title: 'News Feed',
+      intro:
+        'The News Feed page aggregates crypto news headlines, analyzes their sentiment, and shows how recent news aligns with market conditions. This is one of the inputs that influences agent trading decisions.',
+      summaryTitle: 'Analysis summary card',
+      summaryDesc:
+        'At the top of the News Feed, the Analysis Summary card shows the aggregate sentiment across all recent headlines. It distinguishes between keyword-based analysis (fast, automatic) and AI-powered analysis (deeper, on-demand).',
+      method: 'Method',
+      description: 'Description',
+      when: 'When it runs',
+      keywordAnalysis: 'Keyword analysis',
+      keywordDesc:
+        'Fast pattern matching on headlines using predefined crypto keywords',
+      keywordWhen: 'Automatic, every time news refreshes',
+      aiAnalysis: 'AI analysis',
+      aiDesc:
+        'Deeper semantic analysis using an LLM to understand nuance and context',
+      aiWhen: 'On-demand by clicking "Run AI Analysis"',
+      filtersTitle: 'Filtering by sentiment',
+      cardTitle: 'News card anatomy',
+      sigmaTitle: 'Connection to SIGMA',
+      sigmaTip: 'SIGMA sentiment badge',
+      configTitle: 'Configuring news',
+      configDesc:
+        'Go to Settings → News to configure how many news items are fetched and shown. The default is 15 headlines. More headlines give SIGMA a broader market picture but may slow analysis.',
+      configStep1: 'Navigate to Settings → News',
+      configStep2: 'Set the number of news items',
+      configStep2Desc:
+        'Range: 5–50 items. Default is 15. Higher values give SIGMA more context but each AI analysis call will be larger.',
+      configStep3: 'Save and return to News Feed',
+      configStep3Desc:
+        'The news list will refresh with the new count on next load.',
+    },
+    settingsAgents: {
+      title: 'Agent Model Settings',
+      intro:
+        'The Settings → Agents page lets you configure which LLM model each agent uses, apply smart presets, and see real-time model validation against the OpenRouter catalog.',
+      pathNote: 'Where to find it',
+      pathNoteDesc:
+        'Navigate to: Dashboard → Settings → Agents (sidebar) or go directly to /dashboard/settings/agents',
+      agentListTitle: 'Configurable agents',
+      agentListDesc:
+        'There are 7 agent roles. Each can be assigned an independent LLM provider and model. AEGIS (risk) is locked — it always uses the same model as KRYPTO Synthesis to ensure consistent risk evaluation.',
+      role: 'Role',
+      codename: 'Codename',
+      specialty: 'Specialty',
+      locked: 'Locked?',
+      routingSpec: 'Request routing',
+      synthesisSpec: 'Final decision synthesis',
+      platformSpec: 'Platform knowledge',
+      operationsSpec: 'Trade execution',
+      marketSpec: 'Market & indicators',
+      blockchainSpec: 'On-chain data',
+      riskSpec: 'Risk assessment',
+      yes: '🔒 Yes',
+      presetsTitle: 'Smart preset system',
+      presetsDesc:
+        'Instead of configuring each agent individually, use a preset to assign optimal models to all agents at once. The preset auto-selects models based on their role requirements.',
+      preset: 'Preset',
+      strategy: 'Strategy',
+      cost: 'Est. cost',
+      freeStrategy: 'Assigns only $0 models from OpenRouter',
+      balancedStrategy: 'Assigns cost-effective models with good quality',
+      optimizedStrategy: 'Assigns best-performing models for each role',
+      presetRequires: 'Requires OpenRouter',
+      presetRequiresDesc:
+        'Presets are designed for OpenRouter. They assign specific OpenRouter model IDs per agent role. You can still use direct providers (Claude, OpenAI, etc.) but presets will not apply.',
+      recommendedTitle: 'Recommended models (click-to-apply)',
+      recommendedDesc:
+        'Each agent card shows three recommended models (Free, Balanced, Optimized). Each has a live validation badge checked against the OpenRouter catalog. Click any model name to instantly apply it — no need to type.',
+      badge: 'Badge',
+      meaning: 'Meaning',
+      available: 'Available',
+      availableDesc: 'Model exists in the OpenRouter catalog — safe to use',
+      deprecated: 'Deprecated',
+      deprecatedDesc:
+        'Model not found in catalog — may have been removed. Click a different model.',
+      deprecatedWarning: 'If a model shows Deprecated',
+      deprecatedWarningDesc:
+        'OpenRouter occasionally retires models. If your assigned model is deprecated, the agent will still work but may fail. Click one of the other recommended models (Balanced or Optimized) to switch to a current one.',
+      perAgentTitle: 'Per-agent model override',
+      perAgentDesc:
+        'Each agent card has a model selector. For OpenRouter agents, it shows a searchable dropdown of all 300+ available models. For direct providers (Claude, OpenAI, etc.), it shows a fixed list of supported models.',
+    },
   },
 };
 

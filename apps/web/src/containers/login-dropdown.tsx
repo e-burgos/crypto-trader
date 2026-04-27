@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Moon, Sun, HelpCircle, Languages, Menu } from 'lucide-react';
+import { Moon, Sun, BookOpen, Languages, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useThemeStore } from '../store/theme.store';
 import { useTranslation } from 'react-i18next';
@@ -41,11 +41,11 @@ export function LoginDropdown() {
         >
           {/* Help */}
           <Link
-            to="/help"
+            to="/docs"
             onClick={close}
             className="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
-            <HelpCircle className="h-4 w-4 shrink-0" />
+            <BookOpen className="h-4 w-4 shrink-0" />
             {t('nav.help')}
           </Link>
 

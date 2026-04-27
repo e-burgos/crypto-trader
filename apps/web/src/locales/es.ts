@@ -5,7 +5,7 @@ const es = {
     getStarted: 'Comenzar',
     signOut: 'Cerrar sesión',
     profile: 'Perfil',
-    help: 'Ayuda',
+    help: 'Docs',
     lightMode: 'Modo claro',
     darkMode: 'Modo oscuro',
   },
@@ -30,7 +30,7 @@ const es = {
     chat: 'KRYPTO IA',
     agents: 'Agentes',
     admin: 'Admin',
-    help: 'Ayuda y Guía',
+    help: 'Docs',
     groupTrading: 'Trading',
     groupAgente: 'Agentes',
     groupSettings: 'Ajustes',
@@ -884,6 +884,7 @@ const es = {
           'Modelo de respaldo usado cuando un agente no tiene configuración específica. Se aplica automáticamente con los presets.',
         autoResolve: 'Auto-resolver',
         resolved: 'Modelo fallback configurado: {{model}}',
+        recommendedTitle: 'Modelos fallback recomendados (todo-terreno):',
       },
     },
   },
@@ -927,7 +928,7 @@ const es = {
     paginationInfo: '{{from}}–{{to}} de {{total}}',
   },
   help: {
-    title: 'Ayuda y Guía',
+    title: 'Documentación',
     subtitle: 'Todo lo que necesitas saber para operar en la plataforma',
     gettingStarted: 'Primeros Pasos',
     platformBehavior: 'Comportamiento de la Plataforma',
@@ -1090,6 +1091,48 @@ const es = {
       minProfitNote:
         'El agente nunca vende de forma autónoma si la posición está en pérdida. Hay un umbral mínimo de rentabilidad (por defecto 0,3%) que debe superarse antes de ejecutar una venta automática. El cierre manual no tiene esta restricción.',
     },
+    operationModesTitle: 'Modos de Operación',
+    operationModesDesc:
+      'La plataforma soporta tres modos de operación. Cada modo cambia cómo el motor de trading ejecuta las órdenes.',
+    operationModes: {
+      sandboxDesc:
+        'Trading simulado con balance virtual ($10,000 por defecto). No se colocan órdenes reales. Perfecto para probar estrategias.',
+      testnetDesc:
+        'Se conecta a la API Testnet de Binance. Flujo de órdenes real con fondos ficticios. Valida la integración API sin riesgo financiero.',
+      liveDesc:
+        'Trading real con fondos reales en Binance. Las órdenes de mercado se ejecutan al instante. Usar con precaución.',
+      warningTitle: 'Cambio de modo',
+      warningDesc:
+        'Cambiar de SANDBOX/TESTNET a LIVE requiere claves API de Binance con permisos de trading Spot. Las posiciones abiertas en sandbox se preservan pero se pausan.',
+    },
+    llmProvidersTitle: 'Proveedores LLM',
+    llmProvidersDesc:
+      'Cada agente puede funcionar con un proveedor LLM diferente. OpenRouter es el recomendado por defecto — da acceso a más de 300 modelos con una sola API key.',
+    llmProviders: {
+      openrouterDesc:
+        'Más de 300 modelos, una sola API key. Modelos gratuitos disponibles.',
+      claudeDesc: 'Modelos Claude vía la API de Anthropic.',
+      openaiDesc: 'GPT-4o, GPT-4 Turbo y más.',
+      groqDesc: 'Inferencia ultra-rápida con Llama, Mixtral.',
+      geminiDesc: 'Modelos Google Gemini.',
+      mistralDesc: 'Modelos Mistral AI.',
+      togetherDesc: 'Hosting de modelos open-source.',
+      tipTitle: 'Presets Inteligentes',
+      tipDesc:
+        'Usa el sistema de presets (Gratis / Equilibrado / Optimizado) para asignar automáticamente modelos recomendados a todos los agentes. Cada preset selecciona el mejor modelo según el rol del agente.',
+      recommendedTitle: 'Modelos Recomendados por Agente',
+      tableAgent: 'Agente',
+      tableFree: 'Gratis',
+      tableBalanced: 'Equilibrado',
+      tableOptimized: 'Optimizado',
+    },
+    openrouterStep1: 'Crea una cuenta en openrouter.ai',
+    openrouterStep2: 'Ve a Keys → Create Key',
+    openrouterStep3: 'Copia la key (empieza con sk-or-)',
+    openrouterStep4: 'Pega en Configuración → Proveedores LLM → OpenRouter',
+    openrouterTip: 'Modelos gratuitos disponibles',
+    openrouterTipDesc:
+      'Muchos modelos en OpenRouter son gratuitos. Usa el preset "Gratis" para configurar todos los agentes con modelos de costo $0.',
   },
   common: {
     save: 'Guardar',
@@ -1598,6 +1641,26 @@ const es = {
     providerNeedsAttention: 'Requiere atención — proveedor deshabilitado',
     tabStatus: 'Estado de Agentes',
     tabModels: 'Modelos por Defecto',
+    recommendedModels: 'Modelos recomendados:',
+    validated: 'Validado',
+    deprecated: 'Deprecado',
+    roles: {
+      routing:
+        'Clasificador rápido — enruta cada solicitud al agente especialista óptimo. Requiere baja latencia.',
+      orchestrator:
+        'Coordinador central — descompone tareas complejas, fusiona resultados multi-agente, produce respuestas finales.',
+      synthesis:
+        'Sintetizador profundo — genera reportes escritos comprensivos a partir del análisis multi-agente.',
+      platform:
+        'Experto en plataforma — gestiona funciones, configuración, navegación y onboarding de usuarios.',
+      operations:
+        'Asistente de operaciones — inicia/detiene agentes, aplica configs, ejecuta tareas de mantenimiento.',
+      market:
+        'Analista de mercado — análisis de precios, indicadores técnicos, señales de tendencia e insights de trading.',
+      blockchain:
+        'Experto en blockchain — protocolos DeFi, wallets, smart contracts e interpretación de datos on-chain.',
+      risk: 'Gestor de riesgo — validación de stop-loss, cálculo de exposición, cumplimiento de seguridad del portafolio.',
+    },
     kryptoDesc: 'Dejar que KRYPTO decida el mejor agente para tu pregunta',
     nexusDesc:
       'Experto en la plataforma — funciones, configuración, navegación',
@@ -2193,6 +2256,768 @@ const es = {
     modeChangeError: 'Error al cambiar el modo de operación',
     modeFallback:
       'Modo {{mode}} no disponible. Cambiado a Sandbox automáticamente.',
+  },
+  docs: {
+    pagination: {
+      previous: 'Anterior',
+      next: 'Siguiente',
+    },
+    feedback: {
+      question: '¿Esta página fue útil?',
+      yes: 'Sí',
+      no: 'No',
+      thanksYes: '¡Gracias por tu opinión!',
+      thanksNo: 'Gracias — trabajaremos en mejorar esta página.',
+    },
+    group: {
+      gettingStarted: 'Primeros Pasos',
+      platform: 'Plataforma',
+      integration: 'Integración',
+      integrations: 'Integraciones',
+      configuration: 'Configuración',
+      reference: 'Referencia',
+      support: 'Soporte',
+    },
+    quickstart: {
+      title: 'Inicio rápido',
+      intro:
+        'Pon en marcha CryptoTrader en minutos. Esta guía te lleva por la creación de cuenta, la configuración de tu proveedor de IA y el lanzamiento de tu primer agente de trading.',
+      whatIsTitle: '¿Qué es CryptoTrader?',
+      whatIsDesc:
+        'CryptoTrader es una plataforma de trading de criptomonedas impulsada por IA que utiliza un sistema multi-agente para analizar mercados, gestionar el riesgo y ejecutar operaciones en Binance. La plataforma soporta tres modos de operación (Sandbox, Testnet, Live) e integra 7 proveedores LLM para potenciar sus 8 agentes de IA especializados.',
+      createAccountTitle: 'Crea tu cuenta',
+      step1: 'Navega a la página de registro',
+      step1Desc: 'Ve a /register y crea tu cuenta con email y contraseña.',
+      step2: 'Completa el asistente de configuración',
+      step2Desc:
+        'Elige tu modo de operación (Sandbox recomendado), configura las claves del exchange, el proveedor LLM y crea tu primer agente.',
+      configureLlmTitle: 'Configura tu proveedor LLM',
+      configureLlmDesc:
+        'Los agentes de IA necesitan un proveedor LLM para funcionar. Se recomienda OpenRouter — una sola clave API da acceso a más de 300 modelos, incluidos los gratuitos.',
+      llmStep1: 'Ve a Configuración → Proveedores LLM',
+      llmStep2: 'Ingresa tu clave API de OpenRouter',
+      llmStep2Desc: 'Obtén una en openrouter.ai/keys — comienza con sk-or-',
+      llmStep3: 'Usa un Preset para asignar modelos automáticamente',
+      llmStep3Desc:
+        'Gratis ($0), Balanceado (buena relación) u Optimizado (mejor calidad).',
+      firstAgentTitle: 'Crea tu primer agente de trading',
+      agentStep1: 'Ve a Config. de Agentes en el dashboard',
+      agentStep2: 'Haz clic en "Nuevo Agente" para abrir el asistente',
+      agentStep3: 'Elige un nombre, par de trading (ej. BTCUSDT) y modo',
+      agentStep4: 'Configura los parámetros o usa los valores por defecto',
+      agentStep4Desc:
+        'Umbral Compra/Venta: 70%, Stop Loss: 3%, Take Profit: 5%, Trade Máximo: 5% del capital.',
+      agentStep5: 'Haz clic en Crear — el agente está listo',
+      startAgentTitle: 'Inicia el agente',
+      startStep1:
+        'Encuentra la tarjeta de tu agente en la página Config. de Agentes',
+      startStep2: 'Haz clic en el botón Play para iniciarlo',
+      startStep3: 'Monitorea la actividad en Log de Agentes y Posiciones',
+      startStep3Desc:
+        'El agente obtendrá datos del mercado, consultará al sistema multi-agente de IA y ejecutará operaciones automáticamente según tus umbrales.',
+      tipTitle: 'Consejo',
+      tipContent:
+        'Comienza con el modo Sandbox y el Preset Gratuito para aprender la plataforma sin ningún costo. Puedes cambiar a trading en vivo una vez que te sientas cómodo con el sistema.',
+    },
+    platformBehavior: {
+      title: 'Comportamiento de la plataforma',
+      intro:
+        'Comportamientos importantes, advertencias y mecanismos que debes entender antes de operar.',
+      stopAllWarning: 'Importante',
+      stopAllNote:
+        'Las posiciones abiertas existentes permanecen abiertas después de Detener Todo. Debes cerrar las posiciones manualmente o reiniciar los agentes para reanudar el trading.',
+      lifecycleTitle: 'Ciclo de vida de posiciones',
+      lifecycleDesc:
+        'Las posiciones siguen un ciclo de vida estricto: ABIERTAS cuando se ejecuta una operación de COMPRA, monitoreadas en cada ciclo, y CERRADAS cuando se ejecuta una operación de VENTA (manual o automática).',
+      lifecycleAutoSell:
+        'Condiciones de venta automática: umbral de take-profit alcanzado, umbral de stop-loss alcanzado, o el agente IA recomienda VENTA con suficiente confianza Y el umbral mínimo de beneficio se cumple (por defecto 0.3%).',
+      noLossTitle: 'Sin ventas con pérdida autónomas',
+      rateLimitTitle: 'Límites de tasa',
+      rateLimitDesc:
+        'Cada agente tiene un intervalo mínimo configurable entre ciclos de análisis (por defecto: 5 minutos). En modo AGENTE, la IA sugiere el tiempo de espera óptimo según la volatilidad del mercado. En modo PERSONALIZADO, se usa un intervalo fijo.',
+      dataRefreshTitle: 'Actualización de datos',
+      dataRefreshDesc:
+        'Los precios de mercado se actualizan vía WebSocket en tiempo real. Los datos del portafolio se refrescan cada 30 segundos. Las decisiones de los agentes aparecen en el Log de Agentes inmediatamente después de cada ciclo.',
+      autoStopTitle: 'Auto-parada al cambiar configuración',
+      autoStopDesc:
+        'La plataforma detiene automáticamente un agente cuando modificas su configuración. Esto evita que el agente opere con parámetros desactualizados. Tras guardar los cambios, debes reiniciar el agente manualmente.',
+    },
+    agents: {
+      title: 'Agentes',
+      intro:
+        'CryptoTrader utiliza un sistema multi-agente donde cada agente es una IA especializada con un rol específico. Los agentes colaboran mediante una capa de orquestación para producir decisiones de trading.',
+      architectureTitle: 'Arquitectura multi-agente',
+      architectureDesc:
+        'El sistema tiene tres capas: (1) Capa de Enrutamiento — clasifica la intención del usuario y la dirige al agente correcto, (2) Agentes Especialistas — expertos en dominios que analizan aspectos específicos, (3) Capa de Síntesis — combina las salidas de los agentes en una decisión final.',
+      kryptoRole: 'El Orquestador (2 roles configurables)',
+      kryptoDesc:
+        'KRYPTO es la columna vertebral del sistema multi-agente. Opera con dos roles LLM configurables de forma independiente. La coordinación de orquestación es manejada internamente por el framework.',
+      kryptoRouting:
+        'Clasifica solicitudes entrantes y las enruta al especialista apropiado',
+      kryptoSynth:
+        'Combina salidas en BUY/SELL/HOLD final con puntuación de confianza',
+      ultraFast: 'Ultra-rápido (Gemma 4, Qwen 3.5)',
+      highQuality: 'Alta calidad (DeepSeek V4 Pro, Kimi K2)',
+      role: 'Rol',
+      function: 'Función',
+      modelType: 'Modelo recomendado',
+      specialistsTitle: 'Agentes especialistas',
+      agent: 'Agente',
+      codename: 'Nombre clave',
+      domain: 'Dominio',
+      specialty: 'Especialidad',
+      nexusDomain: 'Funcionalidad de plataforma',
+      nexusSpec:
+        'Conoce la plataforma al detalle, explica funciones y configuraciones',
+      forgeDomain: 'Ejecución de trades',
+      forgeSpec:
+        'Tipos de órdenes, tiempos de ejecución, restricciones operativas',
+      sigmaDomain: 'Análisis de datos de mercado',
+      sigmaSpec:
+        'RSI, MACD, Bandas de Bollinger, perfiles de volumen, soporte/resistencia',
+      cipherDomain: 'Blockchain y on-chain',
+      cipherSpec: 'Métricas on-chain, movimientos de ballenas, tendencias DeFi',
+      aegisDomain: 'Evaluación de riesgos',
+      aegisSpec:
+        'Tamaño de posiciones, límites de exposición, gestión de drawdown',
+      showcaseTitle: 'Showcase de agentes',
+      configTitle: 'Configuración de agentes',
+      configInfoTitle: 'Personalización por agente',
+      configInfo:
+        'Cada agente puede configurarse individualmente con su propio proveedor LLM, modelo específico y modelos recomendados por el administrador. Ve a Configuración → Agentes para personalizar.',
+    },
+    agentFlow: {
+      title: 'Flujo de decisión del agente',
+      intro:
+        'Entiende cómo el agente toma decisiones de trading paso a paso, desde la recolección de datos hasta la ejecución del trade.',
+      cycleTitle: 'El ciclo de decisión',
+      step1: 'Recolección de datos',
+      step1Desc:
+        'Obtener los últimos datos del mercado, velas OHLCV e indicadores técnicos para el par configurado.',
+      step2: 'Consulta multi-agente',
+      step2Desc:
+        'El orquestador (KRYPTO) enruta los datos del mercado a los especialistas: SIGMA para análisis de mercado, AEGIS para riesgos, CIPHER para blockchain.',
+      step3: 'Síntesis',
+      step3Desc:
+        'KRYPTO sintetiza las opiniones de los especialistas en una sola recomendación: COMPRAR, VENDER o MANTENER.',
+      step4: 'Verificación de confianza',
+      step4Desc:
+        'La recomendación incluye una puntuación de confianza (0-100%). Se compara con los umbrales de compra/venta del agente.',
+      step5: 'Ejecución',
+      step5Desc:
+        'Si la confianza supera el umbral Y todas las verificaciones de seguridad pasan, se ejecuta el trade.',
+      step6: 'Espera',
+      step6Desc:
+        'El agente espera al siguiente ciclo (intervalo fijo o sugerido por IA).',
+      waitTitle: 'El tiempo de espera',
+      agentMode: 'Modo AGENTE (por defecto)',
+      agentModeDesc:
+        'La IA sugiere un tiempo de espera basado en la volatilidad del mercado. Alta volatilidad = espera más corta (2-5 min). Baja volatilidad = espera más larga (10-30 min).',
+      customMode: 'Modo PERSONALIZADO',
+      customModeDesc:
+        'Intervalo fijo establecido por el usuario (mínimo 5 minutos). La IA no ajusta la frecuencia.',
+      outcomesTitle: 'Resultados de decisión',
+      scenario: 'Escenario',
+      decision: 'Decisión',
+      confidence: 'Confianza',
+      threshold: 'Umbral',
+      result: 'Resultado',
+      strongBuy: 'Señal de compra fuerte',
+      executed: 'Trade ejecutado',
+      executedProfit: 'Ejecutado (si min. beneficio cumplido)',
+      weakBuy: 'Señal de compra débil',
+      skipped: 'Omitido — por debajo del umbral',
+      neutral: 'Mercado neutral',
+      noAction: 'Sin acción — esperar',
+      sellLoss: 'Venta con pérdida',
+      sellProfit: 'Venta con ganancia',
+      blocked: 'Bloqueado — nunca vende con pérdida vía LLM',
+    },
+    agentConfig: {
+      title: 'Configuración de agentes',
+      intro:
+        'Configura los parámetros del agente, usa presets para una configuración rápida y entiende los conceptos clave detrás de cada ajuste.',
+      presetsDesc:
+        'CryptoTrader ofrece tres presets integrados que configuran todos los parámetros del agente a la vez. Elige según tu tolerancia al riesgo.',
+      paramsTitle: 'Parámetros de configuración',
+      paramsDesc:
+        'Cada agente de trading tiene estos parámetros configurables. Haz clic en cada tarjeta para saber más.',
+      conceptsTitle: 'Conceptos clave explicados',
+    },
+    tradeExecution: {
+      title: 'Ejecución de trades',
+      intro:
+        'Cómo se ejecutan los trades, reglas de compra/venta, cálculos de comisiones y ejemplos reales.',
+      buyTitle: 'Flujo de ejecución de compra',
+      buyStep1:
+        'Verificación de confianza — La confianza del agente debe superar el umbral de compra',
+      buyStep2:
+        'Verificación de capital — Confirmar balance suficiente (disponible × maxTradePct)',
+      buyStep3:
+        'Verificación de posiciones — Posiciones abiertas < maxConcurrentPositions',
+      buyStep4:
+        'Ejecutar orden — Orden de mercado en Binance (LIVE/TESTNET) o simular (SANDBOX)',
+      buyStep5:
+        'Crear posición — Registrar precio de entrada, cantidad y comisiones',
+      sellTitle: 'Rutas de ejecución de venta',
+      sellPath1: '1. VENTA recomendada por IA',
+      sellPath1Desc:
+        'El agente analiza el mercado y recomienda vender. Requiere: confianza > umbral de venta Y beneficio > minProfitPct (0.3%). NUNCA venderá con pérdida vía LLM.',
+      sellPath2: '2. Activación de take-profit',
+      sellPath2Desc:
+        'Automático: cuando el precio sube por takeProfitPct desde la entrada. No requiere IA — se activa solo por precio.',
+      sellPath3: '3. Activación de stop-loss',
+      sellPath3Desc:
+        'Automático: cuando el precio baja por stopLossPct desde la entrada. El único mecanismo que puede cerrar con pérdida. Límite de seguridad duro.',
+      sellPath4: '4. Cierre manual',
+      sellPath4Desc:
+        'El usuario hace clic en "Cerrar Posición". Sin restricciones — puede cerrar a cualquier precio. Útil para salidas de emergencia.',
+      priorityTitle: 'Prioridad de ejecución',
+      priority: 'Prioridad',
+      mechanism: 'Mecanismo',
+      canLoss: '¿Puede cerrar con pérdida?',
+      needsAI: '¿Requiere IA?',
+      formulas: 'Fórmulas',
+    },
+    operationModes: {
+      title: 'Modos de operación',
+      intro:
+        'CryptoTrader soporta tres modos de operación. Cada modo determina cómo se ejecutan los trades y si hay dinero real en riesgo.',
+      overviewTitle: 'Resumen de modos',
+      mode: 'Modo',
+      exchange: 'Exchange',
+      realMoney: '¿Dinero real?',
+      useCase: 'Caso de uso',
+      simulated: 'Simulado',
+      sandboxUse: 'Aprendizaje, prueba de estrategias',
+      testnetUse: 'Pruebas de integración API',
+      liveUse: 'Trading real',
+      sandboxTitle: 'Modo Sandbox',
+      sandboxDesc:
+        'Todos los trades se simulan en la base de datos. No se necesita conexión al exchange ni claves API. Perfecto para aprender y probar estrategias. Usa precios de mercado reales del WebSocket de Binance.',
+      sandboxTip:
+        'Comienza aquí para entender cómo funcionan los agentes, probar configuraciones y aprender la plataforma sin ningún riesgo.',
+      sandboxTipTitle: 'Ideal para principiantes',
+      testnetTitle: 'Modo Testnet',
+      testnetDesc:
+        'Se conecta al Testnet de Binance — un entorno separado con dinero ficticio. Las órdenes se colocan en una API de exchange real pero con fondos de prueba. Ideal para validar la configuración de claves API y la ejecución de órdenes sin riesgo.',
+      testnetLimitations:
+        'Los precios del Testnet pueden diferir de producción. La liquidez es limitada. Algunos pares pueden no estar disponibles.',
+      testnetNote: 'Limitaciones del Testnet',
+      liveTitle: 'Modo Live',
+      liveDesc:
+        'Trading con dinero real en Binance producción. Cada trade usa tu balance real. Requiere una cuenta Binance con fondos reales y claves API correctamente configuradas.',
+      liveRisk:
+        'El trading en vivo implica riesgo financiero real. Comienza con montos pequeños. La plataforma tiene protección stop-loss pero las pérdidas son posibles. Solo opera lo que puedes permitirte perder.',
+      liveWarning: 'Advertencia de riesgo',
+      switchingTitle: 'Cambiar entre modos',
+    },
+    binance: {
+      title: 'Integración con Binance',
+      intro:
+        'Cómo CryptoTrader se integra con Binance para feeds de datos y ejecución de trades.',
+      pairsTitle: 'Pares de trading soportados',
+      pair: 'Par',
+      base: 'Base',
+      quote: 'Cotización',
+      minOrder: 'Orden mínima',
+      permissionsTitle: 'Permisos API requeridos',
+      permission: 'Permiso',
+      why: 'Por qué',
+      sandbox: 'Sandbox',
+      readInfo: 'Leer Info',
+      readInfoWhy: 'Balance, historial de órdenes',
+      notNeeded: 'No requerido',
+      enableTrading: 'Habilitar Trading',
+      enableTradingWhy: 'Colocar órdenes de compra/venta',
+      noWithdrawal: 'Nunca habilites "Habilitar Retiros"',
+      noWithdrawalDesc:
+        'CryptoTrader nunca necesita permisos de retiro. Nunca los otorgues. Restringe tus claves por IP como capa adicional de protección.',
+      pipelineTitle: 'Pipeline de datos',
+      data: 'Dato',
+      source: 'Fuente',
+      frequency: 'Frecuencia',
+      ohlcv: 'Velas OHLCV',
+      realTime: 'Tiempo real',
+      realTimePrice: 'Precio en tiempo real',
+      every30s: 'Cada 30 segundos',
+      perCycle: 'Por ciclo de análisis',
+      accountBalance: 'Balance de cuenta',
+      rateLimitsTitle: 'Límites de tasa',
+      rateLimitsDesc:
+        'Binance impone límites de tasa en el uso de la API. La plataforma los gestiona automáticamente:',
+      rateLimitsCode: 'Límites de Binance',
+    },
+    apiKeys: {
+      title: 'Claves API',
+      intro:
+        'Cómo generar, configurar y asegurar tus claves API para Binance y los proveedores LLM.',
+      binanceTitle: 'Claves API de Binance',
+      binanceStep1: 'Inicia sesión en tu cuenta Binance',
+      binanceStep2: 'Ve a Gestión de API (Configuración → Gestión de API)',
+      binanceStep3: 'Haz clic en "Crear API" — elige Sistema Generado',
+      binanceStep4: 'Habilita SOLO "Leer Info" y "Habilitar Trading"',
+      binanceStep4Desc: 'Nunca habilites Retiros ni Transferencia Universal',
+      binanceStep5: 'Configura restricciones de IP para mayor seguridad',
+      binanceStep6: 'Copia tanto la Clave API como la Clave Secreta',
+      secretWarning: 'Clave secreta mostrada una sola vez',
+      secretWarningDesc:
+        'La Clave Secreta solo se muestra una vez al crear. Guárdala inmediatamente en un lugar seguro. Si se pierde, debes eliminar la clave y crear una nueva.',
+      testnetTitle: 'Claves API de Testnet',
+      testnetDesc:
+        'Para el modo TESTNET, necesitas claves del Testnet de Binance — un entorno separado de producción.',
+      testnetStep1: 'Ve a testnet.binance.vision',
+      testnetStep1Desc: 'Esta es la Red de Prueba Spot de Binance',
+      testnetStep2: 'Inicia sesión con tu cuenta de GitHub',
+      testnetStep3: 'Generar Clave HMAC_SHA256',
+      testnetStep4: 'Copia la Clave API y la Clave Secreta',
+      testnetNote: 'Fondos de Testnet',
+      llmTitle: 'Claves de proveedores LLM',
+      llmDesc:
+        'Cada proveedor LLM requiere su propia clave API. Se recomienda OpenRouter ya que da acceso a más de 300 modelos con una sola clave.',
+      keyFormats: 'Formatos de clave por proveedor',
+      securityTitle: 'Mejores prácticas de seguridad para claves',
+      securityBestPractices: 'Mejores prácticas de seguridad',
+      sec1: 'Nunca compartas tus claves API',
+      sec2: 'Usa restricciones de IP en las claves de Binance',
+      sec3: 'Nunca habilites permisos de retiro',
+      sec4: 'Rota las claves periódicamente',
+      sec5: 'Usa claves separadas para testnet y producción',
+      sec6: 'Monitorea el uso de tu clave API de Binance en el dashboard de Binance',
+    },
+    llmProviders: {
+      title: 'Proveedores LLM',
+      intro:
+        'CryptoTrader soporta 7 proveedores LLM. Cada agente puede usar un proveedor y modelo diferente.',
+      supportedTitle: 'Proveedores soportados',
+      provider: 'Proveedor',
+      models: 'Modelos destacados',
+      cost: 'Costo',
+      notes: 'Notas',
+      varies: 'Variable (opciones gratuitas)',
+      openrouterNote: '300+ modelos, una sola clave API',
+      openrouterDesc:
+        'OpenRouter actúa como pasarela unificada a más de 300 modelos de múltiples proveedores. Una clave API te da acceso a modelos gratuitos (DeepSeek, Gemma, Qwen) y premium (GPT-4o, Claude).',
+      paid: 'De pago',
+      openaiNote: 'Máxima calidad, mayor costo',
+      claudeNote: 'Excelente razonamiento',
+      freeTier: 'Nivel gratuito',
+      geminiNote: 'Buena opción gratuita',
+      groqNote: 'Inferencia ultra-rápida',
+      mistralNote: 'Proveedor europeo',
+      togetherNote: 'Modelos de código abierto',
+      best: 'Excelente',
+      good: 'Buena',
+      veryGood: 'Muy buena',
+      freeFor: 'Pruebas, aprendizaje, bajo volumen',
+      balancedFor: 'Trading regular, costo-efectivo',
+      optimizedFor: 'Trading serio, máxima precisión',
+      openrouterBenefit: '¿Por qué OpenRouter?',
+      openrouterBenefitDesc:
+        'Una sola clave API, presets de modelos (Gratis/Balanceado/Optimizado), asignación de modelos por agente y fallback automático si un modelo está caído.',
+      validationTitle: 'Validación de modelos en vivo',
+      validationDesc:
+        'En Configuración → Agentes, cada modelo recomendado muestra un badge de validación (✓ Disponible / ⚠ Obsoleto) verificado contra el catálogo en vivo de OpenRouter. Haz clic en cualquier nombre de modelo para aplicarlo al instante.',
+      presetsTitle: 'Presets de modelos',
+      preset: 'Preset',
+      quality: 'Calidad',
+      bestFor: 'Ideal para',
+      agentModelTitle: 'Mapeo agente-modelo',
+      agentModelDesc:
+        'No todos los agentes necesitan la misma calidad de modelo. El Enrutamiento de KRYPTO procesa clasificaciones simples — un modelo rápido y gratuito funciona bien. La Síntesis de KRYPTO toma la decisión final — se beneficia de un modelo de mayor calidad.',
+      agent: 'Agente',
+    },
+    faq: {
+      title: 'FAQ',
+      intro: 'Preguntas frecuentes sobre CryptoTrader.',
+      q1: '¿CryptoTrader es gratuito?',
+      a1: 'La plataforma es gratuita. Solo pagas por el uso de la API LLM (opcional — modelos gratuitos disponibles via OpenRouter) y las comisiones de trading de Binance (0.1% por operación).',
+      q2: '¿Puedo perder dinero?',
+      a2: 'En modo SANDBOX — no. En modo LIVE — sí. Si bien la plataforma tiene protección stop-loss y nunca vende con pérdida vía IA, el stop-loss en sí puede y cerrará posiciones con pérdida para limitar el daño. Solo opera lo que puedes permitirte perder.',
+      q3: '¿Qué exchanges están soportados?',
+      a3: 'Actualmente solo Binance (trading Spot). El soporte para Binance Futures y otros exchanges está en el roadmap.',
+      q4: '¿Qué criptomonedas puedo operar?',
+      a4: 'BTC y ETH con USDT o USDC como monedas de cotización. Cuatro pares: BTCUSDT, BTCUSDC, ETHUSDT, ETHUSDC.',
+      q5: '¿Cómo funciona el stop-loss?',
+      a5: 'El stop-loss es un disyuntor duro. Cuando el precio baja el porcentaje configurado desde el precio de entrada, la posición se cierra inmediatamente — sin decisión de IA. Es el único mecanismo que puede cerrar con pérdida.',
+      q6: '¿Puede la IA vender con pérdida?',
+      a6: 'No. La IA (LLM) nunca vende con pérdida. Hay un umbral mínimo de rentabilidad (por defecto 0.3%) que debe superarse. Solo el stop-loss o el cierre manual pueden salir con pérdida.',
+      q7: '¿Puedo ejecutar múltiples agentes simultáneamente?',
+      a7: 'Sí. Cada agente opera de forma independiente con su propia configuración, par de trading y proveedor LLM. Puedes tener agentes en diferentes modos (ej. uno en SANDBOX, uno en LIVE).',
+      q8: '¿Cuánto dura un ciclo de trading?',
+      a8: 'Un ciclo de análisis tarda 10-30 segundos dependiendo de la velocidad del proveedor LLM. El intervalo entre ciclos es configurable (mínimo 5 minutos, o determinado por IA en modo AGENTE).',
+      q9: '¿Están seguros mis datos?',
+      a9: 'Las claves API están cifradas en reposo. Los datos de análisis de mercado se envían a los proveedores LLM pero nunca incluyen información personal ni datos de cuenta. La plataforma nunca tiene acceso para retirar fondos de tu cuenta del exchange.',
+      q10: '¿Puedo auto-alojarlo?',
+      a10: 'Sí. CryptoTrader es de código abierto. Puedes desplegarlo en tu propia infraestructura usando Docker. Consulta el README para las instrucciones de despliegue.',
+      q11: '¿Qué ocurre si la plataforma se desconecta?',
+      a11: 'Todos los agentes se detienen. Las posiciones abiertas permanecen abiertas en el exchange. El stop-loss es gestionado por la plataforma, no el exchange, por lo que no se activará mientras esté desconectada. Debes monitorear las posiciones y configurar stop-losses a nivel del exchange para operaciones críticas.',
+      generalTitle: 'General',
+      tradingTitle: 'Trading',
+      technicalTitle: 'Técnico',
+      moreHelp: '¿Necesitas más ayuda?',
+      moreHelpDesc:
+        'Si tu pregunta no está respondida aquí, usa el chat multi-agente para preguntar cualquier cosa sobre la plataforma. Los agentes de IA pueden proporcionar respuestas personalizadas basadas en tu configuración.',
+    },
+    dashboard: {
+      title: 'Resumen del dashboard',
+      intro:
+        'La página de Resumen es tu centro de comando. Muestra el rendimiento de tu portafolio, PnL en tiempo real, distribución de activos y acceso rápido a todas las secciones de la plataforma.',
+      kpiTitle: 'Métricas de rendimiento',
+      kpiDesc:
+        'La fila superior muestra cuatro métricas clave para el modo de operación actual. Todas las métricas se actualizan automáticamente a medida que los agentes ejecutan trades.',
+      metric: 'Métrica',
+      description: 'Descripción',
+      source: 'Fuente',
+      netPnl: 'PnL neto',
+      netPnlDesc:
+        'Ganancia/pérdida total tras comisiones en todas las posiciones cerradas',
+      winRate: 'Tasa de acierto',
+      winRateDesc: 'Porcentaje de posiciones cerradas con beneficio',
+      openPositions: 'Posiciones abiertas',
+      openPositionsDesc: 'Número de posiciones actualmente activas',
+      totalTrades: 'Total de trades',
+      totalTradesDesc:
+        'Todas las órdenes de compra + venta ejecutadas en el modo actual',
+      closedPositions: 'Posiciones cerradas',
+      liveData: 'Datos en vivo',
+      tradeHistory: 'Historial de trades',
+      modeNote: 'Datos por modo',
+      modeNoteDesc:
+        'Todas las métricas reflejan solo el modo de operación actual (SANDBOX, TESTNET o LIVE). Cambiar de modo muestra conjuntos de datos separados. Usa el selector de modo en la navegación superior para cambiar.',
+      pnlChartTitle: 'Gráfico de PnL en el tiempo',
+      pnlChartDesc:
+        'El gráfico de área muestra tu ganancia/pérdida neta acumulada en el tiempo. Cada punto representa un trade cerrado. Una línea ascendente significa actividad rentable; plana o descendente significa pérdidas o sin trades.',
+      pnlChartTip: '¿Sin datos aún?',
+      pnlChartTipDesc:
+        'El gráfico solo aparece tras al menos un trade cerrado. Inicia un agente en modo SANDBOX, deja que complete al menos un ciclo completo COMPRA → VENTA y regresa para ver el gráfico.',
+      assetTitle: 'Distribución de activos',
+      assetDesc:
+        'El gráfico de barras muestra el PnL desglosado por par de trading (BTCUSDT, BTCUSDC, ETHUSDT, ETHUSDC). Te permite comparar qué pares son más rentables para tu estrategia.',
+      quickActionsTitle: 'Navegación rápida',
+      quickActionsDesc:
+        'El Resumen enlaza a todas las secciones clave. Usa la barra lateral para acceso rápido a Config. Agentes, Mercado, Posiciones y Log de Agentes.',
+      section: 'Sección',
+      path: 'Ruta',
+      purpose: 'Propósito',
+      marketPurpose: 'Precios en vivo, gráficos OHLCV, indicadores técnicos',
+      botAnalysisPurpose: 'Puntuación técnica + noticias + agentes combinada',
+      agentLogPurpose:
+        'Revisar todas las decisiones de los agentes con razonamiento',
+      positionsPurpose: 'Ver posiciones de trading abiertas y cerradas',
+      configPurpose: 'Crear, iniciar, detener y gestionar agentes de trading',
+      chatPurpose:
+        'Preguntar a los agentes de IA cualquier cosa sobre la plataforma',
+      balanceTitle: 'Visualización del balance',
+      balanceDesc: 'El balance mostrado depende de tu modo de operación:',
+      sandboxBalance: 'Balance Sandbox',
+      sandboxBalanceDesc:
+        'Billetera virtual que comienza en $10,000. Aumenta/disminuye a medida que los trades de sandbox se cierran. Se reinicia al cambiar de modo.',
+      testnetBalance: 'Balance Testnet',
+      testnetBalanceDesc:
+        'Balance de tu cuenta Binance Testnet. Muestra USDT/USDC reales de fondos de prueba. Requiere claves API testnet configuradas en Configuración → Exchange.',
+      liveBalance: 'Balance Live',
+      liveBalanceDesc:
+        'Balance real de Binance. Muestra USDT/USDC disponibles reales. Requiere claves API live. Este es dinero real.',
+    },
+    market: {
+      title: 'Mercado y gráficos',
+      intro:
+        'La página de Mercado proporciona datos de precios en tiempo real, gráficos de velas OHLCV y un panel completo de análisis técnico para los cuatro pares de trading soportados.',
+      tickerTitle: 'Ticker en vivo',
+      tickerDesc:
+        'En la parte superior de la página de Mercado, el ticker en vivo muestra datos de precios en tiempo real para el par seleccionado via WebSocket de Binance. Los datos se actualizan en milisegundos a medida que el mercado se mueve.',
+      field: 'Campo',
+      description: 'Descripción',
+      currentPrice: 'Precio actual',
+      currentPriceDesc:
+        'Último precio operado, actualizado en tiempo real via WebSocket',
+      priceChange: 'Cambio 24h',
+      priceChangeDesc: 'Cambio de precio y porcentaje en las últimas 24 horas',
+      high24h: 'Máximo 24h',
+      high24hDesc: 'Precio más alto en las últimas 24 horas',
+      low24h: 'Mínimo 24h',
+      low24hDesc: 'Precio más bajo en las últimas 24 horas',
+      volume: 'Volumen 24h',
+      volumeDesc: 'Volumen total operado en 24 horas',
+      pairTitle: 'Selector de par',
+      pairDesc:
+        'Usa los botones en la parte superior para cambiar entre los cuatro pares soportados. El gráfico, el ticker y los indicadores se actualizan para el par seleccionado.',
+      chartTitle: 'Gráfico de precios',
+      chartDesc:
+        'La pestaña Gráfico muestra datos de velas OHLCV (Apertura, Máximo, Mínimo, Cierre, Volumen) para el par seleccionado. Las velas representan intervalos de 4 horas por defecto. Las barras de volumen aparecen debajo del gráfico de precios.',
+      ohlcvNote: '¿Qué es OHLCV?',
+      ohlcvDesc:
+        'Cada vela muestra: Apertura (precio al inicio del período), Máximo (precio máximo), Mínimo (precio mínimo), Cierre (precio al final). Velas verdes = el precio subió; rojas = bajó.',
+      indicatorsTitle: 'Indicadores técnicos',
+      indicatorsDesc:
+        'Cambia a la pestaña "Análisis Técnico" para ver todos los indicadores que los agentes de IA usan al tomar decisiones. Son exactamente los mismos indicadores enviados a SIGMA (analista de mercado) en cada ciclo.',
+      indicator: 'Indicador',
+      type: 'Tipo',
+      signals: 'Señales',
+      indicatorsTip: 'Cómo usa la IA los indicadores',
+      indicatorsTipDesc:
+        'SIGMA (analista de mercado) recibe todos los valores de indicadores y los interpreta de forma holística — no usa reglas codificadas como "RSI > 70 = vender". En su lugar, considera todas las señales junto con la acción del precio reciente y el volumen.',
+      rsiSignals:
+        '>70 sobrecomprado (posible venta), <30 sobrevendido (posible compra)',
+      macdSignals:
+        'Línea MACD cruzando por encima de la señal = alcista, por debajo = bajista',
+      bbSignals:
+        'Precio cerca de banda superior = sobrecomprado; cerca de inferior = sobrevendido',
+      emaSignals: 'EMA corta cruzando por encima de EMA larga = señal alcista',
+      stochSignals:
+        'Combina RSI y estocástico para lecturas de momentum más precisas',
+      volumeSignals:
+        'Alto volumen confirma movimientos de precio; bajo volumen = señal débil',
+      trend: 'Tendencia',
+      momentum: 'Momentum',
+      volatility: 'Volatilidad',
+      movingAvg: 'Media móvil',
+      volumeType: 'Volumen',
+      analysisTitle: 'Del mercado a la decisión',
+      analysisDesc:
+        'Los datos técnicos de la página de Mercado alimentan directamente la página de Análisis del Bot, que los combina con el sentimiento de noticias e historial de agentes para producir una puntuación de confianza combinada.',
+    },
+    botAnalysis: {
+      title: 'Análisis del bot',
+      infoTitle: 'Para qué sirve esta página',
+      infoDesc:
+        'Usa Análisis del Bot para entender POR QUÉ el agente probablemente COMPRARÁ, VENDERÁ o MANTENDRÁ. Te da transparencia sobre el razonamiento de la IA antes de que ocurran las decisiones.',
+      combinedScoreTitle: 'Banner de puntuación combinada',
+      combinedScoreDesc:
+        'El banner superior muestra una señal de mercado general (ALCISTA, BAJISTA o NEUTRAL) derivada de combinar indicadores técnicos y sentimiento de noticias. Es una señal informativa — no ejecuta trades directamente. La decisión final siempre la toman los agentes de IA.',
+      techSummaryTitle: 'Resumen técnico',
+      techSummaryDesc:
+        'El panel de Resumen Técnico agrega todos los indicadores activos del par seleccionado en un veredicto legible. Cada indicador se muestra con su valor actual y una señal COMPRA/VENTA/NEUTRAL.',
+      indicator: 'Indicador',
+      value: 'Valor mostrado',
+      signal: 'Señal',
+      rsiValue: 'Valor numérico 0–100',
+      rsiSignal: 'SOBRECOMPRADO / SOBREVENDIDO / NEUTRAL',
+      macdValue: 'Línea MACD, línea de señal, histograma',
+      macdSignal: 'ALCISTA / BAJISTA / NEUTRAL',
+      bbValue: 'Posición banda superior/inferior',
+      bbSignal: 'CERCA_SUPERIOR / CERCA_INFERIOR / NEUTRAL',
+      volume: 'Volumen',
+      volumeValue: 'Volumen 24h vs promedio',
+      volumeSignal: 'ALTO / BAJO / NORMAL',
+      emaValue: 'Estado de cruce EMA',
+      emaSignal: 'ALCISTA / BAJISTA',
+      newsSentimentTitle: 'Panel de sentimiento de noticias',
+      newsSentimentDesc:
+        'Este panel muestra el sentimiento de noticias recientes de criptomonedas y cómo se alinea con las señales técnicas. SIGMA procesa titulares para medir el estado de ánimo del mercado.',
+      newsCount: 'Cantidad de noticias',
+      newsCountDesc:
+        'Cuántos artículos recientes están incluidos en el análisis',
+      overallSentiment: 'Sentimiento general',
+      overallSentimentDesc:
+        'Puntuación de sentimiento agregada en noticias recientes (POSITIVO / NEGATIVO / NEUTRAL)',
+      sigmaOpinion: 'Opinión de SIGMA',
+      agentInputTitle: 'Resumen de aportes de agentes',
+      agentInputDesc:
+        'Esta sección muestra un resumen de las decisiones recientes de los agentes: conteos COMPRA/VENTA/MANTENER, confianza promedio y qué pares de trading son más activos.',
+      element: 'Elemento',
+      description: 'Descripción',
+      nextDecisionTitle: 'Cuenta regresiva para próxima decisión',
+      nextDecisionDesc:
+        'Si algún agente está en ejecución, el banner de Próxima Decisión muestra una cuenta regresiva hasta cuándo el agente analizará el mercado.',
+      nextDecisionTip: '¿Sin cuenta regresiva?',
+      nextDecisionTipDesc:
+        'La cuenta regresiva solo aparece cuando al menos un agente está activamente en ejecución. Ve a Config. Agentes, encuentra tu agente y haz clic en Play para iniciarlo.',
+      pairSelectionTitle: 'Selección de par',
+      pairSelectionDesc:
+        'Usa el selector de par en la parte superior para cambiar entre BTCUSDT, BTCUSDC, ETHUSDT y ETHUSDC. El resumen técnico y el sentimiento de noticias se actualizan para reflejar el par seleccionado.',
+    },
+    agentDecisions: {
+      title: 'Log de agentes',
+      cardTitle: 'Anatomía de la tarjeta de decisión',
+      cardDesc:
+        'Cada entrada en el Log de Agentes es una tarjeta de decisión. Haz clic en cualquier tarjeta para expandir el razonamiento completo de la IA.',
+      field: 'Campo',
+      description: 'Descripción',
+      decisionBadge: 'Badge de decisión',
+      decisionBadgeDesc:
+        'COMPRA (verde), VENTA (rojo) o MANTENER (gris) — la recomendación final',
+      confidence: 'Confianza',
+      confidenceDesc:
+        'Puntuación del 0–100%. Cuán segura estaba la IA sobre su decisión',
+      pair: 'Par de trading',
+      pairDesc: 'El par de activos analizado (ej. BTC/USDT)',
+      price: 'Precio en la decisión',
+      priceDesc: 'Precio de mercado cuando se tomó la decisión',
+      mode: 'Modo de operación',
+      modeDesc:
+        'SANDBOX, TESTNET o LIVE — en qué entorno estaba ejecutándose el agente',
+      timestamp: 'Marca de tiempo',
+      timestampDesc: 'Cuándo completó el ciclo de decisión',
+      suggestedWait: 'Espera sugerida',
+      suggestedWaitDesc:
+        'Cuánto tiempo sugirió la IA esperar antes del próximo análisis (en modo AGENTE)',
+      typesTitle: 'Entendiendo cada tipo de decisión',
+      buyDesc:
+        'El agente decidió comprar. Se ejecutó un trade SOLO SI: la confianza superó el umbral de compra Y el capital disponible ≥ tamaño mínimo de trade Y posiciones abiertas < máximo simultáneo.',
+      sellDesc:
+        'El agente decidió vender. Se ejecutó un trade SOLO SI: la confianza superó el umbral de venta Y el beneficio de la posición ≥ minProfitPct (0.3%). El agente nunca vende con pérdida.',
+      holdDesc:
+        'Sin acción. Las condiciones del mercado no cumplieron los criterios de COMPRA o VENTA. El agente esperará y re-analizará en el siguiente intervalo.',
+      filtersTitle: 'Filtrar decisiones',
+      filtersDesc:
+        'Usa el panel de filtros para reducir el log de decisiones. Puedes filtrar por tipo de decisión, par de trading y qué agente produjo la decisión.',
+      filter: 'Filtro',
+      options: 'Opciones',
+      decisionFilter: 'Tipo de decisión',
+      assetFilter: 'Activo / Par',
+      agentFilter: 'Agente',
+      agentFilterDesc: 'TODOS o nombre de configuración de agente específico',
+      detailTitle: 'Modal de detalle de decisión',
+      detailTip: 'Leyendo el razonamiento',
+      modeAwarenessTitle: 'Vista filtrada por modo',
+      modeAwarenessDesc:
+        'El Log de Agentes filtra automáticamente para mostrar solo las decisiones del modo de operación actual. Cambia entre SANDBOX, TESTNET y LIVE usando el selector de modo en la navegación superior.',
+    },
+    chat: {
+      title: 'Chat multi-agente',
+      intro:
+        'La página de Chat te da acceso directo al sistema multi-agente para interacción conversacional. Haz preguntas sobre la plataforma, solicita análisis de mercado o pide explicaciones de decisiones recientes.',
+      useCaseTitle: '¿Para qué usar el Chat?',
+      useCaseDesc:
+        'El Chat es ideal para: entender una decisión específica que tomó el agente, solicitar un análisis de mercado bajo demanda, aprender sobre las funciones de la plataforma o solucionar problemas de configuración.',
+      sessionsTitle: 'Sesiones de chat',
+      sessionsDesc:
+        'Las conversaciones se organizan en sesiones. Cada sesión mantiene su propio contexto — la IA recuerda lo que se discutió dentro de una sesión. Puedes crear múltiples sesiones para mantener diferentes conversaciones separadas.',
+      sessionStep1: 'Panel de sesiones',
+      sessionStep1Desc:
+        'La barra lateral izquierda (plegable en móvil) muestra todas tus sesiones. Haz clic en una para cargarla.',
+      sessionStep2: 'Nueva sesión',
+      sessionStep2Desc:
+        'Escribir tu primer mensaje en un input vacío crea automáticamente una nueva sesión con el inicio de tu mensaje como título.',
+      sessionStep3: 'Persistencia de sesión',
+      sessionStep3Desc:
+        'Las sesiones se guardan de forma permanente. Vuelve a cualquier conversación anterior para continuar el contexto.',
+      capabilitiesTitle: 'Atajos de capacidad',
+      capabilitiesDesc:
+        'Sobre el campo de input, los botones de acción rápida inyectan contexto estructurado en tu mensaje automáticamente. Esto da a los agentes los datos que necesitan sin que tengas que describirlos.',
+      capability: 'Capacidad',
+      whatItDoes: 'Qué hace',
+      bestFor: 'Ideal para',
+      capAnalysis: 'Análisis de mercado',
+      capAnalysisDesc:
+        'Adjunta snapshot actual del mercado: precio, indicadores, velas recientes',
+      capAnalysisFor:
+        '"¿Por qué el agente compró?" o "¿Cómo está el mercado ahora?"',
+      capNews: 'Análisis de noticias',
+      capNewsDesc:
+        'Adjunta titulares de noticias crypto recientes y sus puntuaciones de sentimiento',
+      capNewsFor: '"¿Qué noticias mueven BTC hoy?" o análisis de sentimiento',
+      capTrades: 'Historial de trades',
+      capTradesDesc:
+        'Adjunta decisiones recientes de los agentes y trades ejecutados',
+      capTradesFor: '"Analiza mis últimos 10 trades" o revisión de estrategia',
+      agentSelectionTitle: 'Elegir un agente',
+      agentSelectionDesc:
+        'Por defecto, NEXUS (el experto en plataforma) maneja las preguntas generales. Puedes cambiar a un agente específico usando el selector desplegable sobre el chat.',
+      agent: 'Agente',
+      bestAt: 'Mejor para preguntar sobre',
+      nexusBest:
+        'Funciones de la plataforma, configuración, cómo hacer preguntas',
+      sigmaBest: 'Análisis de mercado, indicadores técnicos, acción del precio',
+      forgeBest:
+        'Ejecución de trades, gestión de órdenes, operaciones de portafolio',
+      cipherBest: 'Datos blockchain, métricas on-chain, fundamentos crypto',
+      aegisBest:
+        'Gestión de riesgos, tamaño de posiciones, análisis de drawdown',
+      orchestratingTitle: 'Indicador de orquestación',
+      orchestratingDesc:
+        'Cuando envías un mensaje complejo, puedes ver un indicador "Orquestando...". Esto significa que KRYPTO está enrutando tu solicitud al agente especialista más apropiado.',
+      streamingNote: 'Respuestas en streaming',
+      streamingNoteDesc:
+        'Las respuestas se transmiten en tiempo real a medida que la IA las genera. Puedes ver el texto aparecer palabra por palabra. Para detener la respuesta antes, haz clic en el botón Detener.',
+    },
+    newsFeed: {
+      title: 'Feed de noticias',
+      intro:
+        'La página de Feed de Noticias agrega titulares de noticias crypto, analiza su sentimiento y muestra cómo las noticias recientes se alinean con las condiciones del mercado.',
+      summaryTitle: 'Tarjeta de resumen de análisis',
+      summaryDesc:
+        'En la parte superior del Feed de Noticias, la tarjeta de Resumen de Análisis muestra el sentimiento agregado de todos los titulares recientes. Distingue entre análisis basado en palabras clave (rápido, automático) y análisis con IA (más profundo, bajo demanda).',
+      method: 'Método',
+      description: 'Descripción',
+      when: 'Cuándo se ejecuta',
+      keywordAnalysis: 'Análisis de palabras clave',
+      keywordDesc:
+        'Coincidencia de patrones rápida en titulares usando palabras clave crypto predefinidas',
+      keywordWhen: 'Automático, cada vez que las noticias se refrescan',
+      aiAnalysis: 'Análisis con IA',
+      aiDesc:
+        'Análisis semántico más profundo usando un LLM para entender matices y contexto',
+      aiWhen: 'Bajo demanda al hacer clic en "Ejecutar Análisis IA"',
+      filtersTitle: 'Filtrar por sentimiento',
+      cardTitle: 'Anatomía de la tarjeta de noticia',
+      sigmaTitle: 'Conexión con SIGMA',
+      sigmaTip: 'Badge de sentimiento de SIGMA',
+      configTitle: 'Configurar noticias',
+      configDesc:
+        'Ve a Configuración → Noticias para configurar cuántos ítems de noticias se obtienen y muestran. El valor por defecto es 15 titulares.',
+      configStep1: 'Navega a Configuración → Noticias',
+      configStep2: 'Establece el número de ítems de noticias',
+      configStep2Desc:
+        'Rango: 5–50 ítems. Por defecto es 15. Valores más altos dan a SIGMA más contexto pero cada llamada de análisis IA será más grande.',
+      configStep3: 'Guarda y regresa al Feed de Noticias',
+      configStep3Desc:
+        'La lista de noticias se refrescará con el nuevo conteo en la próxima carga.',
+    },
+    settingsAgents: {
+      title: 'Configuración de modelos de agentes',
+      intro:
+        'La página Configuración → Agentes te permite configurar qué modelo LLM usa cada agente, aplicar presets inteligentes y ver la validación de modelos en tiempo real contra el catálogo de OpenRouter.',
+      pathNote: 'Dónde encontrarlo',
+      pathNoteDesc:
+        'Navega a: Dashboard → Configuración → Agentes (barra lateral) o ve directamente a /dashboard/settings/agents',
+      agentListTitle: 'Agentes configurables',
+      agentListDesc:
+        'Hay 7 roles de agentes. Cada uno puede asignarse con un proveedor LLM y modelo independiente. AEGIS (riesgo) está bloqueado — siempre usa el mismo modelo que la Síntesis de KRYPTO.',
+      role: 'Rol',
+      codename: 'Nombre clave',
+      specialty: 'Especialidad',
+      locked: '¿Bloqueado?',
+      routingSpec: 'Enrutamiento de solicitudes',
+      synthesisSpec: 'Síntesis de decisión final',
+      platformSpec: 'Conocimiento de plataforma',
+      operationsSpec: 'Ejecución de trades',
+      marketSpec: 'Mercado e indicadores',
+      blockchainSpec: 'Datos on-chain',
+      riskSpec: 'Evaluación de riesgo',
+      yes: '🔒 Sí',
+      presetsTitle: 'Sistema de presets inteligentes',
+      presetsDesc:
+        'En lugar de configurar cada agente individualmente, usa un preset para asignar modelos óptimos a todos los agentes a la vez.',
+      preset: 'Preset',
+      strategy: 'Estrategia',
+      cost: 'Costo estimado',
+      freeStrategy: 'Asigna solo modelos $0 de OpenRouter',
+      balancedStrategy: 'Asigna modelos costo-efectivos con buena calidad',
+      optimizedStrategy: 'Asigna los mejores modelos para cada rol',
+      presetRequires: 'Requiere OpenRouter',
+      presetRequiresDesc:
+        'Los presets están diseñados para OpenRouter. Asignan IDs de modelos específicos de OpenRouter por rol de agente.',
+      recommendedTitle: 'Modelos recomendados (clic para aplicar)',
+      recommendedDesc:
+        'Cada tarjeta de agente muestra tres modelos recomendados (Gratis, Balanceado, Optimizado). Haz clic en cualquier nombre de modelo para aplicarlo instantáneamente.',
+      badge: 'Badge',
+      meaning: 'Significado',
+      available: 'Disponible',
+      availableDesc:
+        'El modelo existe en el catálogo de OpenRouter — seguro para usar',
+      deprecated: 'Obsoleto',
+      deprecatedDesc:
+        'Modelo no encontrado en el catálogo — puede haber sido eliminado. Haz clic en un modelo diferente.',
+      deprecatedWarning: 'Si un modelo muestra Obsoleto',
+      deprecatedWarningDesc:
+        'OpenRouter ocasionalmente retira modelos. Si tu modelo asignado está obsoleto, el agente aún funcionará pero puede fallar.',
+      perAgentTitle: 'Override de modelo por agente',
+      perAgentDesc:
+        'Cada tarjeta de agente tiene un selector de modelo. Para agentes OpenRouter, muestra un desplegable con búsqueda de todos los 300+ modelos disponibles.',
+    },
   },
 };
 

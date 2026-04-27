@@ -10,35 +10,175 @@ import {
   ShieldAlert,
   Sparkles,
   ChevronRight,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button, Select, type SelectOption } from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
 import {
   useAdminAgentConfigs,
   useUpdateAdminAgentConfig,
-  useApplyAdminPreset,
+  useApplyRecommendedAdminPreset,
   useAutoResolveFallback,
   type AgentPresetName,
+  type RecommendedModelMap,
 } from '../../hooks/use-agent-config';
 import { useLLMKeys, useUpdateLLMModel } from '../../hooks/use-user';
+import { useOpenRouterModels } from '../../hooks/use-openrouter-models';
 import { DynamicModelSelect } from '../settings/dynamic-model-select';
 import { OpenRouterModelSelect } from '../settings/openrouter-model-select';
 import { cn } from '../../lib/utils';
 import { Dialog } from '@crypto-trader/ui';
 
-const AGENT_META: Record<
-  string,
-  { codename: string; color: string; locked?: boolean }
-> = {
-  orchestrator: { codename: 'KRYPTO', color: 'text-yellow-500' },
-  routing: { codename: 'KRYPTO', color: 'text-yellow-500' },
-  synthesis: { codename: 'KRYPTO', color: 'text-yellow-500' },
-  platform: { codename: 'NEXUS', color: 'text-blue-500' },
-  operations: { codename: 'FORGE', color: 'text-orange-500' },
-  market: { codename: 'SIGMA', color: 'text-green-500' },
-  blockchain: { codename: 'CIPHER', color: 'text-purple-500' },
-  risk: { codename: 'AEGIS', color: 'text-red-500', locked: true },
+interface AgentMetaInfo {
+  codename: string;
+  color: string;
+  locked?: boolean;
+  roleKey: string;
+  freeModel: string;
+  balancedModel: string;
+  optimizedModel: string;
+}
+
+const AGENT_META: Record<string, AgentMetaInfo> = {
+  orchestrator: {
+    codename: 'KRYPTO',
+    color: 'text-yellow-500',
+    roleKey: 'agents.roles.orchestrator',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-flash',
+    optimizedModel: 'moonshotai/kimi-k2.6',
+  },
+  routing: {
+    codename: 'KRYPTO',
+    color: 'text-yellow-500',
+    roleKey: 'agents.roles.routing',
+    freeModel: 'google/gemma-4-26b-a4b-it:free',
+    balancedModel: 'qwen/qwen3.5-9b',
+    optimizedModel: 'deepseek/deepseek-v4-flash',
+  },
+  synthesis: {
+    codename: 'KRYPTO',
+    color: 'text-yellow-500',
+    roleKey: 'agents.roles.synthesis',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-pro',
+    optimizedModel: 'moonshotai/kimi-k2.6',
+  },
+  platform: {
+    codename: 'NEXUS',
+    color: 'text-blue-500',
+    roleKey: 'agents.roles.platform',
+    freeModel: 'google/gemma-4-31b-it:free',
+    balancedModel: 'qwen/qwen3.5-35b-a3b',
+    optimizedModel: 'deepseek/deepseek-v4-flash',
+  },
+  operations: {
+    codename: 'FORGE',
+    color: 'text-orange-500',
+    roleKey: 'agents.roles.operations',
+    freeModel: 'qwen/qwen3-next-80b-a3b-instruct:free',
+    balancedModel: 'deepseek/deepseek-v4-flash',
+    optimizedModel: 'qwen/qwen3.6-plus',
+  },
+  market: {
+    codename: 'SIGMA',
+    color: 'text-green-500',
+    roleKey: 'agents.roles.market',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-flash',
+    optimizedModel: 'deepseek/deepseek-v4-pro',
+  },
+  blockchain: {
+    codename: 'CIPHER',
+    color: 'text-purple-500',
+    roleKey: 'agents.roles.blockchain',
+    freeModel: 'minimax/minimax-m2.5:free',
+    balancedModel: 'minimax/minimax-m2.7',
+    optimizedModel: 'qwen/qwen3.6-plus',
+  },
+  risk: {
+    codename: 'AEGIS',
+    color: 'text-red-500',
+    locked: true,
+    roleKey: 'agents.roles.risk',
+    freeModel: 'nvidia/nemotron-3-super-120b-a12b:free',
+    balancedModel: 'deepseek/deepseek-v4-pro',
+    optimizedModel: 'moonshotai/kimi-k2.6',
+  },
 };
+
+const FALLBACK_RECOMMENDED = {
+  free: 'nvidia/nemotron-3-super-120b-a12b:free',
+  balanced: 'deepseek/deepseek-v4-flash',
+  optimized: 'moonshotai/kimi-k2.6',
+} as const;
+
+function ModelValidationBadge({
+  modelId,
+  availableModelIds,
+  t,
+}: {
+  modelId: string;
+  availableModelIds: Set<string> | null;
+  t: (key: string, opts?: Record<string, string>) => string;
+}) {
+  if (!availableModelIds) return null;
+  const exists = availableModelIds.has(modelId);
+  return exists ? (
+    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+      <CheckCircle2 className="h-2.5 w-2.5" />
+      {t('agents.validated', { defaultValue: 'Validated' })}
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
+      <AlertTriangle className="h-2.5 w-2.5" />
+      {t('agents.deprecated', { defaultValue: 'Deprecated' })}
+    </span>
+  );
+}
+
+function ModelRecommendationRow({
+  tier,
+  tierColor,
+  modelId,
+  availableModelIds,
+  onApply,
+  t,
+}: {
+  tier: string;
+  tierColor: string;
+  modelId: string;
+  availableModelIds: Set<string> | null;
+  onApply: (modelId: string) => void;
+  t: (key: string, opts?: Record<string, string>) => string;
+}) {
+  const isAvailable = availableModelIds?.has(modelId) ?? false;
+  return (
+    <p className="flex items-center gap-1 flex-wrap">
+      <span className={cn('font-semibold', tierColor)}>{tier}:</span>
+      <button
+        type="button"
+        disabled={!isAvailable}
+        onClick={() => onApply(modelId)}
+        className={cn(
+          'font-mono text-foreground/70 transition-colors',
+          isAvailable
+            ? 'hover:text-primary hover:underline cursor-pointer'
+            : 'opacity-50 cursor-not-allowed line-through',
+        )}
+      >
+        {modelId}
+      </button>
+      <ModelValidationBadge
+        modelId={modelId}
+        availableModelIds={availableModelIds}
+        t={t}
+      />
+    </p>
+  );
+}
 
 const PROVIDERS: SelectOption[] = [
   { value: 'OPENROUTER', label: 'OpenRouter' },
@@ -54,12 +194,14 @@ interface AdminAgentConfigCardProps {
   config: { agentId: string; provider: string; model: string };
   onSave: (agentId: string, provider: string, model: string) => void;
   isSaving: boolean;
+  availableModelIds: Set<string> | null;
 }
 
 function AdminAgentConfigCard({
   config,
   onSave,
   isSaving,
+  availableModelIds,
 }: AdminAgentConfigCardProps) {
   const { t } = useTranslation();
   const meta = AGENT_META[config.agentId] ?? {
@@ -101,6 +243,60 @@ function AdminAgentConfigCard({
           </span>
         )}
       </div>
+
+      {/* Agent role description */}
+      {'roleKey' in meta && (
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t(meta.roleKey)}
+        </p>
+      )}
+
+      {/* Recommended models — click to apply */}
+      {'balancedModel' in meta && (
+        <div className="flex items-start gap-1.5 rounded-lg bg-primary/5 border border-primary/10 p-2.5">
+          <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+          <div className="text-[11px] text-muted-foreground leading-snug space-y-1">
+            <p className="font-medium text-foreground/80">
+              {t('agents.recommendedModels', {
+                defaultValue: 'Recommended models:',
+              })}
+            </p>
+            <ModelRecommendationRow
+              tier="Free"
+              tierColor="text-emerald-500"
+              modelId={meta.freeModel}
+              availableModelIds={availableModelIds}
+              onApply={(m) => {
+                setProvider('OPENROUTER');
+                setModel(m);
+              }}
+              t={t}
+            />
+            <ModelRecommendationRow
+              tier="Balanced"
+              tierColor="text-blue-500"
+              modelId={meta.balancedModel}
+              availableModelIds={availableModelIds}
+              onApply={(m) => {
+                setProvider('OPENROUTER');
+                setModel(m);
+              }}
+              t={t}
+            />
+            <ModelRecommendationRow
+              tier="Optimized"
+              tierColor="text-yellow-500"
+              modelId={meta.optimizedModel}
+              availableModelIds={availableModelIds}
+              onApply={(m) => {
+                setProvider('OPENROUTER');
+                setModel(m);
+              }}
+              t={t}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="w-full">
@@ -158,14 +354,36 @@ export function AdminAgentConfigCards() {
   const { t } = useTranslation();
   const { data: configs, isLoading } = useAdminAgentConfigs();
   const updateMutation = useUpdateAdminAgentConfig();
-  const applyPreset = useApplyAdminPreset();
+  const applyRecommended = useApplyRecommendedAdminPreset();
   const autoResolve = useAutoResolveFallback();
   const { data: llmKeys } = useLLMKeys();
   const updateLLMModel = useUpdateLLMModel();
+  const { data: orModels } = useOpenRouterModels();
   const [pendingPreset, setPendingPreset] = useState<{
     id: AgentPresetName;
     name: string;
   } | null>(null);
+
+  // Build a set of available model IDs for validation
+  const availableModelIds = useMemo(
+    () => (orModels ? new Set(orModels.map((m) => m.id)) : null),
+    [orModels],
+  );
+
+  // Build recommended model map from AGENT_META for preset application
+  const recommendedModels = useMemo<RecommendedModelMap>(() => {
+    const map: RecommendedModelMap = {};
+    for (const [agentId, meta] of Object.entries(AGENT_META)) {
+      if ('freeModel' in meta) {
+        map[agentId] = {
+          free: meta.freeModel,
+          balanced: meta.balancedModel,
+          optimized: meta.optimizedModel,
+        };
+      }
+    }
+    return map;
+  }, []);
 
   // Fallback model state
   const openRouterCred = (llmKeys ?? []).find(
@@ -230,16 +448,7 @@ export function AdminAgentConfigCards() {
     badgeStyle: 'bg-muted text-muted-foreground',
   };
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
-        ))}
-      </div>
-    );
-  }
-
+  // Hooks MUST be called before any early return (Rules of Hooks)
   const allConfigs = useMemo(() => configs ?? [], [configs]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>('');
 
@@ -250,6 +459,16 @@ export function AdminAgentConfigCards() {
   }, [allConfigs, selectedAgentId]);
 
   const selectedConfig = allConfigs.find((c) => c.agentId === selectedAgentId);
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-40 animate-pulse rounded-xl bg-muted" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -269,7 +488,7 @@ export function AdminAgentConfigCards() {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           {/* Default preset first */}
           <button
-            disabled={applyPreset.isPending}
+            disabled={applyRecommended.isPending}
             onClick={() =>
               setPendingPreset({
                 id: DEFAULT_PRESET.id,
@@ -283,7 +502,7 @@ export function AdminAgentConfigCards() {
           >
             <div className="flex items-center gap-2">
               <span className={cn('rounded-md p-1', DEFAULT_PRESET.badgeStyle)}>
-                {applyPreset.isPending &&
+                {applyRecommended.isPending &&
                 pendingPreset?.id === DEFAULT_PRESET.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -305,7 +524,7 @@ export function AdminAgentConfigCards() {
             return (
               <button
                 key={preset.id}
-                disabled={applyPreset.isPending}
+                disabled={applyRecommended.isPending}
                 onClick={() => setPendingPreset({ id: preset.id, name: label })}
                 className={cn(
                   'flex flex-col gap-1.5 rounded-lg border p-3 text-left transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
@@ -314,7 +533,7 @@ export function AdminAgentConfigCards() {
               >
                 <div className="flex items-center gap-2">
                   <span className={cn('rounded-md p-1', preset.badgeStyle)}>
-                    {applyPreset.isPending &&
+                    {applyRecommended.isPending &&
                     pendingPreset?.id === preset.id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
@@ -366,6 +585,49 @@ export function AdminAgentConfigCards() {
                 'Default fallback model used platform-wide when a user has no custom configuration. Applied automatically by presets.',
             })}
           </p>
+          <div className="flex items-start gap-1.5 rounded-lg bg-amber-500/5 border border-amber-500/10 p-2.5">
+            <Info className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="text-[11px] text-muted-foreground leading-snug space-y-1">
+              <p className="font-medium text-foreground/80">
+                {t('settings.agents.fallback.recommendedTitle', {
+                  defaultValue: 'Recommended fallback models (all-rounder):',
+                })}
+              </p>
+              <ModelRecommendationRow
+                tier="Free"
+                tierColor="text-emerald-500"
+                modelId={FALLBACK_RECOMMENDED.free}
+                availableModelIds={availableModelIds}
+                onApply={(m) => {
+                  setFallbackModel(m);
+                  setFallbackDirty(true);
+                }}
+                t={t}
+              />
+              <ModelRecommendationRow
+                tier="Balanced"
+                tierColor="text-blue-500"
+                modelId={FALLBACK_RECOMMENDED.balanced}
+                availableModelIds={availableModelIds}
+                onApply={(m) => {
+                  setFallbackModel(m);
+                  setFallbackDirty(true);
+                }}
+                t={t}
+              />
+              <ModelRecommendationRow
+                tier="Optimized"
+                tierColor="text-yellow-500"
+                modelId={FALLBACK_RECOMMENDED.optimized}
+                availableModelIds={availableModelIds}
+                onApply={(m) => {
+                  setFallbackModel(m);
+                  setFallbackDirty(true);
+                }}
+                t={t}
+              />
+            </div>
+          </div>
           <OpenRouterModelSelect
             value={fallbackModel}
             onChange={(m) => {
@@ -484,6 +746,7 @@ export function AdminAgentConfigCards() {
                   updateMutation.mutate({ agentId, provider, model })
                 }
                 isSaving={updateMutation.isPending}
+                availableModelIds={availableModelIds}
               />
             )}
           </div>
@@ -508,9 +771,28 @@ export function AdminAgentConfigCards() {
         })}
         onConfirm={() => {
           if (pendingPreset) {
-            applyPreset.mutate(pendingPreset.id, {
-              onSettled: () => setPendingPreset(null),
-            });
+            applyRecommended.mutate(
+              {
+                tier: pendingPreset.id,
+                models: recommendedModels,
+                availableModelIds,
+              },
+              {
+                onSettled: () => setPendingPreset(null),
+                onSuccess: () => {
+                  const fallback =
+                    FALLBACK_RECOMMENDED[
+                      pendingPreset.id as keyof typeof FALLBACK_RECOMMENDED
+                    ];
+                  if (fallback) {
+                    updateLLMModel.mutate({
+                      provider: 'OPENROUTER',
+                      selectedModel: fallback,
+                    });
+                  }
+                },
+              },
+            );
           }
         }}
       />

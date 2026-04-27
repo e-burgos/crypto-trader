@@ -94,6 +94,8 @@ export { PageLayout } from './lib/layout/page-layout';
 export type { PageLayoutProps } from './lib/layout/page-layout';
 export { Navbar } from './lib/layout/navbar';
 export type { NavbarProps } from './lib/layout/navbar';
+export { NavbarDocs } from './lib/layout/navbar-docs';
+export type { NavbarDocsProps } from './lib/layout/navbar-docs';
 export { DashboardHeader } from './lib/layout/dashboard-header';
 export type { DashboardHeaderProps } from './lib/layout/dashboard-header';
 
@@ -147,6 +149,46 @@ export { HelpSidebar } from './lib/domain/help/help-sidebar';
 
 // Charts
 export { ChartCard } from './lib/charts/chart-card';
+
+// Docs
+export {
+  DocsCallout,
+  DocsCodeBlock,
+  DocsCard,
+  DocsSectionHeader,
+  DocsSteps,
+  DocsTable,
+  DocsBadge,
+  DocsPageFeedback,
+  DocsTOC,
+  DocsSearch,
+  DocsPagination,
+  DocsBreadcrumb,
+  DocsSidebar,
+} from './lib/docs';
+export type {
+  DocsCalloutProps,
+  DocsCalloutVariant,
+  DocsCodeBlockProps,
+  DocsCardProps,
+  DocsSectionHeaderProps,
+  DocsStepsProps,
+  DocsStep,
+  DocsTableProps,
+  DocsBadgeProps,
+  DocsBadgeVariant,
+  DocsPageFeedbackProps,
+  DocsTOCProps,
+  DocsTOCItem,
+  DocsSearchProps,
+  DocsSearchPage,
+  DocsPaginationProps,
+  DocsPaginationLink,
+  DocsBreadcrumbProps,
+  DocsSidebarProps,
+  DocsSidebarGroup,
+  DocsSidebarLink,
+} from './lib/docs';
 export type { ChartCardProps } from './lib/charts/chart-card';
 export { ChartTooltip } from './lib/charts/chart-tooltip';
 export type { ChartTooltipProps } from './lib/charts/chart-tooltip';

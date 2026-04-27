@@ -21,3 +21,26 @@ export type { DocsBadgeProps, DocsBadgeVariant } from './docs-badge';
 
 export { DocsPageFeedback } from './docs-page-feedback';
 export type { DocsPageFeedbackProps } from './docs-page-feedback';
+
+// v1.1 — Multi-page layout components
+export { DocsTOC } from './docs-toc';
+export type { DocsTOCProps, DocsTOCItem } from './docs-toc';
+
+export { DocsSearch } from './docs-search';
+export type { DocsSearchProps, DocsSearchPage } from './docs-search';
+
+export { DocsPagination } from './docs-pagination';
+export type {
+  DocsPaginationProps,
+  DocsPaginationLink,
+} from './docs-pagination';
+
+export { DocsBreadcrumb } from './docs-breadcrumb';
+export type { DocsBreadcrumbProps } from './docs-breadcrumb';
+
+export { DocsSidebar } from './docs-sidebar';
+export type {
+  DocsSidebarProps,
+  DocsSidebarGroup,
+  DocsSidebarLink,
+} from './docs-sidebar';

@@ -94,6 +94,8 @@ export { PageLayout } from './lib/layout/page-layout';
 export type { PageLayoutProps } from './lib/layout/page-layout';
 export { Navbar } from './lib/layout/navbar';
 export type { NavbarProps } from './lib/layout/navbar';
+export { NavbarDocs } from './lib/layout/navbar-docs';
+export type { NavbarDocsProps } from './lib/layout/navbar-docs';
 export { DashboardHeader } from './lib/layout/dashboard-header';
 export type { DashboardHeaderProps } from './lib/layout/dashboard-header';
 
@@ -158,6 +160,11 @@ export {
   DocsTable,
   DocsBadge,
   DocsPageFeedback,
+  DocsTOC,
+  DocsSearch,
+  DocsPagination,
+  DocsBreadcrumb,
+  DocsSidebar,
 } from './lib/docs';
 export type {
   DocsCalloutProps,
@@ -171,6 +178,16 @@ export type {
   DocsBadgeProps,
   DocsBadgeVariant,
   DocsPageFeedbackProps,
+  DocsTOCProps,
+  DocsTOCItem,
+  DocsSearchProps,
+  DocsSearchPage,
+  DocsPaginationProps,
+  DocsPaginationLink,
+  DocsBreadcrumbProps,
+  DocsSidebarProps,
+  DocsSidebarGroup,
+  DocsSidebarLink,
 } from './lib/docs';
 export type { ChartCardProps } from './lib/charts/chart-card';
 export { ChartTooltip } from './lib/charts/chart-tooltip';

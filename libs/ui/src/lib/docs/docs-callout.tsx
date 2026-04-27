@@ -61,7 +61,7 @@ export function DocsCallout({
   return (
     <div
       className={cn(
-        'rounded-lg border border-transparent border-l-4 px-4 py-3',
+        'rounded-lg border border-transparent border-l-4 px-4 py-4 mt-6 mb-6',
         config.border,
         config.bg,
         className,

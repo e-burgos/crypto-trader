@@ -6,7 +6,7 @@ import {
   SlidersHorizontal,
   Briefcase,
   Newspaper,
-  HelpCircle,
+  BookOpen,
   Activity,
   BotMessageSquare,
   Brain,
@@ -169,7 +169,7 @@ export function SidebarContainer() {
         {
           id: 'help',
           label: t('sidebar.help'),
-          icon: <HelpCircle className="h-4 w-4" />,
+          icon: <BookOpen className="h-4 w-4" />,
           href: '/docs',
           active: isActive('/docs'),
         },

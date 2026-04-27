@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import {
   BotMessageSquare,
   Maximize2,
@@ -33,6 +33,7 @@ import {
   OrchestratingIndicator,
   AGENTS,
 } from '@crypto-trader/ui';
+import type { AgentId } from '@crypto-trader/ui';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
@@ -51,6 +52,46 @@ export function ChatWidget() {
 
   const overlayRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
+  const dragStartY = useRef<number>(0);
+
+  // Mobile sheet height: 'partial' = 88vh, 'full' = 100vh
+  const [sheetSize, setSheetSize] = useState<'partial' | 'full'>('partial');
+
+  // Reset to partial whenever panel closes
+  const handleClose = useCallback(() => {
+    setSheetSize('partial');
+    close();
+  }, [close]);
+
+  // Animate slide-down on mobile before closing
+  const animateClose = useCallback(() => {
+    const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+    if (!isDesktop && overlayRef.current) {
+      gsap.to(overlayRef.current, {
+        y: '100%',
+        duration: 0.3,
+        ease: 'power3.in',
+        onComplete: handleClose,
+      });
+    } else {
+      handleClose();
+    }
+  }, [handleClose]);
+
+  const handleDragStart = (e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+  };
+
+  const handleDragEnd = (e: React.TouchEvent) => {
+    const delta = e.changedTouches[0].clientY - dragStartY.current;
+    if (delta < -40) {
+      // Swiped up → fullscreen
+      setSheetSize('full');
+    } else if (delta > 40) {
+      // Swiped down → animate close
+      animateClose();
+    }
+  };
 
   // GSAP: animate FAB on mount
   useGSAP(() => {
@@ -69,15 +110,30 @@ export function ChatWidget() {
     );
   });
 
-  // GSAP: animate overlay open
+  // GSAP: slide from right on desktop, slide up from bottom on mobile
   useGSAP(
     () => {
       if (!overlayRef.current || !isOpen || !isAuthenticated) return;
-      gsap.fromTo(
-        overlayRef.current,
-        { opacity: 0, scale: 0.88, y: 20, transformOrigin: 'bottom right' },
-        { opacity: 1, scale: 1, y: 0, duration: 0.38, ease: 'back.out(1.4)' },
-      );
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches;
+      if (isDesktop) {
+        gsap.fromTo(
+          overlayRef.current,
+          { x: 420, opacity: 0 },
+          {
+            x: 0,
+            opacity: 1,
+            duration: 0.3,
+            ease: 'power3.out',
+            clearProps: 'x,opacity',
+          },
+        );
+      } else {
+        gsap.fromTo(
+          overlayRef.current,
+          { y: '100%' },
+          { y: 0, duration: 0.35, ease: 'power3.out', clearProps: 'y' },
+        );
+      }
     },
     { dependencies: [isOpen] },
   );
@@ -149,54 +205,77 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* ── FAB ───────────────────────────────────────────────── */}
-      <button
-        ref={fabRef}
-        onClick={toggle}
-        className={cn(
-          'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl',
-          'bg-gradient-to-br from-primary to-primary/70 text-primary-foreground',
-          'shadow-[0_4px_24px_hsl(var(--primary)/0.45)]',
-          'transition-all duration-200 hover:scale-105 hover:shadow-[0_4px_32px_hsl(var(--primary)/0.6)]',
-          'active:scale-95',
-          isOpen && 'scale-95 opacity-90',
-          isStreaming && 'krypto-fab-pulse',
-        )}
-        title={t('chat.openChat', { defaultValue: 'KRYPTO AI Chat' })}
-      >
-        <BotMessageSquare
+      {/* ── FAB — visible only when chat is closed ─────────── */}
+      {!isOpen && (
+        <button
+          ref={fabRef}
+          onClick={toggle}
           className={cn(
-            'h-6 w-6 transition-transform duration-300',
-            isOpen && 'scale-90',
+            'fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl',
+            'bg-gradient-to-br from-primary to-primary/70 text-primary-foreground',
+            'shadow-[0_4px_24px_hsl(var(--primary)/0.45)]',
+            'transition-all duration-200 hover:scale-105 hover:shadow-[0_4px_32px_hsl(var(--primary)/0.6)]',
+            'active:scale-95',
+            isStreaming && 'krypto-fab-pulse',
           )}
-        />
-        {isStreaming && (
-          <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500">
-            <span className="h-2 w-2 animate-ping rounded-full bg-emerald-400" />
-          </span>
-        )}
-      </button>
+          title={t('chat.openChat', { defaultValue: 'KRYPTO AI Chat' })}
+        >
+          <BotMessageSquare className="h-6 w-6" />
+          {isStreaming && (
+            <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500">
+              <span className="h-2 w-2 animate-ping rounded-full bg-emerald-400" />
+            </span>
+          )}
+        </button>
+      )}
 
-      {/* ── Chat overlay ──────────────────────────────────────── */}
+      {/* ── Mobile backdrop ────────────────────────────────── */}
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-black/50 backdrop-blur-sm"
+          onClick={animateClose}
+        />
+      )}
+
+      {/* ── Chat panel: sidebar (desktop) / bottom-sheet (mobile) ── */}
       {isOpen && (
         <div
           ref={overlayRef}
           className={cn(
-            'fixed z-50 flex flex-col',
-            // Mobile: full screen with margins
-            'inset-x-2 top-16 bottom-20',
-            // Desktop: floating panel bottom-right
-            'sm:inset-x-auto sm:top-auto sm:bottom-24 sm:right-6 sm:w-[420px] sm:h-[70%]',
-            'rounded-2xl',
-            'shadow-[0_8px_32px_rgba(0,0,0,0.25),0_0_0_1px_hsl(var(--primary)/0.25)]',
-            'bg-card border border-border',
+            'fixed z-50 flex flex-col bg-card',
+            // Mobile: bottom sheet with dynamic height
+            'inset-x-0 bottom-0 rounded-t-2xl border-t border-border',
+            'shadow-[0_-8px_40px_rgba(0,0,0,0.3)]',
+            sheetSize === 'full' ? 'h-screen rounded-t-none' : 'h-[88vh]',
+            'transition-[height,border-radius] duration-300 ease-in-out',
+            // Desktop: full-height right sidebar
+            'md:inset-y-0 md:inset-x-auto md:right-0 md:bottom-auto md:h-full md:w-[400px]',
+            'md:rounded-none md:border-t-0 md:border-l md:border-border',
+            'md:shadow-[-8px_0_32px_rgba(0,0,0,0.15)]',
+            'md:transition-none',
           )}
         >
-          {/* Top accent line */}
-          <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+          {/* Mobile drag handle — swipe up = fullscreen, swipe down = close */}
+          <div
+            className="md:hidden flex justify-center pt-2.5 pb-1 shrink-0 touch-none select-none"
+            onTouchStart={handleDragStart}
+            onTouchEnd={handleDragEnd}
+          >
+            <div
+              className={cn(
+                'h-1 w-10 rounded-full transition-colors duration-150',
+                sheetSize === 'full'
+                  ? 'bg-primary/50'
+                  : 'bg-border/80 hover:bg-primary/40',
+              )}
+            />
+          </div>
+
+          {/* Top accent line — desktop only */}
+          <div className="hidden md:block h-px w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
           {/* ── Header ──────────────────────────────────────── */}
-          <div className="relative flex items-center justify-between px-4 py-3">
+          <div className="relative flex items-center justify-between px-4 py-3 bg-card shrink-0">
             {/* Subtle radial glow behind header */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/8 to-transparent" />
 
@@ -258,7 +337,7 @@ export function ChatWidget() {
                 <Maximize2 className="h-3.5 w-3.5" />
               </button>
               <button
-                onClick={close}
+                onClick={animateClose}
                 className="rounded-lg p-1.5 text-muted-foreground/60 hover:bg-muted hover:text-foreground transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
@@ -294,8 +373,8 @@ export function ChatWidget() {
                     agents={AGENTS}
                     agentId={activeAgentId}
                     routedByKrypto={!!routedAgentId && !selectedAgentId}
-                    provider={session?.provider}
-                    model={session?.model}
+                    provider={session?.provider ?? undefined}
+                    model={session?.model ?? undefined}
                   />
                 </div>
               )}
@@ -304,14 +383,14 @@ export function ChatWidget() {
                   messages={session?.messages ?? []}
                   streamingContent={streamingContent}
                   isStreaming={isStreaming}
-                  provider={session?.provider}
+                  provider={session?.provider ?? undefined}
                   streamError={streamError}
                 />
                 {/* D: Quick actions / Inline options from agent response */}
                 {!isStreaming && quickActions && (
                   <ChatQuickActions
                     actions={quickActions}
-                    onTransferAgent={(target) => selectAgent(target as any)}
+                    onTransferAgent={(target) => selectAgent(target as AgentId)}
                   />
                 )}
                 {!isStreaming && inlineOptions && (

@@ -7,9 +7,11 @@ import { type AgentShowcase } from './types';
 export function AgentCard({
   agent,
   index,
+  hideChatCta = false,
 }: {
   agent: AgentShowcase;
   index: number;
+  hideChatCta?: boolean;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -145,18 +147,20 @@ export function AgentCard({
         </div>
 
         {/* CTA */}
-        <button
-          onClick={() => navigate('/dashboard/chat')}
-          className={cn(
-            'mt-4 inline-flex items-center gap-1.5 text-xs font-semibold',
-            'transition-all duration-300',
-            agent.color,
-            'opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0',
-          )}
-        >
-          {t('agentsShowcase.chatWith', { name: agent.codename })}
-          <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
-        </button>
+        {!hideChatCta && (
+          <button
+            onClick={() => navigate('/dashboard/chat')}
+            className={cn(
+              'mt-4 inline-flex items-center gap-1.5 text-xs font-semibold',
+              'transition-all duration-300',
+              agent.color,
+              'opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0',
+            )}
+          >
+            {t('agentsShowcase.chatWith', { name: agent.codename })}
+            <ArrowRight className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1" />
+          </button>
+        )}
       </div>
     </div>
   );

@@ -44,9 +44,15 @@ function groupByDate(
 interface ChatSessionPanelProps {
   sessions: ChatSessionSummary[];
   compact?: boolean;
+  /** Called after selecting or creating a session — use to close mobile sidebar */
+  onSelect?: () => void;
 }
 
-export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
+export function ChatSessionPanel({
+  sessions,
+  compact,
+  onSelect,
+}: ChatSessionPanelProps) {
   const { t } = useTranslation();
   const { activeSessionId, setActiveSession } = useChatStore();
   const deleteSession = useDeleteChatSession();
@@ -68,7 +74,10 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
             {t('chat.sessions', { defaultValue: 'Conversations' })}
           </span>
           <button
-            onClick={() => setActiveSession(null)}
+            onClick={() => {
+              setActiveSession(null);
+              onSelect?.();
+            }}
             className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
             title={t('chat.newSession', { defaultValue: 'New session' })}
           >
@@ -87,7 +96,10 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
                 })}
               </p>
               <button
-                onClick={() => setActiveSession(null)}
+                onClick={() => {
+                  setActiveSession(null);
+                  onSelect?.();
+                }}
                 className="text-primary hover:underline"
               >
                 {t('chat.startFirst', {
@@ -106,7 +118,10 @@ export function ChatSessionPanel({ sessions, compact }: ChatSessionPanelProps) {
                     {items.map((session) => (
                       <li key={session.id} className="group relative">
                         <button
-                          onClick={() => setActiveSession(session.id)}
+                          onClick={() => {
+                            setActiveSession(session.id);
+                            onSelect?.();
+                          }}
                           className={cn(
                             'w-full rounded-lg px-2 py-2 text-left text-xs transition-colors',
                             activeSessionId === session.id

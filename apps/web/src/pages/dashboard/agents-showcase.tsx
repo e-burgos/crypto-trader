@@ -24,18 +24,27 @@ export function AgentsShowcasePage() {
   );
 }
 
-/* ── Embeddable Section (for Help page) ── */
-export function AgentsShowcaseSection() {
+/* ── Embeddable Section (for Help page and Docs) ── */
+export function AgentsShowcaseSection({
+  hideChatCta = false,
+}: {
+  hideChatCta?: boolean;
+}) {
   const agents = useAgentData();
 
   return (
     <div className="space-y-6">
-      <OrchestratorHero />
+      <OrchestratorHero hideChatCta={hideChatCta} />
       <PipelineSection />
 
       <div className="space-y-4">
         {agents.map((agent, i) => (
-          <AgentCard key={agent.id} agent={agent} index={i} />
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            index={i}
+            hideChatCta={hideChatCta}
+          />
         ))}
       </div>
     </div>

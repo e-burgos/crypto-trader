@@ -2,7 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export function OrchestratorHero() {
+export function OrchestratorHero({
+  hideChatCta = false,
+}: {
+  hideChatCta?: boolean;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -44,15 +48,17 @@ export function OrchestratorHero() {
           {t('agentsShowcase.subtitle')}
         </p>
 
-        <button
-          onClick={() => navigate('/dashboard/chat')}
-          className="animate-fade-up group inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 active:translate-y-0 active:shadow-md"
-          style={{ animationDelay: '300ms' }}
-        >
-          <MessageSquare className="h-4 w-4" />
-          {t('agentsShowcase.cta')}
-          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-        </button>
+        {!hideChatCta && (
+          <button
+            onClick={() => navigate('/dashboard/chat')}
+            className="animate-fade-up group inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-1 active:translate-y-0 active:shadow-md"
+            style={{ animationDelay: '300ms' }}
+          >
+            <MessageSquare className="h-4 w-4" />
+            {t('agentsShowcase.cta')}
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+          </button>
+        )}
 
         <div
           className="animate-fade-up mt-8 h-px bg-gradient-to-r from-border via-border/60 to-transparent"

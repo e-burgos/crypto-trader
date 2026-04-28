@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { useEffect } from 'react';
+import { Info, BarChart2, Signal } from 'lucide-react';
 import { cn } from '../../utils';
+import { TabModal } from '../../composites/tab-modal';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1324,18 +1324,14 @@ export function IndicatorInfoModal({
   indicatorKey,
   onClose,
 }: IndicatorInfoModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     if (!indicatorKey) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
     };
   }, [indicatorKey, onClose]);
 
@@ -1343,78 +1339,64 @@ export function IndicatorInfoModal({
 
   const info = getIndicators(t)[indicatorKey];
 
-  return createPortal(
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={info.title}
-    >
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl custom-scrollbar">
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-border bg-card px-5 py-4">
-          <div>
-            <h2 className="text-base font-bold leading-tight">{info.title}</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {info.subtitle}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            aria-label={t('market.modalClose')}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-5">
-          {/* What is it */}
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('market.modalWhat')}
-            </h3>
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {info.what}
-            </p>
-          </section>
-
-          {/* Visual chart */}
-          <section className="rounded-xl border border-border bg-muted/20 p-4">
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('market.modalVisualization')}
-            </h3>
-            {info.chart}
-          </section>
-
-          {/* How it works */}
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('market.modalHow')}
-            </h3>
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {info.how}
-            </p>
-          </section>
-
-          {/* Signals */}
-          <section>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t('market.modalSignals')}
-            </h3>
+  return (
+    <TabModal
+      title={info.title}
+      subtitle={info.subtitle}
+      onClose={onClose}
+      closeLabel={t('market.modalClose')}
+      tabs={[
+        {
+          icon: Info,
+          name: t('market.modalWhat'),
+          content: (
+            <div className="space-y-4">
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('market.modalWhat')}
+                </h3>
+                <p className="text-sm leading-relaxed text-foreground/90">
+                  {info.what}
+                </p>
+              </section>
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('market.modalHow')}
+                </h3>
+                <p className="text-sm leading-relaxed text-foreground/90">
+                  {info.how}
+                </p>
+              </section>
+              <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                <p className="text-xs leading-relaxed text-amber-300/90">
+                  {info.tip}
+                </p>
+              </section>
+            </div>
+          ),
+        },
+        {
+          icon: BarChart2,
+          name: t('market.modalVisualization'),
+          content: (
+            <section className="rounded-xl border border-border bg-muted/20 p-4">
+              {info.chart}
+            </section>
+          ),
+        },
+        {
+          icon: Signal,
+          name: t('market.modalSignals'),
+          content: (
             <div className="space-y-2">
               {info.signals.map((s) => (
                 <div
                   key={s.label}
-                  className="flex gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5"
+                  className="flex flex-col gap-1 rounded-lg border border-border bg-muted/20 px-3 py-2.5"
                 >
                   <span
                     className={cn(
-                      'shrink-0 text-xs font-bold font-mono pt-0.5 min-w-[110px]',
+                      'text-xs font-bold font-mono break-words',
                       s.color,
                     )}
                   >
@@ -1426,17 +1408,9 @@ export function IndicatorInfoModal({
                 </div>
               ))}
             </div>
-          </section>
-
-          {/* Tip */}
-          <section className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-            <p className="text-xs leading-relaxed text-amber-300/90">
-              {info.tip}
-            </p>
-          </section>
-        </div>
-      </div>
-    </div>,
-    document.body,
+          ),
+        },
+      ]}
+    />
   );
 }

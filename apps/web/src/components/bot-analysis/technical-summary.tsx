@@ -31,12 +31,12 @@ export function TechnicalSummary({
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20">
+      <div className="flex items-center flex-col sm:flex-row gap-2 px-4 py-3 border-b border-border bg-muted/20">
         <Activity className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('botAnalysis.technicalAnalysis')}
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="sm:ml-auto flex items-center gap-2">
           <span
             className={cn(
               'flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold border',

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { Tabs } from '@crypto-trader/ui';
 import { type NewsAnalysis } from '../../hooks/use-market';
 import { timeAgo, SENTIMENT_CONFIG } from './news-utils';
 import type { SigmaSentiment } from '../bot-analysis';
@@ -20,7 +21,6 @@ type AnalysisTab = 'ai' | 'keyword';
 
 export function AnalysisSummaryCard({
   analysis,
-  newsConfig,
   onRunKeyword,
   isRunningKeyword,
   onRunAi,
@@ -59,9 +59,7 @@ export function AnalysisSummaryCard({
   const hasSigma = !!effectiveSigma;
   const hasAnyAi = hasSigma || hasAi;
 
-  const [activeTab, setActiveTab] = useState<AnalysisTab>(
-    hasAnyAi ? 'ai' : 'keyword',
-  );
+  const [activeTab, setActiveTab] = useState<AnalysisTab>('ai');
   const effectiveTab = hasAnyAi ? activeTab : 'keyword';
 
   // Keyword data
@@ -127,72 +125,85 @@ export function AnalysisSummaryCard({
   return (
     <div className="rounded-2xl border border-border bg-card mb-6">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/20">
-        <Brain className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">
-          {t('news.sentimentSummary')}
-        </span>
-        {effectiveTab === 'ai' && hasAnyAi && (
-          <span className="flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] font-semibold text-primary">
-            <Sparkles className="h-3 w-3" />
-            IA
+      <div className="flex items-center flex-col sm:flex-row gap-3 px-5 py-3.5 border-b border-border bg-muted/20">
+        <div className="flex items-center gap-2.5">
+          <Brain className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">
+            {t('news.sentimentSummary')}
           </span>
-        )}
-        <span
-          className={cn(
-            'ml-auto rounded-full border px-3 py-0.5 text-xs font-bold',
-            overallColor,
-            overallBg,
+        </div>
+        <div className="flex items-center gap-2 sm:ml-auto">
+          {effectiveTab === 'ai' && hasAnyAi && (
+            <span className="flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] font-semibold text-primary">
+              <Sparkles className="h-3 w-3" />
+              IA
+            </span>
           )}
-        >
-          {displayOverall === 'BULLISH'
-            ? t('news.bullish')
-            : displayOverall === 'BEARISH'
-              ? t('news.bearish')
-              : t('news.neutral')}
-        </span>
+          <span
+            className={cn(
+              'ml-auto rounded-full border px-3 py-0.5 text-xs font-bold',
+              overallColor,
+              overallBg,
+            )}
+          >
+            {displayOverall === 'BULLISH'
+              ? t('news.bullish')
+              : displayOverall === 'BEARISH'
+                ? t('news.bearish')
+                : t('news.neutral')}
+          </span>
+          <a
+            href="/dashboard/settings/news"
+            className="flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            <span className=" sm:inline">{t('news.configure')}</span>
+          </a>
+        </div>
       </div>
 
       <div className="p-5 space-y-4">
         {/* Tabs: IA | Keyword */}
         {(hasAnyAi || analysis) && (
-          <div className="flex gap-1 rounded-lg border border-border bg-muted/20 p-0.5 w-fit">
-            {hasAnyAi && (
-              <button
-                onClick={() => setActiveTab('ai')}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                  effectiveTab === 'ai'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Sparkles className="h-3 w-3 text-primary shrink-0" />
-                {t('news.lastAiAnalysis')}
-                {(sigmaTimestamp || analysis?.aiAnalyzedAt) && (
-                  <span className="text-[10px] text-muted-foreground/70 ml-1">
-                    {timeAgo(sigmaTimestamp ?? analysis!.aiAnalyzedAt!)}
-                  </span>
-                )}
-              </button>
-            )}
-            {analysis && (
-              <button
-                onClick={() => setActiveTab('keyword')}
-                className={cn(
-                  'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                  effectiveTab === 'keyword'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Hash className="h-3 w-3 shrink-0" />
-                {t('news.lastKeywordAnalysis')}
-                <span className="text-[10px] text-muted-foreground/70 ml-1">
-                  {timeAgo(analysis.analyzedAt)}
-                </span>
-              </button>
-            )}
+          <div className="flex items-center justify-between gap-3">
+            <Tabs
+              size="sm"
+              border
+              className="flex-1 sm:flex-none"
+              tabs={[
+                ...(hasAnyAi
+                  ? [
+                      {
+                        value: 'ai',
+                        label: t('news.lastAiAnalysis'),
+                        icon: (
+                          <Sparkles className="h-3 w-3 text-primary shrink-0" />
+                        ),
+                      },
+                    ]
+                  : []),
+                ...(analysis
+                  ? [
+                      {
+                        value: 'keyword',
+                        label: t('news.lastKeywordAnalysis'),
+                        icon: <Hash className="h-3 w-3 shrink-0" />,
+                      },
+                    ]
+                  : []),
+              ]}
+              value={effectiveTab}
+              onChange={(v) => setActiveTab(v as AnalysisTab)}
+            />
+            <span className="text-[10px] text-muted-foreground/60 shrink-0 rounded-md border border-border px-2 py-1.5 sm:px-3 sm:py-2.5">
+              {effectiveTab === 'ai'
+                ? sigmaTimestamp || analysis?.aiAnalyzedAt
+                  ? timeAgo(sigmaTimestamp ?? analysis?.aiAnalyzedAt ?? '')
+                  : null
+                : analysis?.analyzedAt
+                  ? timeAgo(analysis.analyzedAt)
+                  : null}
+            </span>
           </div>
         )}
 
@@ -329,11 +340,6 @@ export function AnalysisSummaryCard({
                     {aiScore}
                   </span>
                 </div>
-                {analysis?.aiSummary && (
-                  <p className="mt-2 text-[11px] text-muted-foreground/70 leading-relaxed">
-                    {analysis.aiSummary}
-                  </p>
-                )}
               </div>
             )}
 
@@ -500,11 +506,11 @@ export function AnalysisSummaryCard({
 
         {/* Action buttons */}
         {(analysis || hasSigma) && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
             <button
               onClick={onRunKeyword}
               disabled={isRunningKeyword}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 rounded-lg border border-border bg-background p-2 w-full text-xs font-semibold text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRunningKeyword ? (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -517,7 +523,7 @@ export function AnalysisSummaryCard({
             <button
               onClick={() => onRunAi()}
               disabled={isRunningAi}
-              className="flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 rounded-lg p-2 text-xs w-full font-semibold transition-all whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isRunningAi ? (
                 <>
@@ -531,14 +537,6 @@ export function AnalysisSummaryCard({
                 </>
               )}
             </button>
-
-            <a
-              href="/dashboard/settings/news"
-              className="ml-auto flex items-center gap-1.5 rounded-lg border border-border bg-background px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <Settings className="h-3.5 w-3.5" />
-              {t('news.configure')}
-            </a>
           </div>
         )}
       </div>

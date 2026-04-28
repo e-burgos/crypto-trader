@@ -1,7 +1,12 @@
 import { useRef, useState, useEffect } from 'react';
-import { Briefcase, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@crypto-trader/ui';
-import { cn } from '../../lib/utils';
+import {
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  CircleCheck,
+} from 'lucide-react';
+import { Button, Tabs } from '@crypto-trader/ui';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
@@ -96,23 +101,24 @@ export function PositionsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-fit">
-        {(['OPEN', 'CLOSED'] as const).map((s) => (
-          <button
-            key={s}
-            onClick={() => handleTabChange(s)}
-            className={cn(
-              'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === s
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {s === 'OPEN'
-              ? t('positions.tabOpen', { defaultValue: 'Open' })
-              : t('positions.tabClosed', { defaultValue: 'Closed' })}
-          </button>
-        ))}
+      <div className="mb-4">
+        <Tabs
+          tabs={[
+            {
+              value: 'OPEN',
+              label: t('positions.tabOpen', { defaultValue: 'Open' }),
+              icon: <CircleDot className="h-3.5 w-3.5" />,
+            },
+            {
+              value: 'CLOSED',
+              label: t('positions.tabClosed', { defaultValue: 'Closed' }),
+              icon: <CircleCheck className="h-3.5 w-3.5" />,
+            },
+          ]}
+          value={tab}
+          onChange={(v) => handleTabChange(v as StatusTab)}
+          border
+        />
       </div>
 
       {isLoading ? (

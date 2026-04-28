@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/auth.store';
 import { useChatStore } from '../store/chat.store';
@@ -258,6 +258,20 @@ export function useChatStream(
   const qc = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
   const { t, i18n } = useTranslation();
+
+  // Reset all streaming state when session changes (prevents stale content in new sessions)
+  useEffect(() => {
+    setStreamingContent('');
+    setIsStreaming(false);
+    setError(null);
+    setStreamError(null);
+    setQuickActions(null);
+    setInlineOptions(null);
+    if (esRef.current) {
+      esRef.current.close();
+      esRef.current = null;
+    }
+  }, [sessionId]);
 
   const startStream = useCallback(
     (content: string, capability?: ChatCapability, agentId?: string) => {

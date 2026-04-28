@@ -123,36 +123,37 @@ export function NewsSentimentPanel({
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
+      <div className="flex items-center flex-col sm:flex-row gap-2 px-4 py-3 border-b border-border bg-muted/20 shrink-0">
         <Newspaper className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t('botAnalysis.newsSentimentTitle')}
         </span>
-        {effectiveSigma ? (
-          <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-violet-500/10 text-violet-400 border-violet-500/20">
-            <Brain className="h-2.5 w-2.5" /> SIGMA
-          </span>
-        ) : analysis ? (
-          <span
-            className={cn(
-              'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
-              hasAi
-                ? 'bg-violet-500/10 text-violet-400 border-violet-500/20'
-                : 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-            )}
-          >
-            {hasAi ? (
-              <>
-                <Sparkles className="h-2.5 w-2.5" /> {t('botAnalysis.badgeAi')}
-              </>
-            ) : (
-              <>
-                <Database className="h-2.5 w-2.5" /> Keyword
-              </>
-            )}
-          </span>
-        ) : null}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="sm:ml-auto flex items-center gap-2">
+          {effectiveSigma ? (
+            <span className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border bg-violet-500/10 text-violet-400 border-violet-500/20">
+              <Brain className="h-2.5 w-2.5" /> SIGMA
+            </span>
+          ) : analysis ? (
+            <span
+              className={cn(
+                'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border',
+                hasAi
+                  ? 'bg-violet-500/10 text-violet-400 border-violet-500/20'
+                  : 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+              )}
+            >
+              {hasAi ? (
+                <>
+                  <Sparkles className="h-2.5 w-2.5" />{' '}
+                  {t('botAnalysis.badgeAi')}
+                </>
+              ) : (
+                <>
+                  <Database className="h-2.5 w-2.5" /> Keyword
+                </>
+              )}
+            </span>
+          ) : null}
           {total > 0 && (
             <span
               className={cn(
@@ -206,7 +207,7 @@ export function NewsSentimentPanel({
                 <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-400">
                   <Sparkles className="h-2.5 w-2.5" />
                   {t('botAnalysis.aiAnalysisActive', {
-                    defaultValue: 'Análisis IA',
+                    defaultValue: 'IA',
                   })}
                 </span>
               )}

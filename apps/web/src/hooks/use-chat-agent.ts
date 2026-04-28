@@ -36,6 +36,7 @@ export interface UseChatAgentReturn {
 
 export function useChatAgent(
   sessionAgentId?: string | null,
+  activeSessionId?: string | null,
 ): UseChatAgentReturn {
   const [selectedAgentId, setSelectedAgentId] = useState<AgentId | null>(null);
   const [routedAgentId, setRoutedAgentId] = useState<AgentId | null>(null);
@@ -44,7 +45,20 @@ export function useChatAgent(
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [orchestratingStep, setOrchestratingStep] = useState('');
 
+  // Reset all agent state when session becomes null (new session) or changes
+  useEffect(() => {
+    if (!activeSessionId) {
+      setSelectedAgentId(null);
+      setRoutedAgentId(null);
+      setRoutedProvider(null);
+      setRoutedModel(null);
+      setIsOrchestrating(false);
+      setOrchestratingStep('');
+    }
+  }, [activeSessionId]);
+
   // Restore routedAgentId from session data (e.g. on page load / session switch)
+  // Only when no explicit selection has been made
   useEffect(() => {
     if (sessionAgentId && !selectedAgentId) {
       setRoutedAgentId(sessionAgentId as AgentId);
@@ -56,12 +70,18 @@ export function useChatAgent(
     setRoutedAgentId(null);
   }, []);
 
-  const handleRoutingEvent = useCallback((event: RoutingEvent) => {
-    setRoutedAgentId(event.agentId);
-    if (event.provider) setRoutedProvider(event.provider);
-    if (event.model) setRoutedModel(event.model);
-    setIsOrchestrating(false);
-  }, []);
+  const handleRoutingEvent = useCallback(
+    (event: RoutingEvent) => {
+      // Only apply routing if the user hasn't explicitly selected an agent
+      if (!selectedAgentId) {
+        setRoutedAgentId(event.agentId);
+      }
+      if (event.provider) setRoutedProvider(event.provider);
+      if (event.model) setRoutedModel(event.model);
+      setIsOrchestrating(false);
+    },
+    [selectedAgentId],
+  );
 
   const handleOrchestratingEvent = useCallback((event: OrchestratingEvent) => {
     setIsOrchestrating(true);
@@ -73,7 +93,8 @@ export function useChatAgent(
     setOrchestratingStep('');
   }, []);
 
-  const activeAgentId = routedAgentId ?? selectedAgentId;
+  // Explicit user selection takes priority over backend routing
+  const activeAgentId = selectedAgentId ?? routedAgentId;
 
   return {
     selectedAgentId,

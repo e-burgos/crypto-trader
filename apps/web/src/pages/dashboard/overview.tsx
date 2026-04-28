@@ -407,9 +407,11 @@ export function OverviewPage() {
         {platformMode === 'SANDBOX' && (
           <>
             <div className="mb-3 flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">Sandbox Wallet</h2>
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <Wallet className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <h2 className="text-base font-semibold whitespace-nowrap">
+                Sandbox Wallet
+              </h2>
+              <span className="whitespace-nowrap rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
                 {t('balanceSource.sandbox')}
               </span>
             </div>
@@ -494,9 +496,11 @@ export function OverviewPage() {
         {platformMode === 'TESTNET' && (
           <>
             <div className="mb-3 flex items-center gap-2">
-              <TestTube2 className="h-5 w-5 text-sky-400" />
-              <h2 className="text-lg font-semibold">Binance Testnet Balance</h2>
-              <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-medium text-sky-500">
+              <TestTube2 className="h-5 w-5 shrink-0 text-sky-400" />
+              <h2 className="text-base font-semibold whitespace-nowrap">
+                Binance Testnet Balance
+              </h2>
+              <span className="whitespace-nowrap rounded-full bg-sky-500/15 px-2 py-0.5 text-xs font-medium text-sky-500">
                 {t('balanceSource.testnet')}
               </span>
             </div>
@@ -574,9 +578,11 @@ export function OverviewPage() {
         {platformMode === 'LIVE' && (
           <>
             <div className="mb-3 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold">Binance Live Balance</h2>
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-500">
+              <Zap className="h-5 w-5 shrink-0 text-emerald-400" />
+              <h2 className="text-base font-semibold whitespace-nowrap">
+                Binance Live Balance
+              </h2>
+              <span className="whitespace-nowrap rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-500">
                 {t('balanceSource.live')}
               </span>
             </div>

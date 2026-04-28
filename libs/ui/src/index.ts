@@ -10,6 +10,8 @@ export { Badge } from './lib/primitives/badge';
 export type { BadgeProps, BadgeVariant } from './lib/primitives/badge';
 export { InfoTooltip } from './lib/primitives/info-tooltip';
 export type { InfoTooltipProps } from './lib/primitives/info-tooltip';
+export { Tooltip } from './lib/primitives/tooltip';
+export type { TooltipProps } from './lib/primitives/tooltip';
 export { Typography } from './lib/primitives/typography';
 export type {
   TypographyProps,
@@ -80,6 +82,12 @@ export type {
   NavGroup,
   SidebarUser,
 } from './lib/composites/sidebar';
+export { TabModal } from './lib/composites/tab-modal';
+export type {
+  TabModalProps,
+  TabModalTab,
+  TabModalButton,
+} from './lib/composites/tab-modal';
 
 // Feedback
 export { EmptyState } from './lib/feedback/empty-state';
@@ -126,6 +134,23 @@ export type {
   ModelInfoModalProps,
   ModelInfoData,
 } from './lib/domain/agent/model-info-modal';
+export {
+  AgentStateModal,
+  StateDetailRow,
+  StateSectionTitle,
+} from './lib/domain/agent/agent-state-modal';
+export type {
+  AgentStateModalProps,
+  AgentStateModalLabels,
+  AgentStateConfig,
+  AgentTradingMode,
+  AgentDecisionData,
+  AgentStateIndicators,
+  AgentStateHeadline,
+  AgentStateConfigDetails,
+  StateDetailRowProps,
+  StateSectionTitleProps,
+} from './lib/domain/agent/agent-state-modal';
 
 // Domain — Chat
 export type {

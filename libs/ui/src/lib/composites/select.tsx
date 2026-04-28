@@ -10,7 +10,7 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-interface SelectProps {
+export interface SelectProps {
   options: SelectOption[];
   value: string;
   onChange: (value: string) => void;
@@ -21,6 +21,7 @@ interface SelectProps {
   className?: string;
   disabled?: boolean;
   searchable?: boolean;
+  size?: 'default' | 'sm';
 }
 
 export function Select({
@@ -34,6 +35,7 @@ export function Select({
   className,
   disabled,
   searchable = false,
+  size = 'default',
 }: SelectProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -100,7 +102,9 @@ export function Select({
           disabled={disabled}
           onClick={() => setOpen(!open)}
           className={cn(
-            'flex h-10 w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors',
+            size === 'sm'
+              ? 'flex h-8 w-full items-center justify-between rounded-lg border border-border bg-background px-2.5 py-1 text-xs transition-colors'
+              : 'flex h-10 w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors',
             'hover:border-primary/30 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20',
             'disabled:cursor-not-allowed disabled:opacity-50',
             open && 'border-primary/50 ring-2 ring-primary/20',
@@ -213,5 +217,3 @@ export function Select({
     </div>
   );
 }
-
-export type { SelectProps };

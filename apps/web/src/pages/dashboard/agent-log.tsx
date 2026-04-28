@@ -4,20 +4,26 @@ import { useGSAP } from '@gsap/react';
 import { useTranslation } from 'react-i18next';
 import {
   Bot,
-  SlidersHorizontal,
-  ChevronDown,
-  ChevronUp,
   X,
+  ChevronUp,
+  ChevronDown,
+  LayoutList,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  XCircle,
+  RefreshCw,
+  Coins,
+  User,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Select } from '@crypto-trader/ui';
 import {
   useAgentDecisions,
   type AgentDecision,
 } from '../../hooks/use-analytics';
 import { usePlatformMode } from '../../hooks/use-user';
 import {
-  DECISION_COLOR,
-  DECISION_BG,
   DECISION_FILTERS,
   AgentDecisionCard,
   DecisionDetailModal,
@@ -38,7 +44,6 @@ export function AgentLogPage() {
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>('ALL');
   const [assetFilter, setAssetFilter] = useState<AssetFilter>('ALL');
   const [agentFilter, setAgentFilter] = useState<AgentFilter>('ALL');
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedDecision, setSelectedDecision] =
     useState<AgentDecision | null>(null);
   const [page, setPage] = useState(1);
@@ -128,6 +133,47 @@ export function AgentLogPage() {
     { scope: containerRef, dependencies: [filtered.length, page] },
   );
 
+  const decisionSelectOptions = DECISION_FILTERS.map((f) => ({
+    value: f,
+    label: f === 'ALL' ? t('agentLog.filterDecision') : f,
+    icon:
+      f === 'ALL' ? (
+        <LayoutList className="h-3.5 w-3.5" />
+      ) : f === 'BUY' ? (
+        <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+      ) : f === 'SELL' ? (
+        <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+      ) : f === 'HOLD' ? (
+        <Minus className="h-3.5 w-3.5 text-amber-500" />
+      ) : f === 'CLOSE' ? (
+        <XCircle className="h-3.5 w-3.5 text-orange-500" />
+      ) : (
+        <RefreshCw className="h-3.5 w-3.5" />
+      ),
+  }));
+
+  const assetSelectOptions = assetOptions.map((o) => ({
+    value: o.key,
+    label: o.key === 'ALL' ? t('agentLog.filterPair') : o.label,
+    icon:
+      o.key === 'ALL' ? (
+        <Coins className="h-3.5 w-3.5" />
+      ) : (
+        <Coins className="h-3.5 w-3.5 text-primary/60" />
+      ),
+  }));
+
+  const agentSelectOptions = agentOptions.map((o) => ({
+    value: o.key,
+    label: o.key === 'ALL' ? t('agentLog.filterAgent') : o.label,
+    icon:
+      o.key === 'ALL' ? (
+        <User className="h-3.5 w-3.5" />
+      ) : (
+        <Bot className="h-3.5 w-3.5 text-primary/60" />
+      ),
+  }));
+
   return (
     <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
@@ -142,226 +188,90 @@ export function AgentLogPage() {
       </div>
 
       {/* Filters */}
-      {(() => {
-        const activeCount = [
-          decisionFilter !== 'ALL',
-          assetFilter !== 'ALL',
-          agentFilter !== 'ALL',
-        ].filter(Boolean).length;
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Decision */}
+        <div className="flex-1 min-w-[120px] sm:w-40 sm:flex-none">
+          <Select
+            options={decisionSelectOptions}
+            value={decisionFilter}
+            onChange={(v) => setDecisionFilterAndReset(v as DecisionFilter)}
+            size="sm"
+            className="sm:hidden"
+          />
+          <Select
+            options={decisionSelectOptions}
+            value={decisionFilter}
+            onChange={(v) => setDecisionFilterAndReset(v as DecisionFilter)}
+            className="hidden sm:block"
+          />
+        </div>
 
-        const PillGroup = ({
-          label,
-          options,
-          value,
-          onChange,
-          colorMap,
-          bgMap,
-        }: {
-          label: string;
-          options: { key: string; label: string }[];
-          value: string;
-          onChange: (v: string) => void;
-          colorMap?: Record<string, string>;
-          bgMap?: Record<string, string>;
-        }) => (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-0.5 sm:hidden">
-              {label}
-            </span>
-            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5 overflow-x-auto scrollbar-none">
-              {options.map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => onChange(opt.key)}
-                  className={cn(
-                    'shrink-0 rounded-md px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all touch-manipulation',
-                    value === opt.key
-                      ? opt.key === 'ALL'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : colorMap && bgMap
-                          ? cn(
-                              bgMap[opt.key] ?? 'bg-muted',
-                              colorMap[opt.key] ?? 'text-foreground',
-                              'shadow-sm',
-                            )
-                          : 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+        {/* Par */}
+        {assetOptions.length > 2 && (
+          <div className="flex-1 min-w-[120px] sm:w-40 sm:flex-none">
+            <Select
+              options={assetSelectOptions}
+              value={assetFilter}
+              onChange={setAssetFilterAndReset}
+              size="sm"
+              className="sm:hidden"
+            />
+            <Select
+              options={assetSelectOptions}
+              value={assetFilter}
+              onChange={setAssetFilterAndReset}
+              className="hidden sm:block"
+            />
           </div>
-        );
+        )}
 
-        return (
-          <>
-            {/* Mobile: compact toggle bar */}
-            <div className="flex items-center gap-2 sm:hidden">
-              <button
-                onClick={() => setFiltersOpen((v) => !v)}
-                className={cn(
-                  'flex flex-1 items-center justify-between gap-2 rounded-lg border px-3 py-2 text-[12px] font-semibold transition-colors',
-                  filtersOpen || activeCount > 0
-                    ? 'border-primary/40 bg-primary/5 text-primary'
-                    : 'border-border bg-muted/20 text-muted-foreground',
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span>Filtros</span>
-                  {activeCount > 0 && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                      {activeCount}
-                    </span>
-                  )}
-                </div>
-                {filtersOpen ? (
-                  <ChevronUp className="h-3.5 w-3.5" />
-                ) : (
-                  <ChevronDown className="h-3.5 w-3.5" />
-                )}
-              </button>
+        {/* Agente */}
+        {agentOptions.length > 2 && (
+          <div className="flex-1 min-w-[140px] sm:w-48 sm:flex-none">
+            <Select
+              options={agentSelectOptions}
+              value={agentFilter}
+              onChange={setAgentFilterAndReset}
+              size="sm"
+              className="sm:hidden"
+            />
+            <Select
+              options={agentSelectOptions}
+              value={agentFilter}
+              onChange={setAgentFilterAndReset}
+              className="hidden sm:block"
+            />
+          </div>
+        )}
 
-              {activeCount > 0 && (
-                <button
-                  onClick={() => {
-                    setDecisionFilter('ALL');
-                    setAssetFilter('ALL');
-                    setAgentFilter('ALL');
-                    setPage(1);
-                  }}
-                  className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
+        {/* Reset */}
+        {(decisionFilter !== 'ALL' ||
+          assetFilter !== 'ALL' ||
+          agentFilter !== 'ALL') && (
+          <button
+            onClick={() => {
+              setDecisionFilter('ALL');
+              setAssetFilter('ALL');
+              setAgentFilter('ALL');
+              setPage(1);
+            }}
+            className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 px-2.5 sm:px-3 py-2 sm:py-3 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
 
-              <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-2.5 py-2 text-[11px] text-muted-foreground">
-                <Bot className="h-3.5 w-3.5 text-primary" />
-                <span className="font-semibold tabular-nums">
-                  {filtered.length}
-                </span>
-                {modeFilteredDecisions.length !== filtered.length && (
-                  <span className="text-muted-foreground/60">
-                    / {modeFilteredDecisions.length}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Mobile: expanded filter panel */}
-            {filtersOpen && (
-              <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:hidden">
-                <PillGroup
-                  label="Decisión"
-                  options={DECISION_FILTERS.map((f) => ({ key: f, label: f }))}
-                  value={decisionFilter}
-                  onChange={(v) =>
-                    setDecisionFilterAndReset(v as DecisionFilter)
-                  }
-                  colorMap={DECISION_COLOR}
-                  bgMap={DECISION_BG}
-                />
-                {assetOptions.length > 2 && (
-                  <PillGroup
-                    label="Par"
-                    options={assetOptions}
-                    value={assetFilter}
-                    onChange={setAssetFilterAndReset}
-                  />
-                )}
-                {agentOptions.length > 2 && (
-                  <PillGroup
-                    label="Agente"
-                    options={agentOptions}
-                    value={agentFilter}
-                    onChange={setAgentFilterAndReset}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Desktop: inline pill row */}
-            <div className="hidden sm:flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
-                {DECISION_FILTERS.map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setDecisionFilterAndReset(f)}
-                    className={cn(
-                      'rounded-md px-2.5 py-1 text-[11px] font-bold uppercase transition-all',
-                      decisionFilter === f
-                        ? f === 'ALL'
-                          ? 'bg-primary text-primary-foreground'
-                          : cn(
-                              DECISION_BG[f] ?? 'bg-muted',
-                              DECISION_COLOR[f] ?? 'text-foreground',
-                              'shadow-sm',
-                            )
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-
-              {assetOptions.length > 2 && (
-                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
-                  {assetOptions.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setAssetFilterAndReset(opt.key)}
-                      className={cn(
-                        'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all',
-                        assetFilter === opt.key
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {agentOptions.length > 2 && (
-                <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/20 p-0.5">
-                  <Bot className="ml-1 h-3 w-3 text-muted-foreground shrink-0" />
-                  {agentOptions.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setAgentFilterAndReset(opt.key)}
-                      className={cn(
-                        'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all',
-                        agentFilter === opt.key
-                          ? 'bg-background text-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground',
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-2.5 py-1 text-[11px] text-muted-foreground">
-                <Bot className="h-3.5 w-3.5 text-primary" />
-                <span className="font-semibold">
-                  {t('botAnalysis.agentDecisions', { count: filtered.length })}
-                </span>
-                {modeFilteredDecisions.length !== filtered.length && (
-                  <span className="text-muted-foreground/60">
-                    ({modeFilteredDecisions.length})
-                  </span>
-                )}
-              </div>
-            </div>
-          </>
-        );
-      })()}
+        {/* Count badge */}
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/20 px-2.5 py-1.5 sm:py-3 text-[11px] text-muted-foreground ml-auto">
+          <Bot className="h-3.5 w-3.5 text-primary" />
+          <span className="font-semibold tabular-nums">{filtered.length}</span>
+          {modeFilteredDecisions.length !== filtered.length && (
+            <span className="text-muted-foreground/60">
+              / {modeFilteredDecisions.length}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* List */}
       <div ref={containerRef}>

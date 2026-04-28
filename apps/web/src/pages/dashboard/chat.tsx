@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { BotMessageSquare, PanelLeft, X } from 'lucide-react';
 import {
   useChatSessions,
@@ -6,6 +7,7 @@ import {
   useSaveUserMessage,
   useChatStream,
   useCreateChatSession,
+  chatKeys,
 } from '../../hooks/use-chat';
 import type { ChatCapability } from '@crypto-trader/ui';
 import { useChatAgent } from '../../hooks/use-chat-agent';
@@ -24,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 
 export function ChatPage() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const { data: sessions = [] } = useChatSessions();
   const { activeSessionId } = useChatStore();
   const setActiveSession = useChatStore((s) => s.setActiveSession);
@@ -40,7 +43,7 @@ export function ChatPage() {
     handleRoutingEvent,
     handleOrchestratingEvent,
     handleStreamDone,
-  } = useChatAgent(session?.agentId);
+  } = useChatAgent(session?.agentId, activeSessionId);
   const {
     streamingContent,
     isStreaming,
@@ -54,21 +57,47 @@ export function ChatPage() {
   });
   const createSession = useCreateChatSession();
 
+  // Pending message ref: when creating a new session, we store the message here
+  // and defer save+stream until the hooks re-render with the correct sessionId
+  const pendingMessage = useRef<{
+    content: string;
+    capability?: ChatCapability;
+  } | null>(null);
+
+  // Effect: flush pending message once hooks have the correct session
+  useEffect(() => {
+    if (pendingMessage.current && activeSessionId) {
+      const { content, capability } = pendingMessage.current;
+      pendingMessage.current = null;
+      saveMessage.mutateAsync({ content, capability });
+      startStream(content, capability, selectedAgentId ?? undefined);
+    }
+  }, [activeSessionId, saveMessage, startStream, selectedAgentId]);
+
   const handleSend = async (content: string, capability?: ChatCapability) => {
-    let sid = activeSessionId;
-    if (!sid) {
+    if (activeSessionId) {
+      // Session already exists — hooks have correct sessionId
+      await saveMessage.mutateAsync({ content, capability });
+      startStream(content, capability, selectedAgentId ?? undefined);
+    } else {
+      // No session yet — create one, then defer save+stream to next render
       try {
         const newSession = await createSession.mutateAsync({
           title: content.slice(0, 60) || 'New Chat',
+          agentId: selectedAgentId ?? undefined,
         });
-        sid = newSession.id;
-        setActiveSession(sid);
+        // Seed the session cache so the UI transitions to session view immediately
+        // (without waiting for the query fetch to resolve)
+        qc.setQueryData(chatKeys.session(newSession.id), {
+          ...newSession,
+          messages: [],
+        });
+        pendingMessage.current = { content, capability };
+        setActiveSession(newSession.id);
       } catch {
         return;
       }
     }
-    await saveMessage.mutateAsync({ content, capability });
-    startStream(content, capability, selectedAgentId ?? undefined);
   };
 
   const hasMessages = (session?.messages.length ?? 0) > 0;
@@ -186,16 +215,6 @@ export function ChatPage() {
               onSelect={(msg, cap) => handleSend(msg, cap)}
               compact={false}
             />
-            <button
-              onClick={() =>
-                handleSend(
-                  t('chat.defaultGreeting', { defaultValue: 'Hello, KRYPTO!' }),
-                )
-              }
-              className="mt-2 rounded-xl bg-primary px-5 py-2.5 font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              {t('chat.newSession', { defaultValue: 'New session' })}
-            </button>
           </div>
         ) : (
           <>

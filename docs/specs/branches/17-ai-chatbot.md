@@ -15,6 +15,7 @@ Se añade un chatbot conversacional integrado en el dashboard llamado **KRYPTO**
 KRYPTO no es un asistente genérico. Es la personificación del mismo motor de decisiones que ejecuta las operaciones de compra/venta. Habla en primera persona, accumula experiencia a través de su historial de decisiones y posee conocimiento completo de todos los indicadores, configuraciones y flujos de la plataforma.
 
 El usuario puede:
+
 1. **Obtener ayuda** — entender indicadores, etiquetas, cómo configurar el agente, cómo colocar órdenes
 2. **Crear operaciones** guiado por el agente con instrucciones paso a paso
 3. **Consultar el mercado** — panorama actual basado en indicadores + noticias + decisión técnica justificada
@@ -25,6 +26,7 @@ El usuario puede:
 ## 2. Alcance
 
 ### Incluido (v1)
+
 - Backend: `ChatModule` NestJS con persistencia de sesiones y mensajes en PostgreSQL
 - **Streaming de respuestas via SSE** — texto generado token a token en tiempo real
 - Selección de proveedor LLM + modelo por sesión (usa credenciales ya configuradas del usuario)
@@ -35,6 +37,7 @@ El usuario puede:
 - Persistencia de conversaciones en DB por usuario
 
 ### Excluido (v2)
+
 - Ejecución de acciones directas por el chatbot (crear config, start/stop agent vía chat) — v1 solo guía al usuario
 - Búsqueda semántica sobre historial de decisiones (RAG) — v1 envía los últimos 10 al contexto
 - Chatbot visible en la landing page (usuarios no autenticados)
@@ -44,17 +47,17 @@ El usuario puede:
 
 ## 3. Personas y casos de uso
 
-| Persona | Caso de uso | Ejemplo de mensaje |
-|---|---|---|
-| **Nuevo usuario** | Entender indicadores | "¿Qué significa RSI 28 y qué debería hacer?" |
-| **Nuevo usuario** | Crear primera operación | "Quiero empezar a operar BTC, ¿cómo hago?" |
-| **Usuario intermedio** | Entender decisión del agente | "¿Por qué decidiste HOLD esta mañana con BTC?" |
-| **Usuario intermedio** | Consultar mercado | "¿Cómo ves el mercado ahora mismo?" |
-| **Usuario avanzado** | Justificación técnica | "Dame un análisis completo de ETH/USDT con todos los indicadores" |
-| **Cualquier usuario** | Configuración | "¿Qué umbral de compra me recomendás para una estrategia conservadora?" |
-| **Cualquier usuario** | Aprender blockchain | "¿Qué es una wallet HD y cómo generan las claves privadas?" |
-| **Cualquier usuario** | DeFi / ecosistema | "Explicame qué es un AMM y cómo difiere de un order book centralizado" |
-| **Usuario nuevo** | Conceptos básicos | "¿Qué es una blockchain y por qué Bitcoin no puede ser falsificado?" |
+| Persona                | Caso de uso                  | Ejemplo de mensaje                                                      |
+| ---------------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| **Nuevo usuario**      | Entender indicadores         | "¿Qué significa RSI 28 y qué debería hacer?"                            |
+| **Nuevo usuario**      | Crear primera operación      | "Quiero empezar a operar BTC, ¿cómo hago?"                              |
+| **Usuario intermedio** | Entender decisión del agente | "¿Por qué decidiste HOLD esta mañana con BTC?"                          |
+| **Usuario intermedio** | Consultar mercado            | "¿Cómo ves el mercado ahora mismo?"                                     |
+| **Usuario avanzado**   | Justificación técnica        | "Dame un análisis completo de ETH/USDT con todos los indicadores"       |
+| **Cualquier usuario**  | Configuración                | "¿Qué umbral de compra me recomendás para una estrategia conservadora?" |
+| **Cualquier usuario**  | Aprender blockchain          | "¿Qué es una wallet HD y cómo generan las claves privadas?"             |
+| **Cualquier usuario**  | DeFi / ecosistema            | "Explicame qué es un AMM y cómo difiere de un order book centralizado"  |
+| **Usuario nuevo**      | Conceptos básicos            | "¿Qué es una blockchain y por qué Bitcoin no puede ser falsificado?"    |
 
 ---
 
@@ -82,7 +85,9 @@ Flujo de dos pasos:
 ```
 
 #### Por qué dos pasos en vez de uno
+
 El endpoint `POST` persiste el mensaje del usuario de forma síncrona y retorna su ID. El endpoint SSE `GET` inicia el stream de la respuesta. Esto permite:
+
 - Reintentar el stream sin duplicar el mensaje del usuario
 - Cancelar el stream (cerrar `EventSource`) sin perder el mensaje enviado
 - Compatibilidad con proxies/CDN que no soportan SSE en respuesta a POST
@@ -97,12 +102,12 @@ Si el usuario no tiene credenciales configuradas → el chatbot muestra un estad
 
 En cada mensaje, el sistema inyecta automáticamente al system prompt:
 
-| Dato | Fuente | Cantidad |
-|---|---|---|
-| Decisiones recientes | `agent_decisions` | Últimas 10 |
-| Configuraciones activas | `trading_configs` | Todas |
-| Posiciones abiertas | `positions WHERE status=OPEN` | Todas |
-| Modo de conversación | Request (`capability`) | 1 |
+| Dato                    | Fuente                        | Cantidad   |
+| ----------------------- | ----------------------------- | ---------- |
+| Decisiones recientes    | `agent_decisions`             | Últimas 10 |
+| Configuraciones activas | `trading_configs`             | Todas      |
+| Posiciones abiertas     | `positions WHERE status=OPEN` | Todas      |
+| Modo de conversación    | Request (`capability`)        | 1          |
 
 ---
 
@@ -165,15 +170,15 @@ model User {
 
 Todos protegidos con `JwtAuthGuard`.
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| `GET` | `/chat/llm-options` | Proveedores y modelos disponibles según credenciales configuradas |
-| `GET` | `/chat/sessions` | Lista de sesiones del usuario (con conteo de mensajes) |
-| `POST` | `/chat/sessions` | Crear nueva sesión |
-| `GET` | `/chat/sessions/:id` | Obtener sesión con todos sus mensajes |
-| `DELETE` | `/chat/sessions/:id` | Eliminar sesión y mensajes |
-| `POST` | `/chat/sessions/:id/messages` | Persistir mensaje del usuario → retorna `{ userMessageId }` |
-| `GET` | `/chat/sessions/:id/stream` | **SSE** — Stream de respuesta del agente (`text/event-stream`) |
+| Método   | Ruta                          | Descripción                                                       |
+| -------- | ----------------------------- | ----------------------------------------------------------------- |
+| `GET`    | `/chat/llm-options`           | Proveedores y modelos disponibles según credenciales configuradas |
+| `GET`    | `/chat/sessions`              | Lista de sesiones del usuario (con conteo de mensajes)            |
+| `POST`   | `/chat/sessions`              | Crear nueva sesión                                                |
+| `GET`    | `/chat/sessions/:id`          | Obtener sesión con todos sus mensajes                             |
+| `DELETE` | `/chat/sessions/:id`          | Eliminar sesión y mensajes                                        |
+| `POST`   | `/chat/sessions/:id/messages` | Persistir mensaje del usuario → retorna `{ userMessageId }`       |
+| `GET`    | `/chat/sessions/:id/stream`   | **SSE** — Stream de respuesta del agente (`text/event-stream`)    |
 
 ### SSE — Protocolo de eventos
 
@@ -196,6 +201,7 @@ data: {"error": "Provider returned status 429. Check your API key quota."}
 ### DTOs
 
 #### `CreateSessionDto`
+
 ```typescript
 {
   provider: LLMProvider;      // CLAUDE | OPENAI | GROQ
@@ -205,6 +211,7 @@ data: {"error": "Provider returned status 429. Check your API key quota."}
 ```
 
 #### `SendMessageDto`
+
 ```typescript
 {
   content: string;            // mensaje del usuario
@@ -213,6 +220,7 @@ data: {"error": "Provider returned status 429. Check your API key quota."}
 ```
 
 #### `GET /chat/llm-options` — Response
+
 ```typescript
 [
   {
@@ -240,19 +248,20 @@ El system prompt establece que KRYPTO es el propio agente de trading interno, no
 
 ### 7.2 Modos de conversación (capability hints)
 
-| Capability | Comportamiento | Trigger sugerido en UI |
-|---|---|---|
-| `help` | Explicaciones detalladas y educativas de la plataforma, ejemplos prácticos, analogías | Botón "Cómo usar la plataforma" |
-| `trade` | Guía paso a paso por la UI del dashboard para crear una operación, solicita asset/par/modo si no se indicó | Botón "Quiero operar" |
-| `market` | Análisis técnico completo → BUY/SELL/HOLD con justificación, referencia indicadores y noticias | Botón "Ver mercado" |
-| `blockchain` | Modo instructor: explica conceptos del ecosistema blockchain, DeFi, wallets, consenso, Layer 2, tokenomics — profundidad adaptada al nivel del usuario | Botón "Aprende blockchain" |
-| `undefined` | Libre, KRYPTO adapta estilo según el contexto del mensaje | Conversación abierta |
+| Capability   | Comportamiento                                                                                                                                         | Trigger sugerido en UI          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| `help`       | Explicaciones detalladas y educativas de la plataforma, ejemplos prácticos, analogías                                                                  | Botón "Cómo usar la plataforma" |
+| `trade`      | Guía paso a paso por la UI del dashboard para crear una operación, solicita asset/par/modo si no se indicó                                             | Botón "Quiero operar"           |
+| `market`     | Análisis técnico completo → BUY/SELL/HOLD con justificación, referencia indicadores y noticias                                                         | Botón "Ver mercado"             |
+| `blockchain` | Modo instructor: explica conceptos del ecosistema blockchain, DeFi, wallets, consenso, Layer 2, tokenomics — profundidad adaptada al nivel del usuario | Botón "Aprende blockchain"      |
+| `undefined`  | Libre, KRYPTO adapta estilo según el contexto del mensaje                                                                                              | Conversación abierta            |
 
 ### 7.3 Conocimiento codificado en el prompt
 
 El system prompt incluye siempre:
 
 **Plataforma:**
+
 - Descripción de cada indicador: RSI, MACD, Bollinger Bands, EMA (9/21/50/200), Volumen
 - Descripción de cada sección del dashboard (Overview, Chart, Positions, History, Agent Log, Analytics, Market, News, Config, Settings)
 - Descripción de cada parámetro de configuración con valores recomendados
@@ -263,6 +272,7 @@ El system prompt incluye siempre:
 - Posiciones abiertas
 
 **Blockchain (dominio del instructor):**
+
 - Fundamentos: ¿qué es una blockchain?, bloques, hashes, inmutabilidad, nodos
 - Criptografía aplicada: claves públicas/privadas, firmas digitales, wallets HD (BIP-32/39/44)
 - Mecanismos de consenso: Proof of Work, Proof of Stake, diferencias, trade-offs
@@ -368,12 +378,12 @@ Aparece al crear una nueva sesión (modal o inline):
 
 Cuatro botones visibles cuando la sesión no tiene mensajes, dispuestos en grid 2×2:
 
-| Botón | Ícono | capability | Mensaje pre-llenado |
-|---|---|---|---|
-| **Cómo usar la plataforma** | `HelpCircle` | `help` | `¿Por dónde debería empezar para entender la plataforma?` |
-| **Quiero operar ahora** | `TrendingUp` | `trade` | `Quiero crear una operación de trading. ¿Puedes guiarme?` |
-| **¿Cómo está el mercado?** | `BarChart2` | `market` | `Dame un análisis del mercado actual con tu recomendación de inversión.` |
-| **Aprende blockchain** | `BookOpen` | `blockchain` | `Quiero aprender sobre blockchain. ¿Por dónde empezamos?` |
+| Botón                       | Ícono        | capability   | Mensaje pre-llenado                                                      |
+| --------------------------- | ------------ | ------------ | ------------------------------------------------------------------------ |
+| **Cómo usar la plataforma** | `HelpCircle` | `help`       | `¿Por dónde debería empezar para entender la plataforma?`                |
+| **Quiero operar ahora**     | `TrendingUp` | `trade`      | `Quiero crear una operación de trading. ¿Puedes guiarme?`                |
+| **¿Cómo está el mercado?**  | `BarChart2`  | `market`     | `Dame un análisis del mercado actual con tu recomendación de inversión.` |
+| **Aprende blockchain**      | `BookOpen`   | `blockchain` | `Quiero aprender sobre blockchain. ¿Por dónde empezamos?`                |
 
 Al hacer click → el mensaje se envía directamente con el capability hint correspondiente.
 
@@ -389,15 +399,15 @@ Cuando la sesión ya tiene mensajes, los 4 botones se muestran como chips compac
 
 ### 8.7 Estados de la UI
 
-| Estado | Comportamiento |
-|---|---|
-| Sin credenciales LLM | Pantalla vacía con CTA → Settings |
-| Sin sesiones | Pantalla de bienvenida con los 4 capability buttons |
-| **Streaming activo** | Burbuja del agente se va llenando con el texto en tiempo real, botón enviar deshabilitado, botón "Detener" activo |
-| **Streaming detenido por usuario** | El mensaje parcial se guarda en DB con sufijo `[...]`, se habilita el input |
-| Error LLM (stream) | El texto parcial ya mostrado permanece visible + mensaje inline `"Error al generar respuesta"` |
-| Sesión vacía (nueva) | Solo muestra los 4 capability buttons en grid 2×2 |
-| Widget minimizado | Solo FAB visible, sin badge cuando no hay streaming activo |
+| Estado                             | Comportamiento                                                                                                    |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Sin credenciales LLM               | Pantalla vacía con CTA → Settings                                                                                 |
+| Sin sesiones                       | Pantalla de bienvenida con los 4 capability buttons                                                               |
+| **Streaming activo**               | Burbuja del agente se va llenando con el texto en tiempo real, botón enviar deshabilitado, botón "Detener" activo |
+| **Streaming detenido por usuario** | El mensaje parcial se guarda en DB con sufijo `[...]`, se habilita el input                                       |
+| Error LLM (stream)                 | El texto parcial ya mostrado permanece visible + mensaje inline `"Error al generar respuesta"`                    |
+| Sesión vacía (nueva)               | Solo muestra los 4 capability buttons en grid 2×2                                                                 |
+| Widget minimizado                  | Solo FAB visible, sin badge cuando no hay streaming activo                                                        |
 
 ---
 
@@ -448,10 +458,9 @@ useChatStream(sessionId: string): {
 ```
 
 Query keys:
+
 ```typescript
-['chat', 'llm-options']
-['chat', 'sessions']
-['chat', 'sessions', sessionId]
+['chat', 'llm-options'][('chat', 'sessions')][('chat', 'sessions', sessionId)];
 ```
 
 ---
@@ -477,8 +486,8 @@ interface ChatStore {
 
 Agregar entrada en la navegación del sidebar del dashboard:
 
-| Ruta | Label | Ícono |
-|---|---|---|
+| Ruta              | Label                 | Ícono              |
+| ----------------- | --------------------- | ------------------ |
 | `/dashboard/chat` | `sidebar.chat` (i18n) | `BotMessageSquare` |
 
 Posición sugerida: entre "News" y "Config".
@@ -502,9 +511,9 @@ Claves nuevas a agregar en `en.json` y `es.json`:
     "goToSettings": "Go to Settings",
     "deleteSession": "Delete conversation",
     "deleteConfirm": "Are you sure you want to delete this conversation?",
-    "inputPlaceholder": "Ask KRYPTO anything...",
+    "inputPlaceholder": "Ask anything...",
     "send": "Send",
-    "typing": "KRYPTO is thinking...",
+    "typing": "Agent is thinking...",
     "openFullscreen": "Open full screen",
     "capabilities": {
       "help": "Explain the platform",
@@ -548,13 +557,13 @@ Claves nuevas a agregar en `en.json` y `es.json`:
 
 Siguiendo el design system del proyecto:
 
-| Elemento | Animación |
-|---|---|
-| Widget FAB → apertura del overlay | `gsap.from` con `scale: 0.8, opacity: 0, duration: 0.3, ease: 'back.out(1.7)'` |
-| Cada mensaje nuevo (user + assistant) | `gsap.from` con `opacity: 0, y: 10, duration: 0.25, ease: 'power2.out'` |
-| Capability buttons en sesión vacía | `gsap.from(.capability-btn, { opacity: 0, y: 20, stagger: 0.08 })` |
-| Typing indicator | CSS `@keyframes` bounce en los 3 puntos |
-| Lista de sesiones al cargar | `gsap.from(.session-item, { opacity: 0, x: -10, stagger: 0.05 })` |
+| Elemento                              | Animación                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------ |
+| Widget FAB → apertura del overlay     | `gsap.from` con `scale: 0.8, opacity: 0, duration: 0.3, ease: 'back.out(1.7)'` |
+| Cada mensaje nuevo (user + assistant) | `gsap.from` con `opacity: 0, y: 10, duration: 0.25, ease: 'power2.out'`        |
+| Capability buttons en sesión vacía    | `gsap.from(.capability-btn, { opacity: 0, y: 20, stagger: 0.08 })`             |
+| Typing indicator                      | CSS `@keyframes` bounce en los 3 puntos                                        |
+| Lista de sesiones al cargar           | `gsap.from(.session-item, { opacity: 0, x: -10, stagger: 0.05 })`              |
 
 ---
 
@@ -571,6 +580,7 @@ Siguiendo el design system del proyecto:
 ## 15. Criterios de aceptación
 
 ### Backend
+
 - [ ] `GET /chat/llm-options` retorna solo los proveedores con credenciales activas del usuario
 - [ ] `POST /chat/sessions` falla con 400 si el usuario no tiene credenciales para el provider elegido
 - [ ] `POST /chat/sessions/:id/messages` guarda solo el mensaje del usuario y retorna `{ userMessageId }`
@@ -583,6 +593,7 @@ Siguiendo el design system del proyecto:
 - [ ] Los 3 providers (Claude/OpenAI/Groq) streaman correctamente con `stream: true` en sus respectivas APIs
 
 ### Frontend — Widget
+
 - [ ] El FAB es visible en todas las rutas del dashboard
 - [ ] El overlay se abre/cierra con animación GSAP
 - [ ] El link "Abrir en pantalla completa" navega a `/dashboard/chat` preservando la sesión activa
@@ -590,6 +601,7 @@ Siguiendo el design system del proyecto:
 - [ ] El FAB muestra un indicator pulsante mientras hay un stream activo
 
 ### Frontend — Página `/dashboard/chat`
+
 - [ ] Sidebar muestra sesiones agrupadas por fecha
 - [ ] `LLMSelector` muestra solo proveedores con credenciales configuradas
 - [ ] Si no hay credenciales → estado vacío con CTA a Settings
@@ -602,6 +614,7 @@ Siguiendo el design system del proyecto:
 - [ ] Error del LLM → texto parcial visible + mensaje de error inline
 
 ### UX — Capabilities
+
 - [ ] El chatbot responde en el mismo idioma en que el usuario escribe
 - [ ] En modo `market`: la respuesta incluye una decisión concreta (BUY/SELL/HOLD) con justificación técnica referenciando indicadores
 - [ ] En modo `trade`: la respuesta incluye instrucciones de navegación específicas (e.g. "Ve a Config → Agregar configuración → selecciona BTC/USDT")
@@ -653,13 +666,14 @@ FASE 5 — QA
 
 Verificar que estén instaladas en `apps/web`:
 
-| Librería | Uso | Ya instalada |
-|---|---|---|
-| `react-markdown` | Renderizar markdown en respuestas | Por verificar |
-| `remark-gfm` | GitHub Flavored Markdown (tablas, código) | Por verificar |
-| `rehype-highlight` | Syntax highlighting en bloques de código | Por verificar |
+| Librería           | Uso                                       | Ya instalada  |
+| ------------------ | ----------------------------------------- | ------------- |
+| `react-markdown`   | Renderizar markdown en respuestas         | Por verificar |
+| `remark-gfm`       | GitHub Flavored Markdown (tablas, código) | Por verificar |
+| `rehype-highlight` | Syntax highlighting en bloques de código  | Por verificar |
 
 Si no están, agregar con:
+
 ```bash
 pnpm --filter @crypto-trader/web add react-markdown remark-gfm rehype-highlight
 ```

@@ -11,7 +11,11 @@ import {
 import { RefreshCw, BarChart3 } from 'lucide-react';
 import { useThemeStore } from '../../store/theme.store';
 import { useBinanceKlineStream } from '../../hooks/use-binance-kline';
-import { IndicatorInfoModal } from '@crypto-trader/ui';
+import {
+  IndicatorInfoModal,
+  Select,
+  type SelectOption,
+} from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -254,7 +258,7 @@ export function ChartTab({
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         {/* Left: overlay pills */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mr-0.5">
@@ -291,28 +295,62 @@ export function ChartTab({
           })}
         </div>
 
-        {/* Right: interval buttons + refresh */}
-        <div className="flex items-center gap-1.5">
-          {CHART_INTERVALS.map((tf) => (
-            <button
-              key={tf}
-              onClick={() => setChartInterval(tf)}
-              className={cn(
-                'rounded-md border px-3 py-1 text-xs font-medium transition-colors',
-                interval === tf
-                  ? 'border-primary/50 bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',
+        {/* Right: interval selector (mobile) + buttons (desktop) + refresh */}
+        <div className="flex items-center gap-1.5 w-full sm:w-auto sm:shrink-0">
+          {/* Mobile: Select for interval */}
+          <div className="sm:hidden flex-1">
+            <Select
+              options={CHART_INTERVALS.map(
+                (tf): SelectOption => ({ value: tf, label: tf }),
               )}
-            >
-              {tf}
-            </button>
-          ))}
+              value={interval}
+              onChange={(v) => setChartInterval(v as ChartInterval)}
+              size="sm"
+            />
+          </div>
+          {/* Desktop: pill buttons for interval */}
+          <div className="hidden sm:flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
+            {CHART_INTERVALS.map((tf) => (
+              <button
+                key={tf}
+                onClick={() => setChartInterval(tf)}
+                className={cn(
+                  'rounded-md border px-3 py-1 text-xs font-medium transition-colors',
+                  interval === tf
+                    ? 'border-primary/50 bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                )}
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
           <div className="w-px h-4 bg-border mx-0.5" />
+          {/* Mobile: icon + inline countdown */}
           <button
             onClick={handleRefresh}
             disabled={cooldown > 0}
             className={cn(
-              'flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all',
+              'flex items-center gap-1 rounded-lg border p-1.5 text-xs font-medium transition-all sm:hidden',
+              cooldown > 0
+                ? 'border-border/40 text-muted-foreground/40 cursor-not-allowed pr-2'
+                : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',
+            )}
+          >
+            <RefreshCw
+              className={cn(
+                'h-3.5 w-3.5 shrink-0',
+                isLoading && 'animate-spin',
+              )}
+            />
+            {cooldown > 0 && <span>{cooldown}s</span>}
+          </button>
+          {/* Desktop: full button with label */}
+          <button
+            onClick={handleRefresh}
+            disabled={cooldown > 0}
+            className={cn(
+              'hidden sm:flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all',
               cooldown > 0
                 ? 'border-border/40 text-muted-foreground/40 cursor-not-allowed'
                 : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground',

@@ -97,13 +97,13 @@ export function ConfigPage() {
         </p>
         <div className="flex gap-2">
           <Link
-            to="/docs#agent-flow"
+            to="/docs/agent-flow"
             className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors"
           >
             {t('config.docsCalloutGuide')}
           </Link>
           <Link
-            to="/docs#config-concepts-thresholds"
+            to="/docs/agent-config"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           >
             {t('config.docsCalloutConcepts')}

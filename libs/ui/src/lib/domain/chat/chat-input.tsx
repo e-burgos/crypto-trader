@@ -80,7 +80,7 @@ export function ChatInput({
             onBlur={() => setFocused(false)}
             disabled={disabled || isStreaming}
             placeholder={t('chat.inputPlaceholder', {
-              defaultValue: 'Ask KRYPTO anything...',
+              defaultValue: 'Ask anything...',
             })}
             rows={1}
             className={cn(
@@ -132,7 +132,7 @@ export function ChatInput({
               style={{ animationDelay: '0.36s' }}
             />
             <p className="text-[11px] text-muted-foreground/60">
-              {t('chat.typing', { defaultValue: 'KRYPTO is thinking...' })}
+              {t('chat.typing', { defaultValue: 'Agent is thinking...' })}
             </p>
           </div>
         )}

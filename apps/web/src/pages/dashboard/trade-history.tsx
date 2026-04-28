@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Eye, History } from 'lucide-react';
+import { Eye, History, List, TrendingUp, TrendingDown } from 'lucide-react';
 import { useTradeHistory, type Trade } from '../../hooks/use-analytics';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { usePlatformMode } from '../../hooks/use-user';
-import { DataTable, type DataTableColumn } from '@crypto-trader/ui';
+import { DataTable, type DataTableColumn, Tabs } from '@crypto-trader/ui';
 import { TradeDetailModal } from '../../components/trade-history';
 
 type FilterType = 'ALL' | 'BUY' | 'SELL';
@@ -25,11 +25,24 @@ export function TradeHistoryPage() {
     return true;
   });
 
-  const FILTERS: { value: FilterType; label: string }[] = [
-    { value: 'ALL', label: t('tradeHistory.all') },
-    { value: 'BUY', label: t('tradeHistory.buys') },
-    { value: 'SELL', label: t('tradeHistory.sells') },
-  ];
+  const FILTERS: { value: FilterType; label: string; icon: React.ReactNode }[] =
+    [
+      {
+        value: 'ALL',
+        label: t('tradeHistory.all'),
+        icon: <List className="h-3.5 w-3.5" />,
+      },
+      {
+        value: 'BUY',
+        label: t('tradeHistory.buys'),
+        icon: <TrendingUp className="h-3.5 w-3.5" />,
+      },
+      {
+        value: 'SELL',
+        label: t('tradeHistory.sells'),
+        icon: <TrendingDown className="h-3.5 w-3.5" />,
+      },
+    ];
 
   const columns: DataTableColumn<Trade>[] = [
     {
@@ -152,21 +165,17 @@ export function TradeHistoryPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-fit">
-        {FILTERS.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => setFilter(value)}
-            className={cn(
-              'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
-              filter === value
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mb-4">
+        <Tabs
+          tabs={FILTERS.map(({ value, label, icon }) => ({
+            value,
+            label,
+            icon,
+          }))}
+          value={filter}
+          onChange={(v) => setFilter(v as FilterType)}
+          border
+        />
       </div>
 
       <DataTable

@@ -1,7 +1,14 @@
 import { useRef, useState } from 'react';
-import { Newspaper, AlertCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import {
+  Newspaper,
+  AlertCircle,
+  List,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+} from 'lucide-react';
 import { useGSAP } from '@gsap/react';
+import { Tabs } from '@crypto-trader/ui';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import {
@@ -142,29 +149,35 @@ export function NewsFeedPage() {
       />
 
       {/* Filters — between summary card and news grid */}
-      <div className="mb-6 flex gap-1 rounded-xl border border-border bg-muted/30 p-1 w-full">
-        {(['ALL', 'POSITIVE', 'NEGATIVE', 'NEUTRAL'] as SentimentFilter[]).map(
-          (s) => (
-            <button
-              key={s}
-              onClick={() => setFilter(s)}
-              className={cn(
-                'rounded-lg px-4 py-1.5 text-sm font-medium w-full transition-colors',
-                filter === s
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {s === 'ALL'
-                ? t('news.all')
-                : s === 'POSITIVE'
-                  ? t('news.positive')
-                  : s === 'NEGATIVE'
-                    ? t('news.negative')
-                    : t('news.neutral')}
-            </button>
-          ),
-        )}
+      <div className="mb-6">
+        <Tabs
+          fullwidth
+          border
+          tabs={[
+            {
+              value: 'ALL',
+              label: t('news.all'),
+              icon: <List className="h-3.5 w-3.5" />,
+            },
+            {
+              value: 'POSITIVE',
+              label: t('news.positive'),
+              icon: <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />,
+            },
+            {
+              value: 'NEGATIVE',
+              label: t('news.negative'),
+              icon: <TrendingDown className="h-3.5 w-3.5 text-red-500" />,
+            },
+            {
+              value: 'NEUTRAL',
+              label: t('news.neutral'),
+              icon: <Minus className="h-3.5 w-3.5 text-amber-500" />,
+            },
+          ]}
+          value={filter}
+          onChange={(v) => setFilter(v as SentimentFilter)}
+        />
       </div>
 
       {isLoading ? (

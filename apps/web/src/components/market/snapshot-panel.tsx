@@ -62,18 +62,18 @@ export function SnapshotPanel({ symbol }: { symbol: string }) {
       {/* Price header */}
       <div
         className={cn(
-          'rounded-xl border p-5 flex items-center justify-between',
+          'rounded-xl border p-4 sm:p-5 flex items-start justify-between gap-3 overflow-hidden',
           signalCfg.bg,
         )}
       >
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <span className="text-xs font-semibold uppercase text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-start gap-1.5 mb-1">
+            <span className="flex items-center justify-start text-sm font-semibold uppercase text-muted-foreground">
               {t('market.currentPrice')}
+              <InfoButton indicatorKey="price" onOpen={setInfoModal} />
             </span>
-            <InfoButton indicatorKey="price" onOpen={setInfoModal} />
           </div>
-          <div className="text-3xl font-bold font-mono">
+          <div className="text-2xl sm:text-3xl font-bold font-mono truncate">
             $
             {(ticker?.lastPrice ?? data.currentPrice).toLocaleString('en-US', {
               minimumFractionDigits: 2,
@@ -91,15 +91,19 @@ export function SnapshotPanel({ symbol }: { symbol: string }) {
             {(ticker?.priceChangePct ?? data.change24h).toFixed(2)}% (24h)
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <div
             className={cn(
-              'flex items-center gap-2 rounded-xl border px-4 py-2',
+              'flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 sm:px-4 sm:py-2',
               signalCfg.bg,
             )}
           >
-            <SignalIcon className={cn('h-5 w-5', signalCfg.color)} />
-            <span className={cn('text-lg font-bold', signalCfg.color)}>
+            <SignalIcon
+              className={cn('h-4 w-4 sm:h-5 sm:w-5', signalCfg.color)}
+            />
+            <span
+              className={cn('text-sm sm:text-lg font-bold', signalCfg.color)}
+            >
               {signalCfg.label}
             </span>
           </div>

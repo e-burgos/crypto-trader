@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
 import { Brain, RefreshCw, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { Tabs } from '@crypto-trader/ui';
 import {
   useMarketSnapshot,
   deriveOverallSignal,
@@ -163,26 +164,21 @@ export function BotAnalysisPage() {
 
       {/* Symbol selector + refresh */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex rounded-lg border border-border bg-muted/30 overflow-hidden text-xs font-semibold">
-          {MARKET_SYMBOLS.map((m) => (
-            <button
-              key={m.symbol}
-              onClick={() => setSymbol(m.symbol)}
-              className={cn(
-                'px-3 py-2 transition-colors',
-                symbol === m.symbol
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/60',
-              )}
-            >
-              {m.label}
-            </button>
-          ))}
+        <div className="flex-1 sm:flex-none">
+          <Tabs
+            tabs={MARKET_SYMBOLS.map((m) => ({
+              value: m.symbol,
+              label: m.label,
+            }))}
+            value={symbol}
+            onChange={setSymbol}
+            border
+          />
         </div>
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-3 sm:py-3.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
         >
           <RefreshCw
             className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')}

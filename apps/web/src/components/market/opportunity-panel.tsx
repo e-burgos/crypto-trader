@@ -67,11 +67,11 @@ export function OpportunityPanel({
       )}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
           <div
             className={cn(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+              'flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl mt-0.5',
               opp.action === 'BUY'
                 ? 'bg-emerald-500/20'
                 : opp.action === 'SELL'
@@ -79,17 +79,22 @@ export function OpportunityPanel({
                   : 'bg-amber-500/15',
             )}
           >
-            <ActionIcon className={cn('h-6 w-6', actionConfig.color)} />
+            <ActionIcon
+              className={cn('h-5 w-5 sm:h-6 sm:w-6', actionConfig.color)}
+            />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span
                 className={cn(
-                  'text-lg font-bold tracking-wide',
+                  'text-base sm:text-lg font-bold tracking-wide whitespace-nowrap',
                   actionConfig.color,
                 )}
               >
                 {actionConfig.label}
+                {onOpenInfo && (
+                  <InfoButton indicatorKey="opportunity" onOpen={onOpenInfo} />
+                )}
               </span>
               {/* Confidence badge */}
               <span
@@ -117,10 +122,32 @@ export function OpportunityPanel({
             <p className="text-xs text-muted-foreground mt-0.5">
               {opp.summary}
             </p>
+            {/* Confidence bar — visible on mobile inline */}
+            <div className="mt-2 sm:hidden">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all',
+                      actionConfig.barColor,
+                    )}
+                    style={{ width: `${opp.confidence}%` }}
+                  />
+                </div>
+                <span
+                  className={cn(
+                    'text-xs font-bold tabular-nums shrink-0',
+                    actionConfig.color,
+                  )}
+                >
+                  {opp.confidence}%
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Confidence bar + info */}
+        {/* Confidence bar + info — desktop only */}
         <div className="shrink-0 text-right hidden sm:flex sm:flex-col sm:items-end gap-2">
           <div>
             <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">
@@ -143,9 +170,6 @@ export function OpportunityPanel({
               {opp.confidence}%
             </p>
           </div>
-          {onOpenInfo && (
-            <InfoButton indicatorKey="opportunity" onOpen={onOpenInfo} />
-          )}
         </div>
       </div>
 

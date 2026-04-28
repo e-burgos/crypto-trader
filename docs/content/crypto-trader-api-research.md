@@ -1,6 +1,7 @@
 # Crypto Trader — Investigación de APIs de Datos de Mercado
 
 **Fecha:** Abril 2026  
+**Última verificación:** 27 de abril de 2026  
 **Proyecto:** Crypto Trader (monorepo NX — NestJS + React 19)  
 **Objetivo:** Enriquecer el input de los agentes de IA con fuentes de datos externas de calidad, manteniendo control total desde el panel de administración.
 
@@ -47,14 +48,14 @@ El patrón de toggle de LLM providers es el **modelo a replicar** para las integ
 
 ### Agentes disponibles
 
-| Agente | Rol | Fuentes de datos relevantes |
-|---|---|---|
-| SIGMA | Análisis técnico + sentimiento | TA, noticias, sentimiento social, market data |
-| AEGIS | Gestión de riesgo | Derivados, TVL, token unlocks, on-chain macro |
-| CIPHER | Análisis blockchain/DeFi (futuro) | Fundamentals, prediction markets, narrativa |
-| KRYPTO | Orquestador central | Todas |
-| FORGE | Sizing de órdenes | Market data, liquidez |
-| SYNTHESIS | Decisión final | Síntesis de todos los agentes |
+| Agente    | Rol                               | Fuentes de datos relevantes                   |
+| --------- | --------------------------------- | --------------------------------------------- |
+| SIGMA     | Análisis técnico + sentimiento    | TA, noticias, sentimiento social, market data |
+| AEGIS     | Gestión de riesgo                 | Derivados, TVL, token unlocks, on-chain macro |
+| CIPHER    | Análisis blockchain/DeFi (futuro) | Fundamentals, prediction markets, narrativa   |
+| KRYPTO    | Orquestador central               | Todas                                         |
+| FORGE     | Sizing de órdenes                 | Market data, liquidez                         |
+| SYNTHESIS | Decisión final                    | Síntesis de todos los agentes                 |
 
 ---
 
@@ -86,6 +87,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ### 3.1 Plataformas INCLUIR — Core del stack
 
 #### Binance API
+
 - **Tipo:** Exchange + ejecución
 - **Costo:** $0
 - **Rate limit:** 1.200 req/min
@@ -98,6 +100,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### altFINS API ⭐
+
 - **Tipo:** TA pre-calculado + señales de trading
 - **Costo:** Free tier (limitado) / $20/mes Basic
 - **Cobertura:** 2.000 activos, 5 timeframes (15m, 1h, 4h, 12h, 1d), 7 años de histórico
@@ -118,6 +121,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### Coinalyze ⭐
+
 - **Tipo:** Derivados crypto agregados
 - **Costo:** $0 — 40 req/min
 - **Agentes:** AEGIS, SIGMA
@@ -139,24 +143,33 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### DefiLlama
-- **Tipo:** DeFi TVL + stablecoins + DEX volume
-- **Costo:** $0 sin límite
+
+- **Tipo:** DeFi TVL + stablecoins + DEX volume + unlocks + perps
+- **Costo:** $0 (endpoints básicos) / $300/mes (Pro API Plan para endpoints avanzados)
 - **Cobertura:** 7.000+ protocolos, 500+ blockchains
 - **Agentes:** AEGIS, SIGMA
 - **Dato único:** TVL sistémico del ecosistema DeFi como señal de riesgo macro. Open source con metodología pública.
+- **Endpoints gratuitos:** TVL por protocolo/cadena, precios de coins, stablecoins, yields, volumes, fees/revenue.
+- **Endpoints Pro ($300/mes):** Token unlocks/emissions, perps/OI, bridges, ETFs, token liquidity, financial statements, narratives.
+- **SDKs oficiales:** JavaScript (`@defillama/api`), Python (`defillama-sdk`).
+- **MCP Server:** Disponible (23 tools), requiere API plan. Setup: `npm install @defillama/api`.
 - **Pros:**
-  - API completamente gratuita sin registro obligatorio
+  - Endpoints básicos de TVL completamente gratuitos sin registro
   - TVL como indicador de salud sistémica (caída de TVL 30% → señal de riesgo)
-  - Cubre stablecoins, DEX volume, hacks históricos
+  - Cubre stablecoins, DEX volume, hacks históricos, fees/revenue
   - Actualización en tiempo real
+  - SDKs oficiales y documentación OpenAPI
+  - Plan Pro incluye token unlocks (alternativa a Messari)
 - **Contras:**
   - No da indicadores técnicos ni sentimiento
   - Enfocado en DeFi — no cubre CeFi ni CEX
-- **Veredicto:** Gratis total. La mejor señal de riesgo sistémico para AEGIS.
+  - Endpoints avanzados (unlocks, perps) requieren plan Pro de $300/mes
+- **Veredicto:** Endpoints básicos de TVL gratis. Para el stack gratuito: usar solo TVL. Si se contrata Pro, reemplaza parcialmente a Messari en token unlocks.
 
 ---
 
 #### Alternative.me — Fear & Greed Index
+
 - **Tipo:** Índice de sentimiento macro
 - **Costo:** $0 ilimitado
 - **Agentes:** SIGMA, KRYPTO
@@ -173,6 +186,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### CoinGecko API (Demo)
+
 - **Tipo:** Market data agregado global
 - **Costo:** $0 — 10.000 créditos/mes, 30 req/min
 - **Cobertura:** 18.000 CEX tokens + 30 millones DEX tokens, 250+ networks
@@ -192,38 +206,49 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### Finnhub
+
 - **Tipo:** Noticias financieras + sentimiento NLP
-- **Costo:** $0 — 60 calls/min
+- **Costo:** $0 — 60 calls/min (personal use). ⚠️ Plan pagado: $3.500/mes (no hay tier intermedio).
 - **Agentes:** SIGMA, CIPHER
 - **Dato único:** Noticias de 500+ medios financieros con score de sentimiento positivo/negativo ya calculado por NLP. El free tier más generoso del mercado para noticias.
+- **Free tier incluye:** Company News (1 año + real-time updates), WebSocket (50 symbols), Crypto candles, Social Sentiment, Earnings Calendar (1 mes), Recommendation Trends.
 - **Pros:**
   - Reemplaza CryptoPanic y el RSS fetcher actual directamente
   - Score NLP pre-calculado — no requiere llamada LLM adicional para clasificar
   - 60 calls/min gratis es más que suficiente para el ciclo de trading
+  - WebSocket para 50 symbols en free tier (real-time BTC price updates)
 - **Contras:**
   - Cobertura más débil en altcoins de baja capitalización
   - No cubre redes sociales (X, Reddit)
-- **Veredicto:** Reemplaza el fetcher de noticias actual con score de sentimiento incluido.
+  - ⚠️ Enfocado en stocks — cobertura crypto limitada vs stocks
+  - Sin tier intermedio: $0 → $3.500/mes directamente
+- **Veredicto:** Reemplaza el fetcher de noticias actual con score de sentimiento incluido. Validar cobertura crypto específicamente antes de depender al 100%.
 
 ---
 
-#### Messari (Free API)
-- **Tipo:** Research crypto + token unlocks
-- **Costo:** $0 — 20 req/min
+#### Messari API
+
+- **Tipo:** Research crypto + token unlocks + on-chain metrics
+- **Costo:** ⚠️ **Estado incierto (abril 2026)** — la página de API ahora solo muestra "Schedule a Demo" y posicionamiento enterprise. El free tier de 20 req/min puede haber sido descontinuado.
 - **Cobertura:** 40.000 activos
 - **Agentes:** AEGIS, CIPHER
 - **Dato único:** Calendarios de desbloqueo de tokens (token unlock schedules). Cuando un proyecto va a liberar millones de tokens, eso genera presión vendedora predecible que AEGIS puede anticipar.
+- **Endpoints verificados:** `/api/v2/assets/{asset}/metrics`, `/api/v1/news/topics`, token unlocks, exchanges, stablecoins, networks, protocols.
 - **Pros:**
-  - Única API gratuita con calendarios de unlocks
-  - Noticias agregadas de 500+ fuentes
+  - Si el free tier existe: única API gratuita con calendarios de unlocks
+  - Noticias + topics con AI linking a assets
+  - SOC 2 certified, 99.9% SLA (enterprise)
 - **Contras:**
-  - Research profundo solo en plan pago ($500/mes)
-  - Rate limit de 20 req/min limita frecuencia de consulta
-- **Veredicto:** Los token unlocks son una señal de riesgo única que ninguna otra API gratuita da.
+  - ⚠️ Pricing opaco — requiere contactar sales para confirmar acceso
+  - Research profundo solo en plan pago (precio no publicado)
+  - Si se confirma que no hay free tier, alternativa: DefiLlama Pro ($300/mes) incluye unlocks
+- **Veredicto:** Verificar disponibilidad del free tier antes de integrar. Si no está disponible, DefiLlama Pro cubre unlocks como alternativa. Mantener como candidato pero con flag de riesgo.
+- **Acción requerida:** Crear cuenta y probar endpoint `https://api.messari.io/api/v1/assets/bitcoin/metrics` para confirmar acceso gratuito.
 
 ---
 
 #### Polymarket API
+
 - **Tipo:** Prediction market — probabilidades consensuadas
 - **Costo:** $0
 - **Volumen:** $10.600 millones en notional mensual (marzo 2026)
@@ -244,6 +269,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ### 3.2 Plataformas OPCIONALES — Valor real, integración más compleja
 
 #### Token Terminal
+
 - **Tipo:** Fundamentals de protocolos crypto
 - **Costo:** $0 dashboard web / API REST pagada
 - **Agentes:** SIGMA, CIPHER
@@ -255,6 +281,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### Dune Analytics
+
 - **Tipo:** On-chain queries SQL — cualquier dato de blockchain
 - **Costo:** Queries públicos gratis / API propia $390/mes
 - **Cobertura:** 100+ blockchains, 3+ petabytes de datos indexados
@@ -267,6 +294,7 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### CryptoQuant
+
 - **Tipo:** On-chain macro + derivados
 - **Costo:** Free con delay / planes pagados
 - **Agentes:** AEGIS
@@ -278,51 +306,72 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 ---
 
 #### LunarCrush ⭐ (stack balanceado)
+
 - **Tipo:** Social intelligence crypto
-- **Costo:** ~$15–50/mes (free tier muy limitado para API)
-- **Cobertura:** 4.000+ activos, fuentes: X, Reddit, YouTube, TikTok
+- **Costo:** ⚠️ **CORRECCIÓN** — Pricing por día (verificado abril 2026):
+  - Hobby: $0 (market data only, SIN social data, SIN API access)
+  - Individual: $5/día = ~$150/mes (endpoints limitados, 10 req/min, 2.000/día)
+  - Builder: $15/día = ~$450/mes (todos los endpoints, 100 req/min, 20.000/día)
+  - Scale: $45/día = ~$1.350/mes (todos los endpoints, 500 req/min, 100.000/día)
+- **Cobertura:** 6.600+ activos, fuentes: X, Reddit, YouTube, TikTok
 - **Agentes:** SIGMA, CIPHER
-- **Dato único:** Galaxy Score™ (precio + social + spam detection) y AltRank™ (fuerza relativa entre activos). El mejor en inteligencia social del mercado. MCP nativo.
-- **Pros:** La herramienta más completa de social intelligence. MCP nativo para agentes. Cubre fuentes que Finnhub no toca.
-- **Contras:** Free tier inútil para producción. Requiere inversión mensual.
-- **Veredicto:** La mejor herramienta social del mercado. Incorporar cuando el sistema genere retorno real.
+- **Dato único:** Galaxy Score™ (precio + social + spam detection) y AltRank™ (fuerza relativa entre activos). El mejor en inteligencia social del mercado.
+- **MCP Server:** Confirmado — `LunarCrush MCP Server` con todos los tools dentro de API limits.
+- **Claude Connector:** Integración oficial con Claude disponible en todos los planes pagados.
+- **API v4:** Base URL `https://lunarcrush.com/api4`. Documentación en OpenAPI v3.
+- **Endpoints destacados:** `/public/topic/:topic/whatsup/v1` (AI summary), `/public/coins/list/v2` (real-time), custom searches.
+- **Pros:** La herramienta más completa de social intelligence. MCP nativo + Claude connector. AI-powered topic summarization. Custom search aggregations.
+- **Contras:** Hobby tier NO incluye social data ni API. Mínimo útil = $150/mes (no $15-50 como se estimó inicialmente). Es 3x más caro de lo esperado.
+- **Veredicto:** Excelente pero costoso ($150/mes mínimo útil). Solo incorporar cuando el sistema genere retorno real significativo. El plan Individual ($5/día) puede ser suficiente para el ciclo de trading (2.000 calls/día ≈ 83/hora).
 
 ---
 
 #### Glassnode ⭐ (stack balanceado)
+
 - **Tipo:** On-chain macro institucional
-- **Costo:** Free básico (muy limitado) / $29/mes Advanced
-- **Cobertura:** 7.500+ métricas, 1.200 activos. MCP nativo lanzado en 2025.
+- **Costo:** ⚠️ **CORRECCIÓN** — Pricing verificado abril 2026:
+  - Standard: $0/mes (41 métricas, 52 variaciones, resolución 24h, 1 alerta)
+  - Advanced: **$49/mes** (no $29) (96 métricas, 115 variaciones, resolución 1h, 10 alertas, derivados básicos)
+  - Professional: desde **$999/mes** (818 métricas, 15.040 variaciones, resolución 10min, API/CSV/JSON, 500 alertas)
+- **Cobertura:** 1.000+ activos. Standard incluye SOPR y MVRV básico.
 - **Agentes:** AEGIS, SIGMA
 - **Dato único:** MVRV, SOPR, NUPL — las señales de ciclo de mercado de referencia institucional. Determina si BTC está en zona de distribución o acumulación.
-- **Pros:** El estándar institucional para on-chain BTC/ETH. MVRV y SOPR son irremplazables para análisis de ciclo. MCP nativo.
-- **Contras:** Free tier muy limitado para API en producción. Plan útil empieza en $29/mes.
-- **Veredicto:** El upgrade natural de AEGIS. Incorporar cuando el sistema esté en LIVE generando retorno.
+- **Standard (free) incluye:** Network activity (addresses, transactions, fees), mining metrics, validator/staking, SOPR, spot market basics (4 metrics).
+- **Advanced ($49/mes) agrega:** Supply dynamics, exchange balances, holding behavior (liveliness, velocity, NVT, CDD, dormancy, STH/LTH), perpetual futures (23 metrics: OI, volume, funding rate, liquidations), options (10 metrics).
+- **Pros:** El estándar institucional para on-chain BTC/ETH. MVRV y SOPR irremplazables. Standard gratis da acceso básico a señales de ciclo.
+- **Contras:** API/download solo en Professional ($999/mes). Advanced ($49/mes) es display-only en Studio. Free tier útil para señales de ciclo largas pero sin API programática.
+- **Veredicto:** El upgrade natural de AEGIS. Plan Advanced ($49/mes) para señales manuales; Professional ($999/mes) para integración programática vía API. Considerar scraping del Studio en Standard como alternativa temporal.
 
 ---
 
 ### 3.3 Plataformas DESCARTAR — Reemplazadas o inviables actualmente
 
 #### Sentora (IntoTheBlock)
+
 - **Problema:** API legacy discontinuada. Solo plataforma web gratuita. Integración programática no disponible actualmente.
 - **Alternativa:** DefiLlama para TVL sistémico.
 
 #### Augmento
+
 - **Problema:** Solo 25+ activos. Estado del servicio en 2026 incierto. Menor cobertura que Finnhub.
 - **Alternativa:** Finnhub para noticias + sentimiento.
 
 #### Santiment
+
 - **Problema:** Free tier con delay significativo. Plan útil ~$49/mes. Relación costo/beneficio baja dado el stack gratuito disponible.
 - **Alternativa:** Coinalyze + Alternative.me cubren lo mismo gratis.
 
 #### TAAPI.IO
+
 - **Problema:** Reemplazado completamente por altFINS, que da más indicadores, más señales, historial de 7 años y MCP nativo al mismo precio (~$2/mes vs $20/mes altFINS Basic).
 - **Alternativa:** altFINS API.
 
 #### TradingView
+
 - **Problema:** No tiene API pública de datos de mercado. Solo webhooks vía Pine Script alerts. No apto para integración programática en el ciclo de trading.
 
 #### The TIE
+
 - **Problema:** Sin precio público. B2B institucional. Fuera del alcance para la fase actual.
 
 ---
@@ -331,39 +380,43 @@ Se realizaron **tres rondas de búsqueda exhaustiva** sobre plataformas de datos
 
 Cubre las **5 dimensiones esenciales** del sistema: ejecución, análisis técnico, derivados/riesgo, sentimiento y narrativa.
 
-| Categoría | Plataforma | Costo | Agentes destino |
-|---|---|---|---|
-| Ejecución | Binance API | $0 | Todos |
-| TA + señales | altFINS (free tier) | $0 | SIGMA |
-| Derivados | Coinalyze | $0 | AEGIS |
-| DeFi / riesgo sistémico | DefiLlama | $0 | AEGIS |
-| Sentimiento macro | Alternative.me | $0 | SIGMA |
-| Noticias + NLP | Finnhub | $0 | CIPHER |
-| Market data global | CoinGecko Demo | $0 | SIGMA |
-| Token unlocks | Messari (free tier) | $0 | AEGIS |
-| Prediction market | Polymarket API | $0 | CIPHER |
-| **Total** | **9 fuentes** | **$0/mes** | |
+| Categoría               | Plataforma                       | Costo      | Agentes destino |
+| ----------------------- | -------------------------------- | ---------- | --------------- |
+| Ejecución               | Binance API                      | $0         | Todos           |
+| TA + señales            | altFINS (free tier)              | $0         | SIGMA           |
+| Derivados               | Coinalyze                        | $0         | AEGIS           |
+| DeFi / riesgo sistémico | DefiLlama                        | $0         | AEGIS           |
+| Sentimiento macro       | Alternative.me                   | $0         | SIGMA           |
+| Noticias + NLP          | Finnhub                          | $0         | CIPHER          |
+| Market data global      | CoinGecko Demo                   | $0         | SIGMA           |
+| Token unlocks           | Messari (⚠️ verificar free tier) | $0?        | AEGIS           |
+| Prediction market       | Polymarket API                   | $0         | CIPHER          |
+| **Total**               | **9 fuentes**                    | **$0/mes** |                 |
+
+> ⚠️ **Nota:** Messari podría haber discontinuado su free tier. Verificar antes de integrar. Si no está disponible, el stack gratuito se reduce a 8 fuentes y pierde token unlocks (dato único sin alternativa gratuita).
 
 ---
 
-## 5. Stack balanceado — $64/mes
+## 5. Stack balanceado — ~$219/mes (precios verificados abril 2026)
 
 Mantiene el stack gratuito como base y agrega **3 upgrades** que cambian el nivel real del sistema cuando ya genera retorno.
 
-| Categoría | Plataforma | Costo | Cambio vs. free |
-|---|---|---|---|
-| Ejecución | Binance API | $0 | Sin cambio |
-| TA + señales ⭐ | **altFINS API (Basic)** | $20/mes | Free tier → producción real con backtesting |
-| On-chain macro ⭐ | **Glassnode (Advanced)** | $29/mes | Agrega MVRV, SOPR, NUPL para AEGIS |
-| Derivados | Coinalyze | $0 | Sin cambio |
-| DeFi / riesgo | DefiLlama | $0 | Sin cambio |
-| Social intelligence ⭐ | **LunarCrush** | $15/mes | Agrega Galaxy Score + AltRank para SIGMA/CIPHER |
-| Noticias + NLP | Finnhub | $0 | Sin cambio |
-| Sentimiento macro | Alternative.me | $0 | Sin cambio |
-| Market data global | CoinGecko Demo | $0 | Sin cambio |
-| Token unlocks | Messari (free) | $0 | Sin cambio |
-| Prediction market | Polymarket API | $0 | Sin cambio |
-| **Total** | **11 fuentes** | **$64/mes** | |
+| Categoría              | Plataforma                  | Costo             | Cambio vs. free                                                                           |
+| ---------------------- | --------------------------- | ----------------- | ----------------------------------------------------------------------------------------- |
+| Ejecución              | Binance API                 | $0                | Sin cambio                                                                                |
+| TA + señales ⭐        | **altFINS API (Basic)**     | $20/mes           | Free tier → producción real con backtesting                                               |
+| On-chain macro ⭐      | **Glassnode (Advanced)**    | $49/mes           | Agrega métricas esenciales (T2), derivados básicos, 1h resolución (display-only, sin API) |
+| Derivados              | Coinalyze                   | $0                | Sin cambio                                                                                |
+| DeFi / riesgo          | DefiLlama                   | $0                | Sin cambio                                                                                |
+| Social intelligence ⭐ | **LunarCrush (Individual)** | $150/mes ($5/día) | Agrega Galaxy Score + AltRank + social data real (2.000 calls/día)                        |
+| Noticias + NLP         | Finnhub                     | $0                | Sin cambio                                                                                |
+| Sentimiento macro      | Alternative.me              | $0                | Sin cambio                                                                                |
+| Market data global     | CoinGecko Demo              | $0                | Sin cambio                                                                                |
+| Token unlocks          | Messari (⚠️ verificar)      | $0?               | Estado incierto — verificar disponibilidad                                                |
+| Prediction market      | Polymarket API              | $0                | Sin cambio                                                                                |
+| **Total**              | **11 fuentes**              | **~$219/mes**     |                                                                                           |
+
+> ⚠️ **Nota:** Los precios anteriores ($64/mes) estaban basados en estimaciones incorrectas. LunarCrush cambió a billing diario ($5/día mínimo útil) y Glassnode Advanced es $49/mes (no $29). Además, Glassnode Advanced es display-only — para integración programática se requiere Professional ($999/mes).
 
 ---
 
@@ -423,7 +476,7 @@ export interface IDataSourceProvider {
   readonly name: string;
   readonly category: DataSourceCategory;
   readonly targetAgents: AgentId[];
-  
+
   isAvailable(): Promise<boolean>;
   fetch(symbol: string, config?: any): Promise<DataSourcePayload>;
 }
@@ -435,10 +488,10 @@ export interface IDataSourceProvider {
 // apps/api/src/market/data-source.registry.ts
 @Injectable()
 export class DataSourceRegistry {
-  getBestSource(category: string): IDataSourceProvider | null
-  getActiveSources(agent: AgentId): IDataSourceProvider[]
-  toggle(name: string, active: boolean): Promise<void>
-  getHealth(): DataSourceHealth[]
+  getBestSource(category: string): IDataSourceProvider | null;
+  getActiveSources(agent: AgentId): IDataSourceProvider[];
+  toggle(name: string, active: boolean): Promise<void>;
+  getHealth(): DataSourceHealth[];
 }
 ```
 
@@ -448,7 +501,7 @@ export class DataSourceRegistry {
 // Pseudocódigo de la lógica de prioridad
 async buildSnapshot(symbol: string): Promise<MarketSnapshot> {
   const taSource = this.registry.getBestSource('technical');
-  
+
   let indicators: IndicatorSnapshot;
   if (taSource) {
     try {
@@ -460,7 +513,7 @@ async buildSnapshot(symbol: string): Promise<MarketSnapshot> {
   } else {
     indicators = await this.calculateIndicatorSnapshot(symbol);
   }
-  
+
   // ... mismo patrón para cada categoría
 }
 ```
@@ -477,16 +530,16 @@ Nueva página en `apps/web/src/pages/admin/data-sources.tsx` siguiendo el patró
 
 ### Reglas de fallback por categoría
 
-| Categoría | Fuente primaria | Fallback |
-|---|---|---|
-| Análisis técnico | altFINS API | `calculateIndicatorSnapshot()` actual |
-| Noticias + sentimiento | Finnhub | NewsAggregator + RSS actual |
-| Market data | CoinGecko | Binance (precio básico) |
-| Derivados | Coinalyze | Sin fallback (dato nuevo) |
-| DeFi / TVL | DefiLlama | Sin fallback (dato nuevo) |
-| Token unlocks | Messari | Sin fallback (dato nuevo) |
-| Sentimiento macro | Alternative.me | Sin fallback (dato nuevo) |
-| Prediction market | Polymarket | Sin fallback (dato nuevo) |
+| Categoría              | Fuente primaria | Fallback                              |
+| ---------------------- | --------------- | ------------------------------------- |
+| Análisis técnico       | altFINS API     | `calculateIndicatorSnapshot()` actual |
+| Noticias + sentimiento | Finnhub         | NewsAggregator + RSS actual           |
+| Market data            | CoinGecko       | Binance (precio básico)               |
+| Derivados              | Coinalyze       | Sin fallback (dato nuevo)             |
+| DeFi / TVL             | DefiLlama       | Sin fallback (dato nuevo)             |
+| Token unlocks          | Messari         | Sin fallback (dato nuevo)             |
+| Sentimiento macro      | Alternative.me  | Sin fallback (dato nuevo)             |
+| Prediction market      | Polymarket      | Sin fallback (dato nuevo)             |
 
 ### Control del administrador
 
@@ -499,6 +552,7 @@ El admin puede desde el panel:
 5. Todas las acciones se **loguean en `AdminAction`** (audit log existente)
 
 Cuando una fuente falla más de N veces consecutivas, el sistema:
+
 - La marca como degradada en el registry
 - Cae automáticamente al fallback
 - Loguea el evento en el audit log
@@ -509,6 +563,7 @@ Cuando una fuente falla más de N veces consecutivas, el sistema:
 ## 7. Orden de implementación sugerido
 
 ### Fase 1 — Infraestructura base (sin integraciones aún)
+
 1. Crear `DataSourceConfig` en Prisma + migración
 2. Crear interfaz `IDataSourceProvider` en `libs/data-fetcher`
 3. Crear `DataSourceRegistry` service en NestJS
@@ -516,20 +571,23 @@ Cuando una fuente falla más de N veces consecutivas, el sistema:
 5. Conectar la lógica de fallback en `MarketService`
 
 ### Fase 2 — Integraciones gratuitas prioritarias (mayor impacto primero)
+
 1. `FinnhubProvider` — reemplaza RSS + CryptoPanic (impacto inmediato en CIPHER)
 2. `AlternativeMeProvider` — Fear & Greed Index (integración trivial, impacto alto)
 3. `CoinalyzeProvider` — derivados para AEGIS (dato completamente nuevo)
 4. `DefiLlamaProvider` — TVL sistémico para AEGIS (dato completamente nuevo)
 
 ### Fase 3 — Integraciones gratuitas secundarias
+
 5. `MessariProvider` — token unlocks para AEGIS
 6. `PolymarketProvider` — prediction market para CIPHER
 7. `AltFinsProvider` — free tier primero, luego upgrade a Basic
 
 ### Fase 4 — Upgrades cuando el sistema genere retorno real
+
 8. altFINS Basic ($20/mes) — activar plan pago para producción completa
-9. LunarCrush ($15/mes) — social intelligence para SIGMA/CIPHER
-10. Glassnode Advanced ($29/mes) — on-chain macro para AEGIS
+9. Glassnode Advanced ($49/mes) — métricas on-chain esenciales (display-only, considerar Professional $999/mes para API)
+10. LunarCrush Individual ($150/mes = $5/día) — social intelligence con API access (2.000 calls/día)
 
 ---
 
@@ -545,7 +603,32 @@ Cuando una fuente falla más de N veces consecutivas, el sistema:
 
 ---
 
-## 9. Referencias
+## 9. Registro de verificación (27 abril 2026)
+
+| Plataforma     | Verificado | Método                                      | Resultado                                                                           |
+| -------------- | ---------- | ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| CoinGecko      | ✅         | coingecko.com/en/api/pricing                | Demo: 10k credits, 30 req/min — correcto                                            |
+| Alternative.me | ✅         | alternative.me/crypto/fear-and-greed-index/ | API libre, sin auth, endpoint `/fng/` — correcto                                    |
+| Finnhub        | ✅         | finnhub.io/pricing                          | $0 free (60 calls/min) / $3.500 premium — sin tier intermedio                       |
+| DefiLlama      | ✅         | api-docs.defillama.com                      | TVL gratis, Pro $300/mes para unlocks/perps. MCP disponible                         |
+| Glassnode      | ✅         | studio.glassnode.com/pricing                | Standard $0, Advanced **$49/mes** (no $29), Professional $999/mes                   |
+| LunarCrush     | ✅         | lunarcrush.com/pricing                      | Hobby FREE (sin social data), Individual **$5/día=$150/mes**                        |
+| Messari        | ⚠️         | messari.io/api                              | Solo "Schedule a Demo" visible. Free tier incierto                                  |
+| Coinalyze      | ⚠️         | coinalyze.net                               | Dashboard funcional, API docs no accesibles públicamente. Data verificada en charts |
+| altFINS        | ⚠️         | altfins.com/api (401)                       | Página requiere autenticación. Pricing no verificable públicamente                  |
+| Polymarket     | ⚠️         | docs.polymarket.com                         | Docs no cargaron. SDK y REST confirmados por documentación de terceros              |
+| Binance        | ✅         | Ya integrado en el sistema                  | Funcionando en producción                                                           |
+
+### Decisiones resueltas post-verificación
+
+1. **Messari:** Marcar como "candidato condicional". Probar manualmente el endpoint gratuito antes de incluir en la Fase 3. Si no funciona, usar DefiLlama Pro como alternativa para unlocks.
+2. **Glassnode:** Plan Advanced es display-only. La integración programática real requiere Professional ($999/mes) — mover a Fase 4+ cuando haya ROI significativo.
+3. **LunarCrush:** Reclasificar de "$15/mes" a "$150/mes mínimo". Posponer a Fase 4 con umbral de rentabilidad más alto.
+4. **DefiLlama:** Agregar endpoints de fees/revenue y stablecoins al stack gratuito (están incluidos sin Pro).
+
+---
+
+## 10. Referencias
 
 - **Transcript de investigación:** Sesión del 25–27 de abril 2026
 - **Archivo HTML con análisis visual:** `crypto_trader_api_analysis.html`
@@ -553,3 +636,7 @@ Cuando una fuente falla más de N veces consecutivas, el sistema:
 - **Punto de agregación central:** `apps/api/src/market/market.service.ts`
 - **Modelo a replicar (toggle LLM):** `apps/api/src/llm/platform-llm-provider.service.ts`
 - **Panel admin existente:** `apps/web/src/pages/admin/`
+- **DefiLlama SDK:** `npm install @defillama/api` / `pip install defillama-sdk`
+- **LunarCrush API v4:** `https://lunarcrush.com/api4` (OpenAPI: `?format=openapi`)
+- **Alternative.me API:** `https://api.alternative.me/fng/?limit=10`
+- **CoinGecko Demo docs:** `https://docs.coingecko.com/`

@@ -153,6 +153,9 @@ const es = {
     configUpdated: 'Config actualizada',
     noIndicators: 'Sin indicadores almacenados para la última decisión.',
     noNews: 'Sin noticias almacenadas para la última decisión.',
+    filterDecision: 'Decisión',
+    filterPair: 'Par',
+    filterAgent: 'Agente',
   },
   market: {
     title: 'Análisis de Mercado',
@@ -388,7 +391,7 @@ const es = {
   },
   news: {
     subtitle: 'Últimas noticias del mercado cripto',
-    all: 'Todos',
+    all: 'Todas las noticias',
     positive: 'Positivo',
     negative: 'Negativo',
     neutral: 'Neutral',
@@ -2119,7 +2122,7 @@ const es = {
     inputStopLoss: 'Stop Loss',
     inputTakeProfit: 'Take Profit',
     inputRiskZone: 'Niveles de Riesgo',
-    inputAgentRunning: '{{count}} agente activo',
+    inputAgentRunning: '{{count}} activo(s)',
     positiveNews: '{{count}} positivas',
     negativeNews: '{{count}} negativas',
     neutralNews: '{{count}} neutras',

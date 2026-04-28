@@ -2,10 +2,16 @@ import {
   Shield,
   Zap,
   TrendingUp,
+  TrendingDown,
   Target,
   Clock,
   ListChecks,
   Bot,
+  ShieldAlert,
+  DollarSign,
+  Wallet,
+  Repeat2,
+  ArrowUpDown,
 } from 'lucide-react';
 import { InfoTooltip } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
@@ -217,6 +223,7 @@ export const PRESET_META: {
 
 export function StepperSlider({
   label,
+  icon: Icon,
   hint,
   value,
   min,
@@ -227,6 +234,7 @@ export function StepperSlider({
   onChange,
 }: {
   label: string;
+  icon?: React.ElementType;
   hint: string;
   value: string;
   min: number;
@@ -248,7 +256,10 @@ export function StepperSlider({
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm font-semibold">{label}</span>
+        <span className="flex items-center gap-1.5 text-sm font-semibold">
+          {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
+          {label}
+        </span>
         <span className={cn('text-lg font-bold tabular-nums', valueColor)}>
           {displayValue}
           {unit}

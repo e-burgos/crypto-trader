@@ -76,7 +76,8 @@ export function MarketIntelligencePage() {
           <div className="flex flex-col items-start">
             {lastCycleTime && (
               <span className="text-[10px] text-muted-foreground/60 leading-tight">
-                {t('marketIntelligence.lastCycle', 'Last cycle')}: {lastCycleTime}
+                {t('marketIntelligence.lastCycle', 'Last cycle')}:{' '}
+                {lastCycleTime}
               </span>
             )}
             <span>{t('marketIntelligence.refresh')}</span>

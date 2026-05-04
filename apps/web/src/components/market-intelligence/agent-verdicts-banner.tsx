@@ -160,7 +160,21 @@ export function AgentVerdictsBanner() {
 
   // Use the most recent orchestrated decision
   const latest = decisions[0];
-  const verdicts: AgentVerdictData[] = latest?.subAgentVerdicts ?? [];
+
+  // Merge verdicts from multiple decisions: always show the latest per agent+task
+  // This ensures CIPHER (or any agent that doesn't run every cycle) still appears
+  const verdicts: AgentVerdictData[] = (() => {
+    const seen = new Map<string, AgentVerdictData>();
+    for (const decision of decisions) {
+      for (const v of decision.subAgentVerdicts ?? []) {
+        const key = `${v.agentId}:${v.task}`;
+        if (!seen.has(key)) {
+          seen.set(key, v as AgentVerdictData);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  })();
   const hasData = verdicts.length > 0;
 
   // Pick first config matching the current mode for trigger

@@ -20,6 +20,7 @@ export interface AgentVerdictData {
   cached?: boolean;
   model?: string;
   provider?: string;
+  executedAt?: string;
 }
 
 export interface AgentMeta {
@@ -296,12 +297,19 @@ export function AgentVerdictCard({
         ) : (
           <span />
         )}
-        {modelShort && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
-            {modelIcon}
-            <span className="truncate max-w-[180px]">{modelShort}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {verdict.executedAt && (
+            <span className="text-[10px] text-muted-foreground/50">
+              {new Date(verdict.executedAt).toLocaleTimeString()}
+            </span>
+          )}
+          {modelShort && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
+              {modelIcon}
+              <span className="truncate max-w-[180px]">{modelShort}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

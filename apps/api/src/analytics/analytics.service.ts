@@ -181,6 +181,7 @@ export class AnalyticsService {
         cached?: boolean;
         model?: string;
         provider?: string;
+        executedAt?: string;
       }> | null = null;
 
       if (d.metadata) {
@@ -323,6 +324,9 @@ export class AnalyticsService {
               cached: r.cached,
               model: r.model,
               provider: r.provider,
+              executedAt: d.createdAt
+                ? new Date(d.createdAt).toISOString()
+                : undefined,
             };
           });
         }

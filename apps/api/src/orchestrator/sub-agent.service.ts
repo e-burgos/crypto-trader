@@ -375,16 +375,49 @@ Resumen: ${context.summary ?? '(no disponible)'}
       return `Clasifica la intención de este mensaje del usuario y enrútalo al sub-agente correcto:
 "${context.message}"`;
 
-    case 'decision_synthesis':
-      return `Sintetiza estas 4 perspectivas de los sub-agentes y emite la decisión final de trading:
+    case 'decision_synthesis': {
+      let prompt = `Sintetiza estas 4 perspectivas de los sub-agentes y emite la decisión final de trading:
 
 SIGMA (Señal técnica): ${context.technicalSignal}
 SIGMA (Sentimiento noticias): ${context.newsSentiment}
 FORGE (Sizing): ${context.sizingSuggestion}
 AEGIS (Riesgo): ${context.aegisVerdict}
 
-Config del usuario: buyThreshold=${context.buyThreshold}%, sellThreshold=${context.sellThreshold}%
-Emite el JSON de decisión final.`;
+Config del usuario: buyThreshold=${context.buyThreshold}%, sellThreshold=${context.sellThreshold}%`;
+
+      if (context.externalDataSources) {
+        const eds = context.externalDataSources as Record<string, unknown>;
+        const sections: string[] = [];
+        if (eds.fearGreed)
+          sections.push(`Fear & Greed Index: ${JSON.stringify(eds.fearGreed)}`);
+        if (eds.derivatives)
+          sections.push(
+            `Derivatives (OI, Funding, Liquidations): ${JSON.stringify(eds.derivatives)}`,
+          );
+        if (eds.defiHealth)
+          sections.push(
+            `DeFi Health (TVL, Stablecoins): ${JSON.stringify(eds.defiHealth)}`,
+          );
+        if (eds.globalMarket)
+          sections.push(
+            `Global Market (Dominance, Volume): ${JSON.stringify(eds.globalMarket)}`,
+          );
+        if (eds.predictions)
+          sections.push(
+            `Prediction Markets: ${JSON.stringify(eds.predictions)}`,
+          );
+        if (eds.tokenUnlocks)
+          sections.push(
+            `Token Unlocks (próximos): ${JSON.stringify(eds.tokenUnlocks)}`,
+          );
+        if (sections.length > 0) {
+          prompt += `\n\nDatos externos enriquecidos (usa para confirmar/contradecir las señales de los agentes):\n${sections.join('\n')}`;
+        }
+      }
+
+      prompt += '\nEmite el JSON de decisión final.';
+      return prompt;
+    }
 
     case 'cross_agent_synthesis': {
       const localeHint =

@@ -113,6 +113,14 @@ export class OrchestratorService {
       summary?: string | null;
     }>,
     llmOverride?: { provider: string; model: string },
+    enrichedData?: {
+      fearGreed?: unknown;
+      derivatives?: unknown;
+      defiHealth?: unknown;
+      globalMarket?: unknown;
+      predictions?: unknown;
+      tokenUnlocks?: unknown;
+    },
   ): Promise<DecisionPayload> {
     // Load config + open positions + wallet balances for FORGE and AEGIS context
     const [config, openPositions, sandboxWallets] = await Promise.all([
@@ -266,6 +274,26 @@ export class OrchestratorService {
     const forgeOutput = forgeRaw.status === 'fulfilled' ? forgeRaw.value : '{}';
     const aegisOutput = aegisRaw.status === 'fulfilled' ? aegisRaw.value : '{}';
 
+    // Resolve model info per sub-agent (non-blocking)
+    let marketModel: { provider?: string; model?: string } = {};
+    let opsModel: { provider?: string; model?: string } = {};
+    let riskModel: { provider?: string; model?: string } = {};
+    try {
+      const [mkt, ops, rsk] = await Promise.allSettled([
+        this.subAgent.getProvider(userId, 'market', typedOverride),
+        this.subAgent.getProvider(userId, 'operations', typedOverride),
+        this.subAgent.getProvider(userId, 'risk', typedOverride),
+      ]);
+      if (mkt.status === 'fulfilled')
+        marketModel = { provider: mkt.value.provider, model: mkt.value.model };
+      if (ops.status === 'fulfilled')
+        opsModel = { provider: ops.value.provider, model: ops.value.model };
+      if (rsk.status === 'fulfilled')
+        riskModel = { provider: rsk.value.provider, model: rsk.value.model };
+    } catch {
+      /* non-blocking */
+    }
+
     // A2→DB: Persist fresh sentiment to NewsAnalysis (Spec 38, B.4)
     if (sentimentRaw.status === 'fulfilled' && !cachedSentiment) {
       try {
@@ -278,15 +306,31 @@ export class OrchestratorService {
     }
 
     subAgentResults.push(
-      { agentId: 'market', task: 'technical_signal', output: techOutput },
       {
-        agentId: 'market',
+        agentId: 'SIGMA',
+        task: 'technical_signal',
+        output: techOutput,
+        ...marketModel,
+      },
+      {
+        agentId: 'SIGMA',
         task: 'news_sentiment',
         output: sentimentOutput,
         ...(cachedSentiment ? { cached: true } : {}),
+        ...marketModel,
       } as SubAgentResult,
-      { agentId: 'operations', task: 'sizing_suggestion', output: forgeOutput },
-      { agentId: 'risk', task: 'risk_gate', output: aegisOutput },
+      {
+        agentId: 'FORGE',
+        task: 'sizing_suggestion',
+        output: forgeOutput,
+        ...opsModel,
+      },
+      {
+        agentId: 'AEGIS',
+        task: 'risk_gate',
+        output: aegisOutput,
+        ...riskModel,
+      },
     );
 
     // AEGIS verdict gate
@@ -350,6 +394,7 @@ export class OrchestratorService {
           aegisVerdict: aegisOutput,
           buyThreshold: config.buyThreshold,
           sellThreshold: config.sellThreshold,
+          ...(enrichedData ? { externalDataSources: enrichedData } : {}),
         },
         userId,
         false,

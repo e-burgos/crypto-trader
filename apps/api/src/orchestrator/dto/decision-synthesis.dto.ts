@@ -4,6 +4,10 @@ export interface SubAgentResult {
   output: string;
   /** True when this result was reused from a recent decision (within analysis interval TTL) */
   cached?: boolean;
+  /** LLM model used for this sub-agent call */
+  model?: string;
+  /** LLM provider used for this sub-agent call */
+  provider?: string;
 }
 
 export interface AegisVerdict {

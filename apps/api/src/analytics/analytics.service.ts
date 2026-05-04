@@ -174,14 +174,75 @@ export class AnalyticsService {
         reasoning: string;
         cached?: boolean;
       } | null = null;
+      let subAgentVerdicts: Array<{
+        agentId: string;
+        task: string;
+        summary: string;
+        cached?: boolean;
+        model?: string;
+        provider?: string;
+      }> | null = null;
+
       if (d.metadata) {
         const meta = d.metadata as {
           subAgentResults?: Array<{
+            agentId?: string;
             task: string;
             output: string;
             cached?: boolean;
+            model?: string;
+            provider?: string;
           }>;
         };
+
+        // Build sub-agent verdicts array for frontend
+        if (meta.subAgentResults?.length) {
+          subAgentVerdicts = meta.subAgentResults.map((r) => {
+            let summary = '';
+            try {
+              const cleaned = r.output.replace(/```(?:json)?\s*/gi, '').trim();
+              const match = cleaned.match(/\{[\s\S]*\}/);
+              const parsed = match ? JSON.parse(match[0]) : JSON.parse(cleaned);
+              // Extract a short summary depending on the task type
+              if (r.task === 'technical_signal') {
+                summary =
+                  parsed.signal ??
+                  parsed.direction ??
+                  parsed.recommendation ??
+                  r.output;
+              } else if (r.task === 'news_sentiment') {
+                summary =
+                  parsed.impact ?? parsed.sentiment?.toString() ?? r.output;
+              } else if (r.task === 'sizing_suggestion') {
+                summary = parsed.suggestion ?? parsed.sizing ?? r.output;
+              } else if (r.task === 'risk_gate') {
+                summary = parsed.verdict
+                  ? `${parsed.verdict}: ${parsed.reason ?? ''}`
+                  : r.output;
+              } else {
+                summary = r.output;
+              }
+            } catch {
+              summary = r.output;
+            }
+            return {
+              agentId:
+                r.task === 'technical_signal' || r.task === 'news_sentiment'
+                  ? 'SIGMA'
+                  : r.task === 'sizing_suggestion'
+                    ? 'FORGE'
+                    : r.task === 'risk_gate'
+                      ? 'AEGIS'
+                      : (r.agentId ?? 'UNKNOWN'),
+              task: r.task,
+              summary,
+              cached: r.cached,
+              model: r.model,
+              provider: r.provider,
+            };
+          });
+        }
+
         const sigmaResult = meta.subAgentResults?.find(
           (r) => r.task === 'news_sentiment',
         );
@@ -220,6 +281,7 @@ export class AnalyticsService {
         ...d,
         metadata: undefined, // don't leak raw metadata to frontend
         sigmaSentiment,
+        subAgentVerdicts,
         mode: d.mode ?? cfg?.mode ?? null,
         configName: d.configName ?? cfg?.name ?? null,
         configDetails: cfg

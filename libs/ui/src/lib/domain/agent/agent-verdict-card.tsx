@@ -10,6 +10,7 @@ export type AgentVerdictTask =
   | 'sizing_suggestion'
   | 'risk_gate'
   | 'macro_context'
+  | 'decision_synthesis'
   | (string & {});
 
 export interface AgentVerdictData {
@@ -99,8 +100,7 @@ export function formatAgentVerdictSummary(
         }
         case 'news_sentiment': {
           const sentiment = parsed.sentiment ?? parsed.impact ?? '';
-          const score =
-            parsed.score != null ? ` (score: ${parsed.score})` : '';
+          const score = parsed.score != null ? ` (score: ${parsed.score})` : '';
           const reasoning =
             parsed.reasoning ?? parsed.explanation ?? parsed.summary ?? '';
           return reasoning
@@ -271,9 +271,7 @@ export function AgentVerdictCard({
             expanded ? 'max-h-[2000px]' : collapsedMaxHeight,
           )}
         >
-          {renderContent
-            ? renderContent(displaySummary)
-            : displaySummary}
+          {renderContent ? renderContent(displaySummary) : displaySummary}
         </div>
         {!expanded && shouldShowToggle && (
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />

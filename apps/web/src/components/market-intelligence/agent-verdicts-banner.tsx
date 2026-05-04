@@ -58,6 +58,13 @@ const AGENT_META_MAP: Record<string, AgentMeta & { fullNameKey: string }> = {
     color: 'text-cyan-400',
     bgColor: 'bg-cyan-500/10',
   },
+  KRYPTO: {
+    label: 'KRYPTO',
+    fullNameKey: 'marketIntelligence.verdicts.orchestratorRole',
+    icon: <Bot className="h-3.5 w-3.5" />,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
 };
 
 const TASK_ICON: Record<string, React.ReactNode> = {
@@ -66,6 +73,7 @@ const TASK_ICON: Record<string, React.ReactNode> = {
   sizing_suggestion: <Wrench className="h-3 w-3" />,
   risk_gate: <Shield className="h-3 w-3" />,
   macro_context: <Globe className="h-3 w-3" />,
+  decision_synthesis: <Bot className="h-3 w-3" />,
 };
 
 const TASK_LABEL_KEYS: Record<string, string> = {
@@ -74,6 +82,7 @@ const TASK_LABEL_KEYS: Record<string, string> = {
   sizing_suggestion: 'marketIntelligence.verdicts.tasks.positionSizing',
   risk_gate: 'marketIntelligence.verdicts.tasks.riskGate',
   macro_context: 'marketIntelligence.verdicts.tasks.macroContext',
+  decision_synthesis: 'marketIntelligence.verdicts.tasks.synthesis',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,7 +103,13 @@ function decisionIcon(decision: string) {
 
 // ── Verdict card wrapper (adds i18n + ReactMarkdown rendering) ───────────────
 
-function VerdictCardWrapper({ verdict }: { verdict: AgentVerdictData }) {
+function VerdictCardWrapper({
+  verdict,
+  className,
+}: {
+  verdict: AgentVerdictData;
+  className?: string;
+}) {
   const { t } = useTranslation();
   const metaEntry = AGENT_META_MAP[verdict.agentId.toUpperCase()];
   const agentMeta: AgentMeta = metaEntry
@@ -129,6 +144,7 @@ function VerdictCardWrapper({ verdict }: { verdict: AgentVerdictData }) {
       showLessLabel={t('marketIntelligence.verdicts.showLess')}
       modelIcon={<Cpu className="h-2.5 w-2.5" />}
       formattedSummary={formatted}
+      className={className}
       renderContent={(content) => (
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       )}
@@ -222,47 +238,22 @@ export function AgentVerdictsBanner() {
       )}
 
       {hasData && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {verdicts.map((v, i) => (
-              <VerdictCardWrapper key={i} verdict={v} />
-            ))}
-          </div>
-
-          {/* KRYPTO synthesis section */}
-          {latest && (
-            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Bot className="h-3.5 w-3.5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold leading-tight">
-                    KRYPTO
-                  </span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">
-                    {t('marketIntelligence.verdicts.orchestratorRole')}
-                  </span>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  {latest.llmModel && (
-                    <span className="text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                      <Cpu className="h-2.5 w-2.5" />
-                      {shortModelName(latest.llmModel)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground line-clamp-3">
-                {latest.reasoning}
-              </p>
-              <div className="text-[11px] text-muted-foreground/60">
-                {t('marketIntelligence.verdicts.lastCycle')}:{' '}
-                {new Date(latest.createdAt).toLocaleTimeString()}
-              </div>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {verdicts.map((v, i) => (
+            <VerdictCardWrapper key={i} verdict={v} />
+          ))}
+          {latest?.reasoning && (
+            <VerdictCardWrapper
+              className="sm:col-span-2 border-primary/20 bg-primary/5"
+              verdict={{
+                agentId: 'KRYPTO',
+                task: 'decision_synthesis',
+                summary: latest.reasoning,
+                model: latest.llmModel,
+              }}
+            />
           )}
-        </>
+        </div>
       )}
     </InfoCard>
   );

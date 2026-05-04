@@ -3381,6 +3381,7 @@ const en = {
         positionSizing: 'Position Sizing',
         riskGate: 'Risk Gate',
         macroContext: 'Macro Context',
+        synthesis: 'Synthesis',
       },
     },
   },

@@ -3432,6 +3432,7 @@ const es = {
         positionSizing: 'Tamaño de Posición',
         riskGate: 'Control de Riesgo',
         macroContext: 'Contexto Macro',
+        synthesis: 'Síntesis',
       },
     },
   },

@@ -297,7 +297,7 @@ export function AgentVerdictCard({
         ) : (
           <span />
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           {verdict.executedAt && (
             <span className="text-[10px] text-muted-foreground/50">
               {new Date(verdict.executedAt).toLocaleTimeString()}

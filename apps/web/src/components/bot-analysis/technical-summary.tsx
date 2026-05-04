@@ -10,6 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { AgentVerdictCard } from '@crypto-trader/ui';
 import {
   deriveOverallSignal,
   deriveOpportunity,
@@ -229,53 +230,42 @@ export function TechnicalSummary({
 
         {/* SIGMA Technical Conclusion */}
         {sigmaTechnical && (
-          <div
+          <AgentVerdictCard
+            verdict={{
+              agentId: 'sigma-technical',
+              task: 'technical_signal',
+              summary: sigmaTechnical.reasoning,
+              cached: sigmaTechnical.cached,
+            }}
+            agentMeta={{
+              label: t('botAnalysis.sigmaTitle'),
+              subtitle: `${t('botAnalysis.signalTechnical')}: ${sigmaTechnical.signal}`,
+              icon: <Brain className="h-3 w-3" />,
+              color: sigmaTechnical.signal === 'BUY'
+                ? 'text-emerald-400'
+                : sigmaTechnical.signal === 'SELL'
+                  ? 'text-red-400'
+                  : 'text-amber-400',
+              bgColor: sigmaTechnical.signal === 'BUY'
+                ? 'bg-emerald-500/10'
+                : sigmaTechnical.signal === 'SELL'
+                  ? 'bg-red-500/10'
+                  : 'bg-amber-500/10',
+            }}
+            taskLabel={sigmaTechnical.signal}
+            formattedSummary={sigmaTechnical.reasoning}
+            showCachedBadge={!!sigmaTechnical.cached}
+            cachedLabel={t('botAnalysis.sigmaCached')}
+            showMoreLabel={t('common.more', 'Más')}
+            showLessLabel={t('common.less', 'Menos')}
             className={cn(
-              'rounded-lg border p-3 space-y-1.5',
               sigmaTechnical.signal === 'BUY'
                 ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
                 : sigmaTechnical.signal === 'SELL'
                   ? 'border-red-500/20 bg-red-500/[0.06]'
                   : 'border-amber-500/20 bg-amber-500/[0.06]',
             )}
-          >
-            <div className="flex items-center gap-1.5">
-              <Brain className="h-3 w-3 text-violet-400" />
-              <span className="text-[10px] font-bold uppercase tracking-wide text-violet-400">
-                {t('botAnalysis.sigmaTitle')}
-              </span>
-              <span
-                className={cn(
-                  'ml-1 text-[10px] font-semibold',
-                  sigmaTechnical.signal === 'BUY'
-                    ? 'text-emerald-400'
-                    : sigmaTechnical.signal === 'SELL'
-                      ? 'text-red-400'
-                      : 'text-amber-400',
-                )}
-              >
-                {t('botAnalysis.signalTechnical')}: {sigmaTechnical.signal}
-              </span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-foreground/80">
-              {sigmaTechnical.reasoning}
-            </p>
-            <div className="text-right">
-              <span
-                className={cn(
-                  'text-[10px] font-mono font-bold',
-                  sigmaTechnical.confidence >= 0.65
-                    ? 'text-emerald-400'
-                    : sigmaTechnical.confidence <= 0.35
-                      ? 'text-red-400'
-                      : 'text-amber-400',
-                )}
-              >
-                {t('botAnalysis.confidenceLabel')}:{' '}
-                {Math.round(sigmaTechnical.confidence * 100)}%
-              </span>
-            </div>
-          </div>
+          />
         )}
       </div>
     </div>

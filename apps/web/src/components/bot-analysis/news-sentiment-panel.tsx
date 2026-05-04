@@ -12,6 +12,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { AgentVerdictCard } from '@crypto-trader/ui';
 import {
   useNewsConfig,
   useNewsAnalysis,
@@ -330,66 +331,47 @@ export function NewsSentimentPanel({
 
         {/* SIGMA AI Conclusion */}
         {effectiveSigma && (
-          <div
+          <AgentVerdictCard
+            verdict={{
+              agentId: 'sigma-sentiment',
+              task: 'news_sentiment',
+              summary: effectiveSigma.reasoning,
+              cached: effectiveSigma.cached,
+            }}
+            agentMeta={{
+              label: t('botAnalysis.sigmaTitle'),
+              subtitle: effectiveSigma.impact === 'positive'
+                ? t('botAnalysis.sigmaImpactPositive')
+                : effectiveSigma.impact === 'negative'
+                  ? t('botAnalysis.sigmaImpactNegative')
+                  : t('botAnalysis.sigmaImpactNeutral'),
+              icon: <Brain className="h-3 w-3" />,
+              color: effectiveSigma.impact === 'positive'
+                ? 'text-emerald-400'
+                : effectiveSigma.impact === 'negative'
+                  ? 'text-red-400'
+                  : 'text-amber-400',
+              bgColor: effectiveSigma.impact === 'positive'
+                ? 'bg-emerald-500/10'
+                : effectiveSigma.impact === 'negative'
+                  ? 'bg-red-500/10'
+                  : 'bg-amber-500/10',
+            }}
+            taskLabel={`Score: ${effectiveSigma.sentiment > 0 ? '+' : ''}${typeof effectiveSigma.sentiment === 'number' ? effectiveSigma.sentiment.toFixed(2) : effectiveSigma.sentiment}`}
+            formattedSummary={effectiveSigma.reasoning}
+            showCachedBadge={!!effectiveSigma.cached}
+            cachedLabel={t('botAnalysis.sigmaCached')}
+            showMoreLabel={t('common.more', 'Más')}
+            showLessLabel={t('common.less', 'Menos')}
             className={cn(
-              'shrink-0 rounded-lg border p-3 space-y-1.5',
+              'shrink-0',
               effectiveSigma.impact === 'positive'
                 ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
                 : effectiveSigma.impact === 'negative'
                   ? 'border-red-500/20 bg-red-500/[0.06]'
                   : 'border-amber-500/20 bg-amber-500/[0.06]',
             )}
-          >
-            <div className="flex items-center gap-1.5">
-              <Brain className="h-3 w-3 text-violet-400" />
-              <span className="text-[10px] font-bold uppercase tracking-wide text-violet-400">
-                {t('botAnalysis.sigmaTitle')}
-              </span>
-              <span
-                className={cn(
-                  'ml-1 text-[10px] font-semibold',
-                  effectiveSigma.impact === 'positive'
-                    ? 'text-emerald-400'
-                    : effectiveSigma.impact === 'negative'
-                      ? 'text-red-400'
-                      : 'text-amber-400',
-                )}
-              >
-                {effectiveSigma.impact === 'positive'
-                  ? t('botAnalysis.sigmaImpactPositive')
-                  : effectiveSigma.impact === 'negative'
-                    ? t('botAnalysis.sigmaImpactNegative')
-                    : t('botAnalysis.sigmaImpactNeutral')}
-              </span>
-              {effectiveSigma.cached && (
-                <span className="ml-auto inline-flex items-center gap-0.5 text-[9px] text-muted-foreground/60">
-                  <RefreshCw className="h-2.5 w-2.5" />
-                  {t('botAnalysis.sigmaCached')}
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] leading-relaxed text-foreground/80">
-              {effectiveSigma.reasoning}
-            </p>
-            <div className="text-right">
-              <span
-                className={cn(
-                  'text-[10px] font-mono font-bold',
-                  effectiveSigma.sentiment > 0
-                    ? 'text-emerald-400'
-                    : effectiveSigma.sentiment < 0
-                      ? 'text-red-400'
-                      : 'text-amber-400',
-                )}
-              >
-                {t('botAnalysis.scoreLabel')}:{' '}
-                {effectiveSigma.sentiment > 0 ? '+' : ''}
-                {typeof effectiveSigma.sentiment === 'number'
-                  ? effectiveSigma.sentiment.toFixed(2)
-                  : effectiveSigma.sentiment}
-              </span>
-            </div>
-          </div>
+          />
         )}
 
         <div

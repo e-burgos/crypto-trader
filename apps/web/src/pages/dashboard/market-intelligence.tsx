@@ -4,10 +4,7 @@ import { Globe, RefreshCw } from 'lucide-react';
 import { Tabs } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useEnrichedSnapshot } from '../../hooks/use-enriched-snapshot';
-import {
-  useMarketSnapshot,
-  useMarketNews,
-} from '../../hooks/use-market';
+import { useMarketSnapshot, useMarketNews } from '../../hooks/use-market';
 import { useAgentDecisions } from '../../hooks/use-analytics';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
 import { usePlatformMode } from '../../hooks/use-user';
@@ -53,17 +50,20 @@ export function MarketIntelligencePage() {
     return d.mode === platformMode;
   });
 
+  // Filter decisions by the active asset tab
+  const assetDecisions = modeDecisions.filter((d) => d.asset === asset);
+
   const livePrice = ticker?.lastPrice ?? snapshot?.currentPrice ?? 0;
 
   const latestSigma: SigmaSentiment | null = (() => {
-    for (const d of modeDecisions) {
+    for (const d of assetDecisions) {
       if (d.sigmaSentiment) return d.sigmaSentiment;
     }
     return null;
   })();
 
   const latestSigmaTechnical: SigmaTechnical | null = (() => {
-    for (const d of modeDecisions) {
+    for (const d of assetDecisions) {
       const tech = d.subAgentVerdicts?.find(
         (v) => v.task === 'technical_signal',
       );

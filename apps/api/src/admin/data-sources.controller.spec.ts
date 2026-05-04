@@ -19,6 +19,7 @@ const mockRegistry = {
 const mockPrisma = {
   adminAction: { create: jest.fn() },
   dataSourceConfig: { findUniqueOrThrow: jest.fn() },
+  dataSourceCredential: { findMany: jest.fn().mockResolvedValue([]) },
 };
 
 describe('DataSourcesController', () => {
@@ -60,7 +61,7 @@ describe('DataSourcesController', () => {
       ]);
       mockRegistry.computeHealthStatus.mockReturnValue('healthy');
 
-      const result = await controller.listAll();
+      const result = await controller.listAll({ userId: 'admin1', email: 'admin@test.com', role: 'ADMIN' });
       expect(result.sources).toHaveLength(1);
       expect(result.sources[0].name).toBe('alternative_me');
       expect(result.sources[0].health).toBe('healthy');

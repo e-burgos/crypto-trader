@@ -2,7 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdminService } from './admin.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
-import { TradingService } from '../trading/trading.service';
+
+jest.mock('../trading/trading.service', () => ({
+  TradingService: jest.fn().mockImplementation(() => ({
+    stopAllAgents: jest.fn(),
+    getAllAgentsStatus: jest.fn(),
+  })),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { TradingService } = require('../trading/trading.service');
 
 const mockPrisma = {
   user: { count: jest.fn() },

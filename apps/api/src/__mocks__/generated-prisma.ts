@@ -54,3 +54,17 @@ export const RiskProfile = {
   AGGRESSIVE: 'AGGRESSIVE',
 };
 export const AgentId = $Enums.AgentId;
+export const NewsApiProvider = {
+  CRYPTOPANIC: 'CRYPTOPANIC',
+  NEWSDATA: 'NEWSDATA',
+};
+export const DataSourceCategory = {
+  TECHNICAL: 'TECHNICAL',
+  SENTIMENT: 'SENTIMENT',
+  DERIVATIVES: 'DERIVATIVES',
+  DEFI_ONCHAIN: 'DEFI_ONCHAIN',
+  NEWS: 'NEWS',
+  MARKET_DATA: 'MARKET_DATA',
+  PREDICTION: 'PREDICTION',
+  TOKEN_UNLOCKS: 'TOKEN_UNLOCKS',
+};

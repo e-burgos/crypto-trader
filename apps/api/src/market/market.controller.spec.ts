@@ -23,6 +23,7 @@ describe('MarketController — GET /market/enriched-snapshot/:symbol', () => {
     globalMarket: null,
     predictions: null,
     tokenUnlocks: null,
+    technicalSignals: null,
     activeSources: ['alternative_me'],
     failedSources: [],
     snapshotBuildTimeMs: 150,

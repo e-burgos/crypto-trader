@@ -108,6 +108,112 @@ function decisionIcon(decision: string) {
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
+/**
+ * Formats raw agent summary into human-readable text.
+ * Handles: raw JSON, <think> tags, empty objects, and plain text passthrough.
+ */
+function formatVerdictSummary(raw: string, task: string): string {
+  if (!raw || raw === '{}' || raw === '[]') return '';
+
+  // Strip <think>...</think> blocks from reasoning models
+  let text = raw.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+  if (!text) {
+    // If only thinking content existed, extract it
+    const thinkMatch = raw.match(/<think>([\s\S]*?)<\/think>/);
+    text = thinkMatch?.[1]?.trim() ?? raw;
+  }
+
+  // Try to detect and format JSON responses
+  const jsonMatch = text.match(/^\s*(\{[\s\S]*\})\s*$/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      // Skip if it's an empty object
+      if (Object.keys(parsed).length === 0) return '';
+
+      switch (task) {
+        case 'technical_signal': {
+          const signal = parsed.signal ?? parsed.direction ?? '';
+          const conf = parsed.confidence
+            ? `${Math.round(parsed.confidence * 100)}%`
+            : '';
+          const reasoning = parsed.reasoning ?? '';
+          return reasoning
+            ? `**${signal}** (${conf} confidence) — ${reasoning}`
+            : `${signal} ${conf}`.trim();
+        }
+        case 'news_sentiment': {
+          const sentiment = parsed.sentiment ?? parsed.impact ?? '';
+          const score =
+            parsed.score != null ? ` (score: ${parsed.score})` : '';
+          const reasoning =
+            parsed.reasoning ?? parsed.explanation ?? parsed.summary ?? '';
+          return reasoning
+            ? `**${sentiment}**${score} — ${reasoning}`
+            : `${sentiment}${score}`;
+        }
+        case 'sizing_suggestion': {
+          const rec = parsed.recommendation ?? parsed.action ?? '';
+          const size = parsed.maxTradeSize
+            ? `max trade: ${Math.round(parsed.maxTradeSize * 100)}%`
+            : parsed.positionSizeMultiplier
+              ? `multiplier: ${parsed.positionSizeMultiplier}`
+              : '';
+          const reasoning =
+            parsed.reasoning ?? parsed.reason ?? parsed.suggestion ?? '';
+          if (rec || size || reasoning) {
+            const header = rec ? `**${rec.toUpperCase()}**` : '';
+            return [header, size, reasoning].filter(Boolean).join(' — ');
+          }
+          // Generic fallback: list all keys
+          return Object.entries(parsed)
+            .map(
+              ([k, v]) =>
+                `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`,
+            )
+            .join(', ');
+        }
+        case 'risk_gate': {
+          const verdict = parsed.verdict ?? parsed.action ?? '';
+          const riskScore = parsed.riskScore
+            ? ` (riskScore ${parsed.riskScore})`
+            : '';
+          const reason =
+            parsed.reason ?? parsed.reasoning ?? parsed.explanation ?? '';
+          return reason
+            ? `**${verdict}**${riskScore}: ${reason}`
+            : `${verdict}${riskScore}`;
+        }
+        case 'macro_context': {
+          const regime = parsed.regime ?? '';
+          const bias = parsed.bias ?? '';
+          const conf = parsed.confidence
+            ? `${Math.round(parsed.confidence * 100)}%`
+            : '';
+          const reasoning = parsed.reasoning ?? '';
+          const header = regime
+            ? `**${regime}** ${bias ? `(${bias})` : ''} ${conf ? `— ${conf} conf.` : ''}`
+            : '';
+          return [header, reasoning].filter(Boolean).join('\n\n');
+        }
+        default: {
+          // Generic: show all keys as readable text
+          return Object.entries(parsed)
+            .map(
+              ([k, v]) =>
+                `**${k}**: ${typeof v === 'object' ? JSON.stringify(v) : v}`,
+            )
+            .join('\n');
+        }
+      }
+    } catch {
+      // Not valid JSON, continue with text as-is
+    }
+  }
+
+  return text;
+}
+
 /** Individual collapsible verdict card */
 function VerdictCardComponent({ verdict: v }: { verdict: VerdictCard }) {
   const [expanded, setExpanded] = useState(false);
@@ -162,7 +268,9 @@ function VerdictCardComponent({ verdict: v }: { verdict: VerdictCard }) {
         <div
           className={`text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none overflow-hidden transition-[max-height] duration-300 ease-in-out [&_p]:my-0.5 [&_p]:leading-relaxed [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0 [&_pre]:my-1 [&_pre]:text-[11px] [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:rounded-md [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:text-[11px] [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_strong]:text-foreground [&_h1]:text-xs [&_h2]:text-xs [&_h3]:text-xs [&_blockquote]:border-l-2 [&_blockquote]:border-primary/30 [&_blockquote]:pl-2 [&_blockquote]:text-muted-foreground ${expanded ? 'max-h-[2000px]' : 'max-h-[5lh]'}`}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{v.summary}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {formatVerdictSummary(v.summary, v.task) || v.summary}
+          </ReactMarkdown>
         </div>
         {!expanded && v.summary.length > 150 && (
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />

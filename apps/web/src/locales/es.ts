@@ -1285,6 +1285,8 @@ const es = {
       'BeinCrypto — noticias de mercado, DeFi y análisis Web3. RSS público.',
     newsdata:
       'NewsData.io — API REST con hasta 200 solicitudes gratuitas al día. Requiere clave API gratuita.',
+    finnhub:
+      'Finnhub — Noticias crypto con 60 llamadas/min en tier gratuito. Requiere clave API gratuita.',
     orderPriceOffset:
       'Ajusta el precio de referencia para órdenes relativo al mercado. Negativo = simular compra por debajo del mercado (más favorable). Positivo = comprar por encima del mercado. En modo LIVE, afecta el tamaño de la posición pero la orden se ejecuta al precio de mercado.',
     sandboxMode:

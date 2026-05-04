@@ -1080,6 +1080,7 @@ export function SettingsPage() {
               'rss:beincrypto': 'beincrypto',
               reddit: 'reddit',
               newsdata: 'newsdata',
+              finnhub: 'finnhub',
             };
             const freeSources = newsSources.filter((s) => !s.requiresApiKey);
             const optionalSources = newsSources.filter((s) => s.requiresApiKey);

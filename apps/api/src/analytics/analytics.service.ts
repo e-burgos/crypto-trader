@@ -264,7 +264,7 @@ export class AnalyticsService {
                               `${k}: ${typeof parsed[k] === 'object' ? JSON.stringify(parsed[k]) : parsed[k]}`,
                           )
                           .join(', ')
-                      : 'Sin datos de sizing disponibles';
+                      : '';
                 }
               } else if (r.task === 'risk_gate') {
                 const verdict = parsed.verdict ?? parsed.action ?? '';

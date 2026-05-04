@@ -216,7 +216,7 @@ export function AgentVerdictCard({
   return (
     <div
       className={cn(
-        'flex flex-col gap-2 rounded-lg border border-border p-3',
+        'flex flex-col gap-2 rounded-lg border border-border p-3 h-full',
         className,
       )}
     >
@@ -280,7 +280,7 @@ export function AgentVerdictCard({
       </div>
 
       {/* Expand/collapse toggle + model */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mt-auto">
         {shouldShowToggle ? (
           <button
             onClick={() => setExpanded(!expanded)}

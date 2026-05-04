@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
   InfoCard,
   Badge,
+  Tabs,
   AgentVerdictCard,
   formatAgentVerdictSummary,
 } from '@crypto-trader/ui';
@@ -154,22 +156,65 @@ function VerdictCardWrapper({
 export function AgentVerdictsBanner() {
   const { t } = useTranslation();
   const { mode } = usePlatformMode();
-  const { data: decisions = [], isLoading } = useAgentDecisions(5, mode);
+  // Fetch enough decisions to cover all bots (5 per bot × N bots)
+  const { data: decisions = [], isLoading } = useAgentDecisions(20, mode);
   const { data: configs = [] } = useTradingConfigs();
   const triggerAnalysis = useTriggerAnalysis();
 
-  // Use the most recent orchestrated decision
-  const latest = decisions[0];
+  // Only show running configs for current mode
+  const activeConfigs = configs.filter(
+    (c) => c.isRunning && c.mode === mode?.toUpperCase(),
+  );
 
-  // Merge verdicts from multiple decisions: always show the latest per agent+task
-  // This ensures CIPHER (or any agent that doesn't run every cycle) still appears
+  // Config selector state — default to first active config
+  const [selectedConfigId, setSelectedConfigId] = useState<string>('');
+  const effectiveConfigId = selectedConfigId || activeConfigs[0]?.id || '';
+
+  // Filter decisions for the selected config
+  const configDecisions = decisions.filter(
+    (d) => d.configId === effectiveConfigId,
+  );
+  const latest = configDecisions[0];
+
+  // Merge verdicts from this config's decisions only
+  const EMPTY_VERDICTS = new Set([
+    '{}',
+    '[]',
+    '',
+    'Sin datos de sizing disponibles',
+    'Decisión orquestada por KRYPTO',
+  ]);
+
   const verdicts: AgentVerdictData[] = (() => {
     const seen = new Map<string, AgentVerdictData>();
-    for (const decision of decisions) {
+    for (const decision of configDecisions) {
+      // Include sub-agent verdicts
       for (const v of decision.subAgentVerdicts ?? []) {
         const key = `${v.agentId}:${v.task}`;
-        if (!seen.has(key)) {
+        const existing = seen.get(key);
+        const isEmpty = EMPTY_VERDICTS.has(v.summary?.trim());
+        if (!existing) {
           seen.set(key, v as AgentVerdictData);
+        } else if (EMPTY_VERDICTS.has(existing.summary?.trim()) && !isEmpty) {
+          seen.set(key, v as AgentVerdictData);
+        }
+      }
+      // Include KRYPTO synthesis from the decision reasoning
+      if (decision.reasoning) {
+        const key = 'KRYPTO:decision_synthesis';
+        const kryptoVerdict: AgentVerdictData = {
+          agentId: 'KRYPTO',
+          task: 'decision_synthesis',
+          summary: decision.reasoning,
+          model: decision.llmModel ?? undefined,
+          executedAt: decision.createdAt,
+        };
+        const existing = seen.get(key);
+        const isEmpty = EMPTY_VERDICTS.has(decision.reasoning.trim());
+        if (!existing) {
+          seen.set(key, kryptoVerdict);
+        } else if (EMPTY_VERDICTS.has(existing.summary?.trim()) && !isEmpty) {
+          seen.set(key, kryptoVerdict);
         }
       }
     }
@@ -177,15 +222,18 @@ export function AgentVerdictsBanner() {
   })();
   const hasData = verdicts.length > 0;
 
-  // Pick first config matching the current mode for trigger
-  const activeConfig =
-    configs.find((c) => c.mode === mode?.toUpperCase()) ?? configs[0];
-
   const handleTrigger = () => {
-    if (activeConfig?.id) {
-      triggerAnalysis.mutate(activeConfig.id);
+    if (effectiveConfigId) {
+      triggerAnalysis.mutate(effectiveConfigId);
     }
   };
+
+  // Build tabs from active configs
+  const configTabs = activeConfigs.map((c) => ({
+    value: c.id,
+    label: `${c.name}`,
+    icon: undefined,
+  }));
 
   return (
     <InfoCard
@@ -197,7 +245,7 @@ export function AgentVerdictsBanner() {
       )}
       headerRight={
         <div className="flex items-center gap-2">
-          {activeConfig && (
+          {effectiveConfigId && (
             <button
               onClick={handleTrigger}
               disabled={triggerAnalysis.isPending}
@@ -224,6 +272,18 @@ export function AgentVerdictsBanner() {
         </div>
       }
     >
+      {/* Config selector tabs */}
+      {configTabs.length > 1 && (
+        <div className="mb-3">
+          <Tabs
+            tabs={configTabs}
+            value={effectiveConfigId}
+            onChange={setSelectedConfigId}
+            size="sm"
+          />
+        </div>
+      )}
+
       {isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -253,19 +313,16 @@ export function AgentVerdictsBanner() {
       {hasData && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {verdicts.map((v, i) => (
-            <VerdictCardWrapper key={i} verdict={v} />
-          ))}
-          {latest?.reasoning && (
             <VerdictCardWrapper
-              className="border-primary/20 bg-primary/5"
-              verdict={{
-                agentId: 'KRYPTO',
-                task: 'decision_synthesis',
-                summary: latest.reasoning,
-                model: latest.llmModel ?? undefined,
-              }}
+              key={i}
+              verdict={v}
+              className={
+                v.agentId === 'KRYPTO'
+                  ? 'border-primary/20 bg-primary/5'
+                  : undefined
+              }
             />
-          )}
+          ))}
         </div>
       )}
     </InfoCard>

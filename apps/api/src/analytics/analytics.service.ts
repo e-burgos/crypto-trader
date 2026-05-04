@@ -203,27 +203,68 @@ export class AnalyticsService {
               const cleaned = r.output.replace(/```(?:json)?\s*/gi, '').trim();
               const match = cleaned.match(/\{[\s\S]*\}/);
               const parsed = match ? JSON.parse(match[0]) : JSON.parse(cleaned);
-              // Extract a short summary depending on the task type
+              // Build human-readable summary depending on task type
               if (r.task === 'technical_signal') {
-                summary = parsed.reasoning
-                  ? JSON.stringify({
-                      signal: parsed.signal,
-                      confidence: parsed.confidence,
-                      reasoning: parsed.reasoning,
-                    })
-                  : (parsed.signal ??
+                if (parsed.reasoning) {
+                  const signal = parsed.signal ?? 'N/A';
+                  const conf = parsed.confidence
+                    ? `${Math.round(parsed.confidence * 100)}%`
+                    : '';
+                  summary = `**${signal}** (${conf} confidence) — ${parsed.reasoning}`;
+                } else {
+                  summary =
+                    parsed.signal ??
                     parsed.direction ??
                     parsed.recommendation ??
-                    r.output);
+                    r.output;
+                }
               } else if (r.task === 'news_sentiment') {
-                summary =
-                  parsed.impact ?? parsed.sentiment?.toString() ?? r.output;
+                const sentiment = parsed.sentiment ?? parsed.impact ?? 'N/A';
+                const reasoning =
+                  parsed.reasoning ?? parsed.explanation ?? parsed.summary ?? '';
+                const score =
+                  parsed.score != null ? ` (score: ${parsed.score})` : '';
+                summary = reasoning
+                  ? `**${sentiment}**${score} — ${reasoning}`
+                  : `${sentiment}${score}`;
               } else if (r.task === 'sizing_suggestion') {
-                summary = parsed.suggestion ?? parsed.sizing ?? r.output;
+                const action = parsed.action ?? parsed.sizing ?? '';
+                const multiplier = parsed.positionSizeMultiplier
+                  ? `positionSizeMultiplier: ${parsed.positionSizeMultiplier}`
+                  : parsed.positionSize
+                    ? `positionSize: ${parsed.positionSize}`
+                    : '';
+                const reason =
+                  parsed.reasoning ?? parsed.reason ?? parsed.suggestion ?? '';
+                if (action || multiplier || reason) {
+                  summary = [action, multiplier, reason]
+                    .filter(Boolean)
+                    .join(' — ');
+                } else {
+                  // Fallback: if JSON has any keys, show them as readable text
+                  const keys = Object.keys(parsed);
+                  summary =
+                    keys.length > 0
+                      ? keys
+                          .map(
+                            (k) =>
+                              `${k}: ${typeof parsed[k] === 'object' ? JSON.stringify(parsed[k]) : parsed[k]}`,
+                          )
+                          .join(', ')
+                      : r.output;
+                }
               } else if (r.task === 'risk_gate') {
-                summary = parsed.verdict
-                  ? `${parsed.verdict}: ${parsed.reason ?? ''}`
-                  : r.output;
+                const verdict = parsed.verdict ?? parsed.action ?? '';
+                const reason =
+                  parsed.reason ?? parsed.reasoning ?? parsed.explanation ?? '';
+                const riskScore = parsed.riskScore
+                  ? ` (riskScore ${parsed.riskScore})`
+                  : '';
+                summary = reason
+                  ? `**${verdict}**${riskScore}: ${reason}`
+                  : verdict
+                    ? `${verdict}${riskScore}`
+                    : r.output;
               } else {
                 summary = r.output;
               }

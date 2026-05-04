@@ -27,8 +27,10 @@ export interface NewsItemInput {
 
 function safeParseJson<T>(raw: string, fallback: T): T {
   try {
+    // Strip thinking tags from reasoning models (Qwen3, DeepSeek-R1, etc.)
+    let cleaned = raw.replace(/<think>[\s\S]*?<\/think>\s*/g, '');
     // Strip markdown code fences if present
-    const cleaned = raw.replace(/```(?:json)?\s*/gi, '').trim();
+    cleaned = cleaned.replace(/```(?:json)?\s*/gi, '').trim();
     try {
       return JSON.parse(cleaned) as T;
     } catch {
@@ -296,7 +298,8 @@ export class OrchestratorService {
             currency: w.currency,
             balance: Number(w.balance),
           })),
-          currentPrice: (indicators as unknown as Record<string, unknown>)?.close ?? null,
+          currentPrice:
+            (indicators as unknown as Record<string, unknown>)?.close ?? null,
         },
         userId,
         false,

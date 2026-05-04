@@ -200,7 +200,10 @@ export class AnalyticsService {
           subAgentVerdicts = meta.subAgentResults.map((r) => {
             let summary = '';
             try {
-              const cleaned = r.output.replace(/```(?:json)?\s*/gi, '').trim();
+              const cleaned = r.output
+                .replace(/<think>[\s\S]*?<\/think>\s*/g, '')
+                .replace(/```(?:json)?\s*/gi, '')
+                .trim();
               const match = cleaned.match(/\{[\s\S]*\}/);
               const parsed = match ? JSON.parse(match[0]) : JSON.parse(cleaned);
               // Build human-readable summary depending on task type

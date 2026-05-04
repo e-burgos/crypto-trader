@@ -114,6 +114,7 @@ export interface AgentDecision {
     cached?: boolean;
     model?: string;
     provider?: string;
+    executedAt?: string;
   }> | null;
 }
 

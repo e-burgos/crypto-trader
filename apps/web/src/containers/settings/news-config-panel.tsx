@@ -14,12 +14,14 @@ const ALL_SOURCE_IDS = [
   'rss:theblock',
   'rss:beincrypto',
   'reddit',
+  'finnhub',
 ];
 
 function sourceLabel(source: string): string {
   if (source === 'coingecko') return 'CoinGecko';
   if (source === 'cryptopanic') return 'CryptoPanic';
   if (source === 'newsdata') return 'NewsData';
+  if (source === 'finnhub') return 'Finnhub';
   if (source.startsWith('rss:')) {
     const name = source.replace('rss:', '');
     return name.charAt(0).toUpperCase() + name.slice(1);

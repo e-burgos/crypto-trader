@@ -20,14 +20,13 @@ import { useTradingConfigs, useAgentStatus } from '../../hooks/use-trading';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
 import { usePlatformMode } from '../../hooks/use-user';
 import {
-  TechnicalSummary,
-  NewsSentimentPanel,
   AgentInputSummary,
   CombinedScoreBanner,
   NextDecisionBanner,
   type NewsAnalysisData,
   type SigmaSentiment,
 } from '../../components/bot-analysis';
+import { AgentVerdictsBanner } from '../../components/market-intelligence';
 
 gsap.registerPlugin(useGSAP);
 
@@ -225,10 +224,7 @@ export function BotAnalysisPage() {
             agentStatuses={agentStatuses}
             decisions={modeDecisions}
           />
-          <div className="grid gap-4 lg:grid-cols-2 analysis-section">
-            <TechnicalSummary snapshot={snapshot} livePrice={livePrice} />
-            <NewsSentimentPanel news={newsItems} sigmaSentiment={latestSigma} />
-          </div>
+          <AgentVerdictsBanner />
           <AgentInputSummary
             snapshot={snapshot}
             livePrice={livePrice}

@@ -143,6 +143,20 @@ export function AgentInputSummary({
               label: t('botAnalysis.inputNewsDistribution'),
               value: `${newsAnalysis.positive}↑ / ${newsAnalysis.neutral}→ / ${newsAnalysis.negative}↓`,
             },
+            ...(enrichedSnapshot?.fearGreed
+              ? [
+                  {
+                    label: t('botAnalysis.inputSourcesFearGreed'),
+                    value: `${enrichedSnapshot.fearGreed.value}/100 — ${enrichedSnapshot.fearGreed.classification}`,
+                    color:
+                      enrichedSnapshot.fearGreed.value <= 25
+                        ? 'text-red-400'
+                        : enrichedSnapshot.fearGreed.value >= 75
+                          ? 'text-emerald-400'
+                          : 'text-amber-400',
+                  },
+                ]
+              : []),
           ]
         : [
             {
@@ -152,102 +166,53 @@ export function AgentInputSummary({
             },
           ],
     },
-    {
-      group: t('botAnalysis.inputGroupSources'),
-      items: (() => {
-        if (!enrichedSnapshot) {
-          return [
-            {
-              label: t('botAnalysis.inputSourcesNone'),
-              value: '—',
-              color: 'text-muted-foreground',
-            },
-          ];
-        }
-        const items: { label: string; value: string; color?: string }[] = [];
-
-        // If no sources at all (all disabled or no registry)
-        if (
-          enrichedSnapshot.activeSources.length === 0 &&
-          enrichedSnapshot.failedSources.length === 0
-        ) {
-          return [
-            {
-              label: t('botAnalysis.inputSourcesNone'),
-              value: '—',
-              color: 'text-muted-foreground',
-            },
-          ];
-        }
-
-        // Show data from active sources
-        if (enrichedSnapshot.fearGreed) {
-          const fg = enrichedSnapshot.fearGreed;
-          items.push({
-            label: t('botAnalysis.inputSourcesFearGreed'),
-            value: `${fg.value}/100 — ${fg.classification}`,
-            color:
-              fg.value <= 25
-                ? 'text-red-400'
-                : fg.value >= 75
-                  ? 'text-emerald-400'
-                  : 'text-amber-400',
-          });
-        }
-        if (enrichedSnapshot.derivatives) {
-          const d = enrichedSnapshot.derivatives;
-          items.push({
-            label: t('botAnalysis.inputSourcesDerivatives'),
-            value: `FR: ${(d.fundingRate * 100).toFixed(3)}% · L/S: ${d.longShortRatio.toFixed(2)}`,
-            color:
-              d.fundingRate > 0.01
-                ? 'text-emerald-400'
-                : d.fundingRate < -0.01
-                  ? 'text-red-400'
-                  : 'text-muted-foreground',
-          });
-        }
-        if (enrichedSnapshot.defiHealth) {
-          const dh = enrichedSnapshot.defiHealth;
-          items.push({
-            label: t('botAnalysis.inputSourcesDefi'),
-            value: `TVL ${dh.tvlChange24h >= 0 ? '+' : ''}${dh.tvlChange24h.toFixed(1)}%`,
-            color:
-              dh.tvlChange24h >= 2
-                ? 'text-emerald-400'
-                : dh.tvlChange24h <= -2
-                  ? 'text-red-400'
-                  : 'text-muted-foreground',
-          });
-        }
-        if (enrichedSnapshot.globalMarket) {
-          const gm = enrichedSnapshot.globalMarket;
-          items.push({
-            label: t('botAnalysis.inputSourcesGlobal'),
-            value: `BTC dom: ${gm.btcDominance.toFixed(1)}%${gm.marketCapChange24h != null ? ` · MCap ${gm.marketCapChange24h >= 0 ? '+' : ''}${gm.marketCapChange24h.toFixed(1)}%` : ''}`,
-          });
-        }
-        if (
-          enrichedSnapshot.predictions &&
-          enrichedSnapshot.predictions.length > 0
-        ) {
-          items.push({
-            label: t('botAnalysis.inputSourcesPredictions'),
-            value: `${enrichedSnapshot.predictions.length} markets`,
-          });
-        }
-        if (
-          enrichedSnapshot.tokenUnlocks &&
-          enrichedSnapshot.tokenUnlocks.length > 0
-        ) {
-          items.push({
-            label: t('botAnalysis.inputSourcesUnlocks'),
-            value: `${enrichedSnapshot.tokenUnlocks.length} upcoming`,
-          });
-        }
-        return items;
-      })(),
-    },
+    // Macro Context group — only shown if any macro data available (CIPHER)
+    ...(enrichedSnapshot?.globalMarket ||
+    enrichedSnapshot?.defiHealth ||
+    enrichedSnapshot?.tokenUnlocks
+      ? [
+          {
+            group: t('botAnalysis.inputGroupMacro'),
+            items: (() => {
+              const items: {
+                label: string;
+                value: string;
+                color?: string;
+              }[] = [];
+              if (enrichedSnapshot?.globalMarket) {
+                const gm = enrichedSnapshot.globalMarket;
+                items.push({
+                  label: t('botAnalysis.inputSourcesGlobal'),
+                  value: `BTC dom: ${gm.btcDominance.toFixed(1)}%${gm.marketCapChange24h != null ? ` · MCap ${gm.marketCapChange24h >= 0 ? '+' : ''}${gm.marketCapChange24h.toFixed(1)}%` : ''}`,
+                });
+              }
+              if (enrichedSnapshot?.defiHealth) {
+                const dh = enrichedSnapshot.defiHealth;
+                items.push({
+                  label: t('botAnalysis.inputSourcesDefi'),
+                  value: `TVL ${dh.tvlChange24h >= 0 ? '+' : ''}${dh.tvlChange24h.toFixed(1)}%`,
+                  color:
+                    dh.tvlChange24h >= 2
+                      ? 'text-emerald-400'
+                      : dh.tvlChange24h <= -2
+                        ? 'text-red-400'
+                        : 'text-muted-foreground',
+                });
+              }
+              if (
+                enrichedSnapshot?.tokenUnlocks &&
+                enrichedSnapshot.tokenUnlocks.length > 0
+              ) {
+                items.push({
+                  label: t('botAnalysis.inputSourcesUnlocks'),
+                  value: `${enrichedSnapshot.tokenUnlocks.length} upcoming`,
+                });
+              }
+              return items;
+            })(),
+          },
+        ]
+      : []),
     {
       group: t('botAnalysis.inputGroupHistory'),
       items:
@@ -294,6 +259,11 @@ export function AgentInputSummary({
       icon: Globe,
       accent: 'text-blue-400',
       bar: 'bg-blue-500',
+    },
+    [t('botAnalysis.inputGroupMacro')]: {
+      icon: Globe,
+      accent: 'text-indigo-400',
+      bar: 'bg-indigo-500',
     },
     [t('botAnalysis.inputGroupConfig')]: {
       icon: Layers,
@@ -369,6 +339,20 @@ export function AgentInputSummary({
             className:
               'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400',
             tooltip: enrichedSnapshot.failedSources.join(', '),
+          });
+        }
+
+        // Derivatives tag (AEGIS risk context)
+        if (enrichedSnapshot?.derivatives) {
+          const d = enrichedSnapshot.derivatives;
+          tags.push({
+            label: `${t('botAnalysis.inputSourcesDerivatives')}: FR ${(d.fundingRate * 100).toFixed(3)}% · L/S ${d.longShortRatio.toFixed(2)}`,
+            className:
+              d.fundingRate > 0.01
+                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                : d.fundingRate < -0.01
+                  ? 'bg-red-500/10 border border-red-500/20 text-red-400'
+                  : 'bg-muted/40 border border-border/50 text-muted-foreground',
           });
         }
 

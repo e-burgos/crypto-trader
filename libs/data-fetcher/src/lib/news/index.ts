@@ -12,6 +12,9 @@ export type { RssFetcherConfig } from './rss.fetcher';
 export { NewsDataFetcher } from './newsdata.fetcher';
 export type { NewsDataConfig } from './newsdata.fetcher';
 
+export { FinnhubNewsFetcher } from './finnhub.fetcher';
+export type { FinnhubNewsConfig } from './finnhub.fetcher';
+
 export { NewsAggregator } from './news-aggregator';
 export type { NewsSource, NewsAggregatorConfig } from './news-source.interface';
 export { estimateSentiment, newsItemId } from './news-source.interface';

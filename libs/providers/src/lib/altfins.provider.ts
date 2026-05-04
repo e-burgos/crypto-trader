@@ -22,20 +22,16 @@ export class AltFinsProvider implements IDataSourceProvider {
     config: ProviderConfig,
     apiKey?: string,
   ): Promise<DataSourcePayload> {
-    if (!apiKey) {
-      // Without API key, return empty indicators so the system
-      // falls back to the internal calculation pipeline
-      return { type: 'indicators', data: null };
-    }
-
     const base = config.baseUrl;
     const headers: Record<string, string> = {
-      'X-API-KEY': apiKey,
       'Content-Type': 'application/json',
     };
+    if (apiKey) {
+      headers['X-API-KEY'] = apiKey;
+    }
 
     const response = await fetch(
-      `${base}/api/v2/public/signals-feed/search-requests?page=0&size=20`,
+      `${base}/api/v2/public/signals-feed/search-requests?page=0&size=50`,
       {
         method: 'POST',
         headers,
@@ -71,13 +67,12 @@ export class AltFinsProvider implements IDataSourceProvider {
           signal: AbortSignal.timeout(5_000),
         },
       );
+      // 401 means server is reachable but needs auth — still "available"
+      const reachable = response.ok || response.status === 401;
       return {
-        available: response.ok || response.status === 401,
+        available: reachable,
         latencyMs: Date.now() - start,
-        error:
-          response.ok || response.status === 401
-            ? undefined
-            : `HTTP ${response.status}`,
+        error: reachable ? undefined : `HTTP ${response.status}`,
       };
     } catch (err) {
       return {

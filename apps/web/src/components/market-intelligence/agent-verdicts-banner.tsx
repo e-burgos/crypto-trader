@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { InfoCard, Badge } from '@crypto-trader/ui';
+import {
+  InfoCard,
+  Badge,
+  Tabs,
+  AgentVerdictCard,
+  formatAgentVerdictSummary,
+} from '@crypto-trader/ui';
+import type { AgentMeta, AgentVerdictData } from '@crypto-trader/ui';
 import {
   Bot,
   TrendingUp,
@@ -13,33 +18,17 @@ import {
   Shield,
   Wrench,
   Cpu,
-  ChevronDown,
   Play,
   Loader2,
+  Globe,
 } from 'lucide-react';
 import { useAgentDecisions } from '../../hooks/use-analytics';
 import { usePlatformMode } from '../../hooks/use-user';
 import { useTradingConfigs, useTriggerAnalysis } from '../../hooks/use-trading';
 
-interface VerdictCard {
-  agentId: string;
-  task: string;
-  summary: string;
-  cached?: boolean;
-  model?: string;
-  provider?: string;
-}
+// ── Agent metadata (icons + colors) ──────────────────────────────────────────
 
-const AGENT_META: Record<
-  string,
-  {
-    label: string;
-    fullNameKey: string;
-    icon: React.ReactNode;
-    color: string;
-    bgColor: string;
-  }
-> = {
+const AGENT_META_MAP: Record<string, AgentMeta & { fullNameKey: string }> = {
   SIGMA: {
     label: 'SIGMA',
     fullNameKey: 'marketIntelligence.verdicts.agents.sigma',
@@ -61,6 +50,20 @@ const AGENT_META: Record<
     color: 'text-purple-400',
     bgColor: 'bg-purple-500/10',
   },
+  CIPHER: {
+    label: 'CIPHER',
+    fullNameKey: 'marketIntelligence.verdicts.agents.cipher',
+    icon: <Globe className="h-3.5 w-3.5" />,
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/10',
+  },
+  KRYPTO: {
+    label: 'KRYPTO',
+    fullNameKey: 'marketIntelligence.verdicts.orchestratorRole',
+    icon: <Bot className="h-3.5 w-3.5" />,
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
 };
 
 const TASK_ICON: Record<string, React.ReactNode> = {
@@ -68,6 +71,8 @@ const TASK_ICON: Record<string, React.ReactNode> = {
   news_sentiment: <Newspaper className="h-3 w-3" />,
   sizing_suggestion: <Wrench className="h-3 w-3" />,
   risk_gate: <Shield className="h-3 w-3" />,
+  macro_context: <Globe className="h-3 w-3" />,
+  decision_synthesis: <Bot className="h-3 w-3" />,
 };
 
 const TASK_LABEL_KEYS: Record<string, string> = {
@@ -75,14 +80,11 @@ const TASK_LABEL_KEYS: Record<string, string> = {
   news_sentiment: 'marketIntelligence.verdicts.tasks.newsSentiment',
   sizing_suggestion: 'marketIntelligence.verdicts.tasks.positionSizing',
   risk_gate: 'marketIntelligence.verdicts.tasks.riskGate',
+  macro_context: 'marketIntelligence.verdicts.tasks.macroContext',
+  decision_synthesis: 'marketIntelligence.verdicts.tasks.synthesis',
 };
 
-/** Shorten model name for display (e.g. "anthropic/claude-3.5-sonnet" → "claude-3.5-sonnet") */
-function shortModel(model?: string): string {
-  if (!model) return '';
-  const parts = model.split('/');
-  return parts[parts.length - 1];
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function decisionBadge(decision: string): 'success' | 'error' | 'neutral' {
   if (decision === 'BUY') return 'success';
@@ -98,116 +100,135 @@ function decisionIcon(decision: string) {
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
-/** Individual collapsible verdict card */
-function VerdictCardComponent({ verdict: v }: { verdict: VerdictCard }) {
-  const [expanded, setExpanded] = useState(false);
+// ── Verdict card wrapper (adds i18n + ReactMarkdown rendering) ───────────────
+
+function VerdictCardWrapper({
+  verdict,
+  className,
+}: {
+  verdict: AgentVerdictData;
+  className?: string;
+}) {
   const { t } = useTranslation();
-  const meta = AGENT_META[v.agentId.toUpperCase()] ?? {
-    label: v.agentId,
-    fullNameKey: '',
-    icon: <Bot className="h-3.5 w-3.5" />,
-    color: 'text-muted-foreground',
-    bgColor: 'bg-muted',
-  };
-  const modelShort = shortModel(v.model);
-  const fullName = meta.fullNameKey ? t(meta.fullNameKey) : v.agentId;
-  const taskLabel = TASK_LABEL_KEYS[v.task]
-    ? t(TASK_LABEL_KEYS[v.task])
-    : v.task;
+  const metaEntry = AGENT_META_MAP[verdict.agentId.toUpperCase()];
+  const agentMeta: AgentMeta = metaEntry
+    ? {
+        ...metaEntry,
+        subtitle: t(metaEntry.fullNameKey),
+      }
+    : {
+        label: verdict.agentId,
+        subtitle: verdict.agentId,
+        icon: <Bot className="h-3.5 w-3.5" />,
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
+      };
+
+  const taskLabel = TASK_LABEL_KEYS[verdict.task]
+    ? t(TASK_LABEL_KEYS[verdict.task])
+    : verdict.task;
+
+  // Format summary and wrap with ReactMarkdown
+  const formatted =
+    formatAgentVerdictSummary(verdict.summary, verdict.task) || verdict.summary;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-      {/* Header: Agent name + task */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-md ${meta.bgColor} ${meta.color}`}
-          >
-            {meta.icon}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold leading-tight">
-              {meta.label}
-            </span>
-            <span className="text-[10px] text-muted-foreground leading-tight">
-              {fullName}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {v.cached && (
-            <span className="text-[10px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded">
-              {t('marketIntelligence.verdicts.cached')}
-            </span>
-          )}
-          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded flex items-center gap-0.5">
-            {TASK_ICON[v.task]}
-            {taskLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* Summary with collapse */}
-      <div className="relative">
-        <div
-          className={`text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none overflow-hidden transition-[max-height] duration-300 ease-in-out [&_p]:my-0.5 [&_p]:leading-relaxed [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0 [&_pre]:my-1 [&_pre]:text-[11px] [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:rounded-md [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:text-[11px] [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_strong]:text-foreground [&_h1]:text-xs [&_h2]:text-xs [&_h3]:text-xs [&_blockquote]:border-l-2 [&_blockquote]:border-primary/30 [&_blockquote]:pl-2 [&_blockquote]:text-muted-foreground ${expanded ? 'max-h-[2000px]' : 'max-h-[5lh]'}`}
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{v.summary}</ReactMarkdown>
-        </div>
-        {!expanded && v.summary.length > 150 && (
-          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-        )}
-      </div>
-
-      {/* Expand/collapse toggle + model */}
-      <div className="flex items-center justify-between">
-        {v.summary.length > 150 ? (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
-          >
-            <ChevronDown
-              className={`h-3 w-3 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-            />
-            {expanded
-              ? t('marketIntelligence.verdicts.showLess')
-              : t('marketIntelligence.verdicts.showMore')}
-          </button>
-        ) : (
-          <span />
-        )}
-        {modelShort && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
-            <Cpu className="h-2.5 w-2.5" />
-            <span className="truncate max-w-[180px]">{modelShort}</span>
-          </div>
-        )}
-      </div>
-    </div>
+    <AgentVerdictCard
+      verdict={verdict}
+      agentMeta={agentMeta}
+      taskLabel={taskLabel}
+      taskIcon={TASK_ICON[verdict.task]}
+      cachedLabel={t('marketIntelligence.verdicts.cached')}
+      showMoreLabel={t('marketIntelligence.verdicts.showMore')}
+      showLessLabel={t('marketIntelligence.verdicts.showLess')}
+      modelIcon={<Cpu className="h-2.5 w-2.5" />}
+      formattedSummary={formatted}
+      className={className}
+    />
   );
 }
 
 export function AgentVerdictsBanner() {
   const { t } = useTranslation();
   const { mode } = usePlatformMode();
-  const { data: decisions = [], isLoading } = useAgentDecisions(5, mode);
+  // Fetch enough decisions to cover all bots (5 per bot × N bots)
+  const { data: decisions = [], isLoading } = useAgentDecisions(20, mode);
   const { data: configs = [] } = useTradingConfigs();
   const triggerAnalysis = useTriggerAnalysis();
 
-  // Use the most recent orchestrated decision
-  const latest = decisions[0];
-  const verdicts: VerdictCard[] = latest?.subAgentVerdicts ?? [];
+  // Only show running configs for current mode
+  const activeConfigs = configs.filter(
+    (c) => c.isRunning && c.mode === mode?.toUpperCase(),
+  );
+
+  // Config selector state — default to first active config
+  const [selectedConfigId, setSelectedConfigId] = useState<string>('');
+  const effectiveConfigId = selectedConfigId || activeConfigs[0]?.id || '';
+
+  // Filter decisions for the selected config
+  const configDecisions = decisions.filter(
+    (d) => d.configId === effectiveConfigId,
+  );
+  const latest = configDecisions[0];
+
+  // Merge verdicts from this config's decisions only
+  const EMPTY_VERDICTS = new Set([
+    '{}',
+    '[]',
+    '',
+    'Sin datos de sizing disponibles',
+    'Decisión orquestada por KRYPTO',
+  ]);
+
+  const verdicts: AgentVerdictData[] = (() => {
+    const seen = new Map<string, AgentVerdictData>();
+    for (const decision of configDecisions) {
+      // Include sub-agent verdicts
+      for (const v of decision.subAgentVerdicts ?? []) {
+        const key = `${v.agentId}:${v.task}`;
+        const existing = seen.get(key);
+        const isEmpty = EMPTY_VERDICTS.has(v.summary?.trim());
+        if (!existing) {
+          seen.set(key, v as AgentVerdictData);
+        } else if (EMPTY_VERDICTS.has(existing.summary?.trim()) && !isEmpty) {
+          seen.set(key, v as AgentVerdictData);
+        }
+      }
+      // Include KRYPTO synthesis from the decision reasoning
+      if (decision.reasoning) {
+        const key = 'KRYPTO:decision_synthesis';
+        const kryptoVerdict: AgentVerdictData = {
+          agentId: 'KRYPTO',
+          task: 'decision_synthesis',
+          summary: decision.reasoning,
+          model: decision.llmModel ?? undefined,
+          executedAt: decision.createdAt,
+        };
+        const existing = seen.get(key);
+        const isEmpty = EMPTY_VERDICTS.has(decision.reasoning.trim());
+        if (!existing) {
+          seen.set(key, kryptoVerdict);
+        } else if (EMPTY_VERDICTS.has(existing.summary?.trim()) && !isEmpty) {
+          seen.set(key, kryptoVerdict);
+        }
+      }
+    }
+    return Array.from(seen.values());
+  })();
   const hasData = verdicts.length > 0;
 
-  // Pick first config matching the current mode for trigger
-  const activeConfig =
-    configs.find((c) => c.mode === mode?.toUpperCase()) ?? configs[0];
-
   const handleTrigger = () => {
-    if (activeConfig?.id) {
-      triggerAnalysis.mutate(activeConfig.id);
+    if (effectiveConfigId) {
+      triggerAnalysis.mutate(effectiveConfigId);
     }
   };
+
+  // Build tabs from active configs
+  const configTabs = activeConfigs.map((c) => ({
+    value: c.id,
+    label: `${c.name}`,
+    icon: undefined,
+  }));
 
   return (
     <InfoCard
@@ -219,7 +240,7 @@ export function AgentVerdictsBanner() {
       )}
       headerRight={
         <div className="flex items-center gap-2">
-          {activeConfig && (
+          {effectiveConfigId && (
             <button
               onClick={handleTrigger}
               disabled={triggerAnalysis.isPending}
@@ -234,6 +255,30 @@ export function AgentVerdictsBanner() {
               {t('marketIntelligence.verdicts.triggerAnalysis')}
             </button>
           )}
+        </div>
+      }
+    >
+      {/* Config selector tabs + decision badge */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        {configTabs.length > 1 ? (
+          <Tabs
+            tabs={configTabs}
+            value={effectiveConfigId}
+            onChange={setSelectedConfigId}
+            size="sm"
+          />
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            {activeConfigs[0]?.name}
+          </span>
+        )}
+        <div className="flex items-center gap-2">
+          {latest && (
+            <span className="text-[10px] text-muted-foreground/60">
+              {t('marketIntelligence.lastCycle', 'Last cycle')}:{' '}
+              {new Date(latest.createdAt).toLocaleTimeString()}
+            </span>
+          )}
           {latest && (
             <>
               {decisionIcon(latest.decision)}
@@ -244,8 +289,8 @@ export function AgentVerdictsBanner() {
             </>
           )}
         </div>
-      }
-    >
+      </div>
+
       {isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -273,47 +318,19 @@ export function AgentVerdictsBanner() {
       )}
 
       {hasData && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {verdicts.map((v, i) => (
-              <VerdictCardComponent key={i} verdict={v} />
-            ))}
-          </div>
-
-          {/* KRYPTO synthesis section */}
-          {latest && (
-            <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Bot className="h-3.5 w-3.5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold leading-tight">
-                    KRYPTO
-                  </span>
-                  <span className="text-[10px] text-muted-foreground leading-tight">
-                    {t('marketIntelligence.verdicts.orchestratorRole')}
-                  </span>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  {latest.llmModel && (
-                    <span className="text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                      <Cpu className="h-2.5 w-2.5" />
-                      {shortModel(latest.llmModel)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground line-clamp-3">
-                {latest.reasoning}
-              </p>
-              <div className="text-[11px] text-muted-foreground/60">
-                {t('marketIntelligence.verdicts.lastCycle')}:{' '}
-                {new Date(latest.createdAt).toLocaleTimeString()}
-              </div>
-            </div>
-          )}
-        </>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {verdicts.map((v, i) => (
+            <VerdictCardWrapper
+              key={i}
+              verdict={v}
+              className={
+                v.agentId === 'KRYPTO'
+                  ? 'border-primary/20 bg-primary/5'
+                  : undefined
+              }
+            />
+          ))}
+        </div>
       )}
     </InfoCard>
   );

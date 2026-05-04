@@ -3,6 +3,7 @@ export * from './constants';
 export { useTimeAgo, fmt, fmtPrice, useCountdown } from './helpers';
 export { StatusCard, StateDetailRow, StateSectionTitle } from './status-card';
 export { TechnicalSummary } from './technical-summary';
+export type { SigmaTechnical } from './technical-summary';
 export { NewsSentimentPanel } from './news-sentiment-panel';
 export type { SigmaSentiment } from './news-sentiment-panel';
 export { AgentCurrentStateModal } from './agent-state-modal';

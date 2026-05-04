@@ -5,10 +5,12 @@ import {
   XCircle,
   ShieldAlert,
   BarChart2,
+  Brain,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
+import { AgentVerdictCard } from '@crypto-trader/ui';
 import {
   deriveOverallSignal,
   deriveOpportunity,
@@ -16,13 +18,25 @@ import {
 } from '../../hooks/use-market';
 import { SIGNAL_COLOR, SIGNAL_BG } from './constants';
 import { fmtPrice } from './helpers';
+import type { EnrichedMarketSnapshot } from '@crypto-trader/shared';
+
+export interface SigmaTechnical {
+  signal: string;
+  confidence: number;
+  reasoning: string;
+  cached?: boolean;
+}
 
 export function TechnicalSummary({
   snapshot,
   livePrice,
+  sigmaTechnical,
+  enrichedSnapshot,
 }: {
   snapshot: MarketSnapshot;
   livePrice: number;
+  sigmaTechnical?: SigmaTechnical | null;
+  enrichedSnapshot?: EnrichedMarketSnapshot;
 }) {
   const { t } = useTranslation();
   const { signal, score, reasons } = deriveOverallSignal(snapshot);
@@ -183,6 +197,76 @@ export function TechnicalSummary({
               ))}
             </div>
           </div>
+        )}
+
+        {/* External signals (altfins) confluence note */}
+        {enrichedSnapshot?.technicalSignals &&
+          enrichedSnapshot.technicalSignals.length > 0 && (
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/[0.06] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-blue-400 font-bold mb-1">
+                {t('botAnalysis.altfinsConfluence')}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {enrichedSnapshot.technicalSignals.slice(0, 5).map((s, i) => (
+                  <span
+                    key={`${s.signalName}-${i}`}
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-semibold border',
+                      s.direction === 'BUY' || s.direction === 'BULLISH'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        : s.direction === 'SELL' || s.direction === 'BEARISH'
+                          ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                          : 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+                    )}
+                    title={`${s.symbolName} — ${s.signalName}`}
+                  >
+                    {s.signalName}:{' '}
+                    <span className="font-bold">{s.direction}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+        {/* SIGMA Technical Conclusion */}
+        {sigmaTechnical && (
+          <AgentVerdictCard
+            verdict={{
+              agentId: 'sigma-technical',
+              task: 'technical_signal',
+              summary: sigmaTechnical.reasoning,
+              cached: sigmaTechnical.cached,
+            }}
+            agentMeta={{
+              label: t('botAnalysis.sigmaTitle'),
+              subtitle: `${t('botAnalysis.signalTechnical')}: ${sigmaTechnical.signal}`,
+              icon: <Brain className="h-3 w-3" />,
+              color:
+                sigmaTechnical.signal === 'BUY'
+                  ? 'text-emerald-400'
+                  : sigmaTechnical.signal === 'SELL'
+                    ? 'text-red-400'
+                    : 'text-amber-400',
+              bgColor:
+                sigmaTechnical.signal === 'BUY'
+                  ? 'bg-emerald-500/10'
+                  : sigmaTechnical.signal === 'SELL'
+                    ? 'bg-red-500/10'
+                    : 'bg-amber-500/10',
+            }}
+            taskLabel={sigmaTechnical.signal}
+            showCachedBadge={!!sigmaTechnical.cached}
+            cachedLabel={t('botAnalysis.sigmaCached')}
+            showMoreLabel={t('common.more', 'Más')}
+            showLessLabel={t('common.less', 'Menos')}
+            className={cn(
+              sigmaTechnical.signal === 'BUY'
+                ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+                : sigmaTechnical.signal === 'SELL'
+                  ? 'border-red-500/20 bg-red-500/[0.06]'
+                  : 'border-amber-500/20 bg-amber-500/[0.06]',
+            )}
+          />
         )}
       </div>
     </div>

@@ -181,6 +181,7 @@ export class AnalyticsService {
         cached?: boolean;
         model?: string;
         provider?: string;
+        executedAt?: string;
       }> | null = null;
 
       if (d.metadata) {
@@ -200,25 +201,107 @@ export class AnalyticsService {
           subAgentVerdicts = meta.subAgentResults.map((r) => {
             let summary = '';
             try {
-              const cleaned = r.output.replace(/```(?:json)?\s*/gi, '').trim();
+              const cleaned = r.output
+                .replace(/<think>[\s\S]*?<\/think>\s*/g, '')
+                .replace(/```(?:json)?\s*/gi, '')
+                .trim();
               const match = cleaned.match(/\{[\s\S]*\}/);
               const parsed = match ? JSON.parse(match[0]) : JSON.parse(cleaned);
-              // Extract a short summary depending on the task type
+              // Build human-readable summary depending on task type
               if (r.task === 'technical_signal') {
-                summary =
-                  parsed.signal ??
-                  parsed.direction ??
-                  parsed.recommendation ??
-                  r.output;
+                if (parsed.reasoning) {
+                  const signal = parsed.signal ?? 'N/A';
+                  const conf = parsed.confidence
+                    ? `${Math.round(parsed.confidence * 100)}%`
+                    : '';
+                  summary = `**${signal}** (${conf} confidence) — ${parsed.reasoning}`;
+                } else {
+                  summary =
+                    parsed.signal ??
+                    parsed.direction ??
+                    parsed.recommendation ??
+                    r.output;
+                }
               } else if (r.task === 'news_sentiment') {
-                summary =
-                  parsed.impact ?? parsed.sentiment?.toString() ?? r.output;
+                const sentiment = parsed.sentiment ?? parsed.impact ?? 'N/A';
+                const reasoning =
+                  parsed.reasoning ??
+                  parsed.explanation ??
+                  parsed.summary ??
+                  '';
+                const score =
+                  parsed.score != null ? ` (score: ${parsed.score})` : '';
+                summary = reasoning
+                  ? `**${sentiment}**${score} — ${reasoning}`
+                  : `${sentiment}${score}`;
               } else if (r.task === 'sizing_suggestion') {
-                summary = parsed.suggestion ?? parsed.sizing ?? r.output;
+                const recommendation =
+                  parsed.recommendation ?? parsed.action ?? parsed.sizing ?? '';
+                const maxTrade = parsed.maxTradeSize
+                  ? `max trade size: ${parsed.maxTradeSize}`
+                  : parsed.positionSizeMultiplier
+                    ? `multiplier: ${parsed.positionSizeMultiplier}`
+                    : parsed.positionSize
+                      ? `position size: ${parsed.positionSize}`
+                      : '';
+                const reason =
+                  parsed.reasoning ?? parsed.reason ?? parsed.suggestion ?? '';
+                if (recommendation || maxTrade || reason) {
+                  const header = recommendation
+                    ? `**${recommendation.toUpperCase()}**`
+                    : '';
+                  summary = [header, maxTrade, reason]
+                    .filter(Boolean)
+                    .join(' — ');
+                } else {
+                  // Fallback: enumerate all keys as readable text
+                  const keys = Object.keys(parsed);
+                  summary =
+                    keys.length > 0
+                      ? keys
+                          .map(
+                            (k) =>
+                              `${k}: ${typeof parsed[k] === 'object' ? JSON.stringify(parsed[k]) : parsed[k]}`,
+                          )
+                          .join(', ')
+                      : '';
+                }
               } else if (r.task === 'risk_gate') {
-                summary = parsed.verdict
-                  ? `${parsed.verdict}: ${parsed.reason ?? ''}`
-                  : r.output;
+                const verdict = parsed.verdict ?? parsed.action ?? '';
+                const reason =
+                  parsed.reason ?? parsed.reasoning ?? parsed.explanation ?? '';
+                const riskScore = parsed.riskScore
+                  ? ` (riskScore ${parsed.riskScore})`
+                  : '';
+                summary = reason
+                  ? `**${verdict}**${riskScore}: ${reason}`
+                  : verdict
+                    ? `${verdict}${riskScore}`
+                    : r.output;
+              } else if (r.task === 'macro_context') {
+                const regime = parsed.regime ?? parsed.marketRegime ?? '';
+                const bias = parsed.bias ?? parsed.sentiment ?? '';
+                const conf = parsed.confidence
+                  ? `${Math.round(parsed.confidence * 100)}%`
+                  : '';
+                const factors = Array.isArray(parsed.keyFactors)
+                  ? parsed.keyFactors.join(', ')
+                  : '';
+                const reason = parsed.reasoning ?? '';
+                if (regime || reason) {
+                  const header = regime
+                    ? `**${regime}** ${bias ? `(${bias})` : ''} ${conf ? `— ${conf} conf.` : ''}`
+                    : '';
+                  summary = [
+                    header,
+                    reason,
+                    factors ? `Factores: ${factors}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join('\n\n');
+                } else {
+                  summary = r.output;
+                }
               } else {
                 summary = r.output;
               }
@@ -233,12 +316,17 @@ export class AnalyticsService {
                     ? 'FORGE'
                     : r.task === 'risk_gate'
                       ? 'AEGIS'
-                      : (r.agentId ?? 'UNKNOWN'),
+                      : r.task === 'macro_context'
+                        ? 'CIPHER'
+                        : (r.agentId ?? 'UNKNOWN'),
               task: r.task,
               summary,
               cached: r.cached,
               model: r.model,
               provider: r.provider,
+              executedAt: d.createdAt
+                ? new Date(d.createdAt).toISOString()
+                : undefined,
             };
           });
         }

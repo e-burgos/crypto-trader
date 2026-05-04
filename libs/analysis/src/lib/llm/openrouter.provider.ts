@@ -55,8 +55,22 @@ export class OpenRouterProvider implements LLMProviderClient {
       },
     );
 
+    const rawText = data.choices?.[0]?.message?.content ?? '';
+
+    // Strip <think>...</think> tags from reasoning models (e.g. Qwen3, DeepSeek-R1)
+    // Keep only the actual response content after the thinking block
+    let text = rawText;
+    if (text.includes('<think>')) {
+      text = text.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
+      // If stripping thinking left empty output, use the thinking content as fallback
+      if (!text && rawText.includes('</think>')) {
+        const thinkMatch = rawText.match(/<think>([\s\S]*?)<\/think>/);
+        text = thinkMatch?.[1]?.trim() ?? rawText;
+      }
+    }
+
     return {
-      text: data.choices?.[0]?.message?.content ?? '',
+      text,
       usage: {
         inputTokens: data.usage?.prompt_tokens ?? 0,
         outputTokens: data.usage?.completion_tokens ?? 0,

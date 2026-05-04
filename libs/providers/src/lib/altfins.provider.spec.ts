@@ -25,10 +25,9 @@ describe('AltFinsProvider', () => {
   });
 
   describe('fetchData', () => {
-    it('returns null indicators without API key (fallback)', async () => {
-      const result = await provider.fetchData(config);
-      expect(result.type).toBe('indicators');
-      expect(result.data).toBeNull();
+    it('throws without API key when endpoint returns 401', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 });
+      await expect(provider.fetchData(config)).rejects.toThrow('401');
     });
 
     it('returns signals with API key', async () => {
@@ -63,7 +62,7 @@ describe('AltFinsProvider', () => {
       });
 
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://api.altfins.com/api/v2/public/signals-feed/search-requests?page=0&size=20',
+        'https://api.altfins.com/api/v2/public/signals-feed/search-requests?page=0&size=50',
         expect.objectContaining({
           method: 'POST',
           headers: {

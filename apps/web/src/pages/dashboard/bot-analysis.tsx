@@ -27,6 +27,7 @@ import {
   NextDecisionBanner,
   type NewsAnalysisData,
   type SigmaSentiment,
+  type SigmaTechnical,
 } from '../../components/bot-analysis';
 
 gsap.registerPlugin(useGSAP);
@@ -152,6 +153,35 @@ export function BotAnalysisPage() {
     return null;
   })();
 
+  // Extract latest SIGMA technical signal from any recent decision
+  const latestSigmaTechnical: SigmaTechnical | null = (() => {
+    for (const d of modeDecisions) {
+      const tech = d.subAgentVerdicts?.find(
+        (v) => v.task === 'technical_signal',
+      );
+      if (tech?.summary) {
+        try {
+          const parsed = JSON.parse(tech.summary);
+          if (parsed.signal) return parsed as SigmaTechnical;
+        } catch {
+          // summary might not be JSON, try extracting signal from text
+          const signalMatch = tech.summary.match(
+            /\b(BUY|SELL|HOLD)\b/i,
+          );
+          if (signalMatch) {
+            return {
+              signal: signalMatch[1].toUpperCase(),
+              confidence: 0.5,
+              reasoning: tech.summary,
+              cached: tech.cached,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  })();
+
   const updatedLabel = dataUpdatedAt
     ? t('botAnalysis.updatedAgo', {
         count: Math.round((Date.now() - dataUpdatedAt) / 60_000),
@@ -226,8 +256,17 @@ export function BotAnalysisPage() {
             decisions={modeDecisions}
           />
           <div className="grid gap-4 lg:grid-cols-2 analysis-section">
-            <TechnicalSummary snapshot={snapshot} livePrice={livePrice} />
-            <NewsSentimentPanel news={newsItems} sigmaSentiment={latestSigma} />
+            <TechnicalSummary
+              snapshot={snapshot}
+              livePrice={livePrice}
+              sigmaTechnical={latestSigmaTechnical}
+              enrichedSnapshot={enrichedSnapshot}
+            />
+            <NewsSentimentPanel
+              news={newsItems}
+              sigmaSentiment={latestSigma}
+              enrichedSnapshot={enrichedSnapshot}
+            />
           </div>
           <AgentInputSummary
             snapshot={snapshot}

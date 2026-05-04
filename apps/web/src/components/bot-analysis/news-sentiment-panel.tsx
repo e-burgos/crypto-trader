@@ -19,6 +19,8 @@ import {
 } from '../../hooks/use-market';
 import { SENTIMENT_COLOR } from './constants';
 
+import type { EnrichedMarketSnapshot } from '@crypto-trader/shared';
+
 export interface SigmaSentiment {
   sentiment: number;
   impact: string;
@@ -29,9 +31,11 @@ export interface SigmaSentiment {
 export function NewsSentimentPanel({
   news,
   sigmaSentiment,
+  enrichedSnapshot,
 }: {
   news: NewsItem[];
   sigmaSentiment?: SigmaSentiment | null;
+  enrichedSnapshot?: EnrichedMarketSnapshot;
 }) {
   const { t } = useTranslation();
   const { data: config } = useNewsConfig();
@@ -272,6 +276,51 @@ export function NewsSentimentPanel({
                 {typeof score === 'number' ? score.toFixed(2) : score}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Enriched sentiment sources (Fear & Greed + Predictions) */}
+        {(enrichedSnapshot?.fearGreed || (enrichedSnapshot?.predictions && enrichedSnapshot.predictions.length > 0)) && (
+          <div className="shrink-0 flex flex-wrap gap-2">
+            {enrichedSnapshot?.fearGreed && (
+              <div
+                className={cn(
+                  'flex items-center gap-2 rounded-lg border px-3 py-2 text-[11px]',
+                  enrichedSnapshot.fearGreed.value <= 25
+                    ? 'border-red-500/20 bg-red-500/[0.06]'
+                    : enrichedSnapshot.fearGreed.value >= 75
+                      ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+                      : 'border-amber-500/20 bg-amber-500/[0.06]',
+                )}
+              >
+                <span className="text-muted-foreground font-medium">
+                  {t('botAnalysis.inputSourcesFearGreed')}:
+                </span>
+                <span
+                  className={cn(
+                    'font-bold',
+                    enrichedSnapshot.fearGreed.value <= 25
+                      ? 'text-red-400'
+                      : enrichedSnapshot.fearGreed.value >= 75
+                        ? 'text-emerald-400'
+                        : 'text-amber-400',
+                  )}
+                >
+                  {enrichedSnapshot.fearGreed.value}/100 —{' '}
+                  {enrichedSnapshot.fearGreed.classification}
+                </span>
+              </div>
+            )}
+            {enrichedSnapshot?.predictions && enrichedSnapshot.predictions.length > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
+                <span className="text-muted-foreground font-medium">
+                  {t('botAnalysis.inputSourcesPredictions')}:
+                </span>
+                <span className="font-bold text-indigo-400">
+                  {enrichedSnapshot.predictions.length} {t('botAnalysis.predictionMarkets')}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

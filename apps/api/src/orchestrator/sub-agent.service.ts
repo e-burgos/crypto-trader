@@ -404,11 +404,17 @@ Resumen: ${context.summary ?? '(no disponible)'}
     case 'macro_context': {
       const sections: string[] = [];
       if (context.globalMarket)
-        sections.push(`Global Market: ${JSON.stringify(context.globalMarket, null, 2)}`);
+        sections.push(
+          `Global Market: ${JSON.stringify(context.globalMarket, null, 2)}`,
+        );
       if (context.defiHealth)
-        sections.push(`DeFi Health: ${JSON.stringify(context.defiHealth, null, 2)}`);
+        sections.push(
+          `DeFi Health: ${JSON.stringify(context.defiHealth, null, 2)}`,
+        );
       if (context.tokenUnlocks)
-        sections.push(`Token Unlocks próximos: ${JSON.stringify(context.tokenUnlocks, null, 2)}`);
+        sections.push(
+          `Token Unlocks próximos: ${JSON.stringify(context.tokenUnlocks, null, 2)}`,
+        );
       return `Analiza el contexto macroeconómico del mercado crypto:\n\n${sections.join('\n\n')}\n\nEmite tu análisis de régimen de mercado en JSON.`;
     }
 

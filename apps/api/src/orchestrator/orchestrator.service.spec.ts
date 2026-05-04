@@ -73,7 +73,9 @@ describe('OrchestratorService', () => {
     mockPrismaService.tradingConfig.findFirst.mockResolvedValue(mockConfig);
     mockPrismaService.position.findMany.mockResolvedValue([]);
     mockPrismaService.sandboxWallet.findMany.mockResolvedValue([]);
-    mockPrismaService.newsConfig.findUnique.mockResolvedValue({ intervalMinutes: 10 });
+    mockPrismaService.newsConfig.findUnique.mockResolvedValue({
+      intervalMinutes: 10,
+    });
     mockPrismaService.agentDecision.findFirst.mockResolvedValue(null);
   });
 
@@ -249,11 +251,17 @@ describe('OrchestratorService', () => {
           if (agentId === 'operations' && task === 'sizing_suggestion')
             return Promise.resolve('{"recommendation":"proceed"}');
           if (agentId === 'risk' && task === 'risk_gate')
-            return Promise.resolve('{"verdict":"PASS","riskScore":30,"alerts":[]}');
+            return Promise.resolve(
+              '{"verdict":"PASS","riskScore":30,"alerts":[]}',
+            );
           if (agentId === 'blockchain' && task === 'macro_context')
-            return Promise.resolve('{"regime":"RISK_ON","bias":"BULLISH","confidence":0.75,"keyFactors":["TVL rising"],"reasoning":"DeFi healthy"}');
+            return Promise.resolve(
+              '{"regime":"RISK_ON","bias":"BULLISH","confidence":0.75,"keyFactors":["TVL rising"],"reasoning":"DeFi healthy"}',
+            );
           if (agentId === 'orchestrator' && task === 'decision_synthesis')
-            return Promise.resolve('{"decision":"BUY","confidence":0.8,"reasoning":"All signals aligned","waitMinutes":10}');
+            return Promise.resolve(
+              '{"decision":"BUY","confidence":0.8,"reasoning":"All signals aligned","waitMinutes":10}',
+            );
           return Promise.resolve('{}');
         },
       );
@@ -270,7 +278,9 @@ describe('OrchestratorService', () => {
       expect(result.orchestrated).toBe(true);
       expect(result.decision).toBe('BUY');
       expect(result.subAgentResults).toHaveLength(5);
-      expect(result.subAgentResults?.find((r) => r.task === 'macro_context')).toBeDefined();
+      expect(
+        result.subAgentResults?.find((r) => r.task === 'macro_context'),
+      ).toBeDefined();
       // 5 parallel + 1 synthesis = 6 calls
       expect(mockSubAgentService.call).toHaveBeenCalledTimes(6);
       expect(mockSubAgentService.call).toHaveBeenCalledWith(
@@ -293,9 +303,13 @@ describe('OrchestratorService', () => {
           if (agentId === 'operations' && task === 'sizing_suggestion')
             return Promise.resolve('{"recommendation":"wait"}');
           if (agentId === 'risk' && task === 'risk_gate')
-            return Promise.resolve('{"verdict":"PASS","riskScore":20,"alerts":[]}');
+            return Promise.resolve(
+              '{"verdict":"PASS","riskScore":20,"alerts":[]}',
+            );
           if (agentId === 'orchestrator' && task === 'decision_synthesis')
-            return Promise.resolve('{"decision":"HOLD","confidence":0.5,"reasoning":"No clear signal","waitMinutes":15}');
+            return Promise.resolve(
+              '{"decision":"HOLD","confidence":0.5,"reasoning":"No clear signal","waitMinutes":15}',
+            );
           return Promise.resolve('{}');
         },
       );
@@ -308,7 +322,9 @@ describe('OrchestratorService', () => {
       );
 
       expect(result.subAgentResults).toHaveLength(4);
-      expect(result.subAgentResults?.find((r) => r.task === 'macro_context')).toBeUndefined();
+      expect(
+        result.subAgentResults?.find((r) => r.task === 'macro_context'),
+      ).toBeUndefined();
       // 4 parallel + 1 synthesis = 5 calls
       expect(mockSubAgentService.call).toHaveBeenCalledTimes(5);
       expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
@@ -325,9 +341,13 @@ describe('OrchestratorService', () => {
       mockSubAgentService.call.mockImplementation(
         (agentId: string, task: string) => {
           if (agentId === 'risk' && task === 'risk_gate')
-            return Promise.resolve('{"verdict":"PASS","riskScore":50,"alerts":[]}');
+            return Promise.resolve(
+              '{"verdict":"PASS","riskScore":50,"alerts":[]}',
+            );
           if (agentId === 'orchestrator' && task === 'decision_synthesis')
-            return Promise.resolve('{"decision":"HOLD","confidence":0.5,"reasoning":"neutral","waitMinutes":15}');
+            return Promise.resolve(
+              '{"decision":"HOLD","confidence":0.5,"reasoning":"neutral","waitMinutes":15}',
+            );
           return Promise.resolve('{}');
         },
       );
@@ -348,7 +368,9 @@ describe('OrchestratorService', () => {
       expect(mockSubAgentService.call).toHaveBeenCalledWith(
         'market',
         'news_sentiment',
-        expect.objectContaining({ fearGreed: { value: 25, classification: 'Extreme Fear' } }),
+        expect.objectContaining({
+          fearGreed: { value: 25, classification: 'Extreme Fear' },
+        }),
         'user-1',
         false,
         undefined,
@@ -357,7 +379,9 @@ describe('OrchestratorService', () => {
       expect(mockSubAgentService.call).toHaveBeenCalledWith(
         'risk',
         'risk_gate',
-        expect.objectContaining({ derivatives: { fundingRate: 0.01, openInterest: 15e9 } }),
+        expect.objectContaining({
+          derivatives: { fundingRate: 0.01, openInterest: 15e9 },
+        }),
         'user-1',
         false,
         undefined,
@@ -377,9 +401,13 @@ describe('OrchestratorService', () => {
       mockSubAgentService.call.mockImplementation(
         (agentId: string, task: string) => {
           if (agentId === 'risk' && task === 'risk_gate')
-            return Promise.resolve('{"verdict":"PASS","riskScore":20,"alerts":[]}');
+            return Promise.resolve(
+              '{"verdict":"PASS","riskScore":20,"alerts":[]}',
+            );
           if (agentId === 'orchestrator' && task === 'decision_synthesis')
-            return Promise.resolve('{"decision":"HOLD","confidence":0.5,"reasoning":"test","waitMinutes":10}');
+            return Promise.resolve(
+              '{"decision":"HOLD","confidence":0.5,"reasoning":"test","waitMinutes":10}',
+            );
           return Promise.resolve('{}');
         },
       );
@@ -395,7 +423,8 @@ describe('OrchestratorService', () => {
 
       // Synthesis should receive macroContext (CIPHER output) but NOT externalDataSources
       const synthCall = mockSubAgentService.call.mock.calls.find(
-        (c: unknown[]) => c[0] === 'orchestrator' && c[1] === 'decision_synthesis',
+        (c: unknown[]) =>
+          c[0] === 'orchestrator' && c[1] === 'decision_synthesis',
       );
       expect(synthCall).toBeDefined();
       const synthContext = synthCall![2];

@@ -5,6 +5,7 @@ import {
   XCircle,
   ShieldAlert,
   BarChart2,
+  Brain,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,13 +17,25 @@ import {
 } from '../../hooks/use-market';
 import { SIGNAL_COLOR, SIGNAL_BG } from './constants';
 import { fmtPrice } from './helpers';
+import type { EnrichedMarketSnapshot } from '@crypto-trader/shared';
+
+export interface SigmaTechnical {
+  signal: string;
+  confidence: number;
+  reasoning: string;
+  cached?: boolean;
+}
 
 export function TechnicalSummary({
   snapshot,
   livePrice,
+  sigmaTechnical,
+  enrichedSnapshot,
 }: {
   snapshot: MarketSnapshot;
   livePrice: number;
+  sigmaTechnical?: SigmaTechnical | null;
+  enrichedSnapshot?: EnrichedMarketSnapshot;
 }) {
   const { t } = useTranslation();
   const { signal, score, reasons } = deriveOverallSignal(snapshot);
@@ -181,6 +194,84 @@ export function TechnicalSummary({
                   {r}
                 </span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* External signals (altfins) confluence note */}
+        {enrichedSnapshot?.technicalSignals &&
+          enrichedSnapshot.technicalSignals.length > 0 && (
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/[0.06] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wider text-blue-400 font-bold mb-1">
+                {t('botAnalysis.altfinsConfluence')}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {enrichedSnapshot.technicalSignals.slice(0, 3).map((s, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-semibold border',
+                      s.direction === 'BUY' || s.direction === 'BULLISH'
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        : s.direction === 'SELL' || s.direction === 'BEARISH'
+                          ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                          : 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+                    )}
+                  >
+                    {s.signalName}: {s.direction}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+        {/* SIGMA Technical Conclusion */}
+        {sigmaTechnical && (
+          <div
+            className={cn(
+              'rounded-lg border p-3 space-y-1.5',
+              sigmaTechnical.signal === 'BUY'
+                ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
+                : sigmaTechnical.signal === 'SELL'
+                  ? 'border-red-500/20 bg-red-500/[0.06]'
+                  : 'border-amber-500/20 bg-amber-500/[0.06]',
+            )}
+          >
+            <div className="flex items-center gap-1.5">
+              <Brain className="h-3 w-3 text-violet-400" />
+              <span className="text-[10px] font-bold uppercase tracking-wide text-violet-400">
+                {t('botAnalysis.sigmaTitle')}
+              </span>
+              <span
+                className={cn(
+                  'ml-1 text-[10px] font-semibold',
+                  sigmaTechnical.signal === 'BUY'
+                    ? 'text-emerald-400'
+                    : sigmaTechnical.signal === 'SELL'
+                      ? 'text-red-400'
+                      : 'text-amber-400',
+                )}
+              >
+                {t('botAnalysis.signalTechnical')}: {sigmaTechnical.signal}
+              </span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-foreground/80">
+              {sigmaTechnical.reasoning}
+            </p>
+            <div className="text-right">
+              <span
+                className={cn(
+                  'text-[10px] font-mono font-bold',
+                  sigmaTechnical.confidence >= 0.65
+                    ? 'text-emerald-400'
+                    : sigmaTechnical.confidence <= 0.35
+                      ? 'text-red-400'
+                      : 'text-amber-400',
+                )}
+              >
+                {t('botAnalysis.confidenceLabel')}:{' '}
+                {Math.round(sigmaTechnical.confidence * 100)}%
+              </span>
             </div>
           </div>
         )}

@@ -167,9 +167,9 @@ export function AgentInputSummary({
           ],
     },
     // Macro Context group — only shown if any macro data available (CIPHER)
-    ...((enrichedSnapshot?.globalMarket ||
-      enrichedSnapshot?.defiHealth ||
-      enrichedSnapshot?.tokenUnlocks)
+    ...(enrichedSnapshot?.globalMarket ||
+    enrichedSnapshot?.defiHealth ||
+    enrichedSnapshot?.tokenUnlocks
       ? [
           {
             group: t('botAnalysis.inputGroupMacro'),

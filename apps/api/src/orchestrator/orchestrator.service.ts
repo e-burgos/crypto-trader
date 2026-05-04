@@ -277,7 +277,7 @@ export class OrchestratorService {
         {
           config: {
             maxTradePct: config.maxTradePct,
-              maxConcurrentPositions: config.maxConcurrentPositions,
+            maxConcurrentPositions: config.maxConcurrentPositions,
             buyThreshold: config.buyThreshold,
             sellThreshold: config.sellThreshold,
           },
@@ -316,21 +316,13 @@ export class OrchestratorService {
     const subAgentResults: SubAgentResult[] = [];
 
     const techOutput =
-      settledResults[0].status === 'fulfilled'
-        ? settledResults[0].value
-        : '{}';
+      settledResults[0].status === 'fulfilled' ? settledResults[0].value : '{}';
     const sentimentOutput =
-      settledResults[1].status === 'fulfilled'
-        ? settledResults[1].value
-        : '{}';
+      settledResults[1].status === 'fulfilled' ? settledResults[1].value : '{}';
     const forgeOutput =
-      settledResults[2].status === 'fulfilled'
-        ? settledResults[2].value
-        : '{}';
+      settledResults[2].status === 'fulfilled' ? settledResults[2].value : '{}';
     const aegisOutput =
-      settledResults[3].status === 'fulfilled'
-        ? settledResults[3].value
-        : '{}';
+      settledResults[3].status === 'fulfilled' ? settledResults[3].value : '{}';
     const macroOutput =
       hasMacroData && settledResults[4]?.status === 'fulfilled'
         ? settledResults[4].value

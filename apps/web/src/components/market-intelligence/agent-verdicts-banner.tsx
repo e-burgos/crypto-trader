@@ -6,7 +6,6 @@ import {
   Badge,
   AgentVerdictCard,
   formatAgentVerdictSummary,
-  shortModelName,
 } from '@crypto-trader/ui';
 import type { AgentMeta, AgentVerdictData } from '@crypto-trader/ui';
 import {
@@ -249,7 +248,7 @@ export function AgentVerdictsBanner() {
                 agentId: 'KRYPTO',
                 task: 'decision_synthesis',
                 summary: latest.reasoning,
-                model: latest.llmModel,
+                model: latest.llmModel ?? undefined,
               }}
             />
           )}

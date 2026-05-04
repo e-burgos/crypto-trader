@@ -253,7 +253,7 @@ async function main() {
         displayName: 'altFINS — TA Pre-calculado + Señales',
         category: 'TECHNICAL' as const,
         targetAgents: ['market', 'orchestrator'],
-        requiresApiKey: true,
+        requiresApiKey: false,
         baseUrl: 'https://api.altfins.com',
         rateLimitPerMin: 30,
         pollingIntervalMs: 1_800_000, // 30min
@@ -268,6 +268,7 @@ async function main() {
       'polymarket',
       'coingecko',
       'messari',
+      'altfins',
     ]);
 
     for (const ds of dataSources) {

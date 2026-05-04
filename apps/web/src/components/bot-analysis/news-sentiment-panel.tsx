@@ -13,6 +13,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { AgentVerdictCard } from '@crypto-trader/ui';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   useNewsConfig,
   useNewsAnalysis,
@@ -363,8 +365,11 @@ export function NewsSentimentPanel({
             cachedLabel={t('botAnalysis.sigmaCached')}
             showMoreLabel={t('common.more', 'Más')}
             showLessLabel={t('common.less', 'Menos')}
+            renderContent={(content) => (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            )}
             className={cn(
-              'shrink-0',
+              'shrink-0 !h-auto',
               effectiveSigma.impact === 'positive'
                 ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
                 : effectiveSigma.impact === 'negative'

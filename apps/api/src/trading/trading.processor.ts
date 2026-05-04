@@ -261,7 +261,38 @@ export class TradingProcessor {
         createdAt: d.createdAt.toISOString(),
       }));
 
-      // 8. Call OrchestratorService (uses AgentConfigResolver for model selection)
+      // 8. Fetch enriched external data sources (non-blocking — failure returns null)
+      let enrichedData:
+        | {
+            fearGreed?: unknown;
+            derivatives?: unknown;
+            defiHealth?: unknown;
+            globalMarket?: unknown;
+            predictions?: unknown;
+            tokenUnlocks?: unknown;
+          }
+        | undefined;
+      try {
+        const enriched = await this.marketService.buildEnrichedSnapshot(
+          pair.symbol,
+        );
+        if (enriched) {
+          enrichedData = {
+            fearGreed: enriched.fearGreed ?? undefined,
+            derivatives: enriched.derivatives ?? undefined,
+            defiHealth: enriched.defiHealth ?? undefined,
+            globalMarket: enriched.globalMarket ?? undefined,
+            predictions: enriched.predictions ?? undefined,
+            tokenUnlocks: enriched.tokenUnlocks ?? undefined,
+          };
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Enriched snapshot failed for ${pair.symbol}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      // 9. Call OrchestratorService (uses AgentConfigResolver for model selection)
       const orchestratedDecision =
         await this.orchestratorService.orchestrateDecision(
           userId,
@@ -273,6 +304,7 @@ export class TradingProcessor {
             summary: n.summary ?? null,
           })),
           undefined,
+          enrichedData,
         );
       // Adapt DecisionPayload to the shape expected by the rest of the processor
       const decision = {

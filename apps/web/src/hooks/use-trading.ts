@@ -186,6 +186,19 @@ export function useStartAgent() {
   });
 }
 
+export function useTriggerAnalysis() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (configId: string) =>
+      api.post('/trading/trigger-analysis', { configId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['analytics', 'decisions'] });
+    },
+    onError: (err: { message?: string }) =>
+      toast.error(err?.message || 'Error al ejecutar análisis'),
+  });
+}
+
 export function useStopAgent() {
   const qc = useQueryClient();
   return useMutation({

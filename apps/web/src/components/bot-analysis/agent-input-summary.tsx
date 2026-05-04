@@ -5,9 +5,12 @@ import {
   Layers,
   History as HistoryIcon,
   ListChecks,
+  Globe,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '../../lib/utils';
+import { InfoCard } from '@crypto-trader/ui';
+import type { InfoCardColumn, InfoCardFooterTag } from '@crypto-trader/ui';
+import type { EnrichedMarketSnapshot } from '@crypto-trader/shared';
 import {
   deriveOverallSignal,
   deriveOpportunity,
@@ -28,6 +31,7 @@ export function AgentInputSummary({
   newsWeight,
   agentStatuses,
   recentDecisions,
+  enrichedSnapshot,
 }: {
   snapshot: MarketSnapshot;
   livePrice: number;
@@ -38,6 +42,7 @@ export function AgentInputSummary({
   newsWeight: number;
   agentStatuses: AgentStatus[];
   recentDecisions: AgentDecision[];
+  enrichedSnapshot?: EnrichedMarketSnapshot;
 }) {
   const { t } = useTranslation();
   const { signal, score } = deriveOverallSignal(snapshot);
@@ -118,7 +123,11 @@ export function AgentInputSummary({
             {
               label: t('botAnalysis.inputAnalysisMethod'),
               value: hasSigma ? '⚡ SIGMA' : hasAi ? '✦ IA' : '⊟ Keyword',
-              color: hasSigma ? 'text-violet-400' : hasAi ? 'text-violet-400' : 'text-sky-400',
+              color: hasSigma
+                ? 'text-violet-400'
+                : hasAi
+                  ? 'text-violet-400'
+                  : 'text-sky-400',
             },
             {
               label: t('botAnalysis.inputNewsSentiment'),
@@ -142,6 +151,102 @@ export function AgentInputSummary({
               color: 'text-muted-foreground',
             },
           ],
+    },
+    {
+      group: t('botAnalysis.inputGroupSources'),
+      items: (() => {
+        if (!enrichedSnapshot) {
+          return [
+            {
+              label: t('botAnalysis.inputSourcesNone'),
+              value: '—',
+              color: 'text-muted-foreground',
+            },
+          ];
+        }
+        const items: { label: string; value: string; color?: string }[] = [];
+
+        // If no sources at all (all disabled or no registry)
+        if (
+          enrichedSnapshot.activeSources.length === 0 &&
+          enrichedSnapshot.failedSources.length === 0
+        ) {
+          return [
+            {
+              label: t('botAnalysis.inputSourcesNone'),
+              value: '—',
+              color: 'text-muted-foreground',
+            },
+          ];
+        }
+
+        // Show data from active sources
+        if (enrichedSnapshot.fearGreed) {
+          const fg = enrichedSnapshot.fearGreed;
+          items.push({
+            label: t('botAnalysis.inputSourcesFearGreed'),
+            value: `${fg.value}/100 — ${fg.classification}`,
+            color:
+              fg.value <= 25
+                ? 'text-red-400'
+                : fg.value >= 75
+                  ? 'text-emerald-400'
+                  : 'text-amber-400',
+          });
+        }
+        if (enrichedSnapshot.derivatives) {
+          const d = enrichedSnapshot.derivatives;
+          items.push({
+            label: t('botAnalysis.inputSourcesDerivatives'),
+            value: `FR: ${(d.fundingRate * 100).toFixed(3)}% · L/S: ${d.longShortRatio.toFixed(2)}`,
+            color:
+              d.fundingRate > 0.01
+                ? 'text-emerald-400'
+                : d.fundingRate < -0.01
+                  ? 'text-red-400'
+                  : 'text-muted-foreground',
+          });
+        }
+        if (enrichedSnapshot.defiHealth) {
+          const dh = enrichedSnapshot.defiHealth;
+          items.push({
+            label: t('botAnalysis.inputSourcesDefi'),
+            value: `TVL ${dh.tvlChange24h >= 0 ? '+' : ''}${dh.tvlChange24h.toFixed(1)}%`,
+            color:
+              dh.tvlChange24h >= 2
+                ? 'text-emerald-400'
+                : dh.tvlChange24h <= -2
+                  ? 'text-red-400'
+                  : 'text-muted-foreground',
+          });
+        }
+        if (enrichedSnapshot.globalMarket) {
+          const gm = enrichedSnapshot.globalMarket;
+          items.push({
+            label: t('botAnalysis.inputSourcesGlobal'),
+            value: `BTC dom: ${gm.btcDominance.toFixed(1)}%${gm.marketCapChange24h != null ? ` · MCap ${gm.marketCapChange24h >= 0 ? '+' : ''}${gm.marketCapChange24h.toFixed(1)}%` : ''}`,
+          });
+        }
+        if (
+          enrichedSnapshot.predictions &&
+          enrichedSnapshot.predictions.length > 0
+        ) {
+          items.push({
+            label: t('botAnalysis.inputSourcesPredictions'),
+            value: `${enrichedSnapshot.predictions.length} markets`,
+          });
+        }
+        if (
+          enrichedSnapshot.tokenUnlocks &&
+          enrichedSnapshot.tokenUnlocks.length > 0
+        ) {
+          items.push({
+            label: t('botAnalysis.inputSourcesUnlocks'),
+            value: `${enrichedSnapshot.tokenUnlocks.length} upcoming`,
+          });
+        }
+        return items;
+      })(),
     },
     {
       group: t('botAnalysis.inputGroupHistory'),
@@ -185,6 +290,11 @@ export function AgentInputSummary({
       accent: 'text-sky-400',
       bar: 'bg-sky-500',
     },
+    [t('botAnalysis.inputGroupSources')]: {
+      icon: Globe,
+      accent: 'text-blue-400',
+      bar: 'bg-blue-500',
+    },
     [t('botAnalysis.inputGroupConfig')]: {
       icon: Layers,
       accent: 'text-amber-400',
@@ -198,107 +308,99 @@ export function AgentInputSummary({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden analysis-section">
-      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-border bg-muted/20">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
-          <ListChecks className="h-3.5 w-3.5 text-primary" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-xs font-bold uppercase tracking-wide text-foreground/80">
-            {t('botAnalysis.inputSummaryTitle')}
-          </span>
-          <span className="text-[10px] text-muted-foreground/50 leading-tight">
-            {t('botAnalysis.inputSummarySubtitle')}
-          </span>
-        </div>
-        {runningAgents.length > 0 && (
-          <span className="ml-auto flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[10px] font-semibold text-emerald-400">
+    <InfoCard
+      icon={<ListChecks className="h-3.5 w-3.5 text-primary" />}
+      title={t('botAnalysis.inputSummaryTitle')}
+      subtitle={t('botAnalysis.inputSummarySubtitle')}
+      headerRight={
+        runningAgents.length > 0 ? (
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[10px] font-semibold text-emerald-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {t('botAnalysis.inputAgentRunning', {
               count: runningAgents.length,
             })}
           </span>
-        )}
-      </div>
+        ) : undefined
+      }
+      columns={rows.map((group) => {
+        const meta = GROUP_META[group.group] ?? {
+          icon: Layers,
+          accent: 'bg-muted',
+          accentText: 'text-muted-foreground',
+        };
+        const GroupIcon = meta.icon;
+        return {
+          key: group.group,
+          label: group.group,
+          icon: <GroupIcon className="h-3 w-3" />,
+          accent: meta.bar,
+          accentText: meta.accent,
+          items: group.items.map((item) => ({
+            label: item.label,
+            value: item.value,
+            color: item.color,
+          })),
+        } satisfies InfoCardColumn;
+      })}
+      footerLabel={
+        opp.warnings.length > 0 || opp.action !== 'WAIT'
+          ? t('botAnalysis.inputRiskZone')
+          : undefined
+      }
+      footerTags={(() => {
+        const tags: InfoCardFooterTag[] = [];
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-border/30">
-        {rows.map((group) => {
-          const meta = GROUP_META[group.group] ?? {
-            icon: Layers,
-            accent: 'text-muted-foreground',
-            bar: 'bg-muted',
-          };
-          const GroupIcon = meta.icon;
-          return (
-            <div key={group.group} className="p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className={cn('h-4 w-0.5 rounded-full opacity-70', meta.bar)}
-                />
-                <GroupIcon className={cn('h-3 w-3', meta.accent)} />
-                <span
-                  className={cn(
-                    'text-[10px] font-bold uppercase tracking-wider',
-                    meta.accent,
-                  )}
-                >
-                  {group.group}
-                </span>
-              </div>
+        // Sources status tags
+        if (enrichedSnapshot && enrichedSnapshot.activeSources.length > 0) {
+          tags.push({
+            label: t('botAnalysis.inputSourcesActive', {
+              count: enrichedSnapshot.activeSources.length,
+            }),
+            icon: <Globe className="h-3 w-3 text-emerald-400" />,
+            className:
+              'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400',
+            tooltip: enrichedSnapshot.activeSources.join(', '),
+          });
+        }
+        if (enrichedSnapshot && enrichedSnapshot.failedSources.length > 0) {
+          tags.push({
+            label: `${t('botAnalysis.inputSourcesFailed', { count: enrichedSnapshot.failedSources.length })}`,
+            icon: <span className="text-yellow-500">⚠</span>,
+            className:
+              'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400',
+            tooltip: enrichedSnapshot.failedSources.join(', '),
+          });
+        }
 
-              <div className="space-y-2.5">
-                {group.items.map((item, idx) => (
-                  <div
-                    key={`${item.label}-${idx}`}
-                    className="flex items-start justify-between gap-3"
-                  >
-                    <span className="text-[11px] text-muted-foreground/60 shrink-0 leading-tight">
-                      {item.label}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-[11px] font-semibold text-right font-mono leading-tight',
-                        item.color ?? 'text-foreground/85',
-                      )}
-                    >
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {(opp.warnings.length > 0 || opp.action !== 'WAIT') && (
-        <div className="px-5 py-3 border-t border-border/40 bg-muted/10 flex flex-wrap gap-2 items-center">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-bold mr-1">
-            {t('botAnalysis.inputRiskZone')}
-          </span>
-          {opp.action !== 'WAIT' && (
-            <>
-              <span className="rounded-full bg-muted/40 border border-border/50 px-2.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                Entry ${fmtPrice(opp.entryPrice)}
-              </span>
-              <span className="rounded-full bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 text-[10px] font-mono text-red-400">
-                SL ${fmtPrice(opp.stopLoss)}
-              </span>
-              <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 text-[10px] font-mono text-emerald-400">
-                TP ${fmtPrice(opp.takeProfit)}
-              </span>
-            </>
-          )}
-          {opp.warnings.map((w, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] text-amber-400"
-            >
-              <span className="text-amber-500">⚠</span> {w}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+        // Risk tags
+        if (opp.action !== 'WAIT') {
+          tags.push({
+            label: `Entry $${fmtPrice(opp.entryPrice)}`,
+            className:
+              'bg-muted/40 border border-border/50 font-mono text-muted-foreground',
+          });
+          tags.push({
+            label: `SL $${fmtPrice(opp.stopLoss)}`,
+            className:
+              'bg-red-500/10 border border-red-500/20 font-mono text-red-400',
+          });
+          tags.push({
+            label: `TP $${fmtPrice(opp.takeProfit)}`,
+            className:
+              'bg-emerald-500/10 border border-emerald-500/20 font-mono text-emerald-400',
+          });
+        }
+        opp.warnings.forEach((w) => {
+          tags.push({
+            label: w,
+            icon: <span className="text-amber-500">⚠</span>,
+            className:
+              'bg-amber-500/10 border border-amber-500/20 text-amber-400',
+          });
+        });
+        return tags.length > 0 ? tags : undefined;
+      })()}
+      className="analysis-section"
+    />
   );
 }

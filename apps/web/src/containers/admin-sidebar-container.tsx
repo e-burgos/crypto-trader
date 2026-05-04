@@ -11,6 +11,7 @@ import {
   Shield,
   User,
   Key,
+  Database,
 } from 'lucide-react';
 import { Sidebar, type NavGroup } from '@crypto-trader/ui';
 import { useAuthStore } from '../store/auth.store';
@@ -96,6 +97,13 @@ export function AdminSidebarContainer() {
           icon: <Bot className="h-4 w-4" />,
           href: '/admin/agent-models',
           active: isActive('/admin/agent-models'),
+        },
+        {
+          id: 'admin-data-sources',
+          label: t('sidebar.adminDataSources'),
+          icon: <Database className="h-4 w-4" />,
+          href: '/admin/data-sources',
+          active: isActive('/admin/data-sources'),
         },
         {
           id: 'admin-profile',

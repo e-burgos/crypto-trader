@@ -10,6 +10,9 @@ import { Queue } from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MarketService } from '../market/market.service';
+import { OrchestratorService } from '../orchestrator/orchestrator.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import {
   CreateTradingConfigDto,
   UpdateTradingConfigDto,
@@ -17,6 +20,8 @@ import {
 } from './dto/trading-config.dto';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
 import {
   SandboxOrderExecutor,
   LiveOrderExecutor,
@@ -65,6 +70,9 @@ export class TradingService implements OnModuleInit {
     @InjectQueue(TRADING_QUEUE) private readonly tradingQueue: Queue,
     private readonly gateway: AppGateway,
     private readonly notificationsService: NotificationsService,
+    private readonly marketService: MarketService,
+    private readonly orchestratorService: OrchestratorService,
+    private readonly agentConfigResolver: AgentConfigResolverService,
   ) {}
 
   /**
@@ -851,5 +859,175 @@ export class TradingService implements OnModuleInit {
         updatedAt: found?.updatedAt ?? null,
       };
     });
+  }
+
+  // ── Manual analysis trigger ─────────────────────────────────────────────
+
+  /**
+   * Triggers a full multi-agent analysis cycle for a given config WITHOUT
+   * executing any trade. Returns the orchestrated decision with sub-agent verdicts.
+   */
+  async triggerAnalysis(userId: string, configId: string) {
+    const config = await this.prisma.tradingConfig.findFirst({
+      where: { id: configId, userId },
+    });
+    if (!config) {
+      throw new NotFoundException(
+        `No trading config found with id ${configId}.`,
+      );
+    }
+
+    const pair = SUPPORTED_PAIRS.find(
+      (p) => p.asset === config.asset && p.quote === config.pair,
+    );
+    if (!pair)
+      throw new BadRequestException(
+        `Unsupported pair: ${config.asset}/${config.pair}`,
+      );
+
+    // Health check
+    const healthReport = await this.agentConfigResolver.checkHealth(userId);
+    if (!healthReport.healthy) {
+      const unhealthy = healthReport.agents
+        .filter((a) => !a.healthy)
+        .map((a) => a.agentId)
+        .join(', ');
+      throw new BadRequestException(
+        `Agent health check failed. Unhealthy agents: ${unhealthy}`,
+      );
+    }
+
+    // Fetch candles + indicators
+    const publicClient = new BinanceRestClient({ testnet: false });
+    const candles = await publicClient.getKlines(pair.symbol, '1h', 200);
+    const indicatorSnapshot = calculateIndicatorSnapshot(candles);
+
+    // Load news
+    const newsConfig = await this.marketService.getNewsConfig(userId);
+    let newsItems: Array<{
+      headline: string;
+      sentiment: string;
+      summary?: string | null;
+    }> = [];
+
+    if (newsConfig.botEnabled) {
+      const dbAnalysis = await this.marketService.getLatestAnalysis(userId);
+      if (dbAnalysis) {
+        if (dbAnalysis.aiAnalyzedAt && dbAnalysis.aiHeadlines) {
+          const aiMap = new Map(
+            (
+              dbAnalysis.aiHeadlines as Array<{
+                id: string;
+                sentiment: string;
+              }>
+            ).map((a) => [a.id, a]),
+          );
+          newsItems = (
+            dbAnalysis.headlines as Array<{
+              id: string;
+              headline: string;
+              sentiment: string;
+              summary?: string | null;
+            }>
+          ).map((h) => ({
+            headline: h.headline,
+            sentiment: aiMap.get(h.id)?.sentiment ?? h.sentiment,
+            summary: h.summary ?? null,
+          }));
+        } else {
+          newsItems = (
+            dbAnalysis.headlines as Array<{
+              headline: string;
+              sentiment: string;
+              summary?: string | null;
+            }>
+          ).map((h) => ({
+            headline: h.headline,
+            sentiment: h.sentiment,
+            summary: h.summary ?? null,
+          }));
+        }
+      }
+    }
+
+    // Enriched external data
+    let enrichedData:
+      | {
+          fearGreed?: unknown;
+          derivatives?: unknown;
+          defiHealth?: unknown;
+          globalMarket?: unknown;
+          predictions?: unknown;
+          tokenUnlocks?: unknown;
+        }
+      | undefined;
+    try {
+      const enriched = await this.marketService.buildEnrichedSnapshot(
+        pair.symbol,
+      );
+      if (enriched) {
+        enrichedData = {
+          fearGreed: enriched.fearGreed ?? undefined,
+          derivatives: enriched.derivatives ?? undefined,
+          defiHealth: enriched.defiHealth ?? undefined,
+          globalMarket: enriched.globalMarket ?? undefined,
+          predictions: enriched.predictions ?? undefined,
+          tokenUnlocks: enriched.tokenUnlocks ?? undefined,
+        };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Enriched snapshot failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // Orchestrate decision (analysis only — no trade execution)
+    const result = await this.orchestratorService.orchestrateDecision(
+      userId,
+      configId,
+      indicatorSnapshot,
+      newsItems,
+      undefined,
+      enrichedData,
+    );
+
+    // Persist the decision
+    await this.prisma.agentDecision.create({
+      data: {
+        userId,
+        asset: config.asset,
+        pair: config.pair,
+        decision: result.decision as any,
+        confidence: result.confidence,
+        reasoning: result.reasoning,
+        indicators: indicatorSnapshot as any,
+        newsHeadlines: newsItems.slice(0, 5) as any,
+        waitMinutes: result.waitMinutes,
+        configId: config.id,
+        metadata: {
+          subAgentResults: result.subAgentResults,
+          llmProvider: result.llmProvider,
+          llmModel: result.llmModel,
+          manualTrigger: true,
+        } as any,
+      },
+    });
+
+    // Notify via websocket
+    this.gateway.emitToUser(userId, 'agent:decision', {
+      configId: config.id,
+      decision: result.decision,
+      confidence: result.confidence,
+      reasoning: result.reasoning,
+    });
+
+    return {
+      decision: result.decision,
+      confidence: result.confidence,
+      reasoning: result.reasoning,
+      subAgentResults: result.subAgentResults,
+      llmProvider: result.llmProvider,
+      llmModel: result.llmModel,
+    };
   }
 }

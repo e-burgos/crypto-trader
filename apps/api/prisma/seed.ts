@@ -169,6 +169,130 @@ async function main() {
       `PlatformLLMProvider seeded: ${allProviders.length} providers (all active)`,
     );
 
+    // ── Spec 40: Data Source Configs ─────────────────────────────────────────
+    const dataSources = [
+      {
+        name: 'alternative_me',
+        displayName: 'Alternative.me — Fear & Greed Index',
+        category: 'SENTIMENT' as const,
+        targetAgents: ['market', 'orchestrator'],
+        requiresApiKey: false,
+        baseUrl: 'https://api.alternative.me',
+        rateLimitPerMin: 100,
+        pollingIntervalMs: 1_800_000, // 30min
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'coinalyze',
+        displayName: 'Coinalyze — Derivados Agregados',
+        category: 'DERIVATIVES' as const,
+        targetAgents: ['risk', 'market'],
+        requiresApiKey: true,
+        baseUrl: 'https://api.coinalyze.net',
+        rateLimitPerMin: 40,
+        pollingIntervalMs: 900_000, // 15min
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'defillama',
+        displayName: 'DefiLlama — TVL + Stablecoins + Fees',
+        category: 'DEFI_ONCHAIN' as const,
+        targetAgents: ['risk', 'market'],
+        requiresApiKey: false,
+        baseUrl: 'https://api.llama.fi',
+        rateLimitPerMin: 60,
+        pollingIntervalMs: 3_600_000, // 1h
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'finnhub',
+        displayName: 'Finnhub — Noticias + Sentimiento NLP',
+        category: 'NEWS' as const,
+        targetAgents: ['market', 'blockchain'],
+        requiresApiKey: true,
+        baseUrl: 'https://finnhub.io/api/v1',
+        rateLimitPerMin: 60,
+        pollingIntervalMs: 600_000, // 10min
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'coingecko',
+        displayName: 'CoinGecko — Market Data Global',
+        category: 'MARKET_DATA' as const,
+        targetAgents: ['market', 'orchestrator'],
+        requiresApiKey: false,
+        baseUrl: 'https://api.coingecko.com/api/v3',
+        rateLimitPerMin: 10,
+        pollingIntervalMs: 1_800_000, // 30min
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'polymarket',
+        displayName: 'Polymarket — Prediction Markets',
+        category: 'PREDICTION' as const,
+        targetAgents: ['market', 'blockchain'],
+        requiresApiKey: false,
+        baseUrl: 'https://gamma-api.polymarket.com',
+        rateLimitPerMin: 60,
+        pollingIntervalMs: 3_600_000, // 1h
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'messari',
+        displayName: 'Messari — Token Unlocks',
+        category: 'TOKEN_UNLOCKS' as const,
+        targetAgents: ['risk', 'blockchain'],
+        requiresApiKey: false,
+        baseUrl: 'https://api.messari.io',
+        rateLimitPerMin: 20,
+        pollingIntervalMs: 21_600_000, // 6h
+        monthlyCostUsd: 0,
+      },
+      {
+        name: 'altfins',
+        displayName: 'altFINS — TA Pre-calculado + Señales',
+        category: 'TECHNICAL' as const,
+        targetAgents: ['market', 'orchestrator'],
+        requiresApiKey: true,
+        baseUrl: 'https://api.altfins.com',
+        rateLimitPerMin: 30,
+        pollingIntervalMs: 1_800_000, // 30min
+        monthlyCostUsd: 0,
+      },
+    ];
+
+    // Activate sources that work without an API key + popular free-tier sources
+    const activeSources = new Set([
+      'alternative_me',
+      'defillama',
+      'polymarket',
+      'coingecko',
+      'messari',
+    ]);
+
+    for (const ds of dataSources) {
+      await prisma.dataSourceConfig.upsert({
+        where: { name: ds.name },
+        update: {
+          displayName: ds.displayName,
+          category: ds.category,
+          targetAgents: ds.targetAgents,
+          requiresApiKey: ds.requiresApiKey,
+          baseUrl: ds.baseUrl,
+          rateLimitPerMin: ds.rateLimitPerMin,
+          pollingIntervalMs: ds.pollingIntervalMs,
+          monthlyCostUsd: ds.monthlyCostUsd,
+        },
+        create: {
+          ...ds,
+          isActive: activeSources.has(ds.name),
+        },
+      });
+    }
+    console.log(
+      `DataSourceConfig seeded: ${dataSources.length} sources (${activeSources.size} active)`,
+    );
+
     console.log('\n✅ Seed completado!');
     console.log('─────────────────────────────────────────');
     console.log('  admin@crypto.com        / Admin1234!  (ADMIN)');

@@ -6,3 +6,5 @@ export {
   AGENT_COLOR_MAP,
   AGENT_NAMES,
 } from './agent-constants';
+export { DataSourceCard } from './data-source-card';
+export { DataSourceHealthBadge } from './data-source-health-badge';

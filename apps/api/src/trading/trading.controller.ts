@@ -142,6 +142,24 @@ export class TradingController {
     return this.tradingService.startAgent(user.userId, dto);
   }
 
+  @Post('trigger-analysis')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Trigger a manual multi-agent analysis cycle without executing trades',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Analysis completed. Returns orchestrated decision.',
+  })
+  @ApiResponse({ status: 404, description: 'Config not found' })
+  triggerAnalysis(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: StartAgentDto,
+  ) {
+    return this.tradingService.triggerAnalysis(user.userId, dto.configId);
+  }
+
   @Post('stop')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

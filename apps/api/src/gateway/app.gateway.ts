@@ -74,4 +74,26 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitToAll(event: string, data: unknown) {
     this.server.emit(event, data);
   }
+
+  // ── Data Source notifications (Spec 40) ────────────────────────────────────
+
+  emitDataSourceDegraded(data: {
+    name: string;
+    error: string;
+    consecutiveErrors: number;
+  }) {
+    this.server.emit('data-source:degraded', data);
+  }
+
+  emitDataSourceRecovered(data: { name: string; downDurationMs: number }) {
+    this.server.emit('data-source:recovered', data);
+  }
+
+  emitDataSourceToggled(data: {
+    name: string;
+    isActive: boolean;
+    toggledBy: string;
+  }) {
+    this.server.emit('data-source:toggled', data);
+  }
 }

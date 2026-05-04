@@ -30,6 +30,7 @@
 | 38  | feature/llm-provider-toggle            | 38-llm-provider-toggle.md             | 35,37      |
 | 39  | feature/docs-overhaul                  | 39-docs-overhaul.md                   | 38         |
 | 40  | feature/market-data-sources            | 40-market-data-sources-integration.md | 21,36      |
+| 41  | feature/orchestrator-enriched-inputs   | 41-orchestrator-enriched-inputs.md    | 40,28      |
 
 ## Flujo recomendado
 

@@ -88,6 +88,13 @@ export type {
   TabModalTab,
   TabModalButton,
 } from './lib/composites/tab-modal';
+export { InfoCard } from './lib/composites/info-card';
+export type {
+  InfoCardProps,
+  InfoCardColumn,
+  InfoCardItem,
+  InfoCardFooterTag,
+} from './lib/composites/info-card';
 
 // Feedback
 export { EmptyState } from './lib/feedback/empty-state';

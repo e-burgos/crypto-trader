@@ -120,6 +120,19 @@ enum RiskProfile {
   AGGRESSIVE
 }
 
+// ── Spec 40 — Market Data Sources ────────────────────────────────────────────
+
+enum DataSourceCategory {
+  TECHNICAL       // altFINS
+  SENTIMENT       // Alternative.me
+  DERIVATIVES     // Coinalyze
+  DEFI_ONCHAIN    // DefiLlama
+  NEWS            // Finnhub
+  MARKET_DATA     // CoinGecko
+  PREDICTION      // Polymarket
+  TOKEN_UNLOCKS   // Messari
+}
+
 // ── Models ───────────────────────────────────────────────
 
 model User {
@@ -148,6 +161,7 @@ model User {
   newsAnalyses      NewsAnalysis[]
   llmUsageLogs      LlmUsageLog[]
   agentConfigs      AgentConfig[]
+  dataSourceCredentials DataSourceCredential[]
 
   @@map("users")
 }
@@ -561,4 +575,49 @@ model AdminAgentConfig {
   updatedBy String
 
   @@map("admin_agent_configs")
+}
+
+// ── Spec 40: Market Data Sources — platform-level config + user credentials ──
+
+/// Platform-level data source configuration. Admin manages toggles and priorities.
+model DataSourceConfig {
+  id                String             @id @default(cuid())
+  name              String             @unique            // e.g. "alternative_me"
+  displayName       String                                // e.g. "Alternative.me — Fear & Greed Index"
+  category          DataSourceCategory
+  isActive          Boolean            @default(false)
+  priority          Int                @default(1)        // higher = preferred
+  targetAgents      String[]           @default([])       // AgentId values that benefit from this source
+  requiresApiKey    Boolean            @default(false)
+  baseUrl           String             @default("")
+  rateLimitPerMin   Int                @default(60)
+  pollingIntervalMs Int                @default(1800000)  // default 30min
+  monthlyCostUsd    Float              @default(0)
+  lastSuccessAt     DateTime?
+  lastErrorAt       DateTime?
+  lastErrorMessage  String?
+  consecutiveErrors Int                @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  credentials DataSourceCredential[]
+
+  @@map("data_source_configs")
+}
+
+/// User-level API key for a data source (same pattern as LLMCredential).
+model DataSourceCredential {
+  id              String   @id @default(cuid())
+  userId          String
+  dataSourceId    String
+  apiKeyEncrypted String
+  apiKeyIv        String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dataSource DataSourceConfig @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dataSourceId])
+  @@map("data_source_credentials")
 }

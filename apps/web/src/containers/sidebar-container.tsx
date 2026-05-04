@@ -14,6 +14,7 @@ import {
   ListChecks,
   Rss,
   Bot,
+  Globe,
 } from 'lucide-react';
 import { Sidebar, type NavGroup } from '@crypto-trader/ui';
 import { useAuthStore } from '../store/auth.store';
@@ -92,6 +93,13 @@ export function SidebarContainer() {
           icon: <Brain className="h-4 w-4" />,
           href: '/dashboard/bot-analysis',
           active: isActive('/dashboard/bot-analysis'),
+        },
+        {
+          id: 'market-intelligence',
+          label: t('sidebar.marketIntelligence'),
+          icon: <Globe className="h-4 w-4" />,
+          href: '/dashboard/market-intelligence',
+          active: isActive('/dashboard/market-intelligence'),
         },
         {
           id: 'log',

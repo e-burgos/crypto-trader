@@ -206,9 +206,9 @@ export function TechnicalSummary({
                 {t('botAnalysis.altfinsConfluence')}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {enrichedSnapshot.technicalSignals.slice(0, 3).map((s, i) => (
+                {enrichedSnapshot.technicalSignals.slice(0, 5).map((s, i) => (
                   <span
-                    key={i}
+                    key={`${s.signalName}-${i}`}
                     className={cn(
                       'rounded-full px-2 py-0.5 text-[10px] font-semibold border',
                       s.direction === 'BUY' || s.direction === 'BULLISH'
@@ -217,8 +217,10 @@ export function TechnicalSummary({
                           ? 'bg-red-500/10 border-red-500/20 text-red-400'
                           : 'bg-amber-500/10 border-amber-500/20 text-amber-400',
                     )}
+                    title={`${s.symbolName} — ${s.signalName}`}
                   >
-                    {s.signalName}: {s.direction}
+                    {s.signalName}:{' '}
+                    <span className="font-bold">{s.direction}</span>
                   </span>
                 ))}
               </div>

@@ -719,7 +719,28 @@ ${numbered}`;
               }>;
             };
             if (indicatorData.signals) {
-              technicalSignals = indicatorData.signals.map((s) => ({
+              // Filter signals relevant to the symbol being analyzed
+              const symbolUpper = symbol.toUpperCase();
+              const relevant = indicatorData.signals.filter((s) => {
+                const sig = s.symbol.toUpperCase();
+                return (
+                  sig === symbolUpper ||
+                  sig.startsWith(symbolUpper) ||
+                  symbolUpper.startsWith(sig)
+                );
+              });
+              // Deduplicate by signalName — keep the most recent per indicator
+              const seen = new Map<string, (typeof relevant)[0]>();
+              for (const s of relevant) {
+                const existing = seen.get(s.signalName);
+                if (
+                  !existing ||
+                  new Date(s.timestamp) > new Date(existing.timestamp)
+                ) {
+                  seen.set(s.signalName, s);
+                }
+              }
+              technicalSignals = [...seen.values()].map((s) => ({
                 symbol: s.symbol,
                 symbolName: s.symbolName,
                 signalName: s.signalName,

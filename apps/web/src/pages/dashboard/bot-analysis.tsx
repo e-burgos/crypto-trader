@@ -29,6 +29,7 @@ import {
   type SigmaSentiment,
   type SigmaTechnical,
 } from '../../components/bot-analysis';
+import { AgentVerdictsBanner } from '../../components/market-intelligence';
 
 gsap.registerPlugin(useGSAP);
 
@@ -253,6 +254,7 @@ export function BotAnalysisPage() {
             agentStatuses={agentStatuses}
             decisions={modeDecisions}
           />
+          <AgentVerdictsBanner />
           <div className="grid gap-4 lg:grid-cols-2 analysis-section">
             <TechnicalSummary
               snapshot={snapshot}

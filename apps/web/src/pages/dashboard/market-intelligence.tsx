@@ -4,8 +4,6 @@ import { Globe, RefreshCw } from 'lucide-react';
 import { Tabs } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useEnrichedSnapshot } from '../../hooks/use-enriched-snapshot';
-import { useAgentDecisions } from '../../hooks/use-analytics';
-import { usePlatformMode } from '../../hooks/use-user';
 import {
   FearGreedGauge,
   DerivativesPanel,
@@ -15,7 +13,6 @@ import {
   PredictionMarketsList,
   TokenUnlocksTable,
   TechnicalSignalsPanel,
-  AgentVerdictsBanner,
 } from '../../components/market-intelligence';
 
 const MARKET_ASSETS = [
@@ -30,11 +27,6 @@ export function MarketIntelligencePage() {
     MARKET_ASSETS.find((a) => a.asset === asset)?.symbol ?? 'BTCUSDT';
   const { data, isLoading, refetch, isFetching } =
     useEnrichedSnapshot(activeSymbol);
-  const { mode } = usePlatformMode();
-  const { data: decisions = [] } = useAgentDecisions(1, mode);
-  const lastCycleTime = decisions[0]?.createdAt
-    ? new Date(decisions[0].createdAt).toLocaleTimeString()
-    : null;
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -52,31 +44,10 @@ export function MarketIntelligencePage() {
             )}
           </p>
         </div>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 sm:py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw
-            className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')}
-          />
-          <div className="flex flex-col items-start">
-            {lastCycleTime && (
-              <span className="text-[10px] text-muted-foreground/60 leading-tight">
-                {t('marketIntelligence.lastCycle', 'Last cycle')}:{' '}
-                {lastCycleTime}
-              </span>
-            )}
-            <span>{t('marketIntelligence.refresh')}</span>
-          </div>
-        </button>
       </div>
 
-      {/* Agent verdicts — always visible, independent of enriched data */}
-      <AgentVerdictsBanner />
-
-      {/* Asset selector for market data panels */}
-      <div className="flex items-center gap-2">
+      {/* Asset selector + refresh for market data panels */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <Tabs
           tabs={MARKET_ASSETS.map((a) => ({
             value: a.asset,
@@ -86,6 +57,16 @@ export function MarketIntelligencePage() {
           onChange={setAsset}
           border
         />
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw
+            className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')}
+          />
+          {t('marketIntelligence.refresh')}
+        </button>
       </div>
 
       {/* Loading state */}

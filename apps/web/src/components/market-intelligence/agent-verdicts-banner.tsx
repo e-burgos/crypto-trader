@@ -260,6 +260,30 @@ export function AgentVerdictsBanner() {
               {t('marketIntelligence.verdicts.triggerAnalysis')}
             </button>
           )}
+        </div>
+      }
+    >
+      {/* Config selector tabs + decision badge */}
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        {configTabs.length > 1 ? (
+          <Tabs
+            tabs={configTabs}
+            value={effectiveConfigId}
+            onChange={setSelectedConfigId}
+            size="sm"
+          />
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            {activeConfigs[0]?.name}
+          </span>
+        )}
+        <div className="flex items-center gap-2">
+          {latest && (
+            <span className="text-[10px] text-muted-foreground/60">
+              {t('marketIntelligence.lastCycle', 'Last cycle')}:{' '}
+              {new Date(latest.createdAt).toLocaleTimeString()}
+            </span>
+          )}
           {latest && (
             <>
               {decisionIcon(latest.decision)}
@@ -270,19 +294,7 @@ export function AgentVerdictsBanner() {
             </>
           )}
         </div>
-      }
-    >
-      {/* Config selector tabs */}
-      {configTabs.length > 1 && (
-        <div className="mb-3">
-          <Tabs
-            tabs={configTabs}
-            value={effectiveConfigId}
-            onChange={setSelectedConfigId}
-            size="sm"
-          />
-        </div>
-      )}
+      </div>
 
       {isLoading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

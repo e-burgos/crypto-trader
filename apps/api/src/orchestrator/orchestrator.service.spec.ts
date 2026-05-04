@@ -238,6 +238,170 @@ describe('OrchestratorService', () => {
         ),
       ).rejects.toThrow('Config nonexistent-config not found');
     });
+
+    it('should call 5 sub-agents when enrichedData has macro data (globalMarket)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'market' && task === 'technical_signal')
+            return Promise.resolve('{"signal":"BUY","confidence":0.8}');
+          if (agentId === 'market' && task === 'news_sentiment')
+            return Promise.resolve('{"sentiment":0.6}');
+          if (agentId === 'operations' && task === 'sizing_suggestion')
+            return Promise.resolve('{"recommendation":"proceed"}');
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve('{"verdict":"PASS","riskScore":30,"alerts":[]}');
+          if (agentId === 'blockchain' && task === 'macro_context')
+            return Promise.resolve('{"regime":"RISK_ON","bias":"BULLISH","confidence":0.75,"keyFactors":["TVL rising"],"reasoning":"DeFi healthy"}');
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve('{"decision":"BUY","confidence":0.8,"reasoning":"All signals aligned","waitMinutes":10}');
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+        undefined,
+        { globalMarket: { totalMcap: 2.5e12, btcDominance: 54 } },
+      );
+
+      expect(result.orchestrated).toBe(true);
+      expect(result.decision).toBe('BUY');
+      expect(result.subAgentResults).toHaveLength(5);
+      expect(result.subAgentResults?.find((r) => r.task === 'macro_context')).toBeDefined();
+      // 5 parallel + 1 synthesis = 6 calls
+      expect(mockSubAgentService.call).toHaveBeenCalledTimes(6);
+      expect(mockSubAgentService.call).toHaveBeenCalledWith(
+        'blockchain',
+        'macro_context',
+        expect.objectContaining({ globalMarket: expect.any(Object) }),
+        'user-1',
+        false,
+        undefined,
+      );
+    });
+
+    it('should call only 4 sub-agents without enrichedData (no CIPHER)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'market' && task === 'technical_signal')
+            return Promise.resolve('{"signal":"HOLD","confidence":0.5}');
+          if (agentId === 'market' && task === 'news_sentiment')
+            return Promise.resolve('{"sentiment":0.5}');
+          if (agentId === 'operations' && task === 'sizing_suggestion')
+            return Promise.resolve('{"recommendation":"wait"}');
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve('{"verdict":"PASS","riskScore":20,"alerts":[]}');
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve('{"decision":"HOLD","confidence":0.5,"reasoning":"No clear signal","waitMinutes":15}');
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.subAgentResults).toHaveLength(4);
+      expect(result.subAgentResults?.find((r) => r.task === 'macro_context')).toBeUndefined();
+      // 4 parallel + 1 synthesis = 5 calls
+      expect(mockSubAgentService.call).toHaveBeenCalledTimes(5);
+      expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
+        'blockchain',
+        'macro_context',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('should pass enriched data to correct sub-agents (fearGreed → SIGMA sentiment, derivatives → AEGIS)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve('{"verdict":"PASS","riskScore":50,"alerts":[]}');
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve('{"decision":"HOLD","confidence":0.5,"reasoning":"neutral","waitMinutes":15}');
+          return Promise.resolve('{}');
+        },
+      );
+
+      await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+        undefined,
+        {
+          fearGreed: { value: 25, classification: 'Extreme Fear' },
+          derivatives: { fundingRate: 0.01, openInterest: 15e9 },
+        },
+      );
+
+      // SIGMA sentiment receives fearGreed
+      expect(mockSubAgentService.call).toHaveBeenCalledWith(
+        'market',
+        'news_sentiment',
+        expect.objectContaining({ fearGreed: { value: 25, classification: 'Extreme Fear' } }),
+        'user-1',
+        false,
+        undefined,
+      );
+      // AEGIS receives derivatives
+      expect(mockSubAgentService.call).toHaveBeenCalledWith(
+        'risk',
+        'risk_gate',
+        expect.objectContaining({ derivatives: { fundingRate: 0.01, openInterest: 15e9 } }),
+        'user-1',
+        false,
+        undefined,
+      );
+      // No CIPHER call (no macro data)
+      expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
+        'blockchain',
+        'macro_context',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('should NOT pass externalDataSources to synthesis (Spec 41)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve('{"verdict":"PASS","riskScore":20,"alerts":[]}');
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve('{"decision":"HOLD","confidence":0.5,"reasoning":"test","waitMinutes":10}');
+          return Promise.resolve('{}');
+        },
+      );
+
+      await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+        undefined,
+        { fearGreed: { value: 50 }, globalMarket: { totalMcap: 2e12 } },
+      );
+
+      // Synthesis should receive macroContext (CIPHER output) but NOT externalDataSources
+      const synthCall = mockSubAgentService.call.mock.calls.find(
+        (c: unknown[]) => c[0] === 'orchestrator' && c[1] === 'decision_synthesis',
+      );
+      expect(synthCall).toBeDefined();
+      const synthContext = synthCall![2];
+      expect(synthContext).not.toHaveProperty('externalDataSources');
+      expect(synthContext).toHaveProperty('macroContext');
+    });
   });
 
   // ── enrichNews ────────────────────────────────────────────────────────────

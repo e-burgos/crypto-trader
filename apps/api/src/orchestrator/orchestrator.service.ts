@@ -120,6 +120,7 @@ export class OrchestratorService {
       globalMarket?: unknown;
       predictions?: unknown;
       tokenUnlocks?: unknown;
+      technicalSignals?: unknown;
     },
   ): Promise<DecisionPayload> {
     // Load config + open positions + wallet balances for FORGE and AEGIS context
@@ -202,102 +203,178 @@ export class OrchestratorService {
     }
 
     // Parallel sub-agent calls (skip SIGMA sentiment if cached)
-    const [techRaw, sentimentRaw, forgeRaw, aegisRaw] =
-      await Promise.allSettled([
-        this.subAgent.call(
-          'market',
-          'technical_signal',
-          { indicators },
-          userId,
-          false,
-          typedOverride,
-        ),
-        cachedSentiment
-          ? Promise.resolve(cachedSentiment)
-          : this.subAgent.call(
-              'market',
-              'news_sentiment',
-              { news: news.slice(0, 10) },
-              userId,
-              false,
-              typedOverride,
-            ),
-        this.subAgent.call(
-          'operations',
-          'sizing_suggestion',
-          {
-            config: {
-              maxTradePct: config.maxTradePct,
+    // Distribute enrichedData to sub-agents per Spec 41
+    const techContext: Record<string, unknown> = { indicators };
+    if (enrichedData?.technicalSignals) {
+      techContext.externalSignals = enrichedData.technicalSignals;
+    }
+
+    const sentimentContext: Record<string, unknown> = {
+      news: news.slice(0, 10),
+    };
+    if (enrichedData?.fearGreed) {
+      sentimentContext.fearGreed = enrichedData.fearGreed;
+    }
+    if (enrichedData?.predictions) {
+      sentimentContext.predictions = enrichedData.predictions;
+    }
+
+    const riskContext: Record<string, unknown> = {
+      portfolio: openPositions,
+      availableBalances: sandboxWallets.map((w) => ({
+        currency: w.currency,
+        balance: Number(w.balance),
+      })),
+      indicators: {
+        rsi: (indicators as unknown as Record<string, unknown>).rsi,
+        price: (indicators as unknown as Record<string, unknown>).close,
+        asset: config.asset,
+      },
+      config: {
+        asset: config.asset,
+        pair: config.pair,
+        stopLossPct: config.stopLossPct,
+        takeProfitPct: config.takeProfitPct,
+        maxConcurrentPositions: config.maxConcurrentPositions,
+      },
+    };
+    if (enrichedData?.derivatives) {
+      riskContext.derivatives = enrichedData.derivatives;
+    }
+
+    // Determine if CIPHER macro_context should be called
+    const macroContext: Record<string, unknown> = {};
+    if (enrichedData?.globalMarket)
+      macroContext.globalMarket = enrichedData.globalMarket;
+    if (enrichedData?.defiHealth)
+      macroContext.defiHealth = enrichedData.defiHealth;
+    if (enrichedData?.tokenUnlocks)
+      macroContext.tokenUnlocks = enrichedData.tokenUnlocks;
+    const hasMacroData = Object.keys(macroContext).length > 0;
+
+    const parallelCalls: Promise<string>[] = [
+      this.subAgent.call(
+        'market',
+        'technical_signal',
+        techContext,
+        userId,
+        false,
+        typedOverride,
+      ),
+      cachedSentiment
+        ? Promise.resolve(cachedSentiment)
+        : this.subAgent.call(
+            'market',
+            'news_sentiment',
+            sentimentContext,
+            userId,
+            false,
+            typedOverride,
+          ),
+      this.subAgent.call(
+        'operations',
+        'sizing_suggestion',
+        {
+          config: {
+            maxTradePct: config.maxTradePct,
               maxConcurrentPositions: config.maxConcurrentPositions,
-              buyThreshold: config.buyThreshold,
-              sellThreshold: config.sellThreshold,
-            },
-            openPositionsCount: openPositions.length,
+            buyThreshold: config.buyThreshold,
+            sellThreshold: config.sellThreshold,
           },
-          userId,
-          false,
-          typedOverride,
-        ),
+          openPositionsCount: openPositions.length,
+        },
+        userId,
+        false,
+        typedOverride,
+      ),
+      this.subAgent.call(
+        'risk',
+        'risk_gate',
+        riskContext,
+        userId,
+        false,
+        typedOverride,
+      ),
+    ];
+
+    // Conditionally add CIPHER macro_context (only if macro data available)
+    if (hasMacroData) {
+      parallelCalls.push(
         this.subAgent.call(
-          'risk',
-          'risk_gate',
-          {
-            portfolio: openPositions,
-            availableBalances: sandboxWallets.map((w) => ({
-              currency: w.currency,
-              balance: Number(w.balance),
-            })),
-            indicators: {
-              rsi: (indicators as unknown as Record<string, unknown>).rsi,
-              price: (indicators as unknown as Record<string, unknown>).close,
-              asset: config.asset,
-            },
-            config: {
-              asset: config.asset,
-              pair: config.pair,
-              stopLossPct: config.stopLossPct,
-              takeProfitPct: config.takeProfitPct,
-              maxConcurrentPositions: config.maxConcurrentPositions,
-            },
-          },
+          'blockchain',
+          'macro_context',
+          macroContext,
           userId,
           false,
           typedOverride,
         ),
-      ]);
+      );
+    }
+
+    const settledResults = await Promise.allSettled(parallelCalls);
 
     const subAgentResults: SubAgentResult[] = [];
 
-    const techOutput = techRaw.status === 'fulfilled' ? techRaw.value : '{}';
+    const techOutput =
+      settledResults[0].status === 'fulfilled'
+        ? settledResults[0].value
+        : '{}';
     const sentimentOutput =
-      sentimentRaw.status === 'fulfilled' ? sentimentRaw.value : '{}';
-    const forgeOutput = forgeRaw.status === 'fulfilled' ? forgeRaw.value : '{}';
-    const aegisOutput = aegisRaw.status === 'fulfilled' ? aegisRaw.value : '{}';
+      settledResults[1].status === 'fulfilled'
+        ? settledResults[1].value
+        : '{}';
+    const forgeOutput =
+      settledResults[2].status === 'fulfilled'
+        ? settledResults[2].value
+        : '{}';
+    const aegisOutput =
+      settledResults[3].status === 'fulfilled'
+        ? settledResults[3].value
+        : '{}';
+    const macroOutput =
+      hasMacroData && settledResults[4]?.status === 'fulfilled'
+        ? settledResults[4].value
+        : null;
 
     // Resolve model info per sub-agent (non-blocking)
     let marketModel: { provider?: string; model?: string } = {};
     let opsModel: { provider?: string; model?: string } = {};
     let riskModel: { provider?: string; model?: string } = {};
+    let blockchainModel: { provider?: string; model?: string } = {};
     try {
-      const [mkt, ops, rsk] = await Promise.allSettled([
+      const providerCalls: Promise<{ provider: string; model: string }>[] = [
         this.subAgent.getProvider(userId, 'market', typedOverride),
         this.subAgent.getProvider(userId, 'operations', typedOverride),
         this.subAgent.getProvider(userId, 'risk', typedOverride),
-      ]);
+      ];
+      if (hasMacroData) {
+        providerCalls.push(
+          this.subAgent.getProvider(userId, 'blockchain', typedOverride),
+        );
+      }
+      const [mkt, ops, rsk, blk] = await Promise.allSettled(providerCalls);
       if (mkt.status === 'fulfilled')
         marketModel = { provider: mkt.value.provider, model: mkt.value.model };
       if (ops.status === 'fulfilled')
         opsModel = { provider: ops.value.provider, model: ops.value.model };
       if (rsk.status === 'fulfilled')
         riskModel = { provider: rsk.value.provider, model: rsk.value.model };
+      if (blk?.status === 'fulfilled')
+        blockchainModel = {
+          provider: blk.value.provider,
+          model: blk.value.model,
+        };
     } catch {
       /* non-blocking */
     }
 
     // A2→DB: Persist fresh sentiment to NewsAnalysis (Spec 38, B.4)
-    if (sentimentRaw.status === 'fulfilled' && !cachedSentiment) {
+    if (settledResults[1].status === 'fulfilled' && !cachedSentiment) {
       try {
-        await this.persistSentimentAsAIAnalysis(userId, sentimentRaw.value);
+        await this.persistSentimentAsAIAnalysis(
+          userId,
+          settledResults[1].value,
+        );
       } catch (err) {
         this.logger.warn(
           `Failed to persist sentiment A2→DB: ${err instanceof Error ? err.message : String(err)}`,
@@ -332,6 +409,16 @@ export class OrchestratorService {
         ...riskModel,
       },
     );
+
+    // Add CIPHER macro_context result if executed
+    if (macroOutput) {
+      subAgentResults.push({
+        agentId: 'CIPHER',
+        task: 'macro_context',
+        output: macroOutput,
+        ...blockchainModel,
+      });
+    }
 
     // AEGIS verdict gate
     const aegisVerdict = safeParseJson<Partial<AegisVerdict>>(aegisOutput, {});
@@ -394,7 +481,7 @@ export class OrchestratorService {
           aegisVerdict: aegisOutput,
           buyThreshold: config.buyThreshold,
           sellThreshold: config.sellThreshold,
-          ...(enrichedData ? { externalDataSources: enrichedData } : {}),
+          ...(macroOutput ? { macroContext: macroOutput } : {}),
         },
         userId,
         false,
@@ -409,7 +496,7 @@ export class OrchestratorService {
 
       // All sub-agents failed + synthesis failed → propagate as LLM error
       // so the processor can retry instead of stopping the agent
-      const allSubsFailed = [techRaw, sentimentRaw, forgeRaw, aegisRaw].every(
+      const allSubsFailed = settledResults.every(
         (r) => r.status === 'rejected',
       );
       if (allSubsFailed) {

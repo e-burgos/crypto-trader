@@ -29,6 +29,7 @@ export type AgentTask =
   | 'news_sentiment'
   | 'sizing_suggestion'
   | 'risk_gate'
+  | 'macro_context'
   | 'news_technical_relevance'
   | 'ecosystem_impact'
   | 'intent_classification'
@@ -278,6 +279,10 @@ Intelectual pero adaptable. Con usuarios novatos: analogías simples y progresi�
 ## Formato JSON para impacto
 { "ecosystemImpact": "high|medium|low|none", "category": "...", "chains": [], "summary": "..." }
 
+## Formato JSON para análisis macro (task: macro_context)
+Cuando se te pide analizar el contexto macroeconómico del mercado crypto, responde con:
+{ "regime": "RISK_ON|RISK_OFF|NEUTRAL", "bias": "BULLISH|BEARISH|NEUTRAL", "confidence": 0.0-1.0, "keyFactors": ["factor1", "factor2"], "reasoning": "..." }
+
 Responde siempre en el idioma del usuario.`,
 
   risk: `# AEGIS — Gestor de Riesgo del Portfolio en CryptoTrader
@@ -337,29 +342,50 @@ function buildTaskUserPrompt(
   context: Record<string, unknown>,
 ): string {
   switch (task) {
-    case 'technical_signal':
-      return `Analiza este snapshot de indicadores y emite tu señal de trading:
+    case 'technical_signal': {
+      let prompt = `Analiza este snapshot de indicadores y emite tu señal de trading:
 ${JSON.stringify(context.indicators, null, 2)}`;
+      if (context.externalSignals) {
+        prompt += `\n\nSeñales técnicas externas (altfins) para CONFIRMAR/CONTRADECIR tu análisis:
+${JSON.stringify(context.externalSignals, null, 2)}`;
+      }
+      return prompt;
+    }
 
-    case 'news_sentiment':
-      return `Analiza estas noticias y emite tu análisis de sentimiento del mercado:
+    case 'news_sentiment': {
+      let prompt = `Analiza estas noticias y emite tu análisis de sentimiento del mercado:
 ${JSON.stringify(context.news, null, 2)}`;
+      if (context.fearGreed) {
+        prompt += `\n\nFear & Greed Index: ${JSON.stringify(context.fearGreed)}`;
+      }
+      if (context.predictions) {
+        prompt += `\n\nPrediction Markets (dinero real): ${JSON.stringify(context.predictions)}`;
+      }
+      return prompt;
+    }
 
     case 'sizing_suggestion':
       return `Configuración activa: ${JSON.stringify(context.config)}
 Posiciones abiertas: ${context.openPositionsCount ?? 0}
 ¿Debería proceder con la operación? Dame tu sugerencia de sizing.`;
 
-    case 'risk_gate':
-      return `Portfolio actual del usuario:
+    case 'risk_gate': {
+      let prompt = `Portfolio actual del usuario:
 Posiciones abiertas: ${JSON.stringify(context.portfolio, null, 2)}
 Balances disponibles en wallet: ${JSON.stringify(context.availableBalances ?? [], null, 2)}
 Snapshot de mercado:
 Indicators summary: RSI=${(context.indicators as Record<string, unknown>)?.rsi ?? 'N/A'}, Price=${(context.indicators as Record<string, unknown>)?.price ?? 'N/A'}
 Config del bot:
 Asset=${(context.config as Record<string, unknown>)?.asset ?? 'N/A'}, Par=${(context.config as Record<string, unknown>)?.pair ?? 'N/A'}, MaxPosiciones=${(context.config as Record<string, unknown>)?.maxConcurrentPositions ?? 'N/A'}, StopLoss=${(context.config as Record<string, unknown>)?.stopLossPct ?? 'N/A'}%, TakeProfit=${(context.config as Record<string, unknown>)?.takeProfitPct ?? 'N/A'}%
-RECORDATORIO: Este bot opera UN par específico (${(context.config as Record<string, unknown>)?.asset ?? '?'}/${(context.config as Record<string, unknown>)?.pair ?? '?'}). Es normal que todas las posiciones sean del mismo activo. Calcula la exposición real considerando los balances disponibles + posiciones abiertas.
-Emite tu veredicto de riesgo en JSON.`;
+RECORDATORIO: Este bot opera UN par específico (${(context.config as Record<string, unknown>)?.asset ?? '?'}/${(context.config as Record<string, unknown>)?.pair ?? '?'}). Es normal que todas las posiciones sean del mismo activo. Calcula la exposición real considerando los balances disponibles + posiciones abiertas.`;
+      if (context.derivatives) {
+        prompt += `\n\nDatos de derivados del mercado:
+${JSON.stringify(context.derivatives, null, 2)}
+Incorpora estos datos en tu evaluación de riesgo sistémico.`;
+      }
+      prompt += `\nEmite tu veredicto de riesgo en JSON.`;
+      return prompt;
+    }
 
     case 'news_technical_relevance':
       return `Noticia: "${context.headline}"
@@ -375,46 +401,30 @@ Resumen: ${context.summary ?? '(no disponible)'}
       return `Clasifica la intención de este mensaje del usuario y enrútalo al sub-agente correcto:
 "${context.message}"`;
 
+    case 'macro_context': {
+      const sections: string[] = [];
+      if (context.globalMarket)
+        sections.push(`Global Market: ${JSON.stringify(context.globalMarket, null, 2)}`);
+      if (context.defiHealth)
+        sections.push(`DeFi Health: ${JSON.stringify(context.defiHealth, null, 2)}`);
+      if (context.tokenUnlocks)
+        sections.push(`Token Unlocks próximos: ${JSON.stringify(context.tokenUnlocks, null, 2)}`);
+      return `Analiza el contexto macroeconómico del mercado crypto:\n\n${sections.join('\n\n')}\n\nEmite tu análisis de régimen de mercado en JSON.`;
+    }
+
     case 'decision_synthesis': {
-      let prompt = `Sintetiza estas 4 perspectivas de los sub-agentes y emite la decisión final de trading:
+      let prompt = `Sintetiza estas perspectivas de los sub-agentes y emite la decisión final de trading:
 
 SIGMA (Señal técnica): ${context.technicalSignal}
 SIGMA (Sentimiento noticias): ${context.newsSentiment}
 FORGE (Sizing): ${context.sizingSuggestion}
-AEGIS (Riesgo): ${context.aegisVerdict}
+AEGIS (Riesgo): ${context.aegisVerdict}`;
 
-Config del usuario: buyThreshold=${context.buyThreshold}%, sellThreshold=${context.sellThreshold}%`;
-
-      if (context.externalDataSources) {
-        const eds = context.externalDataSources as Record<string, unknown>;
-        const sections: string[] = [];
-        if (eds.fearGreed)
-          sections.push(`Fear & Greed Index: ${JSON.stringify(eds.fearGreed)}`);
-        if (eds.derivatives)
-          sections.push(
-            `Derivatives (OI, Funding, Liquidations): ${JSON.stringify(eds.derivatives)}`,
-          );
-        if (eds.defiHealth)
-          sections.push(
-            `DeFi Health (TVL, Stablecoins): ${JSON.stringify(eds.defiHealth)}`,
-          );
-        if (eds.globalMarket)
-          sections.push(
-            `Global Market (Dominance, Volume): ${JSON.stringify(eds.globalMarket)}`,
-          );
-        if (eds.predictions)
-          sections.push(
-            `Prediction Markets: ${JSON.stringify(eds.predictions)}`,
-          );
-        if (eds.tokenUnlocks)
-          sections.push(
-            `Token Unlocks (próximos): ${JSON.stringify(eds.tokenUnlocks)}`,
-          );
-        if (sections.length > 0) {
-          prompt += `\n\nDatos externos enriquecidos (usa para confirmar/contradecir las señales de los agentes):\n${sections.join('\n')}`;
-        }
+      if (context.macroContext) {
+        prompt += `\nCIPHER (Contexto macro): ${context.macroContext}`;
       }
 
+      prompt += `\n\nConfig del usuario: buyThreshold=${context.buyThreshold}%, sellThreshold=${context.sellThreshold}%`;
       prompt += '\nEmite el JSON de decisión final.';
       return prompt;
     }

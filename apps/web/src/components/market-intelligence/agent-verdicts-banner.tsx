@@ -1,8 +1,14 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { InfoCard, Badge } from '@crypto-trader/ui';
+import {
+  InfoCard,
+  Badge,
+  AgentVerdictCard,
+  formatAgentVerdictSummary,
+  shortModelName,
+} from '@crypto-trader/ui';
+import type { AgentMeta, AgentVerdictData } from '@crypto-trader/ui';
 import {
   Bot,
   TrendingUp,
@@ -13,7 +19,6 @@ import {
   Shield,
   Wrench,
   Cpu,
-  ChevronDown,
   Play,
   Loader2,
   Globe,
@@ -22,25 +27,9 @@ import { useAgentDecisions } from '../../hooks/use-analytics';
 import { usePlatformMode } from '../../hooks/use-user';
 import { useTradingConfigs, useTriggerAnalysis } from '../../hooks/use-trading';
 
-interface VerdictCard {
-  agentId: string;
-  task: string;
-  summary: string;
-  cached?: boolean;
-  model?: string;
-  provider?: string;
-}
+// ── Agent metadata (icons + colors) ──────────────────────────────────────────
 
-const AGENT_META: Record<
-  string,
-  {
-    label: string;
-    fullNameKey: string;
-    icon: React.ReactNode;
-    color: string;
-    bgColor: string;
-  }
-> = {
+const AGENT_META_MAP: Record<string, AgentMeta & { fullNameKey: string }> = {
   SIGMA: {
     label: 'SIGMA',
     fullNameKey: 'marketIntelligence.verdicts.agents.sigma',
@@ -87,12 +76,7 @@ const TASK_LABEL_KEYS: Record<string, string> = {
   macro_context: 'marketIntelligence.verdicts.tasks.macroContext',
 };
 
-/** Shorten model name for display (e.g. "anthropic/claude-3.5-sonnet" → "claude-3.5-sonnet") */
-function shortModel(model?: string): string {
-  if (!model) return '';
-  const parts = model.split('/');
-  return parts[parts.length - 1];
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function decisionBadge(decision: string): 'success' | 'error' | 'neutral' {
   if (decision === 'BUY') return 'success';
@@ -108,200 +92,47 @@ function decisionIcon(decision: string) {
   return <Minus className="h-4 w-4 text-muted-foreground" />;
 }
 
-/**
- * Formats raw agent summary into human-readable text.
- * Handles: raw JSON, <think> tags, empty objects, and plain text passthrough.
- */
-function formatVerdictSummary(raw: string, task: string): string {
-  if (!raw || raw === '{}' || raw === '[]') return '';
+// ── Verdict card wrapper (adds i18n + ReactMarkdown rendering) ───────────────
 
-  // Strip <think>...</think> blocks from reasoning models
-  let text = raw.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
-  if (!text) {
-    // If only thinking content existed, extract it
-    const thinkMatch = raw.match(/<think>([\s\S]*?)<\/think>/);
-    text = thinkMatch?.[1]?.trim() ?? raw;
-  }
-
-  // Try to detect and format JSON responses
-  const jsonMatch = text.match(/^\s*(\{[\s\S]*\})\s*$/);
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[1]);
-      // Skip if it's an empty object
-      if (Object.keys(parsed).length === 0) return '';
-
-      switch (task) {
-        case 'technical_signal': {
-          const signal = parsed.signal ?? parsed.direction ?? '';
-          const conf = parsed.confidence
-            ? `${Math.round(parsed.confidence * 100)}%`
-            : '';
-          const reasoning = parsed.reasoning ?? '';
-          return reasoning
-            ? `**${signal}** (${conf} confidence) — ${reasoning}`
-            : `${signal} ${conf}`.trim();
-        }
-        case 'news_sentiment': {
-          const sentiment = parsed.sentiment ?? parsed.impact ?? '';
-          const score =
-            parsed.score != null ? ` (score: ${parsed.score})` : '';
-          const reasoning =
-            parsed.reasoning ?? parsed.explanation ?? parsed.summary ?? '';
-          return reasoning
-            ? `**${sentiment}**${score} — ${reasoning}`
-            : `${sentiment}${score}`;
-        }
-        case 'sizing_suggestion': {
-          const rec = parsed.recommendation ?? parsed.action ?? '';
-          const size = parsed.maxTradeSize
-            ? `max trade: ${Math.round(parsed.maxTradeSize * 100)}%`
-            : parsed.positionSizeMultiplier
-              ? `multiplier: ${parsed.positionSizeMultiplier}`
-              : '';
-          const reasoning =
-            parsed.reasoning ?? parsed.reason ?? parsed.suggestion ?? '';
-          if (rec || size || reasoning) {
-            const header = rec ? `**${rec.toUpperCase()}**` : '';
-            return [header, size, reasoning].filter(Boolean).join(' — ');
-          }
-          // Generic fallback: list all keys
-          return Object.entries(parsed)
-            .map(
-              ([k, v]) =>
-                `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`,
-            )
-            .join(', ');
-        }
-        case 'risk_gate': {
-          const verdict = parsed.verdict ?? parsed.action ?? '';
-          const riskScore = parsed.riskScore
-            ? ` (riskScore ${parsed.riskScore})`
-            : '';
-          const reason =
-            parsed.reason ?? parsed.reasoning ?? parsed.explanation ?? '';
-          return reason
-            ? `**${verdict}**${riskScore}: ${reason}`
-            : `${verdict}${riskScore}`;
-        }
-        case 'macro_context': {
-          const regime = parsed.regime ?? '';
-          const bias = parsed.bias ?? '';
-          const conf = parsed.confidence
-            ? `${Math.round(parsed.confidence * 100)}%`
-            : '';
-          const reasoning = parsed.reasoning ?? '';
-          const header = regime
-            ? `**${regime}** ${bias ? `(${bias})` : ''} ${conf ? `— ${conf} conf.` : ''}`
-            : '';
-          return [header, reasoning].filter(Boolean).join('\n\n');
-        }
-        default: {
-          // Generic: show all keys as readable text
-          return Object.entries(parsed)
-            .map(
-              ([k, v]) =>
-                `**${k}**: ${typeof v === 'object' ? JSON.stringify(v) : v}`,
-            )
-            .join('\n');
-        }
-      }
-    } catch {
-      // Not valid JSON, continue with text as-is
-    }
-  }
-
-  return text;
-}
-
-/** Individual collapsible verdict card */
-function VerdictCardComponent({ verdict: v }: { verdict: VerdictCard }) {
-  const [expanded, setExpanded] = useState(false);
+function VerdictCardWrapper({ verdict }: { verdict: AgentVerdictData }) {
   const { t } = useTranslation();
-  const meta = AGENT_META[v.agentId.toUpperCase()] ?? {
-    label: v.agentId,
-    fullNameKey: '',
-    icon: <Bot className="h-3.5 w-3.5" />,
-    color: 'text-muted-foreground',
-    bgColor: 'bg-muted',
-  };
-  const modelShort = shortModel(v.model);
-  const fullName = meta.fullNameKey ? t(meta.fullNameKey) : v.agentId;
-  const taskLabel = TASK_LABEL_KEYS[v.task]
-    ? t(TASK_LABEL_KEYS[v.task])
-    : v.task;
+  const metaEntry = AGENT_META_MAP[verdict.agentId.toUpperCase()];
+  const agentMeta: AgentMeta = metaEntry
+    ? {
+        ...metaEntry,
+        subtitle: t(metaEntry.fullNameKey),
+      }
+    : {
+        label: verdict.agentId,
+        subtitle: verdict.agentId,
+        icon: <Bot className="h-3.5 w-3.5" />,
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
+      };
+
+  const taskLabel = TASK_LABEL_KEYS[verdict.task]
+    ? t(TASK_LABEL_KEYS[verdict.task])
+    : verdict.task;
+
+  // Format summary and wrap with ReactMarkdown
+  const formatted =
+    formatAgentVerdictSummary(verdict.summary, verdict.task) || verdict.summary;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
-      {/* Header: Agent name + task */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-md ${meta.bgColor} ${meta.color}`}
-          >
-            {meta.icon}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold leading-tight">
-              {meta.label}
-            </span>
-            <span className="text-[10px] text-muted-foreground leading-tight">
-              {fullName}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {v.cached && (
-            <span className="text-[10px] text-muted-foreground/60 bg-muted px-1.5 py-0.5 rounded">
-              {t('marketIntelligence.verdicts.cached')}
-            </span>
-          )}
-          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded flex items-center gap-0.5">
-            {TASK_ICON[v.task]}
-            {taskLabel}
-          </span>
-        </div>
-      </div>
-
-      {/* Summary with collapse */}
-      <div className="relative">
-        <div
-          className={`text-xs text-muted-foreground prose prose-xs dark:prose-invert max-w-none overflow-hidden transition-[max-height] duration-300 ease-in-out [&_p]:my-0.5 [&_p]:leading-relaxed [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0 [&_pre]:my-1 [&_pre]:text-[11px] [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:rounded-md [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:text-[11px] [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_strong]:text-foreground [&_h1]:text-xs [&_h2]:text-xs [&_h3]:text-xs [&_blockquote]:border-l-2 [&_blockquote]:border-primary/30 [&_blockquote]:pl-2 [&_blockquote]:text-muted-foreground ${expanded ? 'max-h-[2000px]' : 'max-h-[5lh]'}`}
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {formatVerdictSummary(v.summary, v.task) || v.summary}
-          </ReactMarkdown>
-        </div>
-        {!expanded && v.summary.length > 150 && (
-          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-        )}
-      </div>
-
-      {/* Expand/collapse toggle + model */}
-      <div className="flex items-center justify-between">
-        {v.summary.length > 150 ? (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-0.5 text-[10px] text-primary hover:text-primary/80 transition-colors"
-          >
-            <ChevronDown
-              className={`h-3 w-3 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-            />
-            {expanded
-              ? t('marketIntelligence.verdicts.showLess')
-              : t('marketIntelligence.verdicts.showMore')}
-          </button>
-        ) : (
-          <span />
-        )}
-        {modelShort && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/70">
-            <Cpu className="h-2.5 w-2.5" />
-            <span className="truncate max-w-[180px]">{modelShort}</span>
-          </div>
-        )}
-      </div>
-    </div>
+    <AgentVerdictCard
+      verdict={verdict}
+      agentMeta={agentMeta}
+      taskLabel={taskLabel}
+      taskIcon={TASK_ICON[verdict.task]}
+      cachedLabel={t('marketIntelligence.verdicts.cached')}
+      showMoreLabel={t('marketIntelligence.verdicts.showMore')}
+      showLessLabel={t('marketIntelligence.verdicts.showLess')}
+      modelIcon={<Cpu className="h-2.5 w-2.5" />}
+      formattedSummary={formatted}
+      renderContent={(content) => (
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      )}
+    />
   );
 }
 
@@ -314,7 +145,7 @@ export function AgentVerdictsBanner() {
 
   // Use the most recent orchestrated decision
   const latest = decisions[0];
-  const verdicts: VerdictCard[] = latest?.subAgentVerdicts ?? [];
+  const verdicts: AgentVerdictData[] = latest?.subAgentVerdicts ?? [];
   const hasData = verdicts.length > 0;
 
   // Pick first config matching the current mode for trigger
@@ -394,7 +225,7 @@ export function AgentVerdictsBanner() {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {verdicts.map((v, i) => (
-              <VerdictCardComponent key={i} verdict={v} />
+              <VerdictCardWrapper key={i} verdict={v} />
             ))}
           </div>
 
@@ -417,7 +248,7 @@ export function AgentVerdictsBanner() {
                   {latest.llmModel && (
                     <span className="text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded flex items-center gap-0.5">
                       <Cpu className="h-2.5 w-2.5" />
-                      {shortModel(latest.llmModel)}
+                      {shortModelName(latest.llmModel)}
                     </span>
                   )}
                 </div>

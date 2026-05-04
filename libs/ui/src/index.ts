@@ -158,6 +158,17 @@ export type {
   StateDetailRowProps,
   StateSectionTitleProps,
 } from './lib/domain/agent/agent-state-modal';
+export {
+  AgentVerdictCard,
+  formatAgentVerdictSummary,
+  shortModelName,
+} from './lib/domain/agent/agent-verdict-card';
+export type {
+  AgentVerdictCardProps,
+  AgentVerdictData,
+  AgentVerdictTask,
+  AgentMeta,
+} from './lib/domain/agent/agent-verdict-card';
 
 // Domain — Chat
 export type {

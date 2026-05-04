@@ -7,3 +7,4 @@ export { AdminLLMProvidersPage } from './llm-providers';
 export { AdminAgentModelsPage } from './agent-models';
 export { AdminAuditLogPage } from './audit-log';
 export { AdminHelpPage } from './help';
+export { AdminDataSourcesPage } from './data-sources';

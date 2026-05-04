@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '../../utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -272,7 +274,9 @@ export function AgentVerdictCard({
             expanded ? 'max-h-[2000px]' : collapsedMaxHeight,
           )}
         >
-          {renderContent ? renderContent(displaySummary) : displaySummary}
+          {renderContent
+            ? renderContent(displaySummary)
+            : <ReactMarkdown remarkPlugins={[remarkGfm]}>{displaySummary}</ReactMarkdown>}
         </div>
         {!expanded && shouldShowToggle && (
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />

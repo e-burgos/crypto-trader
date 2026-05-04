@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import {
   InfoCard,
   Badge,
@@ -146,9 +144,6 @@ function VerdictCardWrapper({
       modelIcon={<Cpu className="h-2.5 w-2.5" />}
       formattedSummary={formatted}
       className={className}
-      renderContent={(content) => (
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
-      )}
     />
   );
 }

@@ -343,12 +343,17 @@ function buildTaskUserPrompt(
 ): string {
   switch (task) {
     case 'technical_signal': {
-      let prompt = `Analiza este snapshot de indicadores y emite tu señal de trading:
+      let prompt = `Analiza este snapshot de indicadores y emite tu señal de trading.
+
+IMPORTANTE: Tu "reasoning" debe ser una explicación clara en lenguaje natural (2-4 oraciones) de POR QUÉ emites esa señal, citando los indicadores más relevantes y sus valores. No repitas solo la señal.
+
+Datos:
 ${JSON.stringify(context.indicators, null, 2)}`;
       if (context.externalSignals) {
         prompt += `\n\nSeñales técnicas externas (altfins) para CONFIRMAR/CONTRADECIR tu análisis:
 ${JSON.stringify(context.externalSignals, null, 2)}`;
       }
+      prompt += `\n\nResponde en JSON: { "signal": "BUY|SELL|HOLD", "confidence": 0.0-1.0, "reasoning": "explicación detallada..." }`;
       return prompt;
     }
 

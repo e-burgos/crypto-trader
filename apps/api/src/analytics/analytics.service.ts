@@ -205,11 +205,16 @@ export class AnalyticsService {
               const parsed = match ? JSON.parse(match[0]) : JSON.parse(cleaned);
               // Extract a short summary depending on the task type
               if (r.task === 'technical_signal') {
-                summary =
-                  parsed.signal ??
-                  parsed.direction ??
-                  parsed.recommendation ??
-                  r.output;
+                summary = parsed.reasoning
+                  ? JSON.stringify({
+                      signal: parsed.signal,
+                      confidence: parsed.confidence,
+                      reasoning: parsed.reasoning,
+                    })
+                  : (parsed.signal ??
+                    parsed.direction ??
+                    parsed.recommendation ??
+                    r.output);
               } else if (r.task === 'news_sentiment') {
                 summary =
                   parsed.impact ?? parsed.sentiment?.toString() ?? r.output;

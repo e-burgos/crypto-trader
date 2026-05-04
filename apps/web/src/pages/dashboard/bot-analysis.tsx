@@ -165,9 +165,7 @@ export function BotAnalysisPage() {
           if (parsed.signal) return parsed as SigmaTechnical;
         } catch {
           // summary might not be JSON, try extracting signal from text
-          const signalMatch = tech.summary.match(
-            /\b(BUY|SELL|HOLD)\b/i,
-          );
+          const signalMatch = tech.summary.match(/\b(BUY|SELL|HOLD)\b/i);
           if (signalMatch) {
             return {
               signal: signalMatch[1].toUpperCase(),

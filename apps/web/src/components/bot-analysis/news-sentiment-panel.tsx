@@ -280,7 +280,9 @@ export function NewsSentimentPanel({
         )}
 
         {/* Enriched sentiment sources (Fear & Greed + Predictions) */}
-        {(enrichedSnapshot?.fearGreed || (enrichedSnapshot?.predictions && enrichedSnapshot.predictions.length > 0)) && (
+        {(enrichedSnapshot?.fearGreed ||
+          (enrichedSnapshot?.predictions &&
+            enrichedSnapshot.predictions.length > 0)) && (
           <div className="shrink-0 flex flex-wrap gap-2">
             {enrichedSnapshot?.fearGreed && (
               <div
@@ -311,16 +313,18 @@ export function NewsSentimentPanel({
                 </span>
               </div>
             )}
-            {enrichedSnapshot?.predictions && enrichedSnapshot.predictions.length > 0 && (
-              <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
-                <span className="text-muted-foreground font-medium">
-                  {t('botAnalysis.inputSourcesPredictions')}:
-                </span>
-                <span className="font-bold text-indigo-400">
-                  {enrichedSnapshot.predictions.length} {t('botAnalysis.predictionMarkets')}
-                </span>
-              </div>
-            )}
+            {enrichedSnapshot?.predictions &&
+              enrichedSnapshot.predictions.length > 0 && (
+                <div className="flex items-center gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
+                  <span className="text-muted-foreground font-medium">
+                    {t('botAnalysis.inputSourcesPredictions')}:
+                  </span>
+                  <span className="font-bold text-indigo-400">
+                    {enrichedSnapshot.predictions.length}{' '}
+                    {t('botAnalysis.predictionMarkets')}
+                  </span>
+                </div>
+              )}
           </div>
         )}
 

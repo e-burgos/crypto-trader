@@ -2,7 +2,8 @@ import { useState, useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
-import { Brain, RefreshCw, AlertCircle } from 'lucide-react';
+import { Brain, RefreshCw, AlertCircle, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Tabs } from '@crypto-trader/ui';
 import {
@@ -11,9 +12,9 @@ import {
   useMarketNews,
   useNewsConfig,
   useNewsAnalysis,
-  MARKET_SYMBOLS,
   type OverallSignal,
 } from '../../hooks/use-market';
+import { useEnrichedSnapshot } from '../../hooks/use-enriched-snapshot';
 import { useAgentDecisions } from '../../hooks/use-analytics';
 import { useTradingConfigs, useAgentStatus } from '../../hooks/use-trading';
 import { useBinanceTicker } from '../../hooks/use-binance-ticker';
@@ -30,10 +31,17 @@ import {
 
 gsap.registerPlugin(useGSAP);
 
+const MARKET_ASSETS = [
+  { asset: 'BTC', label: 'Bitcoin', symbol: 'BTCUSDT' },
+  { asset: 'ETH', label: 'Ethereum', symbol: 'ETHUSDT' },
+] as const;
+
 export function BotAnalysisPage() {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [symbol, setSymbol] = useState<string>('BTCUSDT');
+  const [asset, setAsset] = useState<string>('BTC');
+  const symbol =
+    MARKET_ASSETS.find((a) => a.asset === asset)?.symbol ?? 'BTCUSDT';
 
   const {
     data: snapshot,
@@ -48,6 +56,7 @@ export function BotAnalysisPage() {
   const { data: decisions = [] } = useAgentDecisions(15);
   const { data: tradingConfigs = [] } = useTradingConfigs();
   const { data: agentStatuses = [] } = useAgentStatus();
+  const { data: enrichedSnapshot } = useEnrichedSnapshot(symbol);
   const { mode: platformMode } = usePlatformMode();
 
   // Filter to current platform mode
@@ -162,16 +171,16 @@ export function BotAnalysisPage() {
         </p>
       </div>
 
-      {/* Symbol selector + refresh */}
+      {/* Asset selector + refresh */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex-1 sm:flex-none">
           <Tabs
-            tabs={MARKET_SYMBOLS.map((m) => ({
-              value: m.symbol,
-              label: m.label,
+            tabs={MARKET_ASSETS.map((a) => ({
+              value: a.asset,
+              label: a.label,
             }))}
-            value={symbol}
-            onChange={setSymbol}
+            value={asset}
+            onChange={setAsset}
             border
           />
         </div>
@@ -230,7 +239,17 @@ export function BotAnalysisPage() {
             newsWeight={pageNewsConfig?.newsWeight ?? 0}
             agentStatuses={agentStatuses}
             recentDecisions={modeDecisions}
+            enrichedSnapshot={enrichedSnapshot}
           />
+          {/* Link to Market Intelligence */}
+          <Link
+            to="/dashboard/market-intelligence"
+            className="flex items-center gap-2 mt-4 p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors text-sm"
+          >
+            <Globe className="h-4 w-4 text-blue-400" />
+            <span>{t('botAnalysis.goToMarketIntelligence')}</span>
+            <span className="ml-auto text-xs text-muted-foreground">→</span>
+          </Link>
         </>
       )}
     </div>

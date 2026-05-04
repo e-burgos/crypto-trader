@@ -107,6 +107,14 @@ export interface AgentDecision {
     reasoning: string;
     cached?: boolean;
   } | null;
+  subAgentVerdicts?: Array<{
+    agentId: string;
+    task: string;
+    summary: string;
+    cached?: boolean;
+    model?: string;
+    provider?: string;
+  }> | null;
 }
 
 export interface TradeInfo {

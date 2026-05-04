@@ -44,8 +44,10 @@ const es = {
     adminGroupConfig: 'Configuración',
     adminLLMProviders: 'Proveedores LLM',
     adminAgentModels: 'Modelos de Agentes',
+    adminDataSources: 'Fuentes de Datos',
     adminProfile: 'Perfil',
     adminGroupPlatform: 'Plataforma',
+    marketIntelligence: 'Inteligencia de Mercado',
   },
   dashboard: {
     overview: 'Resumen',
@@ -567,6 +569,43 @@ const es = {
     helpGeneralDesc:
       'Para documentación detallada sobre la plataforma de trading, comportamiento de agentes y conceptos de configuración, visita la guía completa.',
     helpGoToGuide: 'Ir a Ayuda y Guía',
+    // Data Sources (Spec 40)
+    dataSources: {
+      title: 'Fuentes de Datos de Mercado',
+      subtitle:
+        'Gestionar integraciones de fuentes de datos externas para agentes de IA',
+      free: 'Gratis',
+      requiresKey: 'API Key',
+      configureKey: 'Configurar API Key',
+      keyConfigured: 'API Key configurada ✓',
+      lastSuccess: 'Último éxito',
+      active: 'activas',
+      allHealthy: 'Todo OK',
+      issuesDetected: 'Problemas detectados',
+      healthCheckAll: 'Verificar Todas',
+      metrics: {
+        totalCalls: 'Llamadas Totales',
+        avgLatency: 'Latencia Prom.',
+        errorRate: 'Tasa de Error',
+        cacheHitRate: 'Cache Hit Rate',
+        perSource: 'Métricas por Fuente',
+        openCircuits: 'Circuit Breakers Abiertos',
+      },
+      apiKeyModal: {
+        title: 'Configurar API Key',
+        howToGet: 'Cómo obtener tu API key',
+        genericInstructions:
+          'Visita la plataforma del proveedor, crea una cuenta y genera una API key desde la configuración de tu cuenta.',
+        opensNewTab: 'Abre en nueva pestaña',
+        inputLabel: 'API Key',
+        inputPlaceholder: 'Pega tu API key aquí...',
+        encryptionNote:
+          'Tu key se encripta en reposo y nunca se expone en logs ni en la UI.',
+        save: 'Guardar Key',
+        saving: 'Guardando...',
+        cancel: 'Cancelar',
+      },
+    },
     // User table columns
     userColEmail: 'Email',
     userColRole: 'Rol',
@@ -2099,6 +2138,16 @@ const es = {
     inputGroupNews: 'Noticias',
     inputGroupConfig: 'Config',
     inputGroupHistory: 'Historial Decisiones',
+    inputGroupSources: 'Fuentes Externas',
+    inputSourcesNone: 'Sin fuentes activas',
+    inputSourcesFearGreed: 'Fear & Greed',
+    inputSourcesDerivatives: 'Derivados',
+    inputSourcesDefi: 'Salud DeFi',
+    inputSourcesGlobal: 'Mercado Global',
+    inputSourcesPredictions: 'Predicciones',
+    inputSourcesUnlocks: 'Token Unlocks',
+    inputSourcesActive: '{{count}} fuentes activas',
+    inputSourcesFailed: '{{count}} fallidas',
     inputHistoryEmpty: 'Sin decisiones aún',
     nextDecisionTitle: 'Próxima Decisión del Agente',
     nextDecisionIn: 'Próxima decisión en',
@@ -2184,6 +2233,7 @@ const es = {
       resistances: 'Resistencias',
     },
     noDecisionsYet: 'El agente aún no ha tomado ninguna decisión.',
+    goToMarketIntelligence: 'Ver panel completo de Inteligencia de Mercado',
   },
   modeSelector: {
     label: 'Modo de operación',
@@ -3020,6 +3070,360 @@ const es = {
       perAgentTitle: 'Override de modelo por agente',
       perAgentDesc:
         'Cada tarjeta de agente tiene un selector de modelo. Para agentes OpenRouter, muestra un desplegable con búsqueda de todos los 300+ modelos disponibles.',
+    },
+  },
+  marketIntelligence: {
+    pageTitle: 'Inteligencia de Mercado',
+    subtitle: 'Datos de mercado enriquecidos de múltiples fuentes externas',
+    refresh: 'Actualizar datos',
+    activeSources: 'Fuentes activas',
+    failedSources: 'Fuentes fallidas',
+    buildTime: 'Tiempo de construcción',
+    fearGreed: {
+      title: 'Índice Miedo y Codicia',
+      previous: 'Anterior',
+    },
+    derivatives: {
+      title: 'Derivados',
+      longShort: 'Long / Short',
+      metrics: 'Métricas',
+      openInterest: 'Interés Abierto',
+      oiChange24h: 'Cambio OI 24h',
+      fundingRate: 'Tasa de Financiamiento',
+      longShortRatio: 'Ratio Long/Short',
+      liquidations24h: 'Liquidaciones 24h',
+      liquidationBreakdown: 'Liquidaciones',
+      liqBuy: 'Liq. Compra',
+      liqSell: 'Liq. Venta',
+    },
+    defi: {
+      title: 'Salud DeFi',
+      totalTvl: 'TVL Total',
+      tvlChange24h: 'Cambio TVL 24h',
+      tvlChange7d: 'Cambio TVL 7d',
+      stablecoinMcap: 'Mcap Stablecoins',
+      stablecoinChange24h: 'Stablecoin Δ24h',
+      stablecoinChange7d: 'Stablecoin Δ7d',
+      dominantChain: 'Chain Principal',
+    },
+    global: {
+      title: 'Mercado Global',
+      overview: 'Resumen',
+      dominance: 'Dominancia',
+      movers: 'Top Movers',
+      totalMarketCap: 'Cap. Total del Mercado',
+      volume24h: 'Volumen 24h',
+      btcDominance: 'Dominancia BTC',
+      ethDominance: 'Dominancia ETH',
+      trending: 'Tendencia',
+      topGainers: 'Mayores Subidas',
+      topLosers: 'Mayores Caídas',
+    },
+    news: {
+      title: 'Noticias y Sentimiento',
+      avgSentiment: 'Sent. Promedio',
+      articles: 'artículos',
+    },
+    predictions: {
+      title: 'Mercados de Predicción',
+      endDate: 'Termina',
+    },
+    unlocks: {
+      title: 'Desbloqueos de Tokens',
+      symbol: 'Símbolo',
+      type: 'Tipo',
+      amount: 'Monto',
+      pctCirculating: '% Circ.',
+      daysLeft: 'Días',
+    },
+    signals: {
+      title: 'Señales Técnicas',
+    },
+    info: {
+      modal: {
+        subtitle: 'Indicadores y uso por agentes',
+        close: 'Cerrar',
+      },
+      tabs: {
+        indicators: 'Indicadores',
+        agentUsage: 'Uso por Agentes',
+      },
+      fearGreed: {
+        desc: 'El índice Fear & Greed mide el sentimiento general del mercado crypto en una escala de 0 a 100.',
+        extremeFear:
+          'Miedo Extremo — inversores en pánico, posible oportunidad de compra.',
+        fear: 'Miedo — mercado cauteloso, incertidumbre dominante.',
+        neutral: 'Neutral — equilibrio entre optimismo y pesimismo.',
+        greed: 'Codicia — mercado optimista, precaución con sobrecompra.',
+        extremeGreed: 'Codicia Extrema — euforia, riesgo de corrección.',
+        delta:
+          'Cambio respecto al cierre anterior. Movimientos bruscos pueden señalar cambios de tendencia.',
+        source:
+          'Fuente: Alternative.me — Calculado con volatilidad, momentum, redes sociales, dominancia BTC y Google Trends.',
+        agentIntro: 'Nuestros agentes de trading usan este indicador para:',
+        agentRiskLabel: 'Filtro de riesgo',
+        agentRiskDesc:
+          'En "Miedo Extremo" los agentes reducen position sizing; en "Codicia Extrema" incrementan stops.',
+        agentContrarianLabel: 'Señal contrarian',
+        agentContrarianDesc:
+          'Miedo extremo + señales técnicas alcistas = señal de compra de alta convicción.',
+        agentTrendLabel: 'Confirmación de tendencia',
+        agentTrendDesc:
+          'Codicia creciente + momentum positivo confirma tendencia alcista.',
+        agentExitLabel: 'Timing de salida',
+        agentExitDesc:
+          'Codicia extrema sostenida por varios días puede indicar techo de mercado.',
+      },
+      derivatives: {
+        desc: 'Datos agregados del mercado de derivados (futuros y perpetuos) que reflejan el posicionamiento de traders.',
+        lsRatioLabel: 'Long/Short Ratio',
+        lsRatioDesc:
+          'Proporción de posiciones largas vs cortas. Ratio > 1 = más longs (sentimiento alcista). Ratio < 1 = más shorts (sentimiento bajista).',
+        oiLabel: 'Open Interest (OI)',
+        oiDesc:
+          'Total de contratos abiertos en USD. Mayor OI = más capital comprometido y mayor convicción del mercado.',
+        oiChangeLabel: 'OI Change 24h',
+        oiChangeDesc:
+          'Variación del OI. OI subiendo + precio subiendo = tendencia fuerte. OI bajando = posiciones cerrándose.',
+        fundingLabel: 'Funding Rate',
+        fundingDesc:
+          'Tasa de financiamiento entre longs y shorts. Positiva = longs pagan a shorts (mercado alcista). Negativa = shorts pagan a longs.',
+        liqLabel: 'Liquidaciones',
+        liqDesc:
+          'Capital liquidado en 24h. Picos de liquidación pueden señalar reversiones.',
+        source:
+          'Fuente: Coinalyze — Datos agregados de Binance, Bybit, OKX y más.',
+        agentIntro: 'Los agentes interpretan datos de derivados para:',
+        agentCrowdedLabel: 'Detección de crowded trades',
+        agentCrowdedDesc:
+          'Funding rate extremo indica posiciones abarrotadas que pueden revertirse.',
+        agentConfluenceLabel: 'Confluencia de señales',
+        agentConfluenceDesc:
+          'OI creciente + funding neutral + precio subiendo = tendencia saludable.',
+        agentLiqAlertLabel: 'Alertas de liquidación',
+        agentLiqAlertDesc:
+          'Cascadas de liquidaciones masivas activan modo defensivo en los agentes.',
+        agentSizingLabel: 'Position sizing',
+        agentSizingDesc:
+          'Long/short ratio extremo reduce el tamaño de posiciones nuevas por riesgo de squeeze.',
+      },
+      defiHealth: {
+        desc: 'Métricas de salud del ecosistema DeFi que reflejan flujo de capital y confianza en protocolos.',
+        tvlLabel: 'Total TVL',
+        tvlDesc:
+          'Total Value Locked — capital total depositado en protocolos DeFi. Indicador de confianza en el ecosistema.',
+        tvlChangeLabel: 'TVL Change 24h/7d',
+        tvlChangeDesc:
+          'Flujos de capital. TVL creciente = más confianza. TVL decreciente = capital saliendo (risk-off).',
+        stableMcapLabel: 'Stablecoin Market Cap',
+        stableMcapDesc:
+          'Capitalización total de stablecoins. "Dry powder" disponible para entrar al mercado.',
+        stableChangeLabel: 'Stablecoin Change',
+        stableChangeDesc:
+          'Stablecoins creciendo = nuevo capital entrando al ecosistema crypto.',
+        dominantLabel: 'Dominant Chain',
+        dominantDesc:
+          'La blockchain con mayor TVL. Cambios aquí indican migración de capital entre ecosistemas.',
+        source:
+          'Fuente: DeFiLlama — Datos de +180 blockchains y +3000 protocolos.',
+        agentIntro: 'Los agentes usan métricas DeFi para:',
+        agentMacroLabel: 'Macro sentiment',
+        agentMacroDesc:
+          'TVL creciente + stablecoins crecientes = ambiente favorable para posiciones largas.',
+        agentRiskOffLabel: 'Detección de risk-off',
+        agentRiskOffDesc:
+          'TVL cayendo rápidamente activa modo conservador en los agentes.',
+        agentTimingLabel: 'Timing de entrada',
+        agentTimingDesc:
+          'Stablecoins en máximos = mucho capital esperando para entrar, señal pre-bullish.',
+        agentCrossChainLabel: 'Confirmación cross-chain',
+        agentCrossChainDesc:
+          'TVL creciendo en múltiples chains = rally de amplia base vs pump aislado.',
+      },
+      globalMarket: {
+        desc: 'Datos macro del mercado crypto global que dan contexto general sobre el estado del ecosistema.',
+        mcapLabel: 'Market Cap',
+        mcapDesc:
+          'Capitalización total del mercado crypto. Es el indicador principal del tamaño del ecosistema.',
+        volLabel: 'Volume 24h',
+        volDesc:
+          'Volumen total de trading en 24 horas. Volumen alto + movimiento = tendencia confirmada.',
+        btcDomLabel: 'BTC Dominance',
+        btcDomDesc:
+          '% del market cap que es Bitcoin. Dominancia subiendo = capital yendo a "safe haven". Bajando = altseason.',
+        ethDomLabel: 'ETH Dominance',
+        ethDomDesc:
+          '% que es Ethereum. Crecimiento indica confianza en DeFi/smart contracts.',
+        moversLabel: 'Top Movers',
+        moversDesc:
+          'Mayores ganadores y perdedores en 24h. Detecta rotación sectorial y narrativas dominantes.',
+        source:
+          'Fuente: CoinGecko — Datos de +13,000 criptomonedas en +600 exchanges.',
+        agentIntro: 'Los agentes procesan datos globales para:',
+        agentAltseasonLabel: 'Detección de altseason',
+        agentAltseasonDesc:
+          'BTC dominance cayendo + alts subiendo = rotar a altcoins.',
+        agentVolumeLabel: 'Validación de volumen',
+        agentVolumeDesc:
+          'Movimiento de precio sin volumen = fake breakout, agentes ignoran la señal.',
+        agentNarrativeLabel: 'Identificación de narrativas',
+        agentNarrativeDesc:
+          'Top movers del mismo sector = narrativa emergente a seguir.',
+        agentRiskLabel: 'Risk management macro',
+        agentRiskDesc:
+          'Market cap cayendo + volumen alto = capitulación, agentes pausan nuevas entradas.',
+      },
+      news: {
+        desc: 'Noticias crypto en tiempo real con análisis de sentimiento automatizado para detectar el tono del mercado.',
+        scoreLabel: 'Sentiment Score (-1 a 1)',
+        scoreDesc:
+          'Análisis NLP del headline. Positivo = noticia alcista. Negativo = noticia bajista.',
+        distLabel: 'Distribución (Bullish/Neutral/Bearish)',
+        distDesc:
+          'Balance general de las últimas 20 noticias. Dominancia de un tipo indica sesgo del mercado.',
+        avgLabel: 'Avg Score',
+        avgDesc:
+          'Promedio de sentimiento. > +0.1 = sesgo bullish general. < -0.1 = sesgo bearish.',
+        barLabel: 'Barra de color lateral',
+        barDesc:
+          'Verde = positiva, Rojo = negativa, Gris = neutral. Permite escanear rápidamente.',
+        symbolsLabel: 'Related Symbols',
+        symbolsDesc:
+          'Monedas mencionadas. Permite correlacionar noticias con movimientos de precio.',
+        source:
+          'Fuente: Finnhub — Noticias agregadas de CoinDesk, TheBlock, Bloomberg Crypto y más. Sentimiento vía keyword NLP.',
+        agentIntro: 'Los agentes procesan noticias para:',
+        agentEventLabel: 'Event-driven trading',
+        agentEventDesc:
+          'Noticias de alta relevancia con sentimiento fuerte pueden activar trades inmediatos.',
+        agentNoiseLabel: 'Filtro de ruido',
+        agentNoiseDesc:
+          'Solo noticias con score > |0.3| y alto relevanceScore afectan las decisiones.',
+        agentTrendLabel: 'Confirmación de tendencia',
+        agentTrendDesc:
+          'Sentimiento persistentemente positivo + precio subiendo = hold posición.',
+        agentRiskLabel: 'Alertas de riesgo',
+        agentRiskDesc:
+          'Cluster de noticias negativas (hacks, regulación, bancarrota) activan stops más ajustados.',
+      },
+      predictions: {
+        desc: 'Mercados de predicción donde usuarios apuestan dinero real sobre eventos futuros. Las probabilidades reflejan la "sabiduría colectiva" del mercado.',
+        probLabel: 'Probabilidad (%)',
+        probDesc:
+          'Precio de la opción "Yes". 49% = el mercado cree que hay 49% de chance de que ocurra. Dinero real respalda esta estimación.',
+        volumeLabel: 'Volumen',
+        volumeDesc:
+          'Total USD apostado en el mercado. Mayor volumen = predicción más confiable y líquida.',
+        endDateLabel: 'End Date',
+        endDateDesc:
+          'Fecha de resolución. Mercados cercanos a vencimiento tienen probabilidades más "definidas".',
+        colorLabel: 'Color del círculo',
+        colorDesc:
+          'Verde > 75% (muy probable), Amarillo 50-75%, Naranja 25-50%, Rojo < 25% (poco probable).',
+        source:
+          'Fuente: Polymarket — Mercados descentralizados de predicción basados en blockchain. Filtrado solo para eventos crypto-relevantes.',
+        agentIntro: 'Los agentes usan prediction markets como:',
+        agentForwardLabel: 'Forward-looking indicator',
+        agentForwardDesc:
+          'Probabilidades implícitas de eventos futuros (aprobaciones ETF, regulación) ayudan a posicionarse antes del evento.',
+        agentConsensusLabel: 'Gauge de consenso',
+        agentConsensusDesc:
+          'Si "BTC above $X" tiene alta probabilidad, confirma sentimiento alcista del mercado.',
+        agentCatalystLabel: 'Detección de catalizadores',
+        agentCatalystDesc:
+          'Mercados de regulación con probabilidades cambiantes pueden anticipar movimientos bruscos.',
+        agentRiskLabel: 'Risk assessment',
+        agentRiskDesc:
+          'Eventos negativos con alta probabilidad activan medidas defensivas anticipadas.',
+      },
+      unlockInfo: {
+        desc: 'Calendario de desbloqueo de tokens. Cuando tokens previamente bloqueados se liberan, pueden generar presión vendedora.',
+        dateLabel: 'Unlock Date',
+        dateDesc:
+          'Fecha de liberación. Los días previos suelen tener presión vendedora anticipada.',
+        amountLabel: 'Unlock Amount (USD)',
+        amountDesc:
+          'Valor en dólares de los tokens a liberar. Mayor monto = mayor impacto potencial.',
+        pctLabel: '% of Circulating',
+        pctDesc:
+          'Porcentaje del supply circulante que se libera. > 5% es significativo, > 10% puede ser muy impactante.',
+        symbolLabel: 'Symbol',
+        symbolDesc:
+          'El token afectado. Permite cruzar con posiciones actuales.',
+        source:
+          'Fuente: Token Unlocks — Datos de vesting schedules de +200 proyectos.',
+        agentIntro: 'Los agentes monitorean unlocks para:',
+        agentCliffLabel: 'Evitar cliff unlocks',
+        agentCliffDesc:
+          'No abrir posiciones largas en tokens con unlock masivo inminente (> 5% del supply).',
+        agentShortLabel: 'Timing de short',
+        agentShortDesc:
+          'Unlocks grandes con volumen delgado pueden presentar oportunidades de short a corto plazo.',
+        agentProtectLabel: 'Protección de portfolio',
+        agentProtectDesc:
+          'Si un token en portfolio tiene unlock próximo, los agentes ajustan stops o reducen exposición.',
+        agentRecoveryLabel: 'Post-unlock recovery',
+        agentRecoveryDesc:
+          'Después de un unlock, si el precio se estabiliza, puede ser señal de entrada con riesgo reducido.',
+      },
+      technicalSignals: {
+        desc: 'Señales técnicas generadas por algoritmos que detectan patrones de precio, momentum y reversiones.',
+        nameLabel: 'Signal Name',
+        nameDesc:
+          'Tipo de patrón detectado (ej: EMA Cross, RSI Oversold, MACD Bullish, etc.)',
+        dirLabel: 'Direction (Buy/Sell/Neutral)',
+        dirDesc:
+          'La dirección que sugiere la señal. Buy = alcista, Sell = bajista.',
+        symbolLabel: 'Symbol',
+        symbolDesc: 'El par en el que se detectó la señal.',
+        priceLabel: 'Price Change',
+        priceDesc:
+          'Variación de precio actual. Confirma o contradice la señal.',
+        donutLabel: 'Distribución (Donut)',
+        donutDesc:
+          'Balance de señales Buy vs Sell vs Neutral. Dominancia indica sesgo del mercado.',
+        source:
+          'Fuente: altFINS — Señales algorítmicas basadas en análisis técnico multi-timeframe.',
+        agentIntro: 'Los agentes utilizan señales técnicas como:',
+        agentMultiLabel: 'Confirmación multi-indicador',
+        agentMultiDesc:
+          'Una señal Buy de EMA Cross + RSI oversold + Fear extremo = alta convicción.',
+        agentFilterLabel: 'Filtro de entrada',
+        agentFilterDesc:
+          'No entran contra la mayoría de señales. Si 70% son Sell, no abren longs.',
+        agentTimingLabel: 'Timing preciso',
+        agentTimingDesc:
+          'Las señales técnicas dan el momento exacto de ejecución dentro de una tesis macro.',
+        agentExitLabel: 'Exit signals',
+        agentExitDesc:
+          'Señales Sell en posiciones abiertas activan cierre parcial o total según confluencia.',
+      },
+    },
+    verdicts: {
+      title: 'Veredictos de Agentes',
+      subtitle: 'Consenso orquestado multi-agente',
+      consensus: 'Consenso',
+      confidence: 'confianza',
+      lastCycle: 'Último ciclo',
+      noDecisions: 'Sin decisiones de agentes para este ciclo',
+      waitingHint:
+        'Los agentes analizan datos de mercado periódicamente y publican veredictos aquí',
+      cached: 'en caché',
+      showMore: 'Más',
+      showLess: 'Menos',
+      orchestratorRole: 'Orquestador · Síntesis',
+      triggerAnalysis: 'Ejecutar Análisis',
+      agents: {
+        sigma: 'Analista de Mercado',
+        forge: 'Operaciones',
+        aegis: 'Gestor de Riesgo',
+      },
+      tasks: {
+        technicalSignal: 'Señal Técnica',
+        newsSentiment: 'Sentimiento de Noticias',
+        positionSizing: 'Tamaño de Posición',
+        riskGate: 'Control de Riesgo',
+      },
     },
   },
 };

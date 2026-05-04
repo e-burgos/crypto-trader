@@ -85,6 +85,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get platformLLMProvider() {
     return this._client.platformLLMProvider;
   }
+  get dataSourceConfig() {
+    return this._client.dataSourceConfig;
+  }
+  get dataSourceCredential() {
+    return this._client.dataSourceCredential;
+  }
 
   $queryRaw<T = unknown>(
     ...args: Parameters<PrismaClientInstance['$queryRaw']>

@@ -11,6 +11,7 @@ import {
   CandleInterval,
   LLMProvider as SharedLLMProvider,
 } from '@crypto-trader/shared';
+import type { EnrichedMarketSnapshot } from '@crypto-trader/shared';
 import { calculateIndicatorSnapshot } from '@crypto-trader/analysis';
 import { createLLMProvider } from '@crypto-trader/analysis';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +24,7 @@ import {
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { DataSourceRegistryService } from './data-source-registry.service';
 
 const VALID_ASSETS = ['BTC', 'ETH'];
 const VALID_INTERVALS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -120,6 +122,7 @@ export class MarketService {
     private readonly prisma: PrismaService,
     private readonly agentConfigResolver: AgentConfigResolverService,
     @Optional() private readonly llmUsageService?: LLMUsageService,
+    @Optional() private readonly dataSourceRegistry?: DataSourceRegistryService,
   ) {}
 
   // ── News Config ────────────────────────────────────────────────────────────
@@ -583,6 +586,170 @@ ${numbered}`;
       currentPrice: Math.round(currentPrice * 100) / 100,
       change24h: Math.round(change24h * 100) / 100,
       ...snapshot,
+    };
+  }
+
+  // ── Enriched Snapshot (Spec 40) ────────────────────────────────────────────
+
+  /**
+   * Builds an enriched market snapshot by fetching data from all active
+   * external providers in parallel. Falls back gracefully — if a provider
+   * fails, the corresponding field is null.
+   */
+  async buildEnrichedSnapshot(symbol: string): Promise<EnrichedMarketSnapshot> {
+    const start = Date.now();
+    const baseSnapshot = await this.getSnapshot(symbol);
+
+    if (!this.dataSourceRegistry) {
+      return {
+        symbol: baseSnapshot.symbol,
+        currentPrice: baseSnapshot.currentPrice,
+        change24h: baseSnapshot.change24h,
+        fearGreed: null,
+        derivatives: null,
+        defiHealth: null,
+        news: null,
+        globalMarket: null,
+        predictions: null,
+        tokenUnlocks: null,
+        technicalSignals: null,
+        activeSources: [],
+        failedSources: [],
+        snapshotBuildTimeMs: Date.now() - start,
+        builtAt: new Date().toISOString(),
+      };
+    }
+
+    const activeConfigs = await this.dataSourceRegistry.getActiveConfigs();
+    const activeSources: string[] = [];
+    const failedSources: string[] = [];
+
+    // Load credentials for providers that require API keys
+    const credentialMap = new Map<string, string>();
+    const configs = activeConfigs.filter((c) => c.requiresApiKey);
+    if (configs.length > 0) {
+      const creds = await this.prisma.dataSourceCredential.findMany({
+        where: {
+          dataSourceId: { in: configs.map((c) => c.id) },
+          isActive: true,
+        },
+      });
+      for (const cred of creds) {
+        const cfg = configs.find((c) => c.id === cred.dataSourceId);
+        if (cfg) {
+          credentialMap.set(
+            cfg.name,
+            decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+          );
+        }
+      }
+    }
+
+    // Fetch all active providers in parallel (skip those that need a key but have none)
+    const results = await Promise.allSettled(
+      activeConfigs
+        .filter((cfg) => {
+          if (cfg.requiresApiKey && !credentialMap.has(cfg.name)) {
+            failedSources.push(cfg.name);
+            return false;
+          }
+          return true;
+        })
+        .map(async (cfg) => {
+          const apiKey = credentialMap.get(cfg.name);
+          const payload = await this.dataSourceRegistry!.fetchFromProvider(
+            cfg.name,
+            apiKey,
+          );
+          return { name: cfg.name, payload };
+        }),
+    );
+
+    // Build enriched fields from results
+    let fearGreed: EnrichedMarketSnapshot['fearGreed'] = null;
+    let derivatives: EnrichedMarketSnapshot['derivatives'] = null;
+    let defiHealth: EnrichedMarketSnapshot['defiHealth'] = null;
+    let news: EnrichedMarketSnapshot['news'] = null;
+    let globalMarket: EnrichedMarketSnapshot['globalMarket'] = null;
+    let predictions: EnrichedMarketSnapshot['predictions'] = null;
+    let tokenUnlocks: EnrichedMarketSnapshot['tokenUnlocks'] = null;
+    let technicalSignals: EnrichedMarketSnapshot['technicalSignals'] = null;
+
+    for (const result of results) {
+      if (result.status === 'rejected') continue;
+      const { name, payload } = result.value;
+      if (!payload) {
+        failedSources.push(name);
+        continue;
+      }
+      activeSources.push(name);
+      switch (payload.type) {
+        case 'fear_greed':
+          fearGreed = payload.data;
+          break;
+        case 'derivatives':
+          derivatives = payload.data;
+          break;
+        case 'defi_health':
+          defiHealth = payload.data;
+          break;
+        case 'news':
+          news = payload.data;
+          break;
+        case 'global_market':
+          globalMarket = payload.data;
+          break;
+        case 'predictions':
+          predictions = payload.data;
+          break;
+        case 'token_unlocks':
+          tokenUnlocks = payload.data;
+          break;
+        case 'indicators':
+          if (payload.data && typeof payload.data === 'object') {
+            const indicatorData = payload.data as {
+              signals?: Array<{
+                symbol: string;
+                symbolName: string;
+                signalName: string;
+                direction: string;
+                lastPrice: string;
+                priceChange: string;
+                timestamp: string;
+              }>;
+            };
+            if (indicatorData.signals) {
+              technicalSignals = indicatorData.signals.map((s) => ({
+                symbol: s.symbol,
+                symbolName: s.symbolName,
+                signalName: s.signalName,
+                direction: s.direction,
+                lastPrice: parseFloat(s.lastPrice) || 0,
+                priceChange: parseFloat(s.priceChange) || 0,
+                timestamp: s.timestamp,
+              }));
+            }
+          }
+          break;
+      }
+    }
+
+    return {
+      symbol: baseSnapshot.symbol,
+      currentPrice: baseSnapshot.currentPrice,
+      change24h: baseSnapshot.change24h,
+      fearGreed,
+      derivatives,
+      defiHealth,
+      news,
+      globalMarket,
+      predictions,
+      tokenUnlocks,
+      technicalSignals,
+      activeSources,
+      failedSources,
+      snapshotBuildTimeMs: Date.now() - start,
+      builtAt: new Date().toISOString(),
     };
   }
 }

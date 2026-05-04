@@ -141,4 +141,15 @@ export class MarketController {
   getSnapshot(@Param('symbol') symbol: string) {
     return this.marketService.getSnapshot(symbol);
   }
+
+  @Get('enriched-snapshot/:symbol')
+  @ApiOperation({
+    summary:
+      'Enriched snapshot: indicadores + datos externos (fear&greed, derivados, DeFi, noticias, etc.)',
+  })
+  @ApiParam({ name: 'symbol', example: 'BTCUSDT' })
+  @ApiResponse({ status: 200 })
+  getEnrichedSnapshot(@Param('symbol') symbol: string) {
+    return this.marketService.buildEnrichedSnapshot(symbol);
+  }
 }

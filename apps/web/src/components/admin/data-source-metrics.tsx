@@ -10,16 +10,18 @@ export function DataSourceMetrics() {
   if (isLoading || !data) return null;
 
   const { sources, circuitBreakers, cache, rateLimiter } = data;
-  const sourcesWithMetrics = sources.filter((s) => s.metrics);
+  const sourcesWithMetrics = sources.filter(
+    (s) => s.metrics && s.metrics.calls24h > 0,
+  );
   const activeSources = sources.filter((s) => s.isActive);
 
   // Aggregate stats
   const totalCalls = sourcesWithMetrics.reduce(
-    (sum, s) => sum + (s.metrics?.totalCalls ?? 0),
+    (sum, s) => sum + (s.metrics?.calls24h ?? 0),
     0,
   );
   const totalErrors = sourcesWithMetrics.reduce(
-    (sum, s) => sum + (s.metrics?.failureCount ?? 0),
+    (sum, s) => sum + (s.metrics?.failures24h ?? 0),
     0,
   );
   const avgLatency =
@@ -36,9 +38,10 @@ export function DataSourceMetrics() {
     ([, v]) => v.state === 'OPEN',
   );
 
-  // Cache hit rate
-  const cacheTotal = (cache?.hits ?? 0) + (cache?.misses ?? 0);
-  const cacheHitRate = cacheTotal > 0 ? (cache.hits / cacheTotal) * 100 : 0;
+  // Cache hit rate — backend returns { entries, sources[] }
+  const cacheEntries = cache?.entries ?? 0;
+  const cacheHitRate =
+    activeSources.length > 0 ? (cacheEntries / activeSources.length) * 100 : 0;
 
   return (
     <div className="space-y-4">
@@ -110,22 +113,10 @@ export function DataSourceMetrics() {
               <tbody>
                 {activeSources.map((s) => {
                   const m = s.metrics;
-                  const errRate = m
-                    ? (m.errorRate ??
-                      (m.totalCalls > 0
-                        ? (m.failureCount / m.totalCalls) * 100
-                        : 0))
-                    : 0;
+                  const errRate = m ? m.errorRate24h * 100 : 0;
                   const latency = m?.avgLatencyMs ?? 0;
                   const uptime =
-                    m && m.totalCalls > 0
-                      ? (
-                          ((m.successCount ??
-                            m.totalCalls - (m.failureCount ?? 0)) /
-                            m.totalCalls) *
-                          100
-                        ).toFixed(1)
-                      : '—';
+                    m && m.calls24h > 0 ? m.uptimePercent.toFixed(1) : '—';
                   return (
                     <tr
                       key={s.name}
@@ -146,7 +137,7 @@ export function DataSourceMetrics() {
                         />
                       </td>
                       <td className="py-1.5 text-right tabular-nums">
-                        {m ? m.totalCalls : '—'}
+                        {m ? m.calls24h : '—'}
                       </td>
                       <td className="py-1.5 text-right tabular-nums">
                         {m ? `${latency.toFixed(0)}ms` : '—'}
@@ -169,7 +160,7 @@ export function DataSourceMetrics() {
                         )}
                       </td>
                       <td className="py-1.5 pl-3">
-                        {m && m.totalCalls > 0 ? (
+                        {m && m.calls24h > 0 ? (
                           <div className="flex items-center gap-2">
                             <ProgressBar
                               value={parseFloat(uptime) || 0}

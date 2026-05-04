@@ -29,22 +29,25 @@ export function useDataSourceStats() {
       lastErrorAt: string | null;
       health: string;
       metrics: {
-        totalCalls: number;
-        successCount: number;
-        failureCount: number;
+        calls24h: number;
+        successes24h: number;
+        failures24h: number;
+        errorRate24h: number;
         avgLatencyMs: number;
-        errorRate: number;
+        p95LatencyMs: number;
+        uptimePercent: number;
       } | null;
     }>;
     totalActive: number;
     totalSources: number;
     circuitBreakers: Record<string, { state: string; failures: number }>;
-    cache: { size: number; hits: number; misses: number };
+    cache: { entries: number; sources: string[] };
     rateLimiter: Record<string, { remaining: number; limit: number }>;
   }>({
     queryKey: ['admin', 'data-sources', 'stats'],
     queryFn: () => api.get('/admin/data-sources/stats'),
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
   });
 }
 

@@ -244,7 +244,7 @@ export function AgentVerdictsBanner() {
           ))}
           {latest?.reasoning && (
             <VerdictCardWrapper
-              className="sm:col-span-2 border-primary/20 bg-primary/5"
+              className="border-primary/20 bg-primary/5"
               verdict={{
                 agentId: 'KRYPTO',
                 task: 'decision_synthesis',

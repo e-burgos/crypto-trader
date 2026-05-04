@@ -68,18 +68,20 @@ export function MarketIntelligencePage() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-3 sm:py-3.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-2 sm:py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors disabled:opacity-50"
         >
           <RefreshCw
             className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')}
           />
-          {t('marketIntelligence.refresh')}
+          <div className="flex flex-col items-start">
+            {lastCycleTime && (
+              <span className="text-[10px] text-muted-foreground/60 leading-tight">
+                {t('marketIntelligence.lastCycle', 'Last cycle')}: {lastCycleTime}
+              </span>
+            )}
+            <span>{t('marketIntelligence.refresh')}</span>
+          </div>
         </button>
-        {lastCycleTime && (
-          <span className="text-[11px] text-muted-foreground/70">
-            {t('marketIntelligence.lastCycle', 'Last cycle')}: {lastCycleTime}
-          </span>
-        )}
       </div>
 
       {/* Loading state */}

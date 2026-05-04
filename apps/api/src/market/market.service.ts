@@ -5,6 +5,7 @@ import {
   RssFetcher,
   RedditFetcher,
   NewsDataFetcher,
+  FinnhubNewsFetcher,
   NewsAggregator,
 } from '@crypto-trader/data-fetcher';
 import {
@@ -111,6 +112,15 @@ const OPTIONAL_NEWS_SOURCES = [
     signupUrl: 'https://newsdata.io',
     factory: (apiKey: string) => new NewsDataFetcher({ apiKey }),
   },
+  {
+    id: 'finnhub',
+    provider: 'FINNHUB' as NewsApiProvider,
+    label: 'Finnhub',
+    description:
+      'Crypto news with 60 calls/min on free tier. Register at finnhub.io for a free API key.',
+    signupUrl: 'https://finnhub.io',
+    factory: (apiKey: string) => new FinnhubNewsFetcher({ apiKey }),
+  },
 ] as const;
 
 @Injectable()
@@ -200,9 +210,14 @@ export class MarketService {
     const cfg = await this.getNewsConfig(userId);
     const count = limit ?? cfg.newsCount;
     const sources = await this.buildNewsSources(userId, cfg.enabledSources);
+    // Fetch more than needed when onlySummary filter is active to compensate filtered items
+    const fetchCount = cfg.onlySummary
+      ? Math.min(count * 3, 100)
+      : Math.min(count, 100);
     const aggregator = new NewsAggregator(sources, { cacheTtlSeconds: 300 });
-    const items = await aggregator.fetchAll(Math.min(count, 100));
-    return cfg.onlySummary ? items.filter((n) => !!n.summary) : items;
+    const items = await aggregator.fetchAll(fetchCount);
+    const filtered = cfg.onlySummary ? items.filter((n) => !!n.summary) : items;
+    return filtered.slice(0, count);
   }
 
   // ── Keyword sentiment analysis → persists to DB ───────────────────────────
@@ -210,9 +225,14 @@ export class MarketService {
   async runKeywordAnalysis(userId: string) {
     const cfg = await this.getNewsConfig(userId);
     const sources = await this.buildNewsSources(userId, cfg.enabledSources);
+    const fetchCount = cfg.onlySummary
+      ? Math.min(cfg.newsCount * 3, 100)
+      : Math.min(cfg.newsCount, 100);
     const aggregator = new NewsAggregator(sources, { cacheTtlSeconds: 300 });
-    const raw = await aggregator.fetchAll(Math.min(cfg.newsCount, 100));
-    const items = cfg.onlySummary ? raw.filter((n) => !!n.summary) : raw;
+    const raw = await aggregator.fetchAll(fetchCount);
+    const items = (
+      cfg.onlySummary ? raw.filter((n) => !!n.summary) : raw
+    ).slice(0, cfg.newsCount);
 
     const positive = items.filter((n) => n.sentiment === 'POSITIVE').length;
     const negative = items.filter((n) => n.sentiment === 'NEGATIVE').length;
@@ -323,6 +343,13 @@ export class MarketService {
       }>
     ).slice(0, cfg.newsCount);
 
+    if (headlines.length === 0) {
+      throw new HttpException(
+        'No news headlines available for AI analysis. Check that at least one news source is active and returning data.',
+        400,
+      );
+    }
+
     const cred = await this.prisma.lLMCredential.findUnique({
       where: { userId_provider: { userId, provider: provider as LLMProvider } },
     });
@@ -340,32 +367,24 @@ export class MarketService {
       usedModel,
     );
 
-    const system = `You are a financial news sentiment classifier for cryptocurrency markets.
-Analyze each news item and classify its sentiment toward crypto markets.
-Always respond with valid JSON only — no markdown, no extra text.
-
-Rules:
-- POSITIVE: bullish news, price increases, institutional adoption, positive regulatory news, new highs, partnerships
-- NEGATIVE: crashes, hacks, scams, bans, heavy regulation, price drops, security issues, bankruptcies
-- NEUTRAL: price tracking, routine updates, educational content, mixed signals
-- reasoning: one sentence max (under 100 chars)`;
+    const system = `You are a crypto news sentiment classifier. Respond ONLY with valid JSON, no other text.
+Rules: POSITIVE=bullish/adoption/gains, NEGATIVE=crashes/hacks/bans, NEUTRAL=routine/mixed.
+Format: {"summary":"2-3 sentence market analysis highlighting key themes and drivers","items":[{"index":1,"sentiment":"POSITIVE","reasoning":"short reason"},...]}`;
 
     const numbered = headlines
       .map((h, i) => {
         const lines = [`${i + 1}. [${h.source ?? ''}] ${h.headline}`];
-        if (h.summary) lines.push(`   Summary: ${h.summary.slice(0, 200)}`);
-        if (h.author) lines.push(`   Author: ${h.author}`);
+        if (h.summary) lines.push(`   Summary: ${h.summary.slice(0, 120)}`);
         return lines.join('\n');
       })
       .join('\n\n');
 
-    const user = `Classify the sentiment of each news item. Return a JSON array:
-[{"index": 1, "sentiment": "POSITIVE"|"NEGATIVE"|"NEUTRAL", "reasoning": "string"}, ...]
+    const user = `Classify sentiment for each news item:
 
-News items:
 ${numbered}`;
 
     let parsed: { index: number; sentiment: string; reasoning: string }[] = [];
+    let llmSummary = '';
     try {
       const response = await llm.complete(system, user);
 
@@ -387,36 +406,77 @@ ${numbered}`;
           });
       }
 
-      // Robust JSON extraction: strip code fences, then extract the JSON array
+      // Guard: empty or very short response
+      if (!response.text || response.text.trim().length < 5) {
+        this.logger.warn(
+          `analyzeSentiment: LLM returned empty/short response (len=${response.text?.length ?? 0})`,
+        );
+        throw new Error(
+          'LLM returned empty response — model may be unavailable or rate-limited',
+        );
+      }
+
+      // Robust JSON extraction: strip code fences, then extract JSON
       let cleaned = response.text.replace(/```(?:json)?\s*/gi, '').trim();
-      // Try direct parse first
+      cleaned = cleaned.replace(/```\s*$/g, '').trim();
+
+      // Try parsing as object { summary, items } or fallback to array
+      let rawParsed: unknown;
       try {
-        parsed = JSON.parse(cleaned);
+        rawParsed = JSON.parse(cleaned);
       } catch {
-        // Extract the outermost JSON array from the text
+        // Extract outermost JSON object or array
+        const objMatch = cleaned.match(/\{[\s\S]*\}/);
         const arrMatch = cleaned.match(/\[[\s\S]*\]/);
-        if (arrMatch) {
-          cleaned = arrMatch[0];
-        }
+        const toParse = objMatch?.[0] ?? arrMatch?.[0] ?? cleaned;
         try {
-          parsed = JSON.parse(cleaned);
+          rawParsed = JSON.parse(toParse);
         } catch {
-          // LLM may have truncated the response — try to repair
-          // Find the last complete object (ending with }) and close the array
-          const lastCompleteObj = cleaned.lastIndexOf('}');
-          if (lastCompleteObj > 0) {
-            const repaired = cleaned.substring(0, lastCompleteObj + 1).trim();
-            const closedArray = repaired.endsWith(']')
-              ? repaired
-              : repaired + ']';
-            parsed = JSON.parse(closedArray);
+          // Try to repair truncated JSON
+          const lastBrace = cleaned.lastIndexOf('}');
+          if (lastBrace > 0) {
+            const repaired = cleaned.substring(0, lastBrace + 1).trim();
+            const wrapped =
+              repaired.startsWith('[') || repaired.startsWith('{')
+                ? repaired
+                : '[' + repaired;
+            const closed =
+              wrapped.startsWith('{') && !wrapped.endsWith('}')
+                ? wrapped + '}'
+                : wrapped.startsWith('[') && !wrapped.endsWith(']')
+                  ? wrapped + ']'
+                  : wrapped;
+            try {
+              rawParsed = JSON.parse(closed);
+            } catch {
+              this.logger.warn(
+                `analyzeSentiment: repair failed. Raw (500 chars): ${response.text.substring(0, 500)}`,
+              );
+              throw new Error('No complete JSON found in LLM response');
+            }
           } else {
             this.logger.warn(
-              `analyzeSentiment: no '}' found in cleaned response (len=${cleaned.length}): ${cleaned.substring(0, 300)}`,
+              `analyzeSentiment: no '}' in response (len=${cleaned.length}): ${cleaned.substring(0, 300)}`,
             );
-            throw new Error('No complete JSON object found in LLM response');
+            throw new Error('No complete JSON found in LLM response');
           }
         }
+      }
+
+      // Handle both formats: { summary, items } or plain array
+      if (
+        rawParsed &&
+        typeof rawParsed === 'object' &&
+        !Array.isArray(rawParsed) &&
+        'items' in (rawParsed as Record<string, unknown>)
+      ) {
+        const obj = rawParsed as { summary?: string; items: typeof parsed };
+        llmSummary = obj.summary ?? '';
+        parsed = obj.items ?? [];
+      } else if (Array.isArray(rawParsed)) {
+        parsed = rawParsed;
+      } else {
+        throw new Error('Unexpected LLM response format');
       }
     } catch (e) {
       recordCall(
@@ -449,7 +509,9 @@ ${numbered}`;
       aiTotal > 0 ? Math.round(((aiPos - aiNeg) / aiTotal) * 100) : 0;
     const aiOverall =
       aiScore > 20 ? 'BULLISH' : aiScore < -20 ? 'BEARISH' : 'NEUTRAL';
-    const aiSummary = `IA (${provider}${usedModel ? ' / ' + usedModel : ''}): ${aiPos} positivas, ${aiNeg} negativas, ${aiNeu} neutrales — score ${aiScore > 0 ? '+' : ''}${aiScore} sobre ${aiTotal} noticias. Sentimiento: ${aiOverall}.`;
+    const aiSummary = llmSummary
+      ? llmSummary
+      : `${aiPos} positivas, ${aiNeg} negativas, ${aiNeu} neutrales — score ${aiScore > 0 ? '+' : ''}${aiScore} sobre ${aiTotal} noticias. Sentimiento: ${aiOverall}.`;
 
     // Update the existing record with AI results
     return this.prisma.newsAnalysis.update({
@@ -624,18 +686,17 @@ ${numbered}`;
     const activeSources: string[] = [];
     const failedSources: string[] = [];
 
-    // Load credentials for providers that require API keys
+    // Load credentials for all providers that have them (optional or required)
     const credentialMap = new Map<string, string>();
-    const configs = activeConfigs.filter((c) => c.requiresApiKey);
-    if (configs.length > 0) {
+    if (activeConfigs.length > 0) {
       const creds = await this.prisma.dataSourceCredential.findMany({
         where: {
-          dataSourceId: { in: configs.map((c) => c.id) },
+          dataSourceId: { in: activeConfigs.map((c) => c.id) },
           isActive: true,
         },
       });
       for (const cred of creds) {
-        const cfg = configs.find((c) => c.id === cred.dataSourceId);
+        const cfg = activeConfigs.find((c) => c.id === cred.dataSourceId);
         if (cfg) {
           credentialMap.set(
             cfg.name,
@@ -718,20 +779,28 @@ ${numbered}`;
                 timestamp: string;
               }>;
             };
-            if (indicatorData.signals) {
-              // Filter signals relevant to the symbol being analyzed
+            if (indicatorData.signals && indicatorData.signals.length > 0) {
+              // Try to filter signals relevant to the symbol being analyzed
               const symbolUpper = symbol.toUpperCase();
+              const baseSymbol = symbolUpper.replace(/USDT$|USD$|BUSD$/, '');
               const relevant = indicatorData.signals.filter((s) => {
                 const sig = s.symbol.toUpperCase();
                 return (
                   sig === symbolUpper ||
-                  sig.startsWith(symbolUpper) ||
-                  symbolUpper.startsWith(sig)
+                  sig === baseSymbol ||
+                  sig.startsWith(baseSymbol) ||
+                  baseSymbol.startsWith(sig)
                 );
               });
+
+              // Use filtered signals if any match, otherwise return all signals
+              // (general market TA intelligence is still valuable)
+              const signalsToUse =
+                relevant.length > 0 ? relevant : indicatorData.signals;
+
               // Deduplicate by signalName — keep the most recent per indicator
-              const seen = new Map<string, (typeof relevant)[0]>();
-              for (const s of relevant) {
+              const seen = new Map<string, (typeof signalsToUse)[0]>();
+              for (const s of signalsToUse) {
                 const existing = seen.get(s.signalName);
                 if (
                   !existing ||

@@ -112,6 +112,7 @@ enum ChatRole {
 enum NewsApiProvider {
   CRYPTOPANIC
   NEWSDATA
+  FINNHUB
 }
 
 enum RiskProfile {

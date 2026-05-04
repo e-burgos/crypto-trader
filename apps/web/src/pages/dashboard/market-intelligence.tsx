@@ -5,6 +5,19 @@ import { Tabs } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useEnrichedSnapshot } from '../../hooks/use-enriched-snapshot';
 import {
+  useMarketSnapshot,
+  useMarketNews,
+} from '../../hooks/use-market';
+import { useAgentDecisions } from '../../hooks/use-analytics';
+import { useBinanceTicker } from '../../hooks/use-binance-ticker';
+import { usePlatformMode } from '../../hooks/use-user';
+import {
+  TechnicalSummary,
+  NewsSentimentPanel,
+  type SigmaSentiment,
+  type SigmaTechnical,
+} from '../../components/bot-analysis';
+import {
   FearGreedGauge,
   DerivativesPanel,
   DefiHealthPanel,
@@ -27,6 +40,52 @@ export function MarketIntelligencePage() {
     MARKET_ASSETS.find((a) => a.asset === asset)?.symbol ?? 'BTCUSDT';
   const { data, isLoading, refetch, isFetching } =
     useEnrichedSnapshot(activeSymbol);
+
+  // Data for TechnicalSummary & NewsSentimentPanel
+  const { data: snapshot } = useMarketSnapshot(activeSymbol);
+  const { ticker } = useBinanceTicker(activeSymbol);
+  const { data: newsItems = [] } = useMarketNews(30);
+  const { data: decisions = [] } = useAgentDecisions(15);
+  const { mode: platformMode } = usePlatformMode();
+
+  const modeDecisions = decisions.filter((d) => {
+    if (platformMode === 'SANDBOX') return d.mode === 'SANDBOX';
+    return d.mode === platformMode;
+  });
+
+  const livePrice = ticker?.lastPrice ?? snapshot?.currentPrice ?? 0;
+
+  const latestSigma: SigmaSentiment | null = (() => {
+    for (const d of modeDecisions) {
+      if (d.sigmaSentiment) return d.sigmaSentiment;
+    }
+    return null;
+  })();
+
+  const latestSigmaTechnical: SigmaTechnical | null = (() => {
+    for (const d of modeDecisions) {
+      const tech = d.subAgentVerdicts?.find(
+        (v) => v.task === 'technical_signal',
+      );
+      if (tech?.summary) {
+        try {
+          const parsed = JSON.parse(tech.summary);
+          if (parsed.signal) return parsed as SigmaTechnical;
+        } catch {
+          const signalMatch = tech.summary.match(/\b(BUY|SELL|HOLD)\b/i);
+          if (signalMatch) {
+            return {
+              signal: signalMatch[1].toUpperCase(),
+              confidence: 0.5,
+              reasoning: tech.summary,
+              cached: tech.cached,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  })();
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -75,6 +134,23 @@ export function MarketIntelligencePage() {
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
           ))}
+        </div>
+      )}
+
+      {/* Technical Analysis + News Sentiment */}
+      {snapshot && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <TechnicalSummary
+            snapshot={snapshot}
+            livePrice={livePrice}
+            sigmaTechnical={latestSigmaTechnical}
+            enrichedSnapshot={data}
+          />
+          <NewsSentimentPanel
+            news={newsItems}
+            sigmaSentiment={latestSigma}
+            enrichedSnapshot={data}
+          />
         </div>
       )}
 

@@ -340,25 +340,27 @@ export function NewsSentimentPanel({
             }}
             agentMeta={{
               label: t('botAnalysis.sigmaTitle'),
-              subtitle: effectiveSigma.impact === 'positive'
-                ? t('botAnalysis.sigmaImpactPositive')
-                : effectiveSigma.impact === 'negative'
-                  ? t('botAnalysis.sigmaImpactNegative')
-                  : t('botAnalysis.sigmaImpactNeutral'),
+              subtitle:
+                effectiveSigma.impact === 'positive'
+                  ? t('botAnalysis.sigmaImpactPositive')
+                  : effectiveSigma.impact === 'negative'
+                    ? t('botAnalysis.sigmaImpactNegative')
+                    : t('botAnalysis.sigmaImpactNeutral'),
               icon: <Brain className="h-3 w-3" />,
-              color: effectiveSigma.impact === 'positive'
-                ? 'text-emerald-400'
-                : effectiveSigma.impact === 'negative'
-                  ? 'text-red-400'
-                  : 'text-amber-400',
-              bgColor: effectiveSigma.impact === 'positive'
-                ? 'bg-emerald-500/10'
-                : effectiveSigma.impact === 'negative'
-                  ? 'bg-red-500/10'
-                  : 'bg-amber-500/10',
+              color:
+                effectiveSigma.impact === 'positive'
+                  ? 'text-emerald-400'
+                  : effectiveSigma.impact === 'negative'
+                    ? 'text-red-400'
+                    : 'text-amber-400',
+              bgColor:
+                effectiveSigma.impact === 'positive'
+                  ? 'bg-emerald-500/10'
+                  : effectiveSigma.impact === 'negative'
+                    ? 'bg-red-500/10'
+                    : 'bg-amber-500/10',
             }}
             taskLabel={`Score: ${effectiveSigma.sentiment > 0 ? '+' : ''}${typeof effectiveSigma.sentiment === 'number' ? effectiveSigma.sentiment.toFixed(2) : effectiveSigma.sentiment}`}
-            formattedSummary={effectiveSigma.reasoning}
             showCachedBadge={!!effectiveSigma.cached}
             cachedLabel={t('botAnalysis.sigmaCached')}
             showMoreLabel={t('common.more', 'Más')}

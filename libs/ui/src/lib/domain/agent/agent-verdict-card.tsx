@@ -274,9 +274,13 @@ export function AgentVerdictCard({
             expanded ? 'max-h-[2000px]' : collapsedMaxHeight,
           )}
         >
-          {renderContent
-            ? renderContent(displaySummary)
-            : <ReactMarkdown remarkPlugins={[remarkGfm]}>{displaySummary}</ReactMarkdown>}
+          {renderContent ? (
+            renderContent(displaySummary)
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {displaySummary}
+            </ReactMarkdown>
+          )}
         </div>
         {!expanded && shouldShowToggle && (
           <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent pointer-events-none" />

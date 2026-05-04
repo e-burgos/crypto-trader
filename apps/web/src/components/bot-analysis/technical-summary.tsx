@@ -241,19 +241,20 @@ export function TechnicalSummary({
               label: t('botAnalysis.sigmaTitle'),
               subtitle: `${t('botAnalysis.signalTechnical')}: ${sigmaTechnical.signal}`,
               icon: <Brain className="h-3 w-3" />,
-              color: sigmaTechnical.signal === 'BUY'
-                ? 'text-emerald-400'
-                : sigmaTechnical.signal === 'SELL'
-                  ? 'text-red-400'
-                  : 'text-amber-400',
-              bgColor: sigmaTechnical.signal === 'BUY'
-                ? 'bg-emerald-500/10'
-                : sigmaTechnical.signal === 'SELL'
-                  ? 'bg-red-500/10'
-                  : 'bg-amber-500/10',
+              color:
+                sigmaTechnical.signal === 'BUY'
+                  ? 'text-emerald-400'
+                  : sigmaTechnical.signal === 'SELL'
+                    ? 'text-red-400'
+                    : 'text-amber-400',
+              bgColor:
+                sigmaTechnical.signal === 'BUY'
+                  ? 'bg-emerald-500/10'
+                  : sigmaTechnical.signal === 'SELL'
+                    ? 'bg-red-500/10'
+                    : 'bg-amber-500/10',
             }}
             taskLabel={sigmaTechnical.signal}
-            formattedSummary={sigmaTechnical.reasoning}
             showCachedBadge={!!sigmaTechnical.cached}
             cachedLabel={t('botAnalysis.sigmaCached')}
             showMoreLabel={t('common.more', 'Más')}

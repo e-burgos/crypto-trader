@@ -288,7 +288,11 @@ export class AnalyticsService {
                   const header = regime
                     ? `**${regime}** ${bias ? `(${bias})` : ''} ${conf ? `— ${conf} conf.` : ''}`
                     : '';
-                  summary = [header, reason, factors ? `Factores: ${factors}` : '']
+                  summary = [
+                    header,
+                    reason,
+                    factors ? `Factores: ${factors}` : '',
+                  ]
                     .filter(Boolean)
                     .join('\n\n');
                 } else {

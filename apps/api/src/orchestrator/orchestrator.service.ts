@@ -276,12 +276,27 @@ export class OrchestratorService {
         'sizing_suggestion',
         {
           config: {
+            asset: config.asset,
+            pair: config.pair,
             maxTradePct: config.maxTradePct,
             maxConcurrentPositions: config.maxConcurrentPositions,
+            stopLossPct: config.stopLossPct,
+            takeProfitPct: config.takeProfitPct,
             buyThreshold: config.buyThreshold,
             sellThreshold: config.sellThreshold,
           },
           openPositionsCount: openPositions.length,
+          openPositions: openPositions.map((p) => ({
+            asset: p.asset,
+            pair: p.pair,
+            quantity: p.quantity,
+            entryPrice: p.entryPrice,
+          })),
+          availableBalances: sandboxWallets.map((w) => ({
+            currency: w.currency,
+            balance: Number(w.balance),
+          })),
+          currentPrice: (indicators as unknown as Record<string, unknown>)?.close ?? null,
         },
         userId,
         false,

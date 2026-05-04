@@ -369,15 +369,24 @@ ${JSON.stringify(context.news, null, 2)}`;
       return prompt;
     }
 
-    case 'sizing_suggestion':
+    case 'sizing_suggestion': {
+      const balances = context.availableBalances
+        ? `\nBalances disponibles: ${JSON.stringify(context.availableBalances)}`
+        : '';
+      const positions = context.openPositions
+        ? `\nPosiciones abiertas detalle: ${JSON.stringify(context.openPositions)}`
+        : '';
+      const price = context.currentPrice
+        ? `\nPrecio actual: ${context.currentPrice}`
+        : '';
       return `Configuración activa: ${JSON.stringify(context.config)}
-Posiciones abiertas: ${context.openPositionsCount ?? 0}
+Posiciones abiertas: ${context.openPositionsCount ?? 0}${positions}${balances}${price}
 
-IMPORTANTE: Responde SIEMPRE en JSON con este formato:
-{ "recommendation": "proceed|skip", "maxTradeSize": <porcentaje decimal del balance>, "reasoning": "explicación de 1-3 oraciones de por qué recomiendas esto" }
+Con estos datos, calcula si se debería proceder con un trade y qué tamaño de posición recomiendas.
 
-Si no tienes suficiente información para calcular sizing, responde:
-{ "recommendation": "skip", "maxTradeSize": 0, "reasoning": "Información insuficiente para calcular sizing" }`;
+Responde SIEMPRE en JSON con este formato:
+{ "recommendation": "proceed|skip", "maxTradeSize": <porcentaje decimal del balance, ej: 0.05 = 5%>, "reasoning": "explicación de 2-4 oraciones justificando tu recomendación basándote en los datos proporcionados" }`;
+    }
 
     case 'risk_gate': {
       let prompt = `Portfolio actual del usuario:
@@ -425,7 +434,13 @@ Resumen: ${context.summary ?? '(no disponible)'}
         sections.push(
           `Token Unlocks próximos: ${JSON.stringify(context.tokenUnlocks, null, 2)}`,
         );
-      return `Analiza el contexto macroeconómico del mercado crypto:\n\n${sections.join('\n\n')}\n\nEmite tu análisis de régimen de mercado en JSON.`;
+      return `Analiza el contexto macroeconómico del mercado crypto:
+
+${sections.join('\n\n')}
+
+IMPORTANTE: Tu campo "reasoning" debe ser una explicación detallada en lenguaje natural (3-5 oraciones) describiendo el estado macro actual, los factores más relevantes y cómo podrían impactar al trading de corto plazo.
+
+Responde en JSON: { "regime": "RISK_ON|RISK_OFF|CONSOLIDATION", "bias": "BULLISH|BEARISH|NEUTRAL", "confidence": 0.0-1.0, "keyFactors": ["factor1", "factor2"], "reasoning": "explicación detallada del contexto macro..." }`;
     }
 
     case 'decision_synthesis': {
@@ -442,7 +457,8 @@ AEGIS (Riesgo): ${context.aegisVerdict}`;
 
       prompt += `\n\nConfig del usuario: buyThreshold=${context.buyThreshold}%, sellThreshold=${context.sellThreshold}%`;
       prompt += `\n\nIMPORTANTE: Tu campo "reasoning" debe ser una explicación clara en lenguaje natural (3-5 oraciones) de POR QUÉ tomas esta decisión, citando los datos más relevantes de cada sub-agente.`;
-      prompt += '\nResponde en JSON: { "decision": "BUY|SELL|HOLD", "confidence": 0.0-1.0, "reasoning": "explicación detallada...", "waitMinutes": 15 }';
+      prompt +=
+        '\nResponde en JSON: { "decision": "BUY|SELL|HOLD", "confidence": 0.0-1.0, "reasoning": "explicación detallada...", "waitMinutes": 15 }';
       return prompt;
     }
 

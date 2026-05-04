@@ -128,15 +128,6 @@ export function MarketIntelligencePage() {
         </button>
       </div>
 
-      {/* Loading state */}
-      {isLoading && (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
-          ))}
-        </div>
-      )}
-
       {/* Technical Analysis + News Sentiment */}
       {snapshot && (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -151,6 +142,15 @@ export function MarketIntelligencePage() {
             sigmaSentiment={latestSigma}
             enrichedSnapshot={data}
           />
+        </div>
+      )}
+
+      {/* Loading state for enriched panels */}
+      {isLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 animate-pulse rounded-xl bg-muted" />
+          ))}
         </div>
       )}
 

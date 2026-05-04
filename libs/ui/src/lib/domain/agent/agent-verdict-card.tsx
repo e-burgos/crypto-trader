@@ -84,7 +84,8 @@ export function formatAgentVerdictSummary(
   }
 
   // Try to detect and format JSON responses (complete or truncated)
-  const jsonMatch = text.match(/^\s*(\{[\s\S]*\})\s*$/) ||
+  const jsonMatch =
+    text.match(/^\s*(\{[\s\S]*\})\s*$/) ||
     text.match(/^\s*\{\s*"(signal|sentiment|recommendation|verdict|regime)"/);
   if (jsonMatch) {
     try {
@@ -167,16 +168,22 @@ export function formatAgentVerdictSummary(
       }
     } catch {
       // JSON parse failed (truncated?) — try extracting fields via regex
-      const reasoningMatch = text.match(/"reasoning"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/);
+      const reasoningMatch = text.match(
+        /"reasoning"\s*:\s*"((?:[^"\\]|\\.)*)(?:"|$)/,
+      );
       const signalMatch = text.match(/"signal"\s*:\s*"([^"]+)"/);
       const confMatch = text.match(/"confidence"\s*:\s*([\d.]+)/);
       const sentimentMatch = text.match(/"sentiment"\s*:\s*"?([^",}]+)"?/);
       const impactMatch = text.match(/"impact"\s*:\s*"([^"]+)"/);
 
       if (reasoningMatch?.[1]) {
-        const reasoning = reasoningMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        const reasoning = reasoningMatch[1]
+          .replace(/\\"/g, '"')
+          .replace(/\\n/g, '\n');
         if (task === 'technical_signal' && signalMatch?.[1]) {
-          const conf = confMatch?.[1] ? `${Math.round(Number(confMatch[1]) * 100)}%` : '';
+          const conf = confMatch?.[1]
+            ? `${Math.round(Number(confMatch[1]) * 100)}%`
+            : '';
           return `**${signalMatch[1]}** ${conf ? `(${conf} confidence)` : ''} — ${reasoning}`;
         }
         if (task === 'news_sentiment') {

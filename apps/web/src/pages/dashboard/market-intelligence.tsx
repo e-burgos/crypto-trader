@@ -4,6 +4,8 @@ import { Globe, RefreshCw } from 'lucide-react';
 import { Tabs } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
 import { useEnrichedSnapshot } from '../../hooks/use-enriched-snapshot';
+import { useAgentDecisions } from '../../hooks/use-analytics';
+import { usePlatformMode } from '../../hooks/use-user';
 import {
   FearGreedGauge,
   DerivativesPanel,
@@ -28,6 +30,11 @@ export function MarketIntelligencePage() {
     MARKET_ASSETS.find((a) => a.asset === asset)?.symbol ?? 'BTCUSDT';
   const { data, isLoading, refetch, isFetching } =
     useEnrichedSnapshot(activeSymbol);
+  const { mode } = usePlatformMode();
+  const { data: decisions = [] } = useAgentDecisions(1, mode);
+  const lastCycleTime = decisions[0]?.createdAt
+    ? new Date(decisions[0].createdAt).toLocaleTimeString()
+    : null;
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
@@ -68,6 +75,11 @@ export function MarketIntelligencePage() {
           />
           {t('marketIntelligence.refresh')}
         </button>
+        {lastCycleTime && (
+          <span className="text-[11px] text-muted-foreground/70">
+            {t('marketIntelligence.lastCycle', 'Last cycle')}: {lastCycleTime}
+          </span>
+        )}
       </div>
 
       {/* Loading state */}

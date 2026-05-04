@@ -3083,6 +3083,7 @@ const es = {
     pageTitle: 'Inteligencia de Mercado',
     subtitle: 'Datos de mercado enriquecidos de múltiples fuentes externas',
     refresh: 'Actualizar datos',
+    lastCycle: 'Último ciclo',
     activeSources: 'Fuentes activas',
     failedSources: 'Fuentes fallidas',
     buildTime: 'Tiempo de construcción',

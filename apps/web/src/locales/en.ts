@@ -3034,6 +3034,7 @@ const en = {
     pageTitle: 'Market Intelligence',
     subtitle: 'Enriched market data from multiple external sources',
     refresh: 'Refresh data',
+    lastCycle: 'Last cycle',
     activeSources: 'Active sources',
     failedSources: 'Failed sources',
     buildTime: 'Build time',

@@ -538,6 +538,28 @@ Sigue el patrón visual de `llm-providers.tsx`:
 
 **Criterio de aceptación:** Si Coinalyze cae 3 veces seguidas, el admin recibe notificación, la fuente se marca degradada, y el snapshot sigue construyéndose sin ella.
 
+### Fase E — Market Intelligence page (trader-facing)
+
+**Objetivo:** Dar visibilidad al trader de los datos externos que alimentan a los agentes, en una página dedicada `/dashboard/market-intelligence`.
+
+1. Crear endpoint `GET /market/enriched-snapshot/:symbol` (accesible por traders, no solo admin).
+2. Crear hook `useEnrichedSnapshot(symbol)` con TanStack Query.
+3. Crear página `/dashboard/market-intelligence` con las siguientes secciones (cada una en su componente):
+   - **FearGreedGauge** — valor actual, clasificación, delta vs día anterior.
+   - **DerivativesPanel** — OI, funding rate, L/S ratio, liquidaciones 24h.
+   - **DefiHealthPanel** — TVL global, cambio 24h/7d, stablecoin mcap.
+   - **GlobalMarketPanel** — market cap, dominancia BTC/ETH, trending, gainers/losers.
+   - **NewsSentimentList** — noticias con sentiment score, label y símbolos relacionados.
+   - **PredictionMarketsList** — mercados de predicción con probabilidad y volumen.
+   - **TokenUnlocksTable** — próximos unlocks con símbolo, fecha, monto, tipo.
+   - **AgentVerdictsBanner** — último veredicto por agente (SIGMA, AEGIS, CIPHER) + consenso.
+4. Agregar entrada en sidebar del dashboard: "Market Intelligence" con icono `Globe`.
+5. Banner link en `bot-analysis` → "Ver datos de mercado en detalle" → `/dashboard/market-intelligence`.
+6. i18n: traducciones en `en.json` y `es.json`.
+7. Componentes van en `apps/web/src/components/market-intelligence/` (lógica de negocio) usando primitivos de `@crypto-trader/ui`.
+
+**Criterio de aceptación:** El trader ve en `/dashboard/market-intelligence` los datos de todas las fuentes activas con refresh automático, y el link desde `bot-analysis` funciona.
+
 ---
 
 ## 7. Out of scope
@@ -546,24 +568,24 @@ Sigue el patrón visual de `llm-providers.tsx`:
 - MCP Server para agentes (DefiLlama MCP, LunarCrush MCP) — futura spec.
 - Configuración de API keys por usuario (este sistema es plataforma-level, admin-only).
 - Historial de datos de providers (solo se almacena el último snapshot, no series temporales de cada fuente).
-- UI para usuarios no-admin (los datos fluyen a los agentes transparentemente).
 - Streaming/WebSocket desde los providers externos (se usa polling con frecuencia configurable).
 
 ---
 
 ## 8. Decisiones de diseño
 
-| #   | Decisión                                               | Alternativa                               | Razón                                                                                                                     |
-| --- | ------------------------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Campos opcionales (`null`) en `EnrichedMarketSnapshot` | Tipo separado por combinación de fuentes  | Los agentes manejan nulls naturalmente en su prompt. Mantiene un solo tipo.                                               |
-| 2   | API keys plataforma-level (admin-only)                 | Keys por usuario como LLM providers       | Las data sources son infraestructura del sistema, no del usuario. Un admin las gestiona para todos.                       |
-| 3   | Polling con frecuencia configurable                    | WebSocket permanente                      | La mayoría de APIs no ofrecen WS. Polling con TTL/cache es más robusto y simple.                                          |
-| 4   | Fallback ruidoso (notificación al admin)               | Fallback silencioso (solo log)            | El admin necesita saber cuándo una fuente falla para tomar acción (rotar key, verificar status).                          |
-| 5   | Circuit breaker: 3 errores / 5 min                     | Desactivación manual por admin            | Automatizar la respuesta evita que un provider caído genere timeouts en cascada.                                          |
-| 6   | Providers en `libs/data-fetcher`                       | Providers en `apps/api/src/`              | Las implementaciones HTTP son reutilizables y testeables independientemente del framework NestJS.                         |
-| 7   | Seed con todas las fuentes pre-configuradas            | Admin crea fuentes manualmente            | Reduce fricción. El admin solo tiene que activar toggles, no crear entries.                                               |
-| 8   | Cache de última respuesta válida con TTL               | Re-fetch en cada snapshot                 | Reduce calls a APIs externas, respeta rate limits, y provee datos stale-but-valid si una fuente está temporalmente caída. |
-| 9   | `EnrichedMarketSnapshot` extiende el tipo existente    | Reemplazar `MarketSnapshot` completamente | Backwards compatible. El código existente sigue funcionando sin cambios.                                                  |
+| #   | Decisión                                                           | Alternativa                                        | Razón                                                                                                                                   |
+| --- | ------------------------------------------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Campos opcionales (`null`) en `EnrichedMarketSnapshot`             | Tipo separado por combinación de fuentes           | Los agentes manejan nulls naturalmente en su prompt. Mantiene un solo tipo.                                                             |
+| 2   | API keys plataforma-level (admin-only)                             | Keys por usuario como LLM providers                | Las data sources son infraestructura del sistema, no del usuario. Un admin las gestiona para todos.                                     |
+| 3   | Polling con frecuencia configurable                                | WebSocket permanente                               | La mayoría de APIs no ofrecen WS. Polling con TTL/cache es más robusto y simple.                                                        |
+| 4   | Fallback ruidoso (notificación al admin)                           | Fallback silencioso (solo log)                     | El admin necesita saber cuándo una fuente falla para tomar acción (rotar key, verificar status).                                        |
+| 5   | Circuit breaker: 3 errores / 5 min                                 | Desactivación manual por admin                     | Automatizar la respuesta evita que un provider caído genere timeouts en cascada.                                                        |
+| 6   | Providers en `libs/data-fetcher`                                   | Providers en `apps/api/src/`                       | Las implementaciones HTTP son reutilizables y testeables independientemente del framework NestJS.                                       |
+| 7   | Seed con todas las fuentes pre-configuradas                        | Admin crea fuentes manualmente                     | Reduce fricción. El admin solo tiene que activar toggles, no crear entries.                                                             |
+| 8   | Cache de última respuesta válida con TTL                           | Re-fetch en cada snapshot                          | Reduce calls a APIs externas, respeta rate limits, y provee datos stale-but-valid si una fuente está temporalmente caída.               |
+| 9   | `EnrichedMarketSnapshot` extiende el tipo existente                | Reemplazar `MarketSnapshot` completamente          | Backwards compatible. El código existente sigue funcionando sin cambios.                                                                |
+| 10  | Página `/dashboard/market-intelligence` separada de `bot-analysis` | Meter datos de Spec 40 en `bot-analysis` existente | Separación de concerns: `bot-analysis` = decisiones del bot; `market-intelligence` = visión del mercado. No sobrecarga la UI existente. |
 
 ---
 

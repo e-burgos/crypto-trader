@@ -445,6 +445,298 @@ pnpm nx run-many --target=build --projects=api,web
 
 ---
 
+## Fase E — Market Intelligence page (trader-facing)
+
+### E1. Endpoint para traders
+
+**Archivos:**
+
+- `apps/api/src/market/market.controller.ts` — agregar `GET /market/enriched-snapshot/:symbol`
+
+**Lógica:**
+
+- Llama a `MarketService.buildEnrichedSnapshot(symbol)`
+- Accesible por cualquier usuario autenticado (no requiere rol admin)
+- Response: `EnrichedMarketSnapshot` serializado como JSON
+
+### E2. Hook de datos
+
+**Archivos:**
+
+- `apps/web/src/hooks/use-enriched-snapshot.ts` (nuevo)
+
+**Contenido:**
+
+```typescript
+export function useEnrichedSnapshot(symbol: string) {
+  return useQuery<EnrichedMarketSnapshot>({
+    queryKey: ['market', 'enriched-snapshot', symbol],
+    queryFn: () => api.get(`/market/enriched-snapshot/${symbol}`),
+    refetchInterval: 120_000, // 2 min auto-refresh
+  });
+}
+```
+
+### E3. Componentes de la página
+
+**Directorio:** `apps/web/src/components/market-intelligence/`
+
+| Componente              | Archivo                       | Datos que muestra                                        |
+| ----------------------- | ----------------------------- | -------------------------------------------------------- |
+| `FearGreedGauge`        | `fear-greed-gauge.tsx`        | Valor 0-100, clasificación, delta vs previo              |
+| `DerivativesPanel`      | `derivatives-panel.tsx`       | OI, funding rate, L/S ratio, liquidaciones               |
+| `DefiHealthPanel`       | `defi-health-panel.tsx`       | TVL global, cambio 24h/7d, stablecoin mcap               |
+| `GlobalMarketPanel`     | `global-market-panel.tsx`     | Market cap, dominancia BTC/ETH, trending, gainers/losers |
+| `NewsSentimentList`     | `news-sentiment-list.tsx`     | Noticias con sentiment score y label                     |
+| `PredictionMarketsList` | `prediction-markets-list.tsx` | Mercados de predicción, probabilidad, volumen            |
+| `TokenUnlocksTable`     | `token-unlocks-table.tsx`     | Próximos unlocks: símbolo, fecha, monto, tipo            |
+| `AgentVerdictsBanner`   | `agent-verdicts-banner.tsx`   | Último veredicto por agente + consenso                   |
+| barrel                  | `index.ts`                    | Re-export de todos los componentes                       |
+
+Todos los componentes usan primitivos de `@crypto-trader/ui` (Card, Badge, Typography, StatCard, Spinner, EmptyState, etc.).
+
+### E4. Página Market Intelligence
+
+**Archivos:**
+
+- `apps/web/src/pages/dashboard/market-intelligence.tsx` (nuevo)
+
+**Layout:**
+
+```
+Header: "Market Intelligence" + symbol selector (Tabs) + refresh + timestamp
+
+Row 1: [FearGreedGauge] [DerivativesPanel]
+Row 2: [DefiHealthPanel] [GlobalMarketPanel]
+Row 3: [NewsSentimentList] (full width)
+Row 4: [PredictionMarketsList] [TokenUnlocksTable]
+Row 5: [AgentVerdictsBanner] (full width)
+```
+
+Secciones ocultas si la fuente correspondiente retorna `null` (fuente desactivada o fallida).
+
+### E5. Routing + navegación
+
+**Archivos:**
+
+- `apps/web/src/app/app.tsx` — agregar `<Route path="market-intelligence" element={<MarketIntelligencePage />} />`
+- Sidebar dashboard — agregar item "Market Intelligence" con icono `Globe` después de "Bot Analysis"
+
+### E6. Link desde bot-analysis
+
+**Archivos:**
+
+- `apps/web/src/pages/dashboard/bot-analysis.tsx` — agregar banner link debajo de `AgentInputSummary`
+
+**Texto:** "Los agentes usaron N fuentes externas → Ver Market Intelligence"
+
+### E7. i18n
+
+**Archivos:**
+
+- `apps/web/src/i18n/en.json` — sección `marketIntelligence`
+- `apps/web/src/i18n/es.json` — sección `marketIntelligence`
+
+### E8. Verificación Fase E
+
+```bash
+pnpm nx run web:lint
+pnpm nx run web:build
+pnpm nx run api:lint
+pnpm nx run api:build
+```
+
+### E9. Tests
+
+**Backend — endpoint test (Jest):**
+
+- `apps/api/src/market/market.controller.spec.ts` — test del endpoint `GET /market/enriched-snapshot/:symbol`
+  - Retorna 200 con `EnrichedMarketSnapshot` válido
+  - Campos `null` cuando fuentes están desactivadas
+  - Requiere autenticación (401 sin token)
+
+**Frontend — component tests (Vitest):**
+
+- `apps/web/src/components/market-intelligence/__tests__/fear-greed-gauge.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/derivatives-panel.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/defi-health-panel.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/global-market-panel.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/news-sentiment-list.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/prediction-markets-list.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/token-unlocks-table.spec.tsx`
+- `apps/web/src/components/market-intelligence/__tests__/agent-verdicts-banner.spec.tsx`
+
+Cada test verifica:
+
+- Renderiza correctamente con datos válidos
+- Muestra `EmptyState` o se oculta cuando data es `null`
+- Formatea valores numéricos correctamente
+
+**E2E — Playwright:**
+
+- `e2e/market-intelligence.spec.ts`
+  - Navega a `/dashboard/market-intelligence`
+  - Verifica que la página carga sin errores
+  - Verifica que el selector de símbolo funciona
+  - Verifica que las secciones se muestran según fuentes activas
+  - Verifica link desde `bot-analysis` → `market-intelligence`
+
+**Verificación:**
+
+```bash
+pnpm nx run api:test -- --testPathPattern=market.controller
+pnpm nx run web:test -- --testPathPattern=market-intelligence
+pnpm nx run web-e2e:e2e -- --grep="market-intelligence"
+```
+
+---
+
+## Fase F — Hardening, seguridad y pendientes
+
+### F1. Validación Zod de respuestas externas
+
+**Archivos:**
+
+- `libs/providers/src/lib/schemas/` (nuevo directorio)
+  - `fear-greed.schema.ts`
+  - `derivatives.schema.ts`
+  - `defi-health.schema.ts`
+  - `news.schema.ts`
+  - `global-market.schema.ts`
+  - `predictions.schema.ts`
+  - `token-unlocks.schema.ts`
+  - `index.ts` (barrel)
+- Cada provider (`.provider.ts`) — agregar `schema.parse()` después del `response.json()`
+
+**Lógica:**
+
+- Definir un schema Zod por cada tipo de payload (`FearGreedData`, `DerivativesData`, etc.)
+- Parsear TODA respuesta de API externa con `schema.safeParse()` antes de usarla
+- Si `safeParse` falla → throw con detalle del error (sin exponer datos sensibles)
+- Tests: cada schema tiene test con datos válidos e inválidos
+
+**Ref spec:** Sec 9 — "Todos los payloads de APIs externas se validan con schemas Zod antes de usarse"
+
+### F2. Encriptación AES-256 de API keys
+
+**Archivos:**
+
+- `apps/api/src/common/encryption.service.ts` — reutilizar el servicio existente (usado para Binance keys)
+- `apps/api/src/admin/data-sources.controller.ts` — encriptar al guardar, desencriptar al pasar a providers
+- `apps/api/src/market/data-source-registry.service.ts` — desencriptar antes de `fetchFromProvider()`
+
+**Lógica:**
+
+- Al hacer `PATCH /admin/data-sources/:id` con `apiKeyEncrypted`, encriptar con AES-256-GCM
+- En `fetchFromProvider()`, desencriptar la key del `DataSourceCredential` antes de pasarla al provider
+- En `GET /admin/data-sources`, mostrar solo `***...últimos 4 chars` (nunca plaintext)
+- Env var: reutilizar `BINANCE_KEY_ENCRYPTION_KEY` (o renombrar a `DATA_ENCRYPTION_KEY`)
+
+**Ref spec:** Sec 9 — "API keys encriptadas con AES-256 en DB, desencriptadas solo en runtime"
+
+### F3. Test de integración `buildEnrichedSnapshot`
+
+**Archivos:**
+
+- `apps/api/src/market/market.service.integration.spec.ts` (nuevo)
+
+**Contenido:**
+
+- Mock de todos los providers (inyectados vía `DataSourceRegistryService`)
+- Test 1: todas las fuentes activas → snapshot completo con todos los campos
+- Test 2: fuentes mixtas (algunas activas, otras no) → campos `null` para las inactivas
+- Test 3: provider falla → campo correspondiente es `null`, los demás OK
+- Test 4: todas fallan → snapshot con solo `symbol`, `currentPrice`, todos los external data `null`
+- Verificar que `activeSources` y `failedSources` se reportan correctamente
+
+**Ref plan:** B6
+
+### F4. E2E test del flujo admin + snapshot
+
+**Archivos:**
+
+- `e2e/data-sources-admin.spec.ts` (nuevo)
+
+**Escenarios:**
+
+- Admin navega a `/admin/data-sources`
+- Admin ve lista de fuentes con estado
+- Admin hace toggle OFF de una fuente → confirma que se desactiva
+- Admin hace toggle ON → confirma que se reactiva
+- Verificar health check (al menos que el botón funcione)
+- Verificar que stats/métricas se muestran
+
+**Ref plan:** B6, D7
+
+### F5. Frontend: sección de métricas en admin
+
+**Archivos:**
+
+- `apps/web/src/components/admin/DataSourceMetrics.tsx` (nuevo)
+- `apps/web/src/pages/admin/data-sources.tsx` — agregar sección de métricas
+
+**Contenido:**
+
+- Calls 24h por provider (bar chart o tabla)
+- Latencia promedio (ms)
+- Error rate 24h (%)
+- Uptime porcentaje
+- Datos vienen del endpoint `GET /admin/data-sources/stats` (ya implementado)
+
+**Ref plan:** D5
+
+### F6. Frontend: indicador real-time WebSocket en DataSourceCard
+
+**Archivos:**
+
+- `apps/web/src/hooks/use-data-source-events.ts` (nuevo)
+- `apps/web/src/components/admin/DataSourceCard.tsx` — agregar badge de estado real-time
+
+**Lógica:**
+
+- Hook escucha eventos WebSocket: `data-source:degraded` y `data-source:recovered`
+- Cuando llega `degraded` → badge cambia a rojo con animación pulse
+- Cuando llega `recovered` → badge vuelve a verde con animación flash
+- Toast notification (Sonner) en cada evento
+
+**Ref plan:** D2
+
+### F7. Alinear tipos compartidos con la spec
+
+**Archivos:**
+
+- `libs/shared/src/types/market-data-sources.ts`
+- Providers afectados si cambia la interfaz
+
+**Cambios:**
+
+- `NewsWithSentiment`: agregar `relevanceScore: number` (default 0 si el provider no lo provee)
+- `GlobalMarketData`: renombrar `trendingCoins` a `trending` (o mantener `trendingCoins` y actualizar spec — decidir consistencia)
+- `DefiHealthData`: agregar `dominantChain: string` (DefiLlama provider ya puede derivar esto del endpoint de chains)
+
+**Ref spec:** Sec 3.2
+
+### F8. Verificación Fase F
+
+```bash
+# Seguridad
+pnpm nx run providers:test   # schemas Zod
+pnpm nx run api:test          # encryption + integration
+
+# Frontend
+pnpm nx run web:lint
+pnpm nx run web:build
+
+# E2E
+pnpm nx run web-e2e:e2e -- --grep="data-sources"
+
+# Full
+pnpm nx run-many --target=build --projects=api,web
+pnpm nx run-many --target=lint --all
+```
+
+---
+
 ## Criterios de aceptación global
 
 - [ ] 7+ fuentes gratuitas integradas y funcionando en producción
@@ -456,6 +748,16 @@ pnpm nx run-many --target=build --projects=api,web
 - [ ] Latencia total de buildSnapshot() < 2 segundos
 - [ ] Zero downtime: si una fuente falla, las demás siguen operando
 - [ ] Audit log registra todos los toggles y eventos de circuit breaker
+- [ ] Trader puede ver datos de mercado en `/dashboard/market-intelligence`
+- [ ] Secciones se ocultan si la fuente está desactivada o devuelve null
+- [ ] Link desde `bot-analysis` a `market-intelligence` funciona
+- [ ] Todas las respuestas de APIs externas se validan con schemas Zod
+- [ ] API keys encriptadas con AES-256 en DB, nunca en plaintext
+- [ ] Test de integración de `buildEnrichedSnapshot` pasa
+- [ ] E2E del flujo admin (toggle + health) pasa
+- [ ] Admin ve métricas por provider (calls, latencia, error rate, uptime)
+- [ ] DataSourceCard muestra estado real-time vía WebSocket
+- [ ] Tipos compartidos alineados con la spec (relevanceScore, dominantChain)
 
 ---
 
@@ -470,11 +772,12 @@ gh pr create \
 
 ### Cambios principales
 - Nuevo modelo \`DataSourceConfig\` con 9 fuentes pre-configuradas
-- Sistema de providers modulares en \`libs/data-fetcher\`
+- Sistema de providers modulares en \`libs/providers\`
 - \`DataSourceRegistryService\` con circuit breaker y fallback
 - Panel admin para gestionar fuentes (\`/admin/data-sources\`)
 - \`EnrichedMarketSnapshot\` con datos de derivados, sentimiento, DeFi, noticias, predictions
-- 7 providers implementados: Alternative.me, Coinalyze, DefiLlama, Finnhub, CoinGecko, Polymarket, altFINS
+- 8 providers implementados: Alternative.me, Coinalyze, DefiLlama, Finnhub, CoinGecko, Polymarket, Messari, altFINS
+- Página \`/dashboard/market-intelligence\` para que el trader vea datos de mercado en vivo
 
 ### Fuentes integradas (stack gratuito)
 | Fuente | Categoría | Costo |

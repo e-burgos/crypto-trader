@@ -48,6 +48,7 @@ import { PositionsPage } from '../pages/dashboard/positions';
 import { NewsFeedPage } from '../pages/dashboard/news-feed';
 import { ChatPage } from '../pages/dashboard/chat';
 import { BotAnalysisPage } from '../pages/dashboard/bot-analysis';
+import { MarketIntelligencePage } from '../pages/dashboard/market-intelligence';
 import { AgentLogPage } from '../pages/dashboard/agent-log';
 import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { ChatWidget } from '../containers/chat/chat-widget';
@@ -62,6 +63,7 @@ import {
   AdminAgentModelsPage,
   AdminAuditLogPage,
   AdminHelpPage,
+  AdminDataSourcesPage,
 } from '../pages/admin/index';
 import { useWebSocket } from '../hooks/use-websocket';
 import { useAuthStore } from '../store/auth.store';
@@ -223,6 +225,10 @@ export function App() {
               />
               <Route path="market" element={<MarketPage />} />
               <Route path="bot-analysis" element={<BotAnalysisPage />} />
+              <Route
+                path="market-intelligence"
+                element={<MarketIntelligencePage />}
+              />
               <Route path="agent-log" element={<AgentLogPage />} />
               <Route
                 path="agents"
@@ -263,6 +269,7 @@ export function App() {
               <Route path="llm-providers" element={<AdminLLMProvidersPage />} />
               <Route path="agent-models" element={<AdminAgentModelsPage />} />
               <Route path="audit-log" element={<AdminAuditLogPage />} />
+              <Route path="data-sources" element={<AdminDataSourcesPage />} />
               <Route
                 path="notifications"
                 element={<AdminNotificationsPage />}

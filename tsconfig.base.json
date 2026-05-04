@@ -27,7 +27,9 @@
       "trading-engine": ["libs/trading-engine/src/index.ts"],
       "analysis": ["libs/analysis/src/index.ts"],
       "data-fetcher": ["libs/data-fetcher/src/index.ts"],
-      "ui": ["libs/ui/src/index.ts"]
+      "ui": ["libs/ui/src/index.ts"],
+      "@crypto-trader/providers": ["libs/providers/src/index.ts"],
+      "providers": ["libs/providers/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

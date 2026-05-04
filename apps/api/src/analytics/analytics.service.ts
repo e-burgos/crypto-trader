@@ -221,27 +221,36 @@ export class AnalyticsService {
               } else if (r.task === 'news_sentiment') {
                 const sentiment = parsed.sentiment ?? parsed.impact ?? 'N/A';
                 const reasoning =
-                  parsed.reasoning ?? parsed.explanation ?? parsed.summary ?? '';
+                  parsed.reasoning ??
+                  parsed.explanation ??
+                  parsed.summary ??
+                  '';
                 const score =
                   parsed.score != null ? ` (score: ${parsed.score})` : '';
                 summary = reasoning
                   ? `**${sentiment}**${score} — ${reasoning}`
                   : `${sentiment}${score}`;
               } else if (r.task === 'sizing_suggestion') {
-                const action = parsed.action ?? parsed.sizing ?? '';
-                const multiplier = parsed.positionSizeMultiplier
-                  ? `positionSizeMultiplier: ${parsed.positionSizeMultiplier}`
-                  : parsed.positionSize
-                    ? `positionSize: ${parsed.positionSize}`
-                    : '';
+                const recommendation =
+                  parsed.recommendation ?? parsed.action ?? parsed.sizing ?? '';
+                const maxTrade = parsed.maxTradeSize
+                  ? `max trade size: ${parsed.maxTradeSize}`
+                  : parsed.positionSizeMultiplier
+                    ? `multiplier: ${parsed.positionSizeMultiplier}`
+                    : parsed.positionSize
+                      ? `position size: ${parsed.positionSize}`
+                      : '';
                 const reason =
                   parsed.reasoning ?? parsed.reason ?? parsed.suggestion ?? '';
-                if (action || multiplier || reason) {
-                  summary = [action, multiplier, reason]
+                if (recommendation || maxTrade || reason) {
+                  const header = recommendation
+                    ? `**${recommendation.toUpperCase()}**`
+                    : '';
+                  summary = [header, maxTrade, reason]
                     .filter(Boolean)
                     .join(' — ');
                 } else {
-                  // Fallback: if JSON has any keys, show them as readable text
+                  // Fallback: enumerate all keys as readable text
                   const keys = Object.keys(parsed);
                   summary =
                     keys.length > 0
@@ -251,7 +260,7 @@ export class AnalyticsService {
                               `${k}: ${typeof parsed[k] === 'object' ? JSON.stringify(parsed[k]) : parsed[k]}`,
                           )
                           .join(', ')
-                      : r.output;
+                      : 'Sin datos de sizing disponibles';
                 }
               } else if (r.task === 'risk_gate') {
                 const verdict = parsed.verdict ?? parsed.action ?? '';
@@ -265,6 +274,26 @@ export class AnalyticsService {
                   : verdict
                     ? `${verdict}${riskScore}`
                     : r.output;
+              } else if (r.task === 'macro_context') {
+                const regime = parsed.regime ?? parsed.marketRegime ?? '';
+                const bias = parsed.bias ?? parsed.sentiment ?? '';
+                const conf = parsed.confidence
+                  ? `${Math.round(parsed.confidence * 100)}%`
+                  : '';
+                const factors = Array.isArray(parsed.keyFactors)
+                  ? parsed.keyFactors.join(', ')
+                  : '';
+                const reason = parsed.reasoning ?? '';
+                if (regime || reason) {
+                  const header = regime
+                    ? `**${regime}** ${bias ? `(${bias})` : ''} ${conf ? `— ${conf} conf.` : ''}`
+                    : '';
+                  summary = [header, reason, factors ? `Factores: ${factors}` : '']
+                    .filter(Boolean)
+                    .join('\n\n');
+                } else {
+                  summary = r.output;
+                }
               } else {
                 summary = r.output;
               }
@@ -279,7 +308,9 @@ export class AnalyticsService {
                     ? 'FORGE'
                     : r.task === 'risk_gate'
                       ? 'AEGIS'
-                      : (r.agentId ?? 'UNKNOWN'),
+                      : r.task === 'macro_context'
+                        ? 'CIPHER'
+                        : (r.agentId ?? 'UNKNOWN'),
               task: r.task,
               summary,
               cached: r.cached,

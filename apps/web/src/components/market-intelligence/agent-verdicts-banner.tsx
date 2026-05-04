@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Play,
   Loader2,
+  Globe,
 } from 'lucide-react';
 import { useAgentDecisions } from '../../hooks/use-analytics';
 import { usePlatformMode } from '../../hooks/use-user';
@@ -61,6 +62,13 @@ const AGENT_META: Record<
     color: 'text-purple-400',
     bgColor: 'bg-purple-500/10',
   },
+  CIPHER: {
+    label: 'CIPHER',
+    fullNameKey: 'marketIntelligence.verdicts.agents.cipher',
+    icon: <Globe className="h-3.5 w-3.5" />,
+    color: 'text-cyan-400',
+    bgColor: 'bg-cyan-500/10',
+  },
 };
 
 const TASK_ICON: Record<string, React.ReactNode> = {
@@ -68,6 +76,7 @@ const TASK_ICON: Record<string, React.ReactNode> = {
   news_sentiment: <Newspaper className="h-3 w-3" />,
   sizing_suggestion: <Wrench className="h-3 w-3" />,
   risk_gate: <Shield className="h-3 w-3" />,
+  macro_context: <Globe className="h-3 w-3" />,
 };
 
 const TASK_LABEL_KEYS: Record<string, string> = {
@@ -75,6 +84,7 @@ const TASK_LABEL_KEYS: Record<string, string> = {
   news_sentiment: 'marketIntelligence.verdicts.tasks.newsSentiment',
   sizing_suggestion: 'marketIntelligence.verdicts.tasks.positionSizing',
   risk_gate: 'marketIntelligence.verdicts.tasks.riskGate',
+  macro_context: 'marketIntelligence.verdicts.tasks.macroContext',
 };
 
 /** Shorten model name for display (e.g. "anthropic/claude-3.5-sonnet" → "claude-3.5-sonnet") */

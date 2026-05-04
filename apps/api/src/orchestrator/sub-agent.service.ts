@@ -372,7 +372,12 @@ ${JSON.stringify(context.news, null, 2)}`;
     case 'sizing_suggestion':
       return `Configuración activa: ${JSON.stringify(context.config)}
 Posiciones abiertas: ${context.openPositionsCount ?? 0}
-¿Debería proceder con la operación? Dame tu sugerencia de sizing.`;
+
+IMPORTANTE: Responde SIEMPRE en JSON con este formato:
+{ "recommendation": "proceed|skip", "maxTradeSize": <porcentaje decimal del balance>, "reasoning": "explicación de 1-3 oraciones de por qué recomiendas esto" }
+
+Si no tienes suficiente información para calcular sizing, responde:
+{ "recommendation": "skip", "maxTradeSize": 0, "reasoning": "Información insuficiente para calcular sizing" }`;
 
     case 'risk_gate': {
       let prompt = `Portfolio actual del usuario:
@@ -436,7 +441,8 @@ AEGIS (Riesgo): ${context.aegisVerdict}`;
       }
 
       prompt += `\n\nConfig del usuario: buyThreshold=${context.buyThreshold}%, sellThreshold=${context.sellThreshold}%`;
-      prompt += '\nEmite el JSON de decisión final.';
+      prompt += `\n\nIMPORTANTE: Tu campo "reasoning" debe ser una explicación clara en lenguaje natural (3-5 oraciones) de POR QUÉ tomas esta decisión, citando los datos más relevantes de cada sub-agente.`;
+      prompt += '\nResponde en JSON: { "decision": "BUY|SELL|HOLD", "confidence": 0.0-1.0, "reasoning": "explicación detallada...", "waitMinutes": 15 }';
       return prompt;
     }
 

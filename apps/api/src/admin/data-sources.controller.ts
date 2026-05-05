@@ -21,7 +21,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
   CurrentUser,
-  RequestUser,
+  type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 import { DataSourceRegistryService } from '../market/data-source-registry.service';
 import { PrismaService } from '../prisma/prisma.service';

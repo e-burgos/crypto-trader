@@ -11,7 +11,7 @@ import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
-  RequestUser,
+  type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('analytics')

@@ -16,7 +16,7 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser, RequestUser } from './decorators/current-user.decorator';
+import { CurrentUser, type RequestUser } from './decorators/current-user.decorator';
 
 @ApiTags('auth')
 @Controller('auth')

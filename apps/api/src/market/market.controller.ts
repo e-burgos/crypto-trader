@@ -21,7 +21,7 @@ import { MarketService } from './market.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
-  RequestUser,
+  type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('market')

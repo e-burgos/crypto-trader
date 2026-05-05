@@ -36,7 +36,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import {
   CurrentUser,
-  RequestUser,
+  type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 import { LLMModelsService } from '../llm/llm-models.service';
 import { LLMUsageService } from '../llm/llm-usage.service';

@@ -332,7 +332,7 @@ export function buildDynamicPreset(
 export const PRESET_FREE: AgentPreset = {
   [AgentId.routing]: {
     provider: LLMProvider.OPENROUTER,
-    model: 'nvidia/nemotron-nano-9b-v2:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
   },
   [AgentId.orchestrator]: {
     provider: LLMProvider.OPENROUTER,
@@ -344,23 +344,23 @@ export const PRESET_FREE: AgentPreset = {
   },
   [AgentId.platform]: {
     provider: LLMProvider.OPENROUTER,
-    model: 'google/gemma-4-31b-it:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
   },
   [AgentId.operations]: {
     provider: LLMProvider.OPENROUTER,
-    model: 'openai/gpt-oss-120b:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
   },
   [AgentId.market]: {
     provider: LLMProvider.OPENROUTER,
-    model: 'inclusionai/ling-2.6-flash:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
   },
   [AgentId.blockchain]: {
     provider: LLMProvider.OPENROUTER,
-    model: 'minimax/minimax-m2.5:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
   },
   [AgentId.risk]: {
     provider: LLMProvider.OPENROUTER,
-    model: 'openai/gpt-oss-120b:free',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
   },
 };
 

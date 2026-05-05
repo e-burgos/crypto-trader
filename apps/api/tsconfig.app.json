@@ -1,13 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "types": ["node"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "target": "ES2022",
-    "moduleResolution": "node10",
-    "noEmit": true
+    "target": "es2021",
+    "noEmit": true,
+    "rootDir": "../../"
   },
   "include": ["src/**/*.ts", "generated/**/*.ts"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__mocks__/**"]

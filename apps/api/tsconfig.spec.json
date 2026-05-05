@@ -2,17 +2,13 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "module": "commonjs",
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "types": ["jest", "node"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "target": "es2021",
-    "moduleResolution": "node",
-    "esModuleInterop": true
+    "target": "es2021"
   },
-  "include": [
-    "jest.config.ts",
-    "src/**/*.ts",
-    "src/**/*.spec.ts"
-  ]
+  "include": ["jest.config.ts", "src/**/*.ts", "src/**/*.spec.ts"]
 }

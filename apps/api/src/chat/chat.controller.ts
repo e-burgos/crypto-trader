@@ -33,7 +33,7 @@ import { ExecuteToolDto } from './dto/execute-tool.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
-  RequestUser,
+  type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('chat')

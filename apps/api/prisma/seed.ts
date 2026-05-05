@@ -6,15 +6,41 @@ import { AGENT_SEEDS } from './seed/agents';
 import { AgentId, LLMProvider } from '../generated/prisma/enums';
 
 // Inlined from src/agents/agent-presets.ts to avoid importing src/ in production seed
-const PRESET_FREE: Partial<Record<AgentId, { provider: LLMProvider; model: string }>> = {
-  [AgentId.routing]: { provider: LLMProvider.OPENROUTER, model: 'nvidia/nemotron-nano-9b-v2:free' },
-  [AgentId.orchestrator]: { provider: LLMProvider.OPENROUTER, model: 'nvidia/nemotron-3-super-120b-a12b:free' },
-  [AgentId.synthesis]: { provider: LLMProvider.OPENROUTER, model: 'nvidia/nemotron-3-super-120b-a12b:free' },
-  [AgentId.platform]: { provider: LLMProvider.OPENROUTER, model: 'google/gemma-4-31b-it:free' },
-  [AgentId.operations]: { provider: LLMProvider.OPENROUTER, model: 'openai/gpt-oss-120b:free' },
-  [AgentId.market]: { provider: LLMProvider.OPENROUTER, model: 'inclusionai/ling-2.6-flash:free' },
-  [AgentId.blockchain]: { provider: LLMProvider.OPENROUTER, model: 'minimax/minimax-m2.5:free' },
-  [AgentId.risk]: { provider: LLMProvider.OPENROUTER, model: 'openai/gpt-oss-120b:free' },
+const PRESET_FREE: Partial<
+  Record<AgentId, { provider: LLMProvider; model: string }>
+> = {
+  [AgentId.routing]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.orchestrator]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.synthesis]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.platform]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.operations]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.market]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.blockchain]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
+  [AgentId.risk]: {
+    provider: LLMProvider.OPENROUTER,
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+  },
 };
 
 const BCRYPT_SALT_ROUNDS = 12;

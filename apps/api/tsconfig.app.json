@@ -6,7 +6,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "target": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
     "noEmit": true
   },
   "include": ["src/**/*.ts", "generated/**/*.ts"],

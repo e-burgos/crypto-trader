@@ -100,9 +100,12 @@ export class LLMKeyDto {
   @ApiProperty({
     example: 'claude-sonnet-4-6',
     description: 'Modelo seleccionado del proveedor',
+    nullable: true,
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  selectedModel!: string;
+  selectedModel?: string | null;
 }
 
 export class LLMModelDto {

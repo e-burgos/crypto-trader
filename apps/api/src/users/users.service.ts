@@ -217,6 +217,7 @@ export class UsersService {
     await this.platformLLMProviderService.assertProviderActive(provider);
 
     const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
+    const selectedModel = dto.selectedModel || '';
 
     return this.prisma.lLMCredential.upsert({
       where: { userId_provider: { userId, provider } },
@@ -225,10 +226,10 @@ export class UsersService {
         provider,
         apiKeyEncrypted,
         apiKeyIv,
-        selectedModel: dto.selectedModel,
+        selectedModel,
         isActive: true,
       },
-      update: { apiKeyEncrypted, apiKeyIv, selectedModel: dto.selectedModel },
+      update: { apiKeyEncrypted, apiKeyIv, selectedModel },
       select: { id: true, provider: true, selectedModel: true, isActive: true },
     });
   }

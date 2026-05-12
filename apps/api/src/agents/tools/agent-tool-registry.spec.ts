@@ -1,6 +1,10 @@
 import { AgentToolRegistry } from './agent-tool-registry';
 import { AgentToolName } from '../../../generated/prisma/enums';
-import { AgentTool, AgentToolInput, AgentToolOutput } from './agent-tool.interface';
+import {
+  AgentTool,
+  AgentToolInput,
+  AgentToolOutput,
+} from './agent-tool.interface';
 
 // Minimal mock tool
 class MockTool implements AgentTool {

@@ -5,7 +5,14 @@ import {
   useUpdateBudgetPolicy,
   type BudgetPolicy,
 } from '../../hooks/use-agent-budget-policies';
-import { Card, Spinner, EmptyState, Button, Input, ToggleSwitch } from '@crypto-trader/ui';
+import {
+  Card,
+  Spinner,
+  EmptyState,
+  Button,
+  Input,
+  ToggleSwitch,
+} from '@crypto-trader/ui';
 
 interface EditingState {
   [agentId: string]: Partial<BudgetPolicy>;
@@ -44,10 +51,7 @@ export function AgentEconomicsSettingsPage() {
     );
   };
 
-  const getDisplayValue = (
-    policy: BudgetPolicy,
-    field: keyof BudgetPolicy,
-  ) => {
+  const getDisplayValue = (policy: BudgetPolicy, field: keyof BudgetPolicy) => {
     const editVal = editing[policy.agentId]?.[field];
     return editVal !== undefined ? editVal : policy[field];
   };
@@ -83,9 +87,7 @@ export function AgentEconomicsSettingsPage() {
               <Card key={policy.agentId} className="p-5 space-y-4">
                 {/* Agent Header */}
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold capitalize">
-                    {policy.agentId}
-                  </h3>
+                  <h3 className="font-semibold capitalize">{policy.agentId}</h3>
                   <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                 </div>
 
@@ -99,9 +101,7 @@ export function AgentEconomicsSettingsPage() {
                     type="number"
                     step="0.01"
                     min={0}
-                    value={String(
-                      getDisplayValue(policy, 'maxDailyUsd'),
-                    )}
+                    value={String(getDisplayValue(policy, 'maxDailyUsd'))}
                     onChange={(e) =>
                       handleFieldChange(
                         policy.agentId,
@@ -145,11 +145,7 @@ export function AgentEconomicsSettingsPage() {
                       getDisplayValue(policy, 'blockFreeModels') as boolean
                     }
                     onChange={(val) =>
-                      handleFieldChange(
-                        policy.agentId,
-                        'blockFreeModels',
-                        val,
-                      )
+                      handleFieldChange(policy.agentId, 'blockFreeModels', val)
                     }
                   />
                 </div>
@@ -168,8 +164,7 @@ export function AgentEconomicsSettingsPage() {
 
                 {/* Last updated */}
                 <p className="text-xs text-muted-foreground">
-                  Updated:{' '}
-                  {new Date(policy.updatedAt).toLocaleDateString()}
+                  Updated: {new Date(policy.updatedAt).toLocaleDateString()}
                 </p>
               </Card>
             );

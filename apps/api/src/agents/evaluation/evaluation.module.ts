@@ -6,10 +6,7 @@ import { ScorecardController } from './scorecard.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-  imports: [
-    BullModule.registerQueue({ name: EVALUATION_QUEUE }),
-    PrismaModule,
-  ],
+  imports: [BullModule.registerQueue({ name: EVALUATION_QUEUE }), PrismaModule],
   controllers: [ScorecardController],
   providers: [EvaluationService, EvaluationProcessor],
   exports: [EvaluationService],

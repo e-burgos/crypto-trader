@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { AgentToolName } from '../../../generated/prisma/enums';
-import { AgentTool, AgentToolInput, AgentToolOutput } from './agent-tool.interface';
+import {
+  AgentTool,
+  AgentToolInput,
+  AgentToolOutput,
+} from './agent-tool.interface';
 
 const SLIPPAGE_PCT: Record<string, number> = {
   BTC: 0.0005,
@@ -39,7 +43,9 @@ export class TradeSimulationTool implements AgentTool {
 
     // Downside based on stop-loss
     const downsideUsd =
-      stopLossPct > 0 ? notional * stopLossPct + feesUsd + slippageUsd : feesUsd + slippageUsd;
+      stopLossPct > 0
+        ? notional * stopLossPct + feesUsd + slippageUsd
+        : feesUsd + slippageUsd;
 
     const expectedNetValueUsd = notional + expectedPnlUsd;
 

@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentToolName } from '../../../generated/prisma/enums';
 import { MarketService } from '../../market/market.service';
-import { AgentTool, AgentToolInput, AgentToolOutput } from './agent-tool.interface';
+import {
+  AgentTool,
+  AgentToolInput,
+  AgentToolOutput,
+} from './agent-tool.interface';
 
 @Injectable()
 export class MarketEdgeTool implements AgentTool {

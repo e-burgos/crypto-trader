@@ -97,13 +97,12 @@ export class EvaluationProcessor {
       select: { id: true, createdAt: true },
     });
 
-    const existingEvals =
-      await this.prisma.agentDecisionEvaluation.findMany({
-        where: {
-          decisionId: { in: recentDecisions.map((d) => d.id) },
-        },
-        select: { decisionId: true, horizonMinutes: true },
-      });
+    const existingEvals = await this.prisma.agentDecisionEvaluation.findMany({
+      where: {
+        decisionId: { in: recentDecisions.map((d) => d.id) },
+      },
+      select: { decisionId: true, horizonMinutes: true },
+    });
 
     const evalSet = new Set(
       existingEvals.map((e) => `${e.decisionId}:${e.horizonMinutes}`),
@@ -117,8 +116,7 @@ export class EvaluationProcessor {
         const key = `${decision.id}:${horizon}`;
         if (!evalSet.has(key)) {
           const delayMs =
-            horizon * 60 * 1000 -
-            (Date.now() - decision.createdAt.getTime());
+            horizon * 60 * 1000 - (Date.now() - decision.createdAt.getTime());
           if (delayMs > 0) {
             await job.queue.add(
               'evaluate',

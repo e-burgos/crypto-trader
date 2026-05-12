@@ -194,9 +194,11 @@ describe('ModelRouterService', () => {
       );
 
       expect(result.reason).toBe('DIVERGENCE_ESCALATION');
-      expect(['gpt-4o', 'claude-sonnet-4-20250514', 'gemini-2.5-pro']).toContain(
-        result.model,
-      );
+      expect([
+        'gpt-4o',
+        'claude-sonnet-4-20250514',
+        'gemini-2.5-pro',
+      ]).toContain(result.model);
     });
   });
 

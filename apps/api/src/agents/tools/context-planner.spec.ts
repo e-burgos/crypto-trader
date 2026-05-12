@@ -1,4 +1,7 @@
-import { ContextPlannerService, InputDescriptor } from './context-planner.service';
+import {
+  ContextPlannerService,
+  InputDescriptor,
+} from './context-planner.service';
 
 describe('ContextPlannerService', () => {
   const planner = new ContextPlannerService();
@@ -15,8 +18,18 @@ describe('ContextPlannerService', () => {
 
   it('includes required inputs and excludes optional when over budget', () => {
     const inputs: InputDescriptor[] = [
-      { name: 'portfolio', tokenEstimate: 300, freshness: 0, priority: 'required' },
-      { name: 'indicators', tokenEstimate: 200, freshness: 0, priority: 'recommended' },
+      {
+        name: 'portfolio',
+        tokenEstimate: 300,
+        freshness: 0,
+        priority: 'required',
+      },
+      {
+        name: 'indicators',
+        tokenEstimate: 200,
+        freshness: 0,
+        priority: 'recommended',
+      },
       { name: 'news', tokenEstimate: 500, freshness: 0, priority: 'optional' },
     ];
 
@@ -32,8 +45,18 @@ describe('ContextPlannerService', () => {
 
   it('scales up maxInputTokens when required inputs exceed base budget', () => {
     const inputs: InputDescriptor[] = [
-      { name: 'positions', tokenEstimate: 400, freshness: 0, priority: 'required' },
-      { name: 'wallets', tokenEstimate: 300, freshness: 0, priority: 'required' },
+      {
+        name: 'positions',
+        tokenEstimate: 400,
+        freshness: 0,
+        priority: 'required',
+      },
+      {
+        name: 'wallets',
+        tokenEstimate: 300,
+        freshness: 0,
+        priority: 'required',
+      },
     ];
 
     // intent_classification base = 512, but required = 700
@@ -46,8 +69,18 @@ describe('ContextPlannerService', () => {
 
   it('truncates recommended inputs when budget is tight', () => {
     const inputs: InputDescriptor[] = [
-      { name: 'portfolio', tokenEstimate: 400, freshness: 0, priority: 'required' },
-      { name: 'indicators', tokenEstimate: 300, freshness: 0, priority: 'recommended' },
+      {
+        name: 'portfolio',
+        tokenEstimate: 400,
+        freshness: 0,
+        priority: 'required',
+      },
+      {
+        name: 'indicators',
+        tokenEstimate: 300,
+        freshness: 0,
+        priority: 'recommended',
+      },
     ];
 
     // intent_classification base = 512

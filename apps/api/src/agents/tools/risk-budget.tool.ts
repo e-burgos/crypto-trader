@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AgentToolName } from '../../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AgentTool, AgentToolInput, AgentToolOutput } from './agent-tool.interface';
+import {
+  AgentTool,
+  AgentToolInput,
+  AgentToolOutput,
+} from './agent-tool.interface';
 
 @Injectable()
 export class RiskBudgetTool implements AgentTool {

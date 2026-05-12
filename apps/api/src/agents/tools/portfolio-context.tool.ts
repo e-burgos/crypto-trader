@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AgentToolName } from '../../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AgentTool, AgentToolInput, AgentToolOutput } from './agent-tool.interface';
+import {
+  AgentTool,
+  AgentToolInput,
+  AgentToolOutput,
+} from './agent-tool.interface';
 
 @Injectable()
 export class PortfolioContextTool implements AgentTool {
@@ -62,7 +66,9 @@ export class PortfolioContextTool implements AgentTool {
       })),
       wallets: wallets.map((w) => ({
         id: w.id,
-        asset: (w as Record<string, unknown>).asset ?? (w as Record<string, unknown>).currency,
+        asset:
+          (w as Record<string, unknown>).asset ??
+          (w as Record<string, unknown>).currency,
         balance: (w as Record<string, unknown>).balance,
       })),
       recentPnl: closedPnl,

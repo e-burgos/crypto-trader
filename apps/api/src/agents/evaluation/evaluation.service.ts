@@ -35,9 +35,7 @@ export class EvaluationService {
         { delay: horizonMinutes * 60 * 1000, removeOnComplete: true },
       );
     }
-    this.logger.log(
-      `Scheduled 4 evaluations for decision=${decisionId}`,
-    );
+    this.logger.log(`Scheduled 4 evaluations for decision=${decisionId}`);
   }
 
   async getScorecard(filters: ScorecardFilters) {
@@ -79,7 +77,8 @@ export class EvaluationService {
       (sum, d) => sum + (d.llmCostUsd ?? 0) + (d.dataCostUsd ?? 0),
       0,
     );
-    const avgCostUsd = decisionIds.length > 0 ? totalCost / decisionIds.length : 0;
+    const avgCostUsd =
+      decisionIds.length > 0 ? totalCost / decisionIds.length : 0;
 
     const totalPnl = evaluations.reduce(
       (sum, e) => sum + (e.realizedPnlUsd ?? e.hypotheticalPnlUsd ?? 0),
@@ -168,25 +167,29 @@ export class EvaluationService {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // PENDING evaluations older than 48h → set to NEUTRAL
-    const pendingUpdated = await this.prisma.agentDecisionEvaluation.updateMany({
-      where: {
-        status: 'PENDING',
-        createdAt: { lt: fortyEightHoursAgo },
+    const pendingUpdated = await this.prisma.agentDecisionEvaluation.updateMany(
+      {
+        where: {
+          status: 'PENDING',
+          createdAt: { lt: fortyEightHoursAgo },
+        },
+        data: {
+          status: 'NEUTRAL',
+          evaluatedAt: now,
+        },
       },
-      data: {
-        status: 'NEUTRAL',
-        evaluatedAt: now,
-      },
-    });
+    );
 
     // NEUTRAL evaluations with horizonMinutes < 60 older than 7 days → delete
-    const neutralDeleted = await this.prisma.agentDecisionEvaluation.deleteMany({
-      where: {
-        status: 'NEUTRAL',
-        horizonMinutes: { lt: 60 },
-        createdAt: { lt: sevenDaysAgo },
+    const neutralDeleted = await this.prisma.agentDecisionEvaluation.deleteMany(
+      {
+        where: {
+          status: 'NEUTRAL',
+          horizonMinutes: { lt: 60 },
+          createdAt: { lt: sevenDaysAgo },
+        },
       },
-    });
+    );
 
     this.logger.log(
       `Cleanup: ${pendingUpdated.count} PENDING→NEUTRAL, ${neutralDeleted.count} old NEUTRAL deleted`,
@@ -209,9 +212,7 @@ export class EvaluationService {
           filters.from,
         );
       if (filters.to)
-        (where.createdAt as Record<string, unknown>).lte = new Date(
-          filters.to,
-        );
+        (where.createdAt as Record<string, unknown>).lte = new Date(filters.to);
     }
     // Filter by status != PENDING to only include evaluated ones
     where.status = { not: 'PENDING' };

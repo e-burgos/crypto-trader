@@ -173,9 +173,7 @@ describe('EvaluationService', () => {
       await service.scheduleEvaluation('dec-1');
 
       expect(queue.add).toHaveBeenCalledTimes(4);
-      const delays = queue.add.mock.calls.map(
-        (c: any[]) => c[2].delay / 60000,
-      );
+      const delays = queue.add.mock.calls.map((c: any[]) => c[2].delay / 60000);
       expect(delays).toEqual([15, 60, 240, 1440]);
     });
   });

@@ -7,6 +7,8 @@ import {
   ChevronUp,
   ExternalLink,
   Filter,
+  DollarSign,
+  Zap,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
@@ -113,6 +115,12 @@ export function AgentDecisionCard({
                 {decision.mode}
               </span>
             )}
+            {decision.modelRoutingReason && (
+              <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-400">
+                <Zap className="mr-0.5 inline h-2.5 w-2.5" />
+                {decision.modelRoutingReason}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Clock className="h-3 w-3" />
@@ -127,6 +135,41 @@ export function AgentDecisionCard({
 
         <div className="px-4 py-3 space-y-3">
           <ConfidenceBar value={decision.confidence} color={color} />
+
+          {/* Economic data row */}
+          {(decision.llmCostUsd != null || decision.expectedNetValueUsd != null) && (
+            <div className="flex items-center gap-3 text-[11px]">
+              {decision.llmCostUsd != null && (
+                <div className="flex items-center gap-1 rounded-md bg-muted/40 px-2 py-1">
+                  <DollarSign className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Cost:</span>
+                  <span className="font-semibold text-foreground">
+                    ${decision.llmCostUsd < 0.01
+                      ? decision.llmCostUsd.toFixed(4)
+                      : decision.llmCostUsd.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {decision.expectedNetValueUsd != null && (
+                <div className="flex items-center gap-1 rounded-md bg-muted/40 px-2 py-1">
+                  <span className="text-muted-foreground">EV:</span>
+                  <span
+                    className={cn(
+                      'font-semibold',
+                      decision.expectedNetValueUsd > 0
+                        ? 'text-emerald-400'
+                        : decision.expectedNetValueUsd < 0
+                          ? 'text-red-400'
+                          : 'text-foreground',
+                    )}
+                  >
+                    {decision.expectedNetValueUsd > 0 ? '+' : ''}
+                    ${decision.expectedNetValueUsd.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5">
             <div className="mb-1.5 flex items-center gap-1.5">

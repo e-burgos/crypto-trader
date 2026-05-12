@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AgentToolName } from '../../../generated/prisma/enums';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AgentTool, AgentToolInput, AgentToolOutput } from './agent-tool.interface';
+import {
+  AgentTool,
+  AgentToolInput,
+  AgentToolOutput,
+} from './agent-tool.interface';
 
 @Injectable()
 export class DecisionMemoryTool implements AgentTool {
@@ -57,7 +61,10 @@ export class DecisionMemoryTool implements AgentTool {
     }
 
     // Calculate per-model win rates
-    const modelStats = new Map<string, { wins: number; total: number; pnl: number }>();
+    const modelStats = new Map<
+      string,
+      { wins: number; total: number; pnl: number }
+    >();
     for (const e of evaluations) {
       const model = modelMap.get(e.decisionId);
       if (!model) continue;

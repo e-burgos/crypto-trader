@@ -183,6 +183,7 @@ export class OrchestratorService {
       where: {
         userId,
         asset: config.asset,
+        pair: config.pair,
         createdAt: { gte: new Date(Date.now() - sentimentTtlMs) },
         metadata: { not: { equals: null } },
       },

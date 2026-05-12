@@ -63,8 +63,7 @@ function buildQueryString(filters: ScorecardFilters): string {
 export function useAgentScorecard(filters: ScorecardFilters = {}) {
   return useQuery<ScorecardEntry[]>({
     queryKey: scorecardKeys.list(filters),
-    queryFn: () =>
-      api.get(`/agents/scorecard${buildQueryString(filters)}`),
+    queryFn: () => api.get(`/agents/scorecard${buildQueryString(filters)}`),
     staleTime: 60_000,
   });
 }

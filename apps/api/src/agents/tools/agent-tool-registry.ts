@@ -98,7 +98,15 @@ export class AgentToolRegistry implements OnModuleInit {
     } catch (err) {
       status = 'ERROR';
       const elapsed = Date.now() - start;
-      await this.logInvocation(input, name, inputHash, null, status, elapsed, 0);
+      await this.logInvocation(
+        input,
+        name,
+        inputHash,
+        null,
+        status,
+        elapsed,
+        0,
+      );
       throw err;
     }
 

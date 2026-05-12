@@ -9,6 +9,7 @@ import { TradeSimulationTool } from './trade-simulation.tool';
 import { RiskBudgetTool } from './risk-budget.tool';
 import { DecisionMemoryTool } from './decision-memory.tool';
 import { TokenBudgetTool } from './token-budget.tool';
+import { ModelRouterService } from '../model-router.service';
 
 @Module({
   imports: [PrismaModule, MarketModule],
@@ -21,7 +22,8 @@ import { TokenBudgetTool } from './token-budget.tool';
     RiskBudgetTool,
     DecisionMemoryTool,
     TokenBudgetTool,
+    ModelRouterService,
   ],
-  exports: [AgentToolRegistry, ContextPlannerService],
+  exports: [AgentToolRegistry, ContextPlannerService, ModelRouterService],
 })
 export class AgentToolsModule {}

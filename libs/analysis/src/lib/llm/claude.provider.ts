@@ -23,7 +23,7 @@ export class ClaudeProvider implements LLMProviderClient {
     systemPrompt: string,
     userPrompt: string,
   ): Promise<LLMResponse> {
-    const { data } = await axios.post(
+    const response = await axios.post(
       'https://api.anthropic.com/v1/messages',
       {
         model: this.model,
@@ -40,6 +40,7 @@ export class ClaudeProvider implements LLMProviderClient {
         timeout: 30000,
       },
     );
+    const data = response.data;
 
     return {
       text: data.content?.[0]?.text ?? '',
@@ -47,6 +48,7 @@ export class ClaudeProvider implements LLMProviderClient {
         inputTokens: data.usage?.input_tokens ?? 0,
         outputTokens: data.usage?.output_tokens ?? 0,
       },
+      headers: response.headers as Record<string, string>,
     };
   }
 }

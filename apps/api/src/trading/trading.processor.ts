@@ -224,7 +224,7 @@ export class TradingProcessor {
 
       // 7. Load recent trades
       const recentDbTrades = await this.prisma.trade.findMany({
-        where: { userId },
+        where: { userId, position: { configId: config.id } },
         orderBy: { executedAt: 'desc' },
         take: 10,
         include: { position: { select: { asset: true, pair: true } } },
@@ -274,6 +274,7 @@ export class TradingProcessor {
         | undefined;
       try {
         const enriched = await this.marketService.buildEnrichedSnapshot(
+          userId,
           pair.symbol,
         );
         if (enriched) {
@@ -642,7 +643,13 @@ export class TradingProcessor {
     cachedPrice?: number,
   ) {
     const openCount = await this.prisma.position.count({
-      where: { userId, status: 'OPEN', asset: config.asset, mode: config.mode },
+      where: {
+        userId,
+        configId: config.id,
+        status: 'OPEN',
+        asset: config.asset,
+        mode: config.mode,
+      },
     });
     if (openCount >= config.maxConcurrentPositions) {
       this.logger.log(`Max positions reached for user ${userId}`);
@@ -811,7 +818,13 @@ export class TradingProcessor {
     cachedPrice?: number,
   ) {
     const openPositions = await this.prisma.position.findMany({
-      where: { userId, asset: config.asset, status: 'OPEN', mode },
+      where: {
+        userId,
+        configId: config.id,
+        pair: config.pair,
+        status: 'OPEN',
+        mode,
+      },
     });
     if (!openPositions.length) return;
 
@@ -910,17 +923,19 @@ export class TradingProcessor {
       if (mode === TradingMode.SANDBOX) {
         const proceeds = order.price * order.quantity;
         const fee = proceeds * TRADE_FEE_PCT;
-        await this.prisma.sandboxWallet.upsert({
-          where: { userId_currency: { userId, currency: pos.pair as any } },
-          create: {
-            userId,
-            currency: pos.pair as any,
-            balance: 10_000 + proceeds - fee,
-          },
-          update: { balance: { increment: proceeds - fee } },
-        });
-        const updatedWallet = await this.prisma.sandboxWallet.findUnique({
-          where: { userId_currency: { userId, currency: pos.pair as any } },
+        const updatedWallet = await this.prisma.$transaction(async (tx) => {
+          await tx.sandboxWallet.upsert({
+            where: { userId_currency: { userId, currency: pos.pair as any } },
+            create: {
+              userId,
+              currency: pos.pair as any,
+              balance: 10_000 + proceeds - fee,
+            },
+            update: { balance: { increment: proceeds - fee } },
+          });
+          return tx.sandboxWallet.findUnique({
+            where: { userId_currency: { userId, currency: pos.pair as any } },
+          });
         });
         this.gateway.emitToUser(userId, 'wallet:updated', {
           currency: pos.pair,
@@ -959,7 +974,13 @@ export class TradingProcessor {
     cachedPrice?: number,
   ) {
     const openPositions = await this.prisma.position.findMany({
-      where: { userId, asset: config.asset, status: 'OPEN', mode },
+      where: {
+        userId,
+        configId: config.id,
+        pair: config.pair,
+        status: 'OPEN',
+        mode,
+      },
     });
     if (!openPositions.length) return;
 
@@ -1059,17 +1080,19 @@ export class TradingProcessor {
         if (mode === TradingMode.SANDBOX) {
           const proceeds = order.price * order.quantity;
           const fee = proceeds * TRADE_FEE_PCT;
-          await this.prisma.sandboxWallet.upsert({
-            where: { userId_currency: { userId, currency: pos.pair as any } },
-            create: {
-              userId,
-              currency: pos.pair as any,
-              balance: 10_000 + proceeds - fee,
-            },
-            update: { balance: { increment: proceeds - fee } },
-          });
-          const updatedWallet = await this.prisma.sandboxWallet.findUnique({
-            where: { userId_currency: { userId, currency: pos.pair as any } },
+          const updatedWallet = await this.prisma.$transaction(async (tx) => {
+            await tx.sandboxWallet.upsert({
+              where: { userId_currency: { userId, currency: pos.pair as any } },
+              create: {
+                userId,
+                currency: pos.pair as any,
+                balance: 10_000 + proceeds - fee,
+              },
+              update: { balance: { increment: proceeds - fee } },
+            });
+            return tx.sandboxWallet.findUnique({
+              where: { userId_currency: { userId, currency: pos.pair as any } },
+            });
           });
           this.gateway.emitToUser(userId, 'wallet:updated', {
             currency: pos.pair,

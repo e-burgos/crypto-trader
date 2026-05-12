@@ -14,6 +14,8 @@ export interface LLMUsage {
 export interface LLMResponse {
   text: string;
   usage: LLMUsage;
+  headers?: Record<string, string>;
+  actualModel?: string;
 }
 
 /**

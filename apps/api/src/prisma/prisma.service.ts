@@ -91,6 +91,18 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get dataSourceCredential() {
     return this._client.dataSourceCredential;
   }
+  get agentBudgetPolicy() {
+    return this._client.agentBudgetPolicy;
+  }
+  get agentModelPolicy() {
+    return this._client.agentModelPolicy;
+  }
+  get agentToolInvocation() {
+    return this._client.agentToolInvocation;
+  }
+  get agentDecisionEvaluation() {
+    return this._client.agentDecisionEvaluation;
+  }
 
   $queryRaw<T = unknown>(
     ...args: Parameters<PrismaClientInstance['$queryRaw']>

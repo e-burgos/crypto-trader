@@ -44,10 +44,16 @@ describe('MarketController — GET /market/enriched-snapshot/:symbol', () => {
   });
 
   it('should return 200 with EnrichedMarketSnapshot', async () => {
-    const result = await controller.getEnrichedSnapshot('BTCUSDT');
+    const result = await controller.getEnrichedSnapshot(
+      { userId: 'user-1' } as any,
+      'BTCUSDT',
+    );
 
     expect(result).toEqual(mockSnapshot);
-    expect(marketService.buildEnrichedSnapshot).toHaveBeenCalledWith('BTCUSDT');
+    expect(marketService.buildEnrichedSnapshot).toHaveBeenCalledWith(
+      'user-1',
+      'BTCUSDT',
+    );
   });
 
   it('should return null fields when sources are disabled', async () => {
@@ -59,14 +65,20 @@ describe('MarketController — GET /market/enriched-snapshot/:symbol', () => {
     };
     marketService.buildEnrichedSnapshot.mockResolvedValueOnce(emptySnapshot);
 
-    const result = await controller.getEnrichedSnapshot('ETHUSDT');
+    const result = await controller.getEnrichedSnapshot(
+      { userId: 'user-1' } as any,
+      'ETHUSDT',
+    );
 
     expect(result.fearGreed).toBeNull();
     expect(result.failedSources).toContain('alternative_me');
   });
 
   it('should always include metadata fields', async () => {
-    const result = await controller.getEnrichedSnapshot('BTCUSDT');
+    const result = await controller.getEnrichedSnapshot(
+      { userId: 'user-1' } as any,
+      'BTCUSDT',
+    );
 
     expect(result.symbol).toBe('BTCUSDT');
     expect(result.snapshotBuildTimeMs).toBeGreaterThanOrEqual(0);

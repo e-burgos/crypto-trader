@@ -570,6 +570,12 @@ export class SubAgentService {
       // Track call for health monitoring
       recordCall(userId, providerEnum, true);
 
+      // Capture rate limits from response headers
+      if (response.headers) {
+        const { captureRateLimits } = await import('@crypto-trader/analysis');
+        captureRateLimits(userId, providerEnum, response.headers);
+      }
+
       // Log usage asynchronously (fire-and-forget)
       if (this.llmUsageService) {
         const source =
@@ -583,6 +589,8 @@ export class SubAgentService {
             model,
             usage: response.usage,
             source,
+            agentId: configAgentId,
+            actualModel: response.actualModel,
           })
           .catch((err) =>
             this.logger.warn(

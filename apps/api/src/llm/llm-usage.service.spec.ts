@@ -96,6 +96,28 @@ describe('LLMUsageService', () => {
       // cost = (2000 * 0.59 + 1000 * 0.79) / 1_000_000 = 0.00197
       expect(call.data.costUsd).toBeCloseTo(0.00197, 6);
     });
+
+    it('should persist optional agentId, decisionId, actualModel and requestId', async () => {
+      mockPrisma.llmUsageLog.create.mockResolvedValue({});
+
+      await service.log({
+        userId: 'u1',
+        provider: 'OPENROUTER' as any,
+        model: 'anthropic/claude-sonnet-4',
+        usage: { inputTokens: 500, outputTokens: 200 },
+        source: 'TRADING' as any,
+        agentId: 'market',
+        decisionId: 'dec-123',
+        actualModel: 'anthropic/claude-sonnet-4-20250514',
+        requestId: 'req-abc',
+      });
+
+      const call = mockPrisma.llmUsageLog.create.mock.calls[0][0];
+      expect(call.data.agentId).toBe('market');
+      expect(call.data.decisionId).toBe('dec-123');
+      expect(call.data.actualModel).toBe('anthropic/claude-sonnet-4-20250514');
+      expect(call.data.requestId).toBe('req-abc');
+    });
   });
 
   describe('getStats', () => {

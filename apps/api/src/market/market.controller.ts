@@ -149,7 +149,10 @@ export class MarketController {
   })
   @ApiParam({ name: 'symbol', example: 'BTCUSDT' })
   @ApiResponse({ status: 200 })
-  getEnrichedSnapshot(@Param('symbol') symbol: string) {
-    return this.marketService.buildEnrichedSnapshot(symbol);
+  getEnrichedSnapshot(
+    @CurrentUser() user: RequestUser,
+    @Param('symbol') symbol: string,
+  ) {
+    return this.marketService.buildEnrichedSnapshot(user.userId, symbol);
   }
 }

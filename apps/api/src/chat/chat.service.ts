@@ -25,6 +25,7 @@ import { LLMModelsService } from '../llm/llm-models.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
+import { TradingService } from '../trading/trading.service';
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
@@ -110,6 +111,8 @@ export class ChatService {
     private readonly agentConfigResolver?: AgentConfigResolverService,
     @Optional()
     private readonly platformLLMProviderService?: PlatformLLMProviderService,
+    @Optional()
+    private readonly tradingService?: TradingService,
   ) {}
 
   // ── Sessions ────────────────────────────────────────────────────────────────
@@ -789,11 +792,15 @@ export class ChatService {
           where: { id: configId, userId },
         });
         if (!config) throw new NotFoundException('Trading config not found');
-        await this.prisma.tradingConfig.update({
-          where: { id: configId },
-          data: { isRunning: true },
-        });
-        result = { started: true, configId };
+        if (this.tradingService) {
+          result = await this.tradingService.startAgent(userId, { configId });
+        } else {
+          await this.prisma.tradingConfig.update({
+            where: { id: configId },
+            data: { isRunning: true },
+          });
+          result = { started: true, configId };
+        }
         break;
       }
       case 'stop_agent': {
@@ -804,11 +811,15 @@ export class ChatService {
           where: { id: configId, userId },
         });
         if (!config) throw new NotFoundException('Trading config not found');
-        await this.prisma.tradingConfig.update({
-          where: { id: configId },
-          data: { isRunning: false },
-        });
-        result = { stopped: true, configId };
+        if (this.tradingService) {
+          result = await this.tradingService.stopAgent(userId, configId);
+        } else {
+          await this.prisma.tradingConfig.update({
+            where: { id: configId },
+            data: { isRunning: false },
+          });
+          result = { stopped: true, configId };
+        }
         break;
       }
       default:

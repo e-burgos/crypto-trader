@@ -23,7 +23,7 @@ export class GeminiProvider implements LLMProviderClient {
     systemPrompt: string,
     userPrompt: string,
   ): Promise<LLMResponse> {
-    const { data } = await axios.post(
+    const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
       {
         system_instruction: { parts: [{ text: systemPrompt }] },
@@ -35,6 +35,7 @@ export class GeminiProvider implements LLMProviderClient {
         timeout: 30000,
       },
     );
+    const data = response.data;
 
     return {
       text: data.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
@@ -42,6 +43,7 @@ export class GeminiProvider implements LLMProviderClient {
         inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
         outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
       },
+      headers: response.headers as Record<string, string>,
     };
   }
 }

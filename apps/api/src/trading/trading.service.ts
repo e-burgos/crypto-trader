@@ -963,6 +963,7 @@ export class TradingService implements OnModuleInit {
       | undefined;
     try {
       const enriched = await this.marketService.buildEnrichedSnapshot(
+        userId,
         pair.symbol,
       );
       if (enriched) {

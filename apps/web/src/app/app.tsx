@@ -50,6 +50,8 @@ import { ChatPage } from '../pages/dashboard/chat';
 import { BotAnalysisPage } from '../pages/dashboard/bot-analysis';
 import { MarketIntelligencePage } from '../pages/dashboard/market-intelligence';
 import { AgentLogPage } from '../pages/dashboard/agent-log';
+import { AgentScorecardPage } from '../pages/dashboard/agent-scorecard';
+import { AgentEconomicsSettingsPage } from '../pages/dashboard/agent-economics-settings';
 import { LiveChartPage } from '../pages/dashboard/live-chart';
 import { ChatWidget } from '../containers/chat/chat-widget';
 import { NotificationsPage } from '../pages/dashboard/notifications';
@@ -230,6 +232,7 @@ export function App() {
                 element={<MarketIntelligencePage />}
               />
               <Route path="agent-log" element={<AgentLogPage />} />
+              <Route path="agent-scorecard" element={<AgentScorecardPage />} />
               <Route
                 path="agents"
                 element={<Navigate to="/docs#agents-showcase" replace />}
@@ -253,6 +256,10 @@ export function App() {
               <Route path="settings/llms" element={<SettingsLLMsPage />} />
               <Route path="settings/news" element={<SettingsNewsPage />} />
               <Route path="settings/agents" element={<SettingsAgentsPage />} />
+              <Route
+                path="settings/agent-economics"
+                element={<AgentEconomicsSettingsPage />}
+              />
               <Route path="notifications" element={<NotificationsPage />} />
             </Route>
             <Route

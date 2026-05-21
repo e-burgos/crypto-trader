@@ -728,6 +728,7 @@ model DataSourceCredential {
   apiKeyEncrypted String
   apiKeyIv        String
   isActive        Boolean  @default(true)
+  shared          Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)

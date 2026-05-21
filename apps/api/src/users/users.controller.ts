@@ -11,6 +11,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -44,6 +45,9 @@ import { ProviderHealthService } from '../llm/provider-health.service';
 import { LLMProvider } from '../../generated/prisma/enums';
 import { suggestModels } from '../llm/model-ranking';
 import { PrismaService } from '../prisma/prisma.service';
+import { DataSourceRegistryService } from '../market/data-source-registry.service';
+import { encrypt } from './utils/encryption.util';
+import type { TraderDataSourceInfo } from '@crypto-trader/shared';
 
 @ApiTags('users')
 @ApiBearerAuth('access-token')
@@ -56,6 +60,7 @@ export class UsersController {
     private readonly llmUsageService: LLMUsageService,
     private readonly providerHealthService: ProviderHealthService,
     private readonly prisma: PrismaService,
+    private readonly registry: DataSourceRegistryService,
   ) {}
 
   // ── /users/me ────────────────────────────────────────────────────────────
@@ -404,6 +409,113 @@ export class UsersController {
       provider as LLMProvider,
       p,
     );
+  }
+
+  // ── /users/me/data-sources ─────────────────────────────────────────────────
+
+  @Get('users/me/data-sources')
+  @ApiOperation({ summary: 'List active data sources with credential status' })
+  @ApiResponse({ status: 200, description: 'List of data sources for trader' })
+  async getMyDataSources(
+    @CurrentUser() user: RequestUser,
+  ): Promise<{ sources: TraderDataSourceInfo[] }> {
+    const configs = await this.registry.getAllConfigs();
+
+    // Get trader's own credentials
+    const ownCredentials = await this.prisma.dataSourceCredential.findMany({
+      where: { userId: user.userId, isActive: true },
+      select: { dataSourceId: true },
+    });
+    const ownCredentialSet = new Set(ownCredentials.map((c) => c.dataSourceId));
+
+    // Get shared credentials (from any admin)
+    const sharedCredentials = await this.prisma.dataSourceCredential.findMany({
+      where: { shared: true, isActive: true },
+      select: { dataSourceId: true },
+    });
+    const sharedCredentialSet = new Set(
+      sharedCredentials.map((c) => c.dataSourceId),
+    );
+
+    const sources: TraderDataSourceInfo[] = configs
+      .filter((cfg) => cfg.isActive)
+      .map((cfg) => ({
+        id: cfg.id,
+        name: cfg.name,
+        displayName: cfg.displayName,
+        category: cfg.category,
+        isActive: cfg.isActive,
+        requiresApiKey: cfg.requiresApiKey,
+        monthlyCostUsd: cfg.monthlyCostUsd,
+        health: this.registry.computeHealthStatus(cfg),
+        hasOwnCredential: ownCredentialSet.has(cfg.id),
+        hasSharedCredential: sharedCredentialSet.has(cfg.id),
+      }));
+
+    return { sources };
+  }
+
+  @Put('users/me/data-sources/:id/credential')
+  @ApiOperation({ summary: 'Set API key for a data source (trader)' })
+  @ApiResponse({ status: 200, description: 'API key saved (encrypted)' })
+  @ApiResponse({
+    status: 404,
+    description: 'Data source not found or inactive',
+  })
+  async setMyDataSourceCredential(
+    @Param('id') id: string,
+    @Body() body: { apiKey: string },
+    @CurrentUser() user: RequestUser,
+  ) {
+    // Validate source exists and is active
+    const config = await this.prisma.dataSourceConfig.findFirst({
+      where: { id, isActive: true },
+    });
+    if (!config) {
+      throw new NotFoundException('Data source not found or inactive');
+    }
+
+    // Encrypt the API key
+    const { encrypted, iv } = encrypt(body.apiKey);
+
+    // Upsert credential (traders always set shared: false)
+    await this.prisma.dataSourceCredential.upsert({
+      where: {
+        userId_dataSourceId: {
+          userId: user.userId,
+          dataSourceId: id,
+        },
+      },
+      create: {
+        userId: user.userId,
+        dataSourceId: id,
+        apiKeyEncrypted: encrypted,
+        apiKeyIv: iv,
+        shared: false,
+      },
+      update: {
+        apiKeyEncrypted: encrypted,
+        apiKeyIv: iv,
+        shared: false,
+        isActive: true,
+      },
+    });
+
+    return { success: true, maskedKey: `***${body.apiKey.slice(-4)}` };
+  }
+
+  @Delete('users/me/data-sources/:id/credential')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete trader credential for a data source' })
+  @ApiResponse({ status: 200, description: 'Credential deleted' })
+  async deleteMyDataSourceCredential(
+    @Param('id') id: string,
+    @CurrentUser() user: RequestUser,
+  ) {
+    await this.prisma.dataSourceCredential.deleteMany({
+      where: { userId: user.userId, dataSourceId: id },
+    });
+    return { success: true };
   }
 
   // ── /admin/users ──────────────────────────────────────────────────────────

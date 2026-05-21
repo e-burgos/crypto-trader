@@ -715,12 +715,16 @@ ${numbered}`;
     const failedSources: string[] = [];
 
     // Load credentials for all providers that have them (optional or required)
+    // Cascade: trader own key → admin shared key → skip
     const credentialMap = new Map<string, string>();
     if (activeConfigs.length > 0) {
+      const dataSourceIds = activeConfigs.map((c) => c.id);
+
+      // 1. Load trader's own credentials
       const creds = await this.prisma.dataSourceCredential.findMany({
         where: {
           userId,
-          dataSourceId: { in: activeConfigs.map((c) => c.id) },
+          dataSourceId: { in: dataSourceIds },
           isActive: true,
         },
       });
@@ -731,6 +735,31 @@ ${numbered}`;
             cfg.name,
             decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
           );
+        }
+      }
+
+      // 2. Fallback: admin shared credentials for sources trader doesn't have
+      const missingSourceIds = dataSourceIds.filter((dsId) => {
+        const cfg = activeConfigs.find((c) => c.id === dsId);
+        return cfg && !credentialMap.has(cfg.name);
+      });
+
+      if (missingSourceIds.length > 0) {
+        const sharedCreds = await this.prisma.dataSourceCredential.findMany({
+          where: {
+            dataSourceId: { in: missingSourceIds },
+            isActive: true,
+            shared: true,
+          },
+        });
+        for (const cred of sharedCreds) {
+          const cfg = activeConfigs.find((c) => c.id === cred.dataSourceId);
+          if (cfg && !credentialMap.has(cfg.name)) {
+            credentialMap.set(
+              cfg.name,
+              decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+            );
+          }
         }
       }
     }

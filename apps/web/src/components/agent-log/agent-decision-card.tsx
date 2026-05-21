@@ -137,14 +137,16 @@ export function AgentDecisionCard({
           <ConfidenceBar value={decision.confidence} color={color} />
 
           {/* Economic data row */}
-          {(decision.llmCostUsd != null || decision.expectedNetValueUsd != null) && (
+          {(decision.llmCostUsd != null ||
+            decision.expectedNetValueUsd != null) && (
             <div className="flex items-center gap-3 text-[11px]">
               {decision.llmCostUsd != null && (
                 <div className="flex items-center gap-1 rounded-md bg-muted/40 px-2 py-1">
                   <DollarSign className="h-3 w-3 text-muted-foreground" />
                   <span className="text-muted-foreground">Cost:</span>
                   <span className="font-semibold text-foreground">
-                    ${decision.llmCostUsd < 0.01
+                    $
+                    {decision.llmCostUsd < 0.01
                       ? decision.llmCostUsd.toFixed(4)
                       : decision.llmCostUsd.toFixed(2)}
                   </span>
@@ -163,8 +165,8 @@ export function AgentDecisionCard({
                           : 'text-foreground',
                     )}
                   >
-                    {decision.expectedNetValueUsd > 0 ? '+' : ''}
-                    ${decision.expectedNetValueUsd.toFixed(2)}
+                    {decision.expectedNetValueUsd > 0 ? '+' : ''}$
+                    {decision.expectedNetValueUsd.toFixed(2)}
                   </span>
                 </div>
               )}

@@ -142,7 +142,7 @@ export class OrchestratorService {
         },
       }),
       this.prisma.position.findMany({
-        where: { userId, status: 'OPEN' },
+        where: { userId, configId, status: 'OPEN' },
         select: {
           asset: true,
           pair: true,
@@ -182,6 +182,8 @@ export class OrchestratorService {
     const recentDecision = await this.prisma.agentDecision.findFirst({
       where: {
         userId,
+        asset: config.asset,
+        pair: config.pair,
         createdAt: { gte: new Date(Date.now() - sentimentTtlMs) },
         metadata: { not: { equals: null } },
       },

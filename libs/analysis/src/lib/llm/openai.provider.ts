@@ -23,7 +23,7 @@ export class OpenAIProvider implements LLMProviderClient {
     systemPrompt: string,
     userPrompt: string,
   ): Promise<LLMResponse> {
-    const { data } = await axios.post(
+    const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model: this.model,
@@ -41,6 +41,7 @@ export class OpenAIProvider implements LLMProviderClient {
         timeout: 30000,
       },
     );
+    const data = response.data;
 
     return {
       text: data.choices?.[0]?.message?.content ?? '',
@@ -48,6 +49,7 @@ export class OpenAIProvider implements LLMProviderClient {
         inputTokens: data.usage?.prompt_tokens ?? 0,
         outputTokens: data.usage?.completion_tokens ?? 0,
       },
+      headers: response.headers as Record<string, string>,
     };
   }
 }

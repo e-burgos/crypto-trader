@@ -7,8 +7,11 @@ const mockLLMProvider = {
   complete: jest.fn(),
 };
 
+const mockCaptureRateLimits = jest.fn();
+
 jest.mock('@crypto-trader/analysis', () => ({
   createLLMProvider: jest.fn(() => mockLLMProvider),
+  captureRateLimits: (...args: unknown[]) => mockCaptureRateLimits(...args),
 }));
 
 jest.mock('../users/utils/encryption.util', () => ({
@@ -140,6 +143,49 @@ describe('SubAgentService', () => {
         expect.stringContaining('AEGIS'),
         expect.any(String),
       );
+    });
+
+    it('should invoke captureRateLimits when response includes headers', async () => {
+      const mockHeaders = {
+        'x-ratelimit-remaining': '95',
+        'x-ratelimit-limit': '100',
+      };
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"HOLD","confidence":0.5,"reasoning":"flat"}',
+        usage: { inputTokens: 50, outputTokens: 20 },
+        headers: mockHeaders,
+      });
+      mockCaptureRateLimits.mockClear();
+
+      await service.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 50 } },
+        'user-1',
+      );
+
+      expect(mockCaptureRateLimits).toHaveBeenCalledWith(
+        'user-1',
+        'GROQ',
+        mockHeaders,
+      );
+    });
+
+    it('should not invoke captureRateLimits when response has no headers', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"HOLD","confidence":0.5,"reasoning":"flat"}',
+        usage: { inputTokens: 50, outputTokens: 20 },
+      });
+      mockCaptureRateLimits.mockClear();
+
+      await service.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 50 } },
+        'user-1',
+      );
+
+      expect(mockCaptureRateLimits).not.toHaveBeenCalled();
     });
   });
 });

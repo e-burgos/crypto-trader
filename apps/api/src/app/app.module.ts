@@ -14,6 +14,8 @@ import { MarketModule } from '../market/market.module';
 import { ChatModule } from '../chat/chat.module';
 import { LlmModule } from '../llm/llm.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
+import { AgentToolsModule } from '../agents/tools/agent-tools.module';
+import { EvaluationModule } from '../agents/evaluation/evaluation.module';
 import { OpenRouterModule } from '../openrouter/openrouter.module';
 
 @Module({
@@ -33,6 +35,8 @@ import { OpenRouterModule } from '../openrouter/openrouter.module';
     ChatModule,
     LlmModule,
     AgentConfigModule,
+    AgentToolsModule,
+    EvaluationModule,
     OpenRouterModule,
   ],
   controllers: [AppController],

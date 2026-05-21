@@ -9,6 +9,10 @@ export interface LLMUsageLogParams {
   model: string;
   usage: { inputTokens: number; outputTokens: number };
   source: LLMSource;
+  agentId?: string;
+  decisionId?: string;
+  actualModel?: string;
+  requestId?: string;
 }
 
 export interface LLMUsageStats {
@@ -74,6 +78,10 @@ export class LLMUsageService {
           outputTokens: params.usage.outputTokens,
           costUsd,
           source: params.source,
+          agentId: (params.agentId as any) ?? undefined,
+          decisionId: params.decisionId ?? undefined,
+          actualModel: params.actualModel ?? undefined,
+          requestId: params.requestId ?? undefined,
         },
       });
     } catch (err) {

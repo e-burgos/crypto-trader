@@ -34,6 +34,7 @@ const PROVIDER_HEX: Record<string, string> = {
   GEMINI: '#60a5fa',
   MISTRAL: '#f97316',
   TOGETHER: '#22d3ee',
+  OPENROUTER: '#e879f9',
 };
 
 const FALLBACK_COLORS = [
@@ -301,6 +302,9 @@ export function AIUsageDashboard() {
                     <th className="pb-2 text-right font-medium">
                       {t('settings.cost', 'Cost')}
                     </th>
+                    <th className="pb-2 text-right font-medium">
+                      {t('settings.avgCostPerCall', 'Avg/Call')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -337,6 +341,11 @@ export function AIUsageDashboard() {
                         </td>
                         <td className="py-2 text-right font-medium">
                           {formatCost(model.costUsd)}
+                        </td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {model.callCount > 0
+                            ? formatCost(model.costUsd / model.callCount)
+                            : '—'}
                         </td>
                       </tr>
                     )),

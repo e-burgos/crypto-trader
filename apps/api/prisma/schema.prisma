@@ -121,6 +121,26 @@ enum RiskProfile {
   AGGRESSIVE
 }
 
+// ── Spec 42 — Agent Profit Optimizer ─────────────────────────────────────────
+
+enum AgentToolName {
+  PORTFOLIO_CONTEXT
+  MARKET_EDGE
+  TRADE_SIMULATION
+  RISK_BUDGET
+  DECISION_MEMORY
+  TOKEN_BUDGET
+}
+
+enum AgentOutcomeStatus {
+  PENDING
+  WIN
+  LOSS
+  NEUTRAL
+  MISSED_OPPORTUNITY
+  AVOIDED_LOSS
+}
+
 // ── Spec 40 — Market Data Sources ────────────────────────────────────────────
 
 enum DataSourceCategory {
@@ -163,6 +183,10 @@ model User {
   llmUsageLogs      LlmUsageLog[]
   agentConfigs      AgentConfig[]
   dataSourceCredentials DataSourceCredential[]
+  budgetPolicy      AgentBudgetPolicy?
+  modelPolicies     AgentModelPolicy[]
+  toolInvocations   AgentToolInvocation[]
+  decisionEvaluations AgentDecisionEvaluation[]
 
   @@map("users")
 }
@@ -307,6 +331,10 @@ model AgentDecision {
   waitMinutes   Int
   /// Orchestration metadata: { orchestrated: boolean, subAgentResults: SubAgentResult[] }
   metadata      Json?
+  llmCostUsd          Float?
+  dataCostUsd         Float?
+  expectedNetValueUsd Float?
+  modelRoutingReason  String?
   createdAt     DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -523,12 +551,17 @@ model LlmUsageLog {
   outputTokens Int
   costUsd      Float
   source       LLMSource
+  agentId      AgentId?
+  decisionId   String?
+  actualModel  String?
+  requestId    String?
   createdAt    DateTime    @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([userId, provider])
+  @@index([agentId, createdAt])
   @@map("llm_usage_logs")
 }
 
@@ -621,4 +654,93 @@ model DataSourceCredential {
 
   @@unique([userId, dataSourceId])
   @@map("data_source_credentials")
+}
+
+// ── Spec 42: Agent Profit Optimizer — telemetry & budget models ──────────────
+
+model AgentBudgetPolicy {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  dailyTokenBudget      Int      @default(200000)
+  dailyUsdBudget        Float    @default(5)
+  maxCostPerDecisionUsd Float    @default(0.15)
+  livePremiumOnly       Boolean  @default(true)
+  minEvToCostRatio      Float    @default(10)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("agent_budget_policies")
+}
+
+model AgentModelPolicy {
+  id              String       @id @default(cuid())
+  userId          String?
+  agentId         AgentId
+  mode            TradingMode?
+  riskProfile     RiskProfile?
+  provider        LLMProvider
+  model           String
+  maxInputTokens  Int          @default(8000)
+  maxOutputTokens Int          @default(768)
+  temperature     Float        @default(0.2)
+  isPremium       Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, agentId])
+  @@index([agentId, mode, riskProfile])
+  @@map("agent_model_policies")
+}
+
+model AgentToolInvocation {
+  id             String        @id @default(cuid())
+  userId         String
+  decisionId     String?
+  agentId        AgentId
+  toolName       AgentToolName
+  inputHash      String
+  outputHash     String?
+  status         String
+  latencyMs      Int
+  freshnessMs    Int?
+  inputTokens    Int           @default(0)
+  outputTokens   Int           @default(0)
+  costUsd        Float         @default(0)
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([decisionId])
+  @@index([agentId, toolName])
+  @@map("agent_tool_invocations")
+}
+
+model AgentDecisionEvaluation {
+  id                   String             @id @default(cuid())
+  decisionId           String
+  userId               String
+  horizonMinutes       Int
+  status               AgentOutcomeStatus @default(PENDING)
+  priceAtDecision      Float
+  priceAtEvaluation    Float?
+  realizedPnlUsd       Float?
+  hypotheticalPnlUsd   Float?
+  missedOpportunityUsd Float?
+  maxAdverseMovePct    Float?
+  maxFavorableMovePct  Float?
+  marketRegime         String?
+  evaluatedAt          DateTime?
+  createdAt            DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, decisionId])
+  @@index([status, createdAt])
+  @@map("agent_decision_evaluations")
 }

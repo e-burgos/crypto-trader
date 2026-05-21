@@ -101,6 +101,10 @@ export interface AgentDecision {
   configDetails?: AgentDecisionConfigDetails | null;
   llmProvider?: string | null;
   llmModel?: string | null;
+  llmCostUsd?: number | null;
+  dataCostUsd?: number | null;
+  expectedNetValueUsd?: number | null;
+  modelRoutingReason?: string | null;
   sigmaSentiment?: {
     sentiment: number;
     impact: string;

@@ -102,8 +102,10 @@ describe('MarketService.buildEnrichedSnapshot (integration)', () => {
       .mockResolvedValueOnce(mockDerivatives)
       .mockResolvedValueOnce(mockDefiHealth);
 
-    const result: EnrichedMarketSnapshot =
-      await service.buildEnrichedSnapshot('BTCUSDT');
+    const result: EnrichedMarketSnapshot = await service.buildEnrichedSnapshot(
+      'user-1',
+      'BTCUSDT',
+    );
 
     expect(result.symbol).toBe('BTCUSDT');
     expect(result.currentPrice).toBe(95000);
@@ -130,7 +132,7 @@ describe('MarketService.buildEnrichedSnapshot (integration)', () => {
 
     registry.fetchFromProvider!.mockResolvedValueOnce(mockFearGreed);
 
-    const result = await service.buildEnrichedSnapshot('BTCUSDT');
+    const result = await service.buildEnrichedSnapshot('user-1', 'BTCUSDT');
 
     expect(result.fearGreed).toEqual(mockFearGreed.data);
     expect(result.derivatives).toBeNull();
@@ -156,7 +158,7 @@ describe('MarketService.buildEnrichedSnapshot (integration)', () => {
       .fetchFromProvider!.mockResolvedValueOnce(mockFearGreed)
       .mockResolvedValueOnce(null); // coinalyze failed
 
-    const result = await service.buildEnrichedSnapshot('BTCUSDT');
+    const result = await service.buildEnrichedSnapshot('user-1', 'BTCUSDT');
 
     expect(result.fearGreed).toEqual(mockFearGreed.data);
     expect(result.derivatives).toBeNull();
@@ -179,7 +181,7 @@ describe('MarketService.buildEnrichedSnapshot (integration)', () => {
       .fetchFromProvider!.mockResolvedValueOnce(null)
       .mockResolvedValueOnce(null);
 
-    const result = await service.buildEnrichedSnapshot('BTCUSDT');
+    const result = await service.buildEnrichedSnapshot('user-1', 'BTCUSDT');
 
     expect(result.symbol).toBe('BTCUSDT');
     expect(result.currentPrice).toBe(95000);
@@ -192,7 +194,7 @@ describe('MarketService.buildEnrichedSnapshot (integration)', () => {
   it('should report snapshotBuildTimeMs and builtAt', async () => {
     registry.getActiveConfigs!.mockResolvedValue([]);
 
-    const result = await service.buildEnrichedSnapshot('BTCUSDT');
+    const result = await service.buildEnrichedSnapshot('user-1', 'BTCUSDT');
 
     expect(result.snapshotBuildTimeMs).toBeGreaterThanOrEqual(0);
     expect(result.builtAt).toBeDefined();

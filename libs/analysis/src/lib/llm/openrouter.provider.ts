@@ -41,7 +41,7 @@ export class OpenRouterProvider implements LLMProviderClient {
       body['models'] = [this.model, ...this.fallbackModels];
     }
 
-    const { data } = await axios.post(
+    const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       body,
       {
@@ -54,6 +54,7 @@ export class OpenRouterProvider implements LLMProviderClient {
         timeout: 60000,
       },
     );
+    const data = response.data;
 
     const rawText = data.choices?.[0]?.message?.content ?? '';
 
@@ -75,6 +76,8 @@ export class OpenRouterProvider implements LLMProviderClient {
         inputTokens: data.usage?.prompt_tokens ?? 0,
         outputTokens: data.usage?.completion_tokens ?? 0,
       },
+      headers: response.headers as Record<string, string>,
+      actualModel: data.model ?? undefined,
     };
   }
 }

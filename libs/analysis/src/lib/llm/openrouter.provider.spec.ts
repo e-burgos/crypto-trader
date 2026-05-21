@@ -100,6 +100,32 @@ describe('OpenRouterProvider', () => {
     expect(result.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
   });
 
+  it('should capture response headers and actualModel', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [{ message: { content: '{"decision":"BUY"}' } }],
+        usage: { prompt_tokens: 200, completion_tokens: 100 },
+        model: 'anthropic/claude-sonnet-4-20250514',
+      },
+      headers: {
+        'x-ratelimit-remaining': '95',
+        'x-ratelimit-limit': '100',
+      },
+    });
+
+    const provider = new OpenRouterProvider({
+      apiKey: 'sk-or-test',
+      model: 'anthropic/claude-sonnet-4',
+    });
+    const result = await provider.complete('sys', 'usr');
+
+    expect(result.headers).toEqual({
+      'x-ratelimit-remaining': '95',
+      'x-ratelimit-limit': '100',
+    });
+    expect(result.actualModel).toBe('anthropic/claude-sonnet-4-20250514');
+  });
+
   it('should use default model when none specified', async () => {
     mockedAxios.post.mockResolvedValue({
       data: {

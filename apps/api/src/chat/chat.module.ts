@@ -6,6 +6,7 @@ import { PrismaModule } from '../prisma';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 import { LlmModule } from '../llm/llm.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
+import { TradingModule } from '../trading/trading.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AgentConfigModule } from '../agents/agent-config.module';
     OrchestratorModule,
     LlmModule,
     AgentConfigModule,
+    TradingModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
     }),

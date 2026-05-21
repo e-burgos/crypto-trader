@@ -658,7 +658,10 @@ ${numbered}`;
    * external providers in parallel. Falls back gracefully — if a provider
    * fails, the corresponding field is null.
    */
-  async buildEnrichedSnapshot(symbol: string): Promise<EnrichedMarketSnapshot> {
+  async buildEnrichedSnapshot(
+    userId: string,
+    symbol: string,
+  ): Promise<EnrichedMarketSnapshot> {
     const start = Date.now();
     const baseSnapshot = await this.getSnapshot(symbol);
 
@@ -691,6 +694,7 @@ ${numbered}`;
     if (activeConfigs.length > 0) {
       const creds = await this.prisma.dataSourceCredential.findMany({
         where: {
+          userId,
           dataSourceId: { in: activeConfigs.map((c) => c.id) },
           isActive: true,
         },

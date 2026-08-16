@@ -1,0 +1,6 @@
+{
+  "$schema": "../schemas/specs-index.schema.json",
+  "_comment": "Central SDD spec registry. Append-only — never edit existing entries, only add new ones. Updated when a spec branch is merged to master.",
+  "_convention": "Folder/ID format: spec-[gh-user]-[NNN]-[slug] where NNN is the author's own counter (not global). Each developer maintains their own sequence.",
+  "specs": []
+}

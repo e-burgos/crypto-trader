@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sdd/schemas/cycle-tasks.schema.json",
+  "title": "SDD Per-Cycle Tasks (sdd/specs/{spec-id}/cycles/cycle-XX/tasks.json)",
+  "description": "Canonical task registry of one cycle. Created by sdd-planner, task statuses updated by sdd-implementor-*, closed by sdd-reviewer. The root sdd/tasks.json is only an index over these files.",
+  "type": "object",
+  "required": [
+    "spec",
+    "cycle",
+    "module",
+    "apps",
+    "flow",
+    "user_stories_generated",
+    "prerequisites",
+    "tasks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "spec": {
+      "type": "string",
+      "pattern": "^spec-[a-z0-9-]+-\\d{3}-[a-z0-9-]+$"
+    },
+    "cycle": { "type": "integer", "minimum": 1 },
+    "module": { "type": "string", "minLength": 1 },
+    "apps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^(apps|libs|tools)/[a-z][a-z0-9-]*$"
+      }
+    },
+    "flow": {
+      "enum": ["full", "reduced"],
+      "description": "full = complete SDD cycle (functional/planner/architect). reduced = structural refactor without user stories (tasks may have empty user_stories)."
+    },
+    "user_stories_generated": { "type": "boolean" },
+    "prerequisites": {
+      "type": "object",
+      "required": ["tasks_generated"],
+      "additionalProperties": false,
+      "properties": { "tasks_generated": { "type": "boolean" } }
+    },
+    "tasks": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/TaskEntry" }
+    }
+  },
+  "definitions": {
+    "TaskEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "user_stories",
+        "estimation_hours",
+        "story_points",
+        "depends_on",
+        "status",
+        "files"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^TASK(-[A-Z]+)?(-\\d+)+$",
+          "description": "Convention for new cycles: TASK-[NNN] (e.g. TASK-001). Scope is this file, so no cycle/spec prefix is needed. Legacy formats are tolerated by the pattern."
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "user_stories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "HU/US ids from functional.md. Empty array only for flow: reduced."
+        },
+        "estimation_hours": { "type": "number", "exclusiveMinimum": 0 },
+        "story_points": { "enum": [1, 2, 3, 5, 8, 13] },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^TASK(-[A-Z]+)?(-\\d+)+$" }
+        },
+        "status": { "enum": ["pending", "in-progress", "done", "skipped"] },
+        "files": { "type": "array", "items": { "type": "string" } },
+        "usage": {
+          "type": "object",
+          "required": ["tokens_in", "tokens_out"],
+          "additionalProperties": false,
+          "description": "Optional telemetry: approximate tokens/time spent implementing this task, recorded by the implementor (or the reviewer at close). Feeds the viewer's Costs dashboard.",
+          "properties": {
+            "tokens_in": { "type": "integer", "minimum": 0 },
+            "tokens_out": { "type": "integer", "minimum": 0 },
+            "duration_minutes": { "type": "number", "minimum": 0 },
+            "model_tier": { "enum": ["haiku", "sonnet", "opus", "fable"] }
+          }
+        }
+      }
+    }
+  }
+}

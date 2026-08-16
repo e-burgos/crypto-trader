@@ -1,0 +1,28 @@
+{
+  "$schema": "./schemas/global.schema.json",
+  "project": "crypto-trader",
+  "description": "Fullstack crypto trading platform",
+  "version": "0.1.0",
+  "completed_modules": [],
+  "in_progress_modules": [],
+  "pending_modules": [],
+  "monorepo": {
+    "tool": "Nx",
+    "package_manager": "pnpm",
+    "apps": {
+      "api": "apps/api — app",
+      "api-e2e": "apps/api-e2e — app",
+      "web": "apps/web — app",
+      "web-e2e": "apps/web-e2e — app"
+    },
+    "libs": {
+      "analysis": "libs/analysis — lib",
+      "data-fetcher": "libs/data-fetcher — lib",
+      "trading-engine": "libs/trading-engine — lib",
+      "openrouter": "libs/openrouter — lib",
+      "providers": "libs/providers — lib",
+      "shared": "libs/shared — lib",
+      "ui": "libs/ui — lib"
+    }
+  }
+}

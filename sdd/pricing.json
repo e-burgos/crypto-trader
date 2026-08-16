@@ -1,0 +1,13 @@
+{
+  "$schema": "./schemas/pricing.schema.json",
+  "_description": "Tarifas para el dashboard de costos del visor SDD (sdd/docs → Costos). Editable por el equipo: ajustar la tarifa hora tradicional y los precios por tier a los valores vigentes. Los precios de modelos son USD por millón de tokens (API first-party).",
+  "currency": "USD",
+  "traditional_hourly_rate": 50,
+  "model_prices_per_mtok": {
+    "haiku": { "input": 1, "output": 5 },
+    "sonnet": { "input": 3, "output": 15 },
+    "opus": { "input": 5, "output": 25 },
+    "fable": { "input": 10, "output": 50 }
+  },
+  "prices_updated_at": "2026-08-13"
+}

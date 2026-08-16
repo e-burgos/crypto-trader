@@ -1,0 +1,6 @@
+{
+  "$schema": "./schemas/tasks-index.schema.json",
+  "_comment": "Lightweight index over per-cycle task files. Canonical task data lives in each sdd/specs/{spec-id}/cycles/cycle-XX/tasks.json. Do not edit task detail here. Regenerate with: pnpm sdd:rebuild-tasks-index",
+  "sdd_version": "4.0",
+  "specs": {}
+}

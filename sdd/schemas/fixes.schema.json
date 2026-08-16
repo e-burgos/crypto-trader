@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sdd/schemas/fixes.schema.json",
+  "title": "SDD Fix Registry (sdd/fixes.json)",
+  "description": "Registry of changes made outside the normal SDD flow (FIX GATE). Created by sdd-orchestrator, closed by the developer, validated/absorbed by sdd-reviewer at cycle close. Replaces the former sdd/schema-fixes.json.",
+  "type": "object",
+  "required": ["fixes"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "_description": { "type": "string" },
+    "_version": { "type": "string" },
+    "_convention": { "type": "string" },
+    "_keywords": { "type": "array", "items": { "type": "string" } },
+    "fixes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/FixEntry" }
+    }
+  },
+  "definitions": {
+    "FixEntry": {
+      "type": "object",
+      "required": [
+        "id",
+        "author",
+        "spec_id",
+        "fix_document",
+        "type",
+        "severity",
+        "created_at",
+        "resolved_at",
+        "title",
+        "estimation_hours",
+        "description",
+        "justification",
+        "related_modules",
+        "affected_files",
+        "test_reference",
+        "status",
+        "cycle"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^FIX-[a-z0-9-]+-\\d{3}$",
+          "description": "FIX-[gh-user]-[seq] (repo-level) or FIX-[gh-user]-[spec-NNN]-[seq] (spec-scoped)."
+        },
+        "author": { "type": "string", "minLength": 1 },
+        "spec_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^spec-[a-z0-9-]+-\\d{3}-[a-z0-9-]+$"
+            },
+            { "type": "null" }
+          ],
+          "description": "null for repo-level fixes."
+        },
+        "fix_document": {
+          "type": "string",
+          "pattern": "^sdd/(fixes|specs/spec-[a-z0-9-]+/fixes)/fix-[a-z0-9-]+\\.md$"
+        },
+        "type": { "enum": ["HOTFIX", "BUGFIX", "FIX", "IMPROVEMENT"] },
+        "severity": { "enum": ["critical", "high", "medium", "low"] },
+        "created_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "resolved_at": {
+          "oneOf": [
+            { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+            { "type": "null" }
+          ]
+        },
+        "validated_at": {
+          "oneOf": [
+            { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+            { "type": "null" }
+          ]
+        },
+        "title": { "type": "string", "maxLength": 120 },
+        "estimation_hours": { "type": "number", "minimum": 0 },
+        "description": { "type": "string" },
+        "justification": { "type": "string" },
+        "related_modules": { "type": "array", "items": { "type": "string" } },
+        "affected_files": { "type": "array", "items": { "type": "string" } },
+        "test_reference": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "in-progress",
+            "implemented",
+            "validated",
+            "absorbed"
+          ],
+          "description": "pending → in-progress → implemented (dev) → validated | absorbed (sdd-reviewer at cycle close)."
+        },
+        "cycle": {
+          "oneOf": [
+            { "type": "string", "pattern": "^cycle-\\d{2}$" },
+            { "type": "null" }
+          ]
+        },
+        "process_note": { "type": "string" }
+      }
+    }
+  }
+}

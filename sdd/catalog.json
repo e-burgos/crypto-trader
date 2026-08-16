@@ -1,0 +1,153 @@
+{
+  "$schema": "./schemas/catalog.schema.json",
+  "_description": "Manifest generado del contenido de sdd/ para consumo del visor (sdd/docs) en hosting estatico sin listado de directorios. Regenerar con: pnpm sdd:rebuild-catalog. NUNCA editar a mano — pnpm sdd:validate falla si esta desactualizado.",
+  "agents": [
+    {
+      "file": "ci-monitor-subagent.agent.md"
+    },
+    {
+      "file": "sdd-architect.agent.md"
+    },
+    {
+      "file": "sdd-functional.agent.md"
+    },
+    {
+      "file": "sdd-implementor-back.agent.md"
+    },
+    {
+      "file": "sdd-implementor-front.agent.md"
+    },
+    {
+      "file": "sdd-orchestrator.agent.md"
+    },
+    {
+      "file": "sdd-planner.agent.md"
+    },
+    {
+      "file": "sdd-reviewer.agent.md"
+    }
+  ],
+  "skills": [
+    {
+      "dir": "generate-api-contract",
+      "file": "skill.md"
+    },
+    {
+      "dir": "generate-nestjs-module",
+      "file": "skill.md"
+    },
+    {
+      "dir": "generate-prisma-schema",
+      "file": "skill.md"
+    },
+    {
+      "dir": "generate-react-component",
+      "file": "skill.md"
+    },
+    {
+      "dir": "generate-springboot-api",
+      "file": "skill.md"
+    },
+    {
+      "dir": "init-nx-workspace",
+      "file": "skill.md"
+    },
+    {
+      "dir": "scaffold-nx",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-architect",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-data-schemas",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-file-structure",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-functional",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-hermes",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-implementor-back",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-implementor-front",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-orchestrator",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-planner",
+      "file": "skill.md"
+    },
+    {
+      "dir": "sdd-reviewer",
+      "file": "skill.md"
+    },
+    {
+      "dir": "setup-graphify",
+      "file": "skill.md"
+    }
+  ],
+  "prompts": [
+    {
+      "file": "check-spec-before-implement.prompt.md"
+    },
+    {
+      "file": "hermes-resume.prompt.md"
+    },
+    {
+      "file": "hotfix-bypass-gate.prompt.md"
+    },
+    {
+      "file": "review-cycle.prompt.md"
+    },
+    {
+      "file": "start-sdd-cycle.prompt.md"
+    }
+  ],
+  "schemas": [
+    {
+      "file": "api.schema.json"
+    },
+    {
+      "file": "components.schema.json"
+    },
+    {
+      "file": "cycle-tasks.schema.json"
+    },
+    {
+      "file": "cycle.schema.json"
+    },
+    {
+      "file": "db-schema.schema.json"
+    },
+    {
+      "file": "fixes.schema.json"
+    },
+    {
+      "file": "global.schema.json"
+    },
+    {
+      "file": "pricing.schema.json"
+    },
+    {
+      "file": "specs-index.schema.json"
+    },
+    {
+      "file": "tasks-index.schema.json"
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "cycle": 1,
+  "module": "trading-agents-core",
+  "apps": ["apps/api", "libs/analysis", "libs/openrouter"],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": { "tasks_generated": true },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Rescatar RiskBudgetTool como servicio de dominio",
+      "user_stories": ["HU-01-04"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-002",
+      "title": "Rescatar TradeSimulationTool como servicio de dominio",
+      "user_stories": ["HU-01-04"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-003",
+      "title": "Rescatar PortfolioContextTool como servicio de dominio",
+      "user_stories": ["HU-01-04"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-004",
+      "title": "AgentDefinition como única fuente de system prompts",
+      "user_stories": ["HU-01-03"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-005",
+      "title": "Crear servicio único de resolución provider/modelo",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-006",
+      "title": "Migrar callers al servicio único y eliminar cascadas duplicadas",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": ["TASK-005"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-007",
+      "title": "Cablear pricing en vivo de OpenRouter al registro de costo LLM",
+      "user_stories": ["HU-01-01"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-008",
+      "title": "Cablear scheduleEvaluation al persistir AgentDecision",
+      "user_stories": ["HU-01-02"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-009",
+      "title": "Evaluar decisiones contra precio real de mercado",
+      "user_stories": ["HU-01-02"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-008"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-010",
+      "title": "Poda de agent tools, registry y context-planner",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-011",
+      "title": "Poda de model-router, llm-analyzer y método muerto",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-012",
+      "title": "Colapsar indirección AgentId y verificación final de cierre",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": ["TASK-004", "TASK-006", "TASK-007", "TASK-009", "TASK-010", "TASK-011"],
+      "status": "pending",
+      "files": []
+    }
+  ]
+}

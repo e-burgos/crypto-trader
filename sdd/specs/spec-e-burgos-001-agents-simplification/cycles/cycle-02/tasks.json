@@ -15,8 +15,11 @@
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/evaluation/evaluation.processor.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.spec.ts"
+      ]
     },
     {
       "id": "TASK-002",
@@ -25,8 +28,19 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-identity.ts",
+        "apps/api/src/agents/agent-config-resolver.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.spec.ts",
+        "apps/api/src/agents/agent-prompt.service.ts",
+        "apps/api/src/agents/agent-config.controller.ts",
+        "apps/api/src/agents/admin-agent-config.controller.ts",
+        "apps/api/src/agents/index.ts",
+        "apps/api/src/chat/chat.service.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.service.ts"
+      ]
     },
     {
       "id": "TASK-003",
@@ -96,7 +110,7 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -116,8 +130,17 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/dto/decision-synthesis.dto.ts",
+        "apps/api/src/orchestrator/dto/aegis-verdict.schema.ts",
+        "apps/api/src/orchestrator/dto/aegis-verdict.schema.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/json-parse.util.ts",
+        "apps/api/prisma/seed/agents.ts"
+      ]
     },
     {
       "id": "TASK-010",

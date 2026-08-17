@@ -12,37 +12,33 @@ import {
   OpenRouterProvider,
 } from '@crypto-trader/analysis';
 import type { LLMProvider as AnalysisLLMProvider } from '@crypto-trader/shared';
-import { MODEL_SLOT_IDS, ModelSlotId } from './agent-identity';
+import { MODEL_SLOT_IDS, ModelSlotId, toAgentId } from './agent-identity';
 
-export interface ResolvedAgentConfig {
-  agentId: AgentId;
+export type ResolutionSource = 'override' | 'user' | 'admin' | 'preset' | 'credential';
+
+export interface ResolvedAgentModel {
+  slot: ModelSlotId;
   provider: LLMProvider;
   model: string;
-  source: 'user' | 'admin' | 'fallback';
+  source: ResolutionSource;
+}
+
+export interface ResolvedAgentClient extends ResolvedAgentModel {
+  client: LLMProviderClient;
 }
 
 export interface AgentHealthItem {
-  agentId: AgentId;
+  slot: ModelSlotId;
   healthy: boolean;
   provider: LLMProvider;
   model: string;
-  source: 'user' | 'admin' | 'fallback';
+  source: ResolutionSource;
   hasKey: boolean;
 }
 
 export interface AgentHealthReport {
   healthy: boolean;
   agents: AgentHealthItem[];
-}
-
-export type ResolutionSource = 'override' | 'user' | 'admin' | 'preset' | 'credential';
-
-export interface ResolvedAgentClient {
-  slot: ModelSlotId;
-  provider: LLMProvider;
-  model: string;
-  source: ResolutionSource;
-  client: LLMProviderClient;
 }
 
 export class NoLLMCredentialError extends BadRequestException {
@@ -53,8 +49,6 @@ export class NoLLMCredentialError extends BadRequestException {
   }
 }
 
-// Hardcoded fallback = PRESET_FREE (OpenRouter free models, chosen by agent role).
-// Updated April 2026 — see agent-presets.ts for the full rationale per agent.
 const AGENT_FALLBACK_CONFIGS = PRESET_FREE as Record<
   AgentId,
   { provider: LLMProvider; model: string }
@@ -68,15 +62,12 @@ export class AgentConfigResolverService {
     private readonly platformLLMProviderService: PlatformLLMProviderService,
   ) {}
 
-  /**
-   * Resolve the effective config for a single agent.
-   * Priority: user override > admin default > hardcoded fallback.
-   */
   async resolveConfig(
-    agentId: AgentId,
+    slot: ModelSlotId,
     userId: string,
-  ): Promise<ResolvedAgentConfig> {
-    // 1. User override
+  ): Promise<ResolvedAgentModel> {
+    const agentId = toAgentId(slot);
+
     const userOverride = await this.agentConfigService.getUserAgentConfig(
       userId,
       agentId,
@@ -85,7 +76,7 @@ export class AgentConfigResolverService {
       const hasKey = await this.hasActiveKey(userId, userOverride.provider);
       if (hasKey) {
         return {
-          agentId,
+          slot,
           provider: userOverride.provider,
           model: userOverride.model,
           source: 'user',
@@ -93,43 +84,32 @@ export class AgentConfigResolverService {
       }
     }
 
-    // 2. Admin default
     const adminDefault =
       await this.agentConfigService.getAdminAgentConfig(agentId);
     if (adminDefault) {
       return {
-        agentId,
+        slot,
         provider: adminDefault.provider,
         model: adminDefault.model,
         source: 'admin',
       };
     }
 
-    // 3. Hardcoded fallback
     const fallback = AGENT_FALLBACK_CONFIGS[agentId];
     return {
-      agentId,
+      slot,
       provider: fallback.provider,
       model: fallback.model,
-      source: 'fallback',
+      source: 'preset',
     };
   }
 
-  /**
-   * Resolve configs for all configurable agents (excluding abstract 'orchestrator').
-   */
-  async resolveAllConfigs(userId: string): Promise<ResolvedAgentConfig[]> {
+  async resolveAllConfigs(userId: string): Promise<ResolvedAgentModel[]> {
     return Promise.all(
-      MODEL_SLOT_IDS.map((slot) =>
-        this.resolveConfig(slot as unknown as AgentId, userId),
-      ),
+      MODEL_SLOT_IDS.map((slot) => this.resolveConfig(slot, userId)),
     );
   }
 
-  /**
-   * Health check: verify user has active keys for all resolved providers.
-   * Optionally simulate removing a provider.
-   */
   async checkHealth(
     userId: string,
     simulateRemoveProvider?: LLMProvider,
@@ -142,8 +122,8 @@ export class AgentConfigResolverService {
           hasKey = false;
         }
         return {
-          agentId: cfg.agentId,
-          healthy: hasKey, // true solo si hay key activa — admin/fallback no garantizan disponibilidad
+          slot: cfg.slot,
+          healthy: hasKey,
           provider: cfg.provider,
           model: cfg.model,
           source: cfg.source,
@@ -168,11 +148,6 @@ export class AgentConfigResolverService {
     return count > 0;
   }
 
-  /**
-   * Single entry point to obtain an LLM client for an agent slot.
-   * Cascade: explicit override > resolveConfig (user > admin > preset) > first active credential.
-   * @throws NoLLMCredentialError if no step reaches an active credential.
-   */
   async resolveClient(
     userId: string,
     slot: ModelSlotId,
@@ -199,7 +174,7 @@ export class AgentConfigResolverService {
       }
     }
 
-    const resolved = await this.resolveConfig(slot as unknown as AgentId, userId);
+    const resolved = await this.resolveConfig(slot, userId);
     const resolvedCred = await this.findActiveCredential(
       userId,
       resolved.provider,
@@ -212,7 +187,7 @@ export class AgentConfigResolverService {
         slot,
         provider: resolved.provider,
         model: resolved.model,
-        source: resolved.source === 'fallback' ? 'preset' : resolved.source,
+        source: resolved.source,
         client: this.buildClient(
           resolved.provider,
           decrypt(resolvedCred.apiKeyEncrypted, resolvedCred.apiKeyIv),

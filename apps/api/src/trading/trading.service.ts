@@ -892,7 +892,7 @@ export class TradingService implements OnModuleInit {
     if (!healthReport.healthy) {
       const unhealthy = healthReport.agents
         .filter((a) => !a.healthy)
-        .map((a) => a.agentId)
+        .map((a) => a.slot)
         .join(', ');
       throw new BadRequestException(
         `Agent health check failed. Unhealthy agents: ${unhealthy}`,

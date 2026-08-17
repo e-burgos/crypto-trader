@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { AgentId } from '../../generated/prisma/enums';
 import { PERSONA_AGENT_IDS, PersonaAgentId } from './agent-identity';
 
 const CACHE_TTL_MS = 60_000;
@@ -27,7 +26,7 @@ export class AgentPromptService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     const definitions = await this.prisma.agentDefinition.findMany({
-      where: { id: { in: PERSONA_AGENT_IDS as unknown as AgentId[] } },
+      where: { id: { in: [...PERSONA_AGENT_IDS] } },
       select: { id: true, isActive: true, systemPrompt: true },
     });
     const byId = new Map(
@@ -57,7 +56,7 @@ export class AgentPromptService implements OnModuleInit {
     }
 
     const definition = await this.prisma.agentDefinition.findUnique({
-      where: { id: agentId as unknown as AgentId },
+      where: { id: agentId },
       select: { systemPrompt: true, isActive: true },
     });
 

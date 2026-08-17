@@ -128,7 +128,7 @@ export class TradingProcessor {
       if (!healthReport.healthy) {
         const unhealthy = healthReport.agents
           .filter((a) => !a.healthy)
-          .map((a) => a.agentId)
+          .map((a) => a.slot)
           .join(', ');
         this.logger.warn(
           `Agent config health check failed for user ${userId} — unhealthy agents: ${unhealthy} — pausing`,

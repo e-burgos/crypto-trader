@@ -137,7 +137,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
     expect(result.provider).toBe(LLMProvider.GROQ);
   });
 
-  it('resolves via resolveConfig preset branch and maps its "fallback" source to "preset"', async () => {
+  it('resolves via resolveConfig preset branch with source "preset"', async () => {
     mockAgentConfigService.getUserAgentConfig.mockResolvedValueOnce(null);
     mockAgentConfigService.getAdminAgentConfig.mockResolvedValueOnce(null);
     mockPrisma.lLMCredential.findFirst.mockResolvedValueOnce(

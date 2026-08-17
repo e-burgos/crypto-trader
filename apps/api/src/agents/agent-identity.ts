@@ -1,4 +1,5 @@
 import type { AgentTask } from '../orchestrator/sub-agent.service';
+import { AgentId } from '../../generated/prisma/enums';
 
 // AgentId (Prisma) has 8 values for 2 overlapping axes — 6 personas ∪ 7 model slots — see architect.md cycle-01 §7.1
 
@@ -22,6 +23,20 @@ export const MODEL_SLOT_IDS = [
   'risk',
 ] as const;
 export type ModelSlotId = (typeof MODEL_SLOT_IDS)[number];
+
+const MODEL_SLOT_TO_AGENT_ID: Readonly<Record<ModelSlotId, AgentId>> = {
+  routing: AgentId.routing,
+  synthesis: AgentId.synthesis,
+  platform: AgentId.platform,
+  operations: AgentId.operations,
+  market: AgentId.market,
+  blockchain: AgentId.blockchain,
+  risk: AgentId.risk,
+};
+
+export function toAgentId(slot: ModelSlotId): AgentId {
+  return MODEL_SLOT_TO_AGENT_ID[slot];
+}
 
 export function resolveModelSlot(
   agentId: PersonaAgentId,

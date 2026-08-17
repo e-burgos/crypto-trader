@@ -19,8 +19,12 @@
       "created_in_cycle": "número de ciclo donde se definió por primera vez",
       "updated_in_cycle": "número del último ciclo que lo modificó (null si nunca se actualizó)",
       "description": "qué hace el endpoint",
-      "path_params": ["param1"],
-      "required_headers": ["Header-Name"],
+      "path_params": [
+        "param1"
+      ],
+      "required_headers": [
+        "Header-Name"
+      ],
       "request_body": {},
       "responses": {
         "200": "descripción"
@@ -47,7 +51,9 @@
         "updated_in_cycle": null,
         "description": "Scorecard de calidad de decisión por agente: win rate, P&L medio, costo medio y valor neto, agregados por régimen de mercado. Excluye del cómputo las evaluaciones PENDING y NOT_EVALUABLE y las expone como conteos aparte. Endpoint pre-existente en el código, registrado en el arnés SDD en este ciclo con el contrato post-cycle-01.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "query_params": {
           "agentId": "Filtra por agente (valor del enum AgentId)",
           "model": "Filtra por modelo LLM",
@@ -77,7 +83,9 @@
         "updated_in_cycle": null,
         "description": "Resumen agregado del scorecard: total evaluado, win/loss rate, P&L medio por decisión, costo total y ROI. Suma pendingCount y notEvaluableCount para distinguir lo aún no evaluable de lo neutro. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "query_params": {
           "agentId": "Filtra por agente (valor del enum AgentId)",
           "model": "Filtra por modelo LLM",
@@ -107,7 +115,9 @@
         "updated_in_cycle": null,
         "description": "Estadísticas de uso y costo LLM del usuario, por proveedor, por modelo y por día. Tras el cycle-01 el costo de tráfico OpenRouter se resuelve con el pricing en vivo del catálogo; label cubre OPENROUTER y TOGETHER y unpricedCallCount expone las llamadas que no se pudieron tarifar. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "query_params": {
           "period": "Ventana de agregación: 7d | 30d | 90d | all (default 30d)"
         },
@@ -129,7 +139,9 @@
         "updated_in_cycle": null,
         "description": "Politica de riesgo agregado por usuario (exposicion por activo entre configs, perdida diaria maxima, drawdown que pausa agentes). Si el usuario no tiene fila en user_risk_policies devuelve los defaults inactivos.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "request_body": {},
         "responses": {
           "200": "{ enabled, maxAssetExposureUsd, maxAssetExposurePct, maxDailyLossUsd, maxDrawdownPct, pauseAgentsOnDrawdown, pausedAt, pausedReason }",
@@ -148,7 +160,9 @@
         "updated_in_cycle": null,
         "description": "Upsert de la politica de riesgo agregado del usuario (crea la fila la primera vez). Con enabled=false limpia pausedAt/pausedReason. Reactivar agentes pausados sigue siendo POST /trading/start.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "request_body": {
           "enabled": "boolean — interruptor maestro de los limites agregados",
           "maxAssetExposureUsd": "number|null >= 0 — techo de exposicion nocional por activo entre todas las configs del usuario",
@@ -170,12 +184,14 @@
         "path": "/trading/config",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "implemented",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "request_body": {
           "_base": "CreateTradingConfigDto (asset, pair, mode, buyThreshold, sellThreshold, stopLossPct, takeProfitPct, minProfitPct, maxTradePct, maxConcurrentPositions, minIntervalMinutes, intervalMode, orderPriceOffsetPct, riskProfile, name)",
           "lossCutEnabled": "boolean (default false)",
@@ -209,12 +225,16 @@
         "path": "/trading/config/{id}",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "implemented",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo.",
-        "path_params": ["id"],
-        "required_headers": ["Authorization"],
+        "path_params": [
+          "id"
+        ],
+        "required_headers": [
+          "Authorization"
+        ],
         "request_body": {
           "_base": "EP-006 request_body (todos los campos opcionales)"
         },
@@ -237,7 +257,9 @@
         "updated_in_cycle": null,
         "description": "Posiciones del usuario paginadas. Endpoint pre-existente, registrado con la respuesta extendida del cycle-02: cada posicion suma el estado de proteccion nativa y de la maquina de trailing/parciales. Cambio aditivo: los clientes existentes ignoran los campos nuevos.",
         "path_params": [],
-        "required_headers": ["Authorization"],
+        "required_headers": [
+          "Authorization"
+        ],
         "query_params": {
           "page": "Pagina (default 1)",
           "limit": "Tamano de pagina (default 20)",

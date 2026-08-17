@@ -88,16 +88,16 @@ Para el detalle técnico de cada subproyecto, ver su constitución específica:
 
 | Subproyecto | Stack base | Última actualización |
 | ----------- | ---------- | -------------------- |
-| `apps/api` | NestJS 11, Prisma 7, PostgreSQL 16, Redis 7, Bull, Socket.io, Passport+JWT | spec-e-burgos-001 cycle-01 (2026-08-17) |
+| `apps/api` | NestJS 11, Prisma 7, PostgreSQL 16, Redis 7, Bull, Socket.io, Passport+JWT, zod 4 | spec-e-burgos-001 cycle-02 (2026-08-17) |
 | `apps/web` | React 19, Vite 8, TanStack Query 5, Zustand 5, Tailwind 3, react-i18next | cycle-0 (inicial) |
 | `apps/api-e2e` | Jest + Supertest | cycle-0 (inicial) |
 | `apps/web-e2e` | Playwright | cycle-0 (inicial) |
 | `libs/analysis` | TypeScript, SDKs LLM (OpenRouter, Anthropic, OpenAI, Groq, Gemini, Mistral) | spec-e-burgos-001 cycle-01 (2026-08-17) |
-| `libs/data-fetcher` | TypeScript, Binance REST/WS, rss-parser | spec-e-burgos-001 cycle-01 (2026-08-17) |
-| `libs/trading-engine` | TypeScript (Jest) | spec-e-burgos-001 cycle-01 (2026-08-17) |
+| `libs/data-fetcher` | TypeScript, Binance REST/WS (spot: MARKET/LIMIT/STOP_LOSS_LIMIT/OCO), rss-parser | spec-e-burgos-001 cycle-02 (2026-08-17) |
+| `libs/trading-engine` | TypeScript (Jest) | spec-e-burgos-001 cycle-02 (2026-08-17) |
 | `libs/openrouter` | TypeScript, @openrouter/sdk | cycle-0 (inicial) |
 | `libs/providers` | TypeScript (Vitest), APIs públicas de mercado | cycle-0 (inicial) |
-| `libs/shared` | TypeScript puro | cycle-0 (inicial) |
+| `libs/shared` | TypeScript puro | spec-e-burgos-001 cycle-02 (2026-08-17) |
 | `libs/ui` | React 19, Tailwind, Radix UI, lucide-react (Vitest) | cycle-0 (inicial) |
 
 ---

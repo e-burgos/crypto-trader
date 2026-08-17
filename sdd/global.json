@@ -16,7 +16,7 @@
         "libs/shared",
         "libs/openrouter"
       ],
-      "cycles_completed": 1,
+      "cycles_completed": 2,
       "description": "Simplificación del núcleo de agentes (poda de subsistemas muertos), venta inteligente con gestión activa de riesgo y reducción del costo LLM por decisión"
     }
   ],

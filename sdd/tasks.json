@@ -28,6 +28,21 @@
           "status": "completed",
           "tasks_total": 16,
           "tasks_done": 16
+        },
+        "cycle-03": {
+          "file": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/tasks.json",
+          "module": "trading-agents-core",
+          "apps": [
+            "apps/api",
+            "apps/web",
+            "libs/analysis",
+            "libs/openrouter",
+            "libs/trading-engine",
+            "libs/shared"
+          ],
+          "status": "in-progress",
+          "tasks_total": 14,
+          "tasks_done": 0
         }
       }
     }

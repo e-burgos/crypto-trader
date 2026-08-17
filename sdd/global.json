@@ -4,8 +4,7 @@
   "description": "Fullstack crypto trading platform",
   "version": "0.1.0",
   "completed_modules": [],
-  "in_progress_modules": [],
-  "pending_modules": [
+  "in_progress_modules": [
     {
       "module": "trading-agents-core",
       "spec": "spec-e-burgos-001-agents-simplification",
@@ -16,9 +15,11 @@
         "libs/data-fetcher",
         "libs/shared"
       ],
+      "cycles_completed": 0,
       "description": "Simplificación del núcleo de agentes (poda de subsistemas muertos), venta inteligente con gestión activa de riesgo y reducción del costo LLM por decisión"
     }
   ],
+  "pending_modules": [],
   "monorepo": {
     "tool": "Nx",
     "package_manager": "pnpm",

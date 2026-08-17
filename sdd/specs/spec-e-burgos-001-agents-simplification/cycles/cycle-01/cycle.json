@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 1,
+  "module": "trading-agents-core",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "apps": ["apps/api", "libs/analysis", "libs/openrouter"],
+  "phase": "prune-and-cost-observability",
+  "flow": "full",
+  "objectives": [
+    "Eliminar los subsistemas muertos: agents/tools/ + agent-tool-registry + context-planner, model-router.service.ts, llm-analyzer.ts y buildNewsAggregator_unused",
+    "Rescatar la lógica de RiskBudgetTool/TradeSimulationTool/PortfolioContextTool como servicios de dominio antes de borrar el registry, para que el cycle-02 los cablee a la ejecución real",
+    "Resolver el limbo del pipeline de evaluación: cablear scheduleEvaluation al persistir AgentDecision con evaluación contra precio real de mercado (o documentar su eliminación si el arquitecto refuta la decisión con evidencia)",
+    "Unificar en un único servicio la resolución de provider/modelo hoy duplicada entre AgentConfigResolverService y SubAgentService.getProvider",
+    "Dejar la tabla AgentDefinition como única fuente de verdad de los system prompts, eliminando el hardcode AGENT_SYSTEM_PROMPTS de sub-agent.service.ts",
+    "Conectar el pricing en vivo de OpenRouter a LLMUsageService.log y agregar OPENROUTER/TOGETHER a PROVIDER_DISPLAY para que el dashboard de costos deje de reportar $0",
+    "Colapsar o aislar en un único punto la indirección orchestrator/routing/synthesis del enum AgentId (8 valores para 6 agentes reales)"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-08-17",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-01/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

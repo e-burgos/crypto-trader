@@ -57,8 +57,17 @@
       "estimation_hours": 3.5,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-prompt.service.ts",
+        "apps/api/src/agents/agent-prompt.service.spec.ts",
+        "apps/api/src/agents/agent-config.module.ts",
+        "apps/api/src/admin/admin.module.ts",
+        "apps/api/src/admin/agents/admin-agents.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.spec.ts",
+        "apps/api/project.json"
+      ]
     },
     {
       "id": "TASK-005",

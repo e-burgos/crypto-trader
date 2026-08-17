@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AgentConfigService } from './agent-config.service';
 import { AgentConfigResolverService } from './agent-config-resolver.service';
+import { AgentPromptService } from './agent-prompt.service';
 import { AgentConfigController } from './agent-config.controller';
 import { AdminAgentConfigController } from './admin-agent-config.controller';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -10,7 +11,7 @@ import { LlmModule } from '../llm/llm.module';
 @Module({
   imports: [PrismaModule, OpenRouterModule, LlmModule],
   controllers: [AgentConfigController, AdminAgentConfigController],
-  providers: [AgentConfigService, AgentConfigResolverService],
-  exports: [AgentConfigService, AgentConfigResolverService],
+  providers: [AgentConfigService, AgentConfigResolverService, AgentPromptService],
+  exports: [AgentConfigService, AgentConfigResolverService, AgentPromptService],
 })
 export class AgentConfigModule {}

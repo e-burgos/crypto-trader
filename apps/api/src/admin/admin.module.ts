@@ -9,6 +9,7 @@ import { GatewayModule } from '../gateway/gateway.module';
 import { TradingModule } from '../trading/trading.module';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 import { MarketModule } from '../market/market.module';
+import { AgentConfigModule } from '../agents/agent-config.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { MarketModule } from '../market/market.module';
     forwardRef(() => TradingModule),
     OrchestratorModule,
     MarketModule,
+    AgentConfigModule,
   ],
   controllers: [AdminController, AdminAgentsController, DataSourcesController],
   providers: [AdminService, AdminAgentsService],

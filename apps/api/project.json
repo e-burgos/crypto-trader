@@ -42,11 +42,18 @@
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
     },
+    "db-seed": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "../../node_modules/.bin/prisma db seed",
+        "cwd": "apps/api"
+      }
+    },
     "serve": {
       "continuous": true,
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
-      "dependsOn": ["build"],
+      "dependsOn": ["build", "db-seed"],
       "options": {
         "buildTarget": "api:build",
         "runBuildTargetDependencies": false

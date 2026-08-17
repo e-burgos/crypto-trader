@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubAgentService } from './sub-agent.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { AgentPromptService } from '../agents/agent-prompt.service';
 import { AgentId } from '../../generated/prisma/enums';
 
 const mockLLMProvider = {
@@ -15,10 +15,17 @@ jest.mock('@crypto-trader/analysis', () => ({
   captureRateLimits: (...args: unknown[]) => mockCaptureRateLimits(...args),
 }));
 
-const mockPrismaService = {
-  agentDefinition: {
-    findUnique: jest.fn(),
-  },
+const mockAgentPromptService = {
+  getSystemPrompt: jest.fn(),
+};
+
+const SYSTEM_PROMPT_BY_AGENT: Record<string, string> = {
+  orchestrator: 'You are KRYPTO',
+  platform: 'You are NEXUS',
+  operations: 'You are FORGE',
+  market: 'You are SIGMA',
+  blockchain: 'You are CIPHER',
+  risk: 'You are AEGIS',
 };
 
 const mockResolvedClient = {
@@ -38,7 +45,9 @@ describe('SubAgentService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockPrismaService.agentDefinition.findUnique.mockResolvedValue(null);
+    mockAgentPromptService.getSystemPrompt.mockImplementation((agentId: string) =>
+      Promise.resolve(SYSTEM_PROMPT_BY_AGENT[agentId] ?? 'generic prompt'),
+    );
     mockAgentConfigResolver.resolveClient.mockResolvedValue(
       mockResolvedClient,
     );
@@ -46,11 +55,11 @@ describe('SubAgentService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubAgentService,
-        { provide: PrismaService, useValue: mockPrismaService },
         {
           provide: AgentConfigResolverService,
           useValue: mockAgentConfigResolver,
         },
+        { provide: AgentPromptService, useValue: mockAgentPromptService },
       ],
     }).compile();
 
@@ -199,6 +208,41 @@ describe('SubAgentService', () => {
           'user-1',
         ),
       ).rejects.toThrow('No active LLM credentials');
+    });
+
+    it('should resolve the system prompt via AgentPromptService for the agent id', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"HOLD","confidence":0.5,"reasoning":"flat"}',
+        usage: { inputTokens: 50, outputTokens: 20 },
+      });
+
+      await service.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 50 } },
+        'user-1',
+      );
+
+      expect(mockAgentPromptService.getSystemPrompt).toHaveBeenCalledWith(
+        'market',
+      );
+    });
+
+    it('should propagate AgentPromptUnavailableError raised by AgentPromptService', async () => {
+      mockAgentPromptService.getSystemPrompt.mockRejectedValueOnce(
+        new Error(
+          'AgentDefinition for "risk" is missing, inactive, or has an empty systemPrompt.',
+        ),
+      );
+
+      await expect(
+        service.call(
+          'risk',
+          'risk_gate',
+          { portfolio: [], indicators: { rsi: 45 } },
+          'user-1',
+        ),
+      ).rejects.toThrow('AgentDefinition for "risk"');
     });
   });
 });

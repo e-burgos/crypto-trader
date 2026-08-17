@@ -19,7 +19,8 @@ import {
   SandboxOrderExecutor,
   LiveOrderExecutor,
   PositionManager,
-  calculateTradeQuantity,
+  resolveTradeQuantity,
+  evaluateSellPolicy,
 } from '@crypto-trader/trading-engine';
 
 import {
@@ -31,6 +32,17 @@ import {
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 import type { AgentHealthReport } from '../agents/agent-config-resolver.service';
+import type {
+  AegisVerdict,
+  ForgeSizingSummary,
+} from '../orchestrator/dto/decision-synthesis.dto';
+
+interface DecisionExecutionContext {
+  decisionId: string;
+  confidence: number;
+  risk?: AegisVerdict;
+  sizing?: ForgeSizingSummary;
+}
 
 interface AgentJobData {
   userId: string;
@@ -319,6 +331,8 @@ export class TradingProcessor {
         subAgentResults: orchestratedDecision.subAgentResults,
         llmProvider: orchestratedDecision.llmProvider,
         llmModel: orchestratedDecision.llmModel,
+        risk: orchestratedDecision.risk,
+        sizing: orchestratedDecision.sizing,
       };
 
       // Compute effective wait: AGENT mode respects LLM suggestion, CUSTOM mode uses user config.
@@ -371,6 +385,13 @@ export class TradingProcessor {
       // 10. Execute based on LLM decision
       const confidencePct = decision.confidence * 100;
 
+      const decisionContext: DecisionExecutionContext = {
+        decisionId: savedDecision.id,
+        confidence: decision.confidence,
+        risk: decision.risk,
+        sizing: decision.sizing,
+      };
+
       if (
         decision.decision === Decision.BUY &&
         confidencePct >= config.buyThreshold
@@ -384,6 +405,7 @@ export class TradingProcessor {
             binanceApiKey,
             binanceSecret,
             cachedMarketPrice,
+            decisionContext,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -422,6 +444,7 @@ export class TradingProcessor {
             binanceApiKey,
             binanceSecret,
             cachedMarketPrice,
+            decisionContext,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -643,6 +666,31 @@ export class TradingProcessor {
     }
   }
 
+  private resolveBuySizing(
+    balance: number,
+    price: number,
+    config: any,
+    decisionContext?: DecisionExecutionContext,
+  ) {
+    if (!config.smartSizingEnabled) {
+      return resolveTradeQuantity({
+        balance,
+        price,
+        maxTradePct: config.maxTradePct,
+      });
+    }
+    return resolveTradeQuantity({
+      balance,
+      price,
+      maxTradePct: config.maxTradePct,
+      verdict: decisionContext?.risk?.verdict,
+      positionSizeMultiplier: decisionContext?.risk?.positionSizeMultiplier,
+      forgeMaxTradePct: decisionContext?.sizing?.maxTradePct,
+      forgeRecommendation: decisionContext?.sizing?.recommendation,
+      reduceSizeFactor: config.reduceSizeFactor,
+    });
+  }
+
   private async executeBuy(
     userId: string,
     config: any,
@@ -651,6 +699,7 @@ export class TradingProcessor {
     apiKey?: string,
     apiSecret?: string,
     cachedPrice?: number,
+    decisionContext?: DecisionExecutionContext,
   ) {
     const openCount = await this.prisma.position.count({
       where: {
@@ -681,11 +730,19 @@ export class TradingProcessor {
         update: {},
       });
 
-      const quantity = calculateTradeQuantity(
+      const sizing = this.resolveBuySizing(
         wallet.balance,
         livePrice,
-        config.maxTradePct,
+        config,
+        decisionContext,
       );
+      if (sizing.blockedBy) {
+        this.logger.log(
+          `BUY sizing blocked for user ${userId}: ${sizing.blockedBy}`,
+        );
+        return;
+      }
+      const quantity = sizing.quantity;
       if (quantity <= 0) return;
 
       const cost = livePrice * quantity;
@@ -723,6 +780,7 @@ export class TradingProcessor {
           fee,
           mode,
           binanceOrderId: `sandbox-${Date.now()}`,
+          decisionId: decisionContext?.decisionId ?? null,
         },
       });
 
@@ -762,11 +820,19 @@ export class TradingProcessor {
     const liveOffsetPct: number = config.orderPriceOffsetPct ?? 0;
     const referencePrice = currentPrice * (1 + liveOffsetPct);
     const quoteBalance = await executor.getBalance(config.pair);
-    const quantity = calculateTradeQuantity(
+    const sizing = this.resolveBuySizing(
       quoteBalance.free,
       referencePrice,
-      config.maxTradePct,
+      config,
+      decisionContext,
     );
+    if (sizing.blockedBy) {
+      this.logger.log(
+        `BUY sizing blocked for user ${userId}: ${sizing.blockedBy}`,
+      );
+      return;
+    }
+    const quantity = sizing.quantity;
     if (quantity <= 0) return;
 
     const order = await executor.placeMarketOrder(
@@ -799,6 +865,7 @@ export class TradingProcessor {
         fee: order.price * order.quantity * TRADE_FEE_PCT,
         mode,
         binanceOrderId: order.orderId,
+        decisionId: decisionContext?.decisionId ?? null,
       },
     });
 
@@ -826,6 +893,7 @@ export class TradingProcessor {
     apiKey?: string,
     apiSecret?: string,
     cachedPrice?: number,
+    decisionContext?: DecisionExecutionContext,
   ) {
     const openPositions = await this.prisma.position.findMany({
       where: {
@@ -876,14 +944,27 @@ export class TradingProcessor {
       cachedPrice ?? (await executor.getPrice(symbol).catch(() => null));
     if (!currentPrice) return;
 
-    const minProfitPct: number = config.minProfitPct ?? 0.003;
+    const sellPolicyConfig = {
+      minProfitPct: config.minProfitPct ?? 0.003,
+      lossCutEnabled: config.lossCutEnabled ?? false,
+      lossCutConfidenceThreshold: config.lossCutConfidenceThreshold ?? 0.85,
+      lossCutMinLossPct: config.lossCutMinLossPct ?? 0.005,
+      lossCutMinEdgeRatio: config.lossCutMinEdgeRatio ?? 2,
+    };
 
     for (const pos of openPositions) {
-      // Only sell if the position is currently profitable above the minimum threshold
-      const profitPct = (currentPrice - pos.entryPrice) / pos.entryPrice;
-      if (profitPct < minProfitPct) {
+      const sellPolicy = evaluateSellPolicy({
+        asset: config.asset,
+        entryPrice: pos.entryPrice,
+        currentPrice,
+        quantity: pos.quantity,
+        stopLossPct: config.stopLossPct,
+        signalConfidence: decisionContext?.confidence,
+        config: sellPolicyConfig,
+      });
+      if (!sellPolicy.allow) {
         this.logger.log(
-          `LLM SELL skipped for position ${pos.id}: profit ${(profitPct * 100).toFixed(2)}% below minimum ${(minProfitPct * 100).toFixed(2)}%`,
+          `LLM SELL skipped for position ${pos.id}: ${sellPolicy.reason}`,
         );
         continue;
       }
@@ -914,6 +995,8 @@ export class TradingProcessor {
           status: 'CLOSED',
           pnl: closedPosition.pnl,
           fees: closedPosition.fees,
+          exitReason:
+            sellPolicy.path === 'LOSS_CUT' ? 'LOSS_CUT' : 'LLM_SIGNAL',
         },
       });
 
@@ -927,6 +1010,7 @@ export class TradingProcessor {
           fee: order.price * order.quantity * TRADE_FEE_PCT,
           mode,
           binanceOrderId: order.orderId,
+          decisionId: decisionContext?.decisionId ?? null,
         },
       });
 

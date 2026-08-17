@@ -10,6 +10,7 @@ import {
 } from './dto/intent-classification.dto';
 import { DecisionPayload, SubAgentResult } from './dto/decision-synthesis.dto';
 import { parseAegisVerdict, isOverridableBlock } from './dto/aegis-verdict.schema';
+import { parseForgeSizing } from './dto/forge-sizing.schema';
 import { NewsEnrichment } from './dto/news-enrichment.dto';
 import { safeParseJson } from './json-parse.util';
 
@@ -425,6 +426,7 @@ export class OrchestratorService {
 
     // AEGIS verdict gate
     const aegisVerdict = parseAegisVerdict(aegisOutput);
+    const forgeSizing = parseForgeSizing(forgeOutput);
     if (aegisVerdict.verdict === 'BLOCK') {
       const { reason, alerts } = aegisVerdict;
 
@@ -443,6 +445,8 @@ export class OrchestratorService {
           waitMinutes: 30,
           orchestrated: true,
           subAgentResults,
+          risk: aegisVerdict,
+          sizing: forgeSizing,
         };
       }
     }
@@ -508,6 +512,8 @@ export class OrchestratorService {
         waitMinutes: 15,
         orchestrated: true,
         subAgentResults,
+        risk: aegisVerdict,
+        sizing: forgeSizing,
       };
     }
 
@@ -539,6 +545,8 @@ export class OrchestratorService {
       subAgentResults,
       llmProvider: synthesisProvider,
       llmModel: synthesisModel,
+      risk: aegisVerdict,
+      sizing: forgeSizing,
     };
   }
 

@@ -20,3 +20,18 @@ export type {
   TradeSimulationInput,
   TradeSimulationResult,
 } from './risk/trade-simulation';
+
+export { resolveTradeQuantity } from './sizing';
+export type {
+  AegisVerdictValue,
+  TradeSizingInput,
+  TradeSizingResult,
+} from './sizing';
+
+export { evaluateSellPolicy } from './sell-policy';
+export type {
+  SellPath,
+  SellPolicyConfig,
+  SellPolicyInput,
+  SellPolicyDecision,
+} from './sell-policy';

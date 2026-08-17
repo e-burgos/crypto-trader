@@ -32,6 +32,12 @@ export interface AegisVerdict {
   alerts: string[];
 }
 
+export interface ForgeSizingSummary {
+  recommendation: 'proceed' | 'skip';
+  maxTradePct: number | null;
+  reasoning: string;
+}
+
 export interface DecisionPayload {
   decision: 'BUY' | 'SELL' | 'HOLD';
   confidence: number;
@@ -44,4 +50,8 @@ export interface DecisionPayload {
   llmProvider?: string;
   /** LLM model used for the synthesis call */
   llmModel?: string;
+  /** AEGIS risk verdict for this cycle, parsed with parseAegisVerdict */
+  risk: AegisVerdict;
+  /** FORGE sizing suggestion for this cycle, parsed with parseForgeSizing */
+  sizing: ForgeSizingSummary;
 }

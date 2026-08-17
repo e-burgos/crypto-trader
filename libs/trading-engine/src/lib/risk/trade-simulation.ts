@@ -37,7 +37,7 @@ export function simulateTrade(
   const takeProfitPct = input.takeProfitPct ?? 0;
   const slippagePct =
     SLIPPAGE_PCT_BY_ASSET[input.asset.toUpperCase()] ??
-    SLIPPAGE_PCT_BY_ASSET.default;
+    SLIPPAGE_PCT_BY_ASSET['default'];
 
   const notionalUsd = input.price * input.quantity;
   const feesUsd = notionalUsd * feePct;

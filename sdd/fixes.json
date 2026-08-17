@@ -3,7 +3,12 @@
   "_description": "Global fixes index. Each fix maps to its owning spec via spec_id. Fixes not tied to a spec have spec_id: null and live in sdd/fixes.md. Spec-scoped fixes live in sdd/specs/{spec-id}/fixes.md. Maintained by: sdd-orchestrator.",
   "_version": "3.0.0",
   "_convention": "Fix ID format: FIX-[gh-user]-[spec-NNN]-[seq] for spec-scoped fixes. FIX-[gh-user]-[seq] for repo-level fixes.",
-  "_keywords": ["[FIX]", "[BUGFIX]", "[HOTFIX]", "[IMPROVEMENT]"],
+  "_keywords": [
+    "[FIX]",
+    "[BUGFIX]",
+    "[HOTFIX]",
+    "[IMPROVEMENT]"
+  ],
   "fixes": [
     {
       "id": "FIX-e-burgos-001",
@@ -14,19 +19,21 @@
       "severity": "high",
       "created_at": "2026-08-17",
       "resolved_at": "2026-08-17",
-      "validated_at": null,
+      "validated_at": "2026-08-17",
       "title": "rebuild-catalog no reconoce las skills nombradas SKILL.md y deja sdd:validate en rojo",
       "estimation_hours": 0.5,
       "description": "sdd/scripts/rebuild-catalog.mjs solo detecta 'skill.md' en minúsculas, pero las skills de este repo están versionadas como sdd/skills/<dir>/SKILL.md (requisito del descubrimiento de skills de Claude Code vía el symlink .claude/skills -> ../sdd/skills en un filesystem case-sensitive). buildCatalog() devuelve skills vacío y el chequeo de frescura de catalog.json falla siempre; regenerar el catálogo vacía la sección skills del visor, y las entradas actuales apuntan a un skill.md inexistente (404 en el visor). Solución: detectar SKILL.md o skill.md registrando el nombre real del archivo, y relajar skills[].file en catalog.schema.json de const 'skill.md' a enum ['skill.md', 'SKILL.md'].",
       "justification": "Bloquea el arranque del cycle-01 de spec-e-burgos-001-agents-simplification: sin sdd:validate en verde el ciclo no queda registrado y ningún commit es válido; el mismo check es gate de CI para todo PR que toque sdd/**. Es un defecto de tooling del arnés, ajeno al alcance de la spec, y no justifica un ciclo SDD propio (2 archivos, sin contratos de API ni entidades nuevas).",
-      "related_modules": ["sdd-harness"],
+      "related_modules": [
+        "sdd-harness"
+      ],
       "affected_files": [
         "sdd/scripts/rebuild-catalog.mjs",
         "sdd/schemas/catalog.schema.json",
         "sdd/catalog.json"
       ],
       "test_reference": "pnpm sdd:validate en verde con sdd/catalog.json regenerado (validate-sdd.mjs:359-374 compara el catálogo contra el filesystem)",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01"
     }
   ]

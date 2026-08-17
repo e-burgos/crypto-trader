@@ -34,10 +34,10 @@
       "llm_usage_logs": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "updated",
         "created_in_cycle": 1,
-        "updated_in_cycle": null,
-        "migration_file": "apps/api/prisma/migrations/20260817000000_add_pricing_source_and_not_evaluable/migration.sql",
+        "updated_in_cycle": 1,
+        "migration_file": "apps/api/prisma/migrations/20260817120000_add_llm_usage_pricing_source/migration.sql",
         "columns": {
           "id": {
             "type": "String @id @default(cuid())",
@@ -169,7 +169,7 @@
           {
             "cycle": 1,
             "date": "2026-08-17",
-            "migration": "20260817000000_add_pricing_source_and_not_evaluable",
+            "migration": "20260817120000_add_llm_usage_pricing_source",
             "change": "tabla pre-existente registrada en el arnés; se agrega la columna nullable pricing_source (enum PricingSource) para trazar el origen de la tarifa aplicada"
           }
         ]
@@ -177,10 +177,10 @@
       "agent_decision_evaluations": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "updated",
         "created_in_cycle": 1,
-        "updated_in_cycle": null,
-        "migration_file": "apps/api/prisma/migrations/20260817000000_add_pricing_source_and_not_evaluable/migration.sql",
+        "updated_in_cycle": 1,
+        "migration_file": "apps/api/prisma/migrations/20260817130000_add_not_evaluable_and_evaluation_unique/migration.sql",
         "columns": {
           "id": {
             "type": "String @id @default(cuid())",
@@ -317,7 +317,7 @@
           {
             "cycle": 1,
             "date": "2026-08-17",
-            "migration": "20260817000000_add_pricing_source_and_not_evaluable",
+            "migration": "20260817130000_add_not_evaluable_and_evaluation_unique",
             "change": "tabla pre-existente registrada en el arnés; se agrega el valor NOT_EVALUABLE al enum AgentOutcomeStatus y el UNIQUE (decision_id, horizon_minutes) que hace idempotente el cableado de scheduleEvaluation. La tabla esta vacia en todos los entornos: el unique no requiere deduplicacion"
           }
         ]

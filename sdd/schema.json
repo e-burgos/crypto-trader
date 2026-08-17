@@ -243,9 +243,9 @@
       "trading_configs": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "migrated",
+        "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": null,
+        "updated_in_cycle": 3,
         "migration_file": "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
         "columns": {
           "id": {
@@ -418,6 +418,16 @@
           "updated_at": {
             "type": "DateTime @updatedAt",
             "constraints": ["NOT NULL"]
+          },
+          "deterministic_gate_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-03: interruptor del gate determinista pre-LLM. Nace apagado (RN-04): una instalacion existente que despliegue este ciclo sin tocar su config llama al LLM en todo ciclo, igual que antes. Es per-config porque la activacion es explicita del dueno del bot"
+          },
+          "gate_price_change_pct": {
+            "type": "Float @default(0.005)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-03: umbral de cambio significativo de precio de la condicion 3 del gate (default 0.5%). Unico umbral del gate que es per-config; los otros cuatro (banda RSI 40-60, delta RSI 5, edad de snapshot 5 min, edad de decision previa 90 min) son constantes de libs/analysis. DTO: @Min(0.0005) @Max(0.05) en Create y Update o el request entero responde 400"
           }
         },
         "indexes": [
@@ -433,6 +443,12 @@
             "date": "2026-08-17",
             "migration": "20260817150000_add_trading_config_risk_tools",
             "change": "tabla pre-existente registrada en el arnes; se agregan 15 columnas (politica de corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo). Todos los defaults reproducen el comportamiento actual: ninguna instalacion existente cambia de conducta sin configurar"
+          },
+          {
+            "cycle": 3,
+            "date": "2026-08-17",
+            "migration": "20260817160000_add_cost_gate_fields",
+            "change": "cycle-03: 2 columnas para el gate determinista pre-LLM (deterministic_gate_enabled, gate_price_change_pct). El interruptor nace apagado; el default de umbral reproduce el comportamiento actual porque sin el interruptor nunca se evalua"
           }
         ]
       },
@@ -816,6 +832,135 @@
             "date": "2026-08-17",
             "migration": "20260817154000_drop_orphan_agent_tables",
             "change": "tabla ELIMINADA en cycle-02. Su unico consumidor (model-router.service.ts) se borro en el cycle-01; la resolucion de modelo pasa entera por AgentConfigResolverService (puerta unica). Reverse SQL completo en architect.md cycle-02 section 11.3"
+          }
+        ]
+      },
+      "agent_decisions": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "updated",
+        "created_in_cycle": 3,
+        "updated_in_cycle": 3,
+        "migration_file": "apps/api/prisma/migrations/20260817160000_add_cost_gate_fields/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "config_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "config de trading que origino la decision; null en decisiones historicas previas al campo"
+          },
+          "config_name": {
+            "type": "String",
+            "constraints": ["NULL"]
+          },
+          "mode": {
+            "type": "TradingMode",
+            "constraints": ["NULL"],
+            "notes": "SANDBOX | TESTNET | LIVE"
+          },
+          "asset": {
+            "type": "Asset",
+            "constraints": ["NOT NULL"],
+            "notes": "BTC | ETH"
+          },
+          "pair": {
+            "type": "QuoteCurrency",
+            "constraints": ["NOT NULL"],
+            "notes": "USDT | USDC"
+          },
+          "decision": {
+            "type": "Decision",
+            "constraints": ["NOT NULL"],
+            "notes": "BUY | SELL | HOLD"
+          },
+          "confidence": {
+            "type": "Float",
+            "constraints": ["NOT NULL"]
+          },
+          "reasoning": {
+            "type": "String",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-03: en un HOLD del gate determinista enumera las cinco condiciones con sus valores reales y termina en 'Sin llamada a LLM.' (RN-03)"
+          },
+          "indicators": {
+            "type": "Json",
+            "constraints": ["NOT NULL"],
+            "notes": "IndicatorSnapshot del ciclo; se persiste igual en un HOLD del gate que en una decision LLM"
+          },
+          "news_headlines": {
+            "type": "Json",
+            "constraints": ["NOT NULL"]
+          },
+          "wait_minutes": {
+            "type": "Int",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-03: un HOLD del gate usa siempre config.min_interval_minutes; el gate nunca alarga la cadencia porque eso retrasaria la deteccion de una senal real"
+          },
+          "metadata": {
+            "type": "Json",
+            "constraints": ["NULL"],
+            "notes": "cycle-03 (aditivo, sin migracion): metadata.gate = { applied, conditions, snapshot } donde snapshot es lo que el ciclo siguiente lee como estado previo del gate; se escribe TAMBIEN en las decisiones resueltas por LLM. metadata.cost = { llmCallCount, pricedCallCount, unpricedCallCount, complete }"
+          },
+          "llm_cost_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "cycle-03: deja de estar sin escritor. 0 = HOLD del gate (costo cero real). > 0 = costo real sumado por LlmCostAccumulator con la tarifa vigente al momento de la llamada. null = ninguna llamada del ciclo fue tarifable (cascada de ModelPricingService agotada) — desconocido, nunca cero encubierto (CE-07)"
+          },
+          "llm_call_count": {
+            "type": "Int @default(0)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-03: llamadas LLM reales del ciclo. 0 = decision del gate determinista. Es columna y no campo de metadata porque llm_cost_usd = 0 no distingue al gate de un modelo gratuito, y porque CA-058 exige agregarlo en SQL"
+          },
+          "data_cost_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "pre-existente, sin escritor en el flujo real"
+          },
+          "expected_net_value_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "pre-existente, sin escritor en el flujo real"
+          },
+          "model_routing_reason": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "pre-existente, sin escritor tras la poda del model-router en cycle-01"
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_agent_decisions",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "idx_agent_decisions_user_created",
+            "type": "INDEX",
+            "columns": ["user_id", "created_at"]
+          },
+          {
+            "name": "idx_agent_decisions_created",
+            "type": "INDEX",
+            "columns": ["created_at"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 3,
+            "date": "2026-08-17",
+            "migration": "20260817160000_add_cost_gate_fields",
+            "change": "tabla pre-existente registrada en el arnes; columna nueva llm_call_count + indice por created_at para el agregado de plataforma sin user_id (EP-010). llm_cost_usd pasa a tener escritor real por primera vez y metadata absorbe el snapshot del gate sin migracion"
           }
         ]
       }

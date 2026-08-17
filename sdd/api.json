@@ -252,9 +252,9 @@
         "path": "/trading/positions",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": null,
+        "updated_in_cycle": 3,
         "description": "Posiciones del usuario paginadas. Endpoint pre-existente, registrado con la respuesta extendida del cycle-02: cada posicion suma el estado de proteccion nativa y de la maquina de trailing/parciales. Cambio aditivo: los clientes existentes ignoran los campos nuevos.",
         "path_params": [],
         "required_headers": [
@@ -269,6 +269,67 @@
         "responses": {
           "200": "{ data: [{ id, asset, pair, mode, entryPrice, quantity, entryAt, exitPrice, exitAt, status, pnl, fees, protectionStatus, stopPrice, takeProfitPrice, highWaterPrice, trailingActive, initialQuantity, partialExitCount, realizedPnl, exitReason }], total, page, limit }",
           "401": "JWT ausente o invalido"
+        },
+        "changelog": [
+          {
+            "cycle": 3,
+            "date": "2026-08-17",
+            "change": "cycle-03: el select de TradingService.getPositions se extiende con los 9 campos que el contrato ya declaraba (protectionStatus, stopPrice, takeProfitPrice, highWaterPrice, trailingActive, initialQuantity, partialExitCount, realizedPnl, exitReason). Los 5 campos nullable se mapean con ?? null explicito: el campo esta siempre presente en el JSON y null es el valor neutro definido (CE-11). Pasa a implemented al cerrar la task."
+          }
+        ]
+      },
+      {
+        "id": "EP-009",
+        "method": "GET",
+        "path": "/analytics/agent-costs",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Costo LLM real del usuario por bot y por dia calendario UTC, agregado desde AgentDecision.llmCostUsd (no desde llm_usage_logs: EP-003 tiene otra fuente, otro grano e incluye el chat). Distingue decisiones resueltas por LLM (llmCallCount > 0) de las resueltas por el gate determinista (llmCallCount = 0) para poder atribuir el ahorro a su causa, y expone aparte las decisiones cuya tarifa no se pudo resolver (llmCostUsd null) en vez de contarlas como cero. Comparte el metodo AnalyticsService.getAgentCostBreakdown con EP-010, sin calculo paralelo que pueda desincronizarse.",
+        "path_params": [],
+        "required_headers": [
+          "Authorization"
+        ],
+        "query_params": {
+          "period": "Ventana de agregacion: 7d | 30d | 90d (default 30d)",
+          "mode": "SANDBOX | TESTNET | LIVE; omitir para todos los modos",
+          "configId": "Restringe la respuesta a un bot; omitir para todos los bots del usuario"
+        },
+        "request_body": {},
+        "responses": {
+          "200": "{ period, from, to, costUsd, decisions, llmDecisions, gateDecisions, unpricedDecisions, byBot: [{ configId, configName, asset, pair, mode, costUsd, decisions, llmDecisions, gateDecisions, unpricedDecisions }], dailySeries: [{ date, costUsd, decisions, llmDecisions, gateDecisions, unpricedDecisions, byBot: [{ configId, costUsd }] }] }",
+          "400": "period fuera de 7d | 30d | 90d",
+          "401": "JWT ausente o invalido"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-010",
+        "method": "GET",
+        "path": "/admin/analytics/llm-costs",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Costo LLM agregado de toda la plataforma en un periodo, para el operador. Calculado sobre la misma fuente (AgentDecision.llmCostUsd) y el mismo metodo de servicio que EP-009 con userId null, de modo que la suma de los costos individuales por usuario es igual al agregado por construccion. Guardado por JwtAuthGuard + RolesGuard con @Roles('ADMIN'), mismo patron que el resto de admin/.",
+        "path_params": [],
+        "required_headers": [
+          "Authorization"
+        ],
+        "query_params": {
+          "period": "Ventana de agregacion: 7d | 30d | 90d (default 30d)",
+          "mode": "SANDBOX | TESTNET | LIVE; omitir para todos los modos",
+          "userId": "Restringe la respuesta a un usuario; omitir para toda la plataforma"
+        },
+        "request_body": {},
+        "responses": {
+          "200": "{ period, from, to, costUsd, decisions, llmDecisions, gateDecisions, unpricedDecisions, byUser: [{ userId, costUsd, decisions, llmDecisions, gateDecisions, unpricedDecisions }], dailySeries: [{ date, costUsd, decisions, llmDecisions, gateDecisions, unpricedDecisions }] }",
+          "400": "period fuera de 7d | 30d | 90d",
+          "401": "JWT ausente o invalido",
+          "403": "Usuario autenticado sin rol ADMIN"
         },
         "changelog": []
       }

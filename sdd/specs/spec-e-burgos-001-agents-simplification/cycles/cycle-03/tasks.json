@@ -54,8 +54,23 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/cache/shared-cache.port.ts",
+        "apps/api/src/cache/cache-record.ts",
+        "apps/api/src/cache/in-memory-shared-cache.service.ts",
+        "apps/api/src/cache/redis-shared-cache.service.ts",
+        "apps/api/src/cache/signal-cache.service.ts",
+        "apps/api/src/cache/shared-cache.module.ts",
+        "apps/api/src/cache/in-memory-shared-cache.service.spec.ts",
+        "apps/api/src/cache/redis-shared-cache.service.spec.ts",
+        "apps/api/src/cache/signal-cache.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator-signal-cache.integration.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.module.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.isolation.spec.ts"
+      ]
     },
     {
       "id": "TASK-005",

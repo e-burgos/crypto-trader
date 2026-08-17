@@ -12,12 +12,14 @@ import {
 import { PrismaModule } from '../prisma/prisma.module';
 import { LlmModule } from '../llm/llm.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
+import { SharedCacheModule } from '../cache/shared-cache.module';
 
 @Module({
   imports: [
     PrismaModule,
     LlmModule,
     AgentConfigModule,
+    SharedCacheModule,
     BullModule.registerQueue({ name: DOCUMENT_PROCESSING_QUEUE }),
   ],
   providers: [

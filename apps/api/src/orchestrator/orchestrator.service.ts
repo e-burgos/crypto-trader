@@ -13,6 +13,10 @@ import { parseAegisVerdict, isOverridableBlock } from './dto/aegis-verdict.schem
 import { parseForgeSizing } from './dto/forge-sizing.schema';
 import { NewsEnrichment } from './dto/news-enrichment.dto';
 import { safeParseJson } from './json-parse.util';
+import {
+  SignalCacheService,
+  DEFAULT_ANALYSIS_TIMEFRAME,
+} from '../cache/signal-cache.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { IndicatorSnapshot } from '@crypto-trader/shared';
@@ -33,6 +37,7 @@ export class OrchestratorService {
     private readonly prisma: PrismaService,
     private readonly subAgent: SubAgentService,
     private readonly agentConfigResolver: AgentConfigResolverService,
+    private readonly signalCache: SignalCacheService,
   ) {}
 
   // ── A) Intent Classification ───────────────────────────────────────────────
@@ -149,6 +154,8 @@ export class OrchestratorService {
         }
       : undefined;
 
+    const analysisTimeframe = DEFAULT_ANALYSIS_TIMEFRAME;
+
     // ── SIGMA sentiment cache ────────────────────────────────────────────────
     // Reuse a recent SIGMA news_sentiment result from any bot of the same user
     // if it falls within the user's configured analysis interval (TTL).
@@ -237,13 +244,19 @@ export class OrchestratorService {
     const hasMacroData = Object.keys(macroContext).length > 0;
 
     const parallelCalls: Promise<string>[] = [
-      this.subAgent.call(
-        'market',
-        'technical_signal',
-        techContext,
-        userId,
-        false,
-        typedOverride,
+      this.signalCache.getOrComputeTechnical(
+        config.asset,
+        config.pair,
+        analysisTimeframe,
+        () =>
+          this.subAgent.call(
+            'market',
+            'technical_signal',
+            techContext,
+            userId,
+            false,
+            typedOverride,
+          ),
       ),
       cachedSentiment
         ? Promise.resolve(cachedSentiment)
@@ -300,13 +313,19 @@ export class OrchestratorService {
     // Conditionally add CIPHER macro_context (only if macro data available)
     if (hasMacroData) {
       parallelCalls.push(
-        this.subAgent.call(
-          'blockchain',
-          'macro_context',
-          macroContext,
-          userId,
-          false,
-          typedOverride,
+        this.signalCache.getOrComputeMacro(
+          config.asset,
+          config.pair,
+          analysisTimeframe,
+          () =>
+            this.subAgent.call(
+              'blockchain',
+              'macro_context',
+              macroContext,
+              userId,
+              false,
+              typedOverride,
+            ),
         ),
       );
     }

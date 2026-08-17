@@ -433,3 +433,28 @@ evaluación de condiciones vs. persistencia/WS — y juntas superarían 5 SP (re
 5 puntos por task). Se mantienen separadas por trazabilidad de CA y para no forzar una task de
 más de 1 día. Ídem TASK-007/TASK-008 (escritura de costo vs. endpoint de lectura agregada): son
 capas distintas (writer vs. reader) y TASK-008 depende de que TASK-007 exista.
+
+---
+
+## Pendiente de documentar en contexto
+
+### TASK-004 — Caché compartido de señal técnica/macro
+
+- `SignalCacheService.getOrComputeNews(asset, pair, newsFingerprint, compute)` existe
+  (`apps/api/src/cache/signal-cache.service.ts`, clave `sig:v1:news:{asset}:{pair}:{newsFingerprint}`,
+  TTL 10 min) cumpliendo el contrato de architect.md §3.3, pero **no está cableado** en
+  `orchestrator.service.ts`: el ALCANCE de la task excluyó explícitamente tocar el bloque de
+  relectura per-user de sentimiento (~líneas 152-187) para mantenerlo byte-idéntico con el flag
+  apagado. Además, la huella `newsFingerprint` content-addressed depende de la función pura
+  `fingerprint()` de `libs/shared` que entrega TASK-002 (gate determinista), no implementada
+  todavía al cerrar esta task. Cablear `getOrComputeNews` en lugar del bloque actual queda para
+  una task futura, una vez exista `fingerprint()`.
+- La atribución del resultado cacheado (`producedBy`/`cachedFrom` en `SubAgentResult`, architect.md
+  §3.4: marcar `{ cached: true, cachedFrom: { provider, model } }` cuando un bot consume una
+  entrada producida por el modelo de otro usuario) no se implementó: `SignalCacheService` cachea
+  únicamente el string de salida del sub-agente, sin metadata de proveedor/modelo. Agregarla
+  requiere tocar la construcción de `subAgentResults` más abajo en `orchestrator.service.ts`
+  (fuera del punto de integración declarado para esta task) y resolver el modelo en el momento de
+  escritura del caché, no solo en el de lectura. No hay CA/CE de cycle-03 que lo exija
+  explícitamente (CA-043..046 y CE-04 cubren comportamiento del caché, no atribución), así que se
+  documenta como deuda en vez de expandir el alcance de TASK-004.

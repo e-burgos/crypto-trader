@@ -3,6 +3,7 @@ import { OrchestratorService } from './orchestrator.service';
 import { SubAgentService } from './sub-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { SignalCacheService } from '../cache/signal-cache.service';
 
 const mockSubAgentService = {
   call: jest.fn(),
@@ -10,6 +11,25 @@ const mockSubAgentService = {
 
 const mockAgentConfigResolver = {
   resolveClient: jest.fn(),
+};
+
+const mockSignalCacheService = {
+  getOrComputeTechnical: jest.fn(
+    (
+      _asset: string,
+      _pair: string,
+      _timeframe: string,
+      compute: () => Promise<string>,
+    ) => compute(),
+  ),
+  getOrComputeMacro: jest.fn(
+    (
+      _asset: string,
+      _pair: string,
+      _timeframe: string,
+      compute: () => Promise<string>,
+    ) => compute(),
+  ),
 };
 
 const mockPrismaService = {
@@ -73,6 +93,7 @@ describe('OrchestratorService', () => {
           provide: AgentConfigResolverService,
           useValue: mockAgentConfigResolver,
         },
+        { provide: SignalCacheService, useValue: mockSignalCacheService },
       ],
     }).compile();
 

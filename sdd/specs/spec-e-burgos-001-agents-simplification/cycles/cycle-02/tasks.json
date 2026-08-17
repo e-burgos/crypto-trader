@@ -1,0 +1,172 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "cycle": 2,
+  "module": "trading-agents-core",
+  "apps": ["apps/api", "libs/data-fetcher", "libs/trading-engine"],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": { "tasks_generated": true },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "FOLLOW-UP — No-op explícito ante colisión P2002 en EvaluationProcessor",
+      "user_stories": ["HU-02-09"],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-002",
+      "title": "FOLLOW-UP — Fusionar ResolvedAgentConfig/ResolvedAgentClient y eliminar casts inseguros",
+      "user_stories": ["HU-02-10"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-003",
+      "title": "FOLLOW-UP — Decisión y migración de las tablas huérfanas",
+      "user_stories": ["HU-02-11"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-004",
+      "title": "Migración Prisma — TradingConfig: umbrales de política de venta y herramientas de riesgo/ganancia",
+      "user_stories": ["HU-02-01", "HU-02-05", "HU-02-06"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-005",
+      "title": "Migración Prisma — Position: estado explícito de protección",
+      "user_stories": ["HU-02-03", "HU-02-04"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-006",
+      "title": "Migración Prisma — Trade.decisionId (FK nullable a AgentDecision)",
+      "user_stories": ["HU-02-07"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-007",
+      "title": "BinanceRestClient — órdenes LIMIT y STOP_LOSS_LIMIT + validación lot-size/minNotional/tick-size",
+      "user_stories": ["HU-02-03"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-008",
+      "title": "BinanceRestClient — orden OCO + consulta de estado de orden",
+      "user_stories": ["HU-02-03", "HU-02-04"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-007"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-009",
+      "title": "Campo tipado de bloqueo en AegisVerdict + regla estructurada que reemplaza isFalseConcentrationBlock",
+      "user_stories": ["HU-02-08"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-010",
+      "title": "Política de SELL — corte de pérdida por señal reemplaza el veto de minProfitPct",
+      "user_stories": ["HU-02-01"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": ["TASK-004"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-011",
+      "title": "Sizing modulado con techo inviolable + verdict REDUCE de AEGIS",
+      "user_stories": ["HU-02-02"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-012",
+      "title": "Colocación de SL/TP nativo al abrir posición + estado \"desprotegida\"",
+      "user_stories": ["HU-02-03"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-005", "TASK-007", "TASK-008"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-013",
+      "title": "Reconciliación de estado al inicio de ciclo",
+      "user_stories": ["HU-02-04"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-005", "TASK-008", "TASK-012"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-014",
+      "title": "Herramientas de ganancia — trailing stop, take-profit escalonado y salida por tiempo",
+      "user_stories": ["HU-02-05"],
+      "estimation_hours": 5.5,
+      "story_points": 8,
+      "depends_on": ["TASK-004"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-015",
+      "title": "Límites de riesgo agregado por usuario cableados al camino real de ejecución",
+      "user_stories": ["HU-02-06"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-004"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-016",
+      "title": "Trazabilidad — setear Trade.decisionId en el flujo real de ejecución",
+      "user_stories": ["HU-02-07"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": ["TASK-006"],
+      "status": "pending",
+      "files": []
+    }
+  ]
+}

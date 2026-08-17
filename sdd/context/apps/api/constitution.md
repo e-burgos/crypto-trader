@@ -1,6 +1,6 @@
 # Constitución — apps/api
 
-> Versión 1.1 | Última actualización: cycle-01 | Fecha: 2026-08-17
+> Versión 1.2 | Última actualización: cycle-02 | Fecha: 2026-08-17
 
 ## 1. Propósito
 
@@ -15,7 +15,7 @@
 ## 3. Estructura y patrones
 
 - Un módulo NestJS por dominio en `apps/api/src/`: auth, users, trading, analysis, llm, orchestrator, openrouter, market, notifications, analytics, admin, chat, agents (AgentConfigModule, AgentDomainModule, EvaluationModule).
-- Pipeline del agente: Bull job → data-fetcher (OHLCV) → analysis (indicadores) → noticias → AgentConfigResolver → LLM → trading-engine (si confidence ≥ threshold) → DB + WebSocket.
+- Pipeline del agente: Bull job → **reconciliación de estado del exchange (solo LIVE/TESTNET, antes de toda decisión)** → data-fetcher (OHLCV) → analysis (indicadores) → noticias → AgentConfigResolver → LLM → sizing modulado + política de SELL + riesgo agregado → trading-engine (si confidence ≥ threshold) → DB + WebSocket.
 - Depende de `libs/`: shared, analysis, data-fetcher, trading-engine, openrouter, providers.
 
 ### 3.1 Piezas de una sola puerta (no razonar su lógica en otro archivo)
@@ -26,7 +26,12 @@
 | `AgentConfigResolverService.resolveClient()` | **Única** puerta para obtener un cliente LLM de agente. Cascada `override → user → admin → preset → primera credencial activa`, `NoLLMCredentialError` si nada resuelve. Incluye `assertProviderActive` + `decrypt` + construcción del cliente.                                                                                    |
 | `AgentPromptService`                         | **Única** fuente de system prompts (tabla `AgentDefinition`). Caché TTL 60 s + `invalidate(agentId)` desde `AdminAgentsService`. **Fail-fast en `onModuleInit`**: si falta alguno de los 6 `AgentDefinition` (inactivo o prompt vacío) la app no arranca → `pnpm db:seed` es parte del bootstrap de dev, CI y e2e.                |
 | `ModelPricingService`                        | Cascada de tarifa `LIVE_OPENROUTER → STALE_CACHE (last-good en memoria) → STATIC_TABLE (MODEL_PRICING) → UNPRICED`. **Nunca lanza.** Tarifa contra `actualModel ?? model`. `MODEL_PRICING` sirve a los 6 proveedores directos; no se le agregan entradas OpenRouter.                                                              |
-| `src/agents/domain/` (`AgentDomainModule`)   | `RiskBudgetService` y `PortfolioContextService`: dominio puro sobre Prisma, sin contrato de tool ni LLM. **Registrado en `AppModule` y todavía sin inyectores — andamio deliberado para el cycle-02, no código muerto nuevo.**                                                                                                     |
+| `src/agents/domain/` (`AgentDomainModule`)   | `RiskBudgetService`, `PortfolioContextService` y `AggregateRiskService`: dominio puro sobre Prisma, sin contrato de tool ni LLM. `AggregateRiskService.assertBuyAllowed` es la **única** puerta del riesgo agregado por usuario (compone `PortfolioContextService` sin `configId` + `RiskBudgetService.assessAggregate`). `TradingModule` importa `AgentDomainModule`.                                                    |
+| `AggregateRiskService` + `user_risk_policies` | Límite de exposición por activo, pérdida diaria máxima (**día calendario UTC**, no ventana móvil) y drawdown que pausa **todas** las configs del usuario. Vive en tabla propia 1:1 con `User`, **no** en `TradingConfig` ni en `AgentBudgetPolicy` — este último es presupuesto de **gasto de LLM**; límite de pérdida operativa ≠ presupuesto de tokens. La tabla nace **sin fila** ⇒ sin política, no se consulta nada. |
+| `evaluateSellPolicy` (`libs/trading-engine`) | **Única** decisión de SELL. Dos caminos independientes: toma de ganancia (piso `minProfitPct`, idéntico al comportamiento previo) y corte de pérdida por señal (`lossCutEnabled`). **Fail-closed en cadena**: confianza ausente, no finita o fuera de `[0,1]` ⇒ nunca vende en pérdida. El veto absoluto de `minProfitPct` en `trading.processor.ts` ya no existe.                                                          |
+| `resolveTradeQuantity` (`libs/trading-engine`) | **Única** aritmética de sizing: `factor = min(aegis × verdict, forge)` con `clamp(·,0,1)` en cada factor ⇒ el techo `balance × maxTradePct` es inviolable **por construcción**. `REDUCE` reduce tamaño (`reduceSizeFactor`), no bloquea; FORGE `skip` ⇒ tamaño 0 con `blockedBy: 'FORGE_SKIP'`, distinto de `AEGIS_BLOCK`.                                                                                             |
+| `aegisVerdictSchema` (`src/orchestrator/dto/`) | **Única** lectura del verdict de AEGIS: `blockReasons: AegisBlockReason[]` tipado (zod, un `.catch()` por campo para degradar a neutro ante payload parcial). `isOverridableBlock` es **fail-closed**: sin `blockReasons`, con array vacío o con cualquier motivo fuera del conjunto anulable, el BLOCK se respeta. El regex `isFalseConcentrationBlock` sobre `reason` fue eliminado y **no se reintroduce**.            |
+| `ReconciliationService` (`src/trading/`)     | **Única** puerta de sincronización con el exchange; corre como paso previo a toda decisión del ciclo (antes del health check del LLM), solo en LIVE/TESTNET. Idempotente por **transición condicional** (`updateMany` con `status: 'OPEN'` esperado + guard `claimed.count === 0`), nunca por conteo de trades. Barre OCO zombie por `clientOrderId` con prefijo `prot-`, preservando antes las `PROTECTED` de otras configs del mismo usuario/símbolo. |
 
 ### 3.2 Evaluación de decisiones
 
@@ -34,13 +39,26 @@
 - Cola `agent-evaluation`: `evaluate` (delayed, `jobId: eval:{decisionId}:{horizon}`), `schedule-evaluations` (repetible `*/15 * * * *`, red de seguridad si Redis pierde los delayed) y `cleanup` (repetible `30 3 * * *`). Los repetibles se registran en `EvaluationService.onModuleInit` con `jobId` fijo + `removeRepeatable` previo, para que N réplicas no multipliquen el sweep.
 - `scheduleEvaluation` se llama **siempre fire-and-forget con `.catch`**: la telemetría nunca puede tumbar el ciclo de trading.
 
+### 3.3 Ejecución de órdenes y protección de posiciones (cycle-02)
+
+- **Regla no negociable — cancelar la protección antes de vender.** Una OCO viva bloquea el balance base; todo camino de salida llama `releaseProtectionIfNeeded` (deja `RELEASED`) antes del `placeMarketOrder(SELL)`: `executeLLMSell`, `closeAtMarket` de `checkOpenPositions`, `executePartialTakeProfit` y `closePositionManually` de `TradingService`. **Cualquier camino de salida nuevo debe hacer lo mismo o falla con `-2010`.**
+- **Protección nativa (solo LIVE/TESTNET, `nativeProtectionEnabled`):** tras confirmarse la compra, `executeBuy` coloca la OCO con `placeProtectionWithRetry` (`src/trading/protection-retry.ts`, única implementación del backoff: 3 intentos, 250/1000/3000 ms ±20 % jitter, solo ante códigos de Binance reintentables). `listClientOrderId = prot-{positionId}-{attempt}`, persistido antes de cada llamada. Agotados los intentos: `protectionStatus = UNPROTECTED` + notificación + evento WS `position:unprotected`; la posición **no** se cierra salvo `closeOnProtectionFailure` (default `false`). En SANDBOX el flag se ignora (el executor se reconstruye en cada ciclo y su simulación en memoria no sobrevive).
+- **Máquina de salidas en `checkOpenPositions`**, orden fijo, primero que matchea gana: TIME_EXIT → STOP (efectivo = `max(stop persistido, nivel trailed)`) → PARTIAL_TP → TAKE_PROFIT fijo (**deshabilitado mientras `trailingStopEnabled` esté activo**) → persistir estado de trailing.
+- `DecisionPayload` transporta `risk: AegisVerdict` y `sizing: ForgeSizingSummary` ya parseados: el processor **nunca** vuelve a parsear `subAgentResults`.
+- `Position.quantity` significa **cantidad abierta remanente**; `initialQuantity` conserva la original y es `null` en filas históricas ⇒ los cálculos leen `initialQuantity ?? quantity`.
+- `Trade.decisionId` (nullable, FK `ON DELETE SET NULL`) se setea en los 4 puntos de creación del flujo real; `null` en la reconciliación (lo ejecutó el exchange) y en el cierre manual.
+- El contrato del JSON de AEGIS viaja en el **user prompt** de `buildTaskUserPrompt('risk_gate')` además del seed: el system prompt vive en la tabla `AgentDefinition` y una instalación ya seedeada no lo actualiza al desplegar.
+
 ## 4. Convenciones propias
 
 - Controladores solo reciben/delegan/responden; la lógica de negocio vive en Services. Errores vía `HttpException`.
 - DTOs con `class-validator` + `class-transformer`. Migraciones solo vía `prisma migrate dev`/`deploy`; cuando no hay BD disponible se escribe el SQL aditivo a mano y se registra en `sdd/schema.json`.
 - Claves de usuario (Binance/LLM/News) cifradas AES-256-GCM; modo Sandbox enforced server-side.
 - Correr: `pnpm dev:api` (necesita `pnpm docker:infra`). Tests: `pnpm nx test api` (Jest).
-- Wiring de módulos vigente y unidireccional: `AgentConfigModule → LlmModule`, `TradingModule → EvaluationModule`. El `eslint-disable @nx/enforce-module-boundaries` vive en `agent-config-resolver.service.ts`.
+- Wiring de módulos vigente y unidireccional: `AgentConfigModule → LlmModule`, `TradingModule → EvaluationModule`, `TradingModule → AgentDomainModule`. El `eslint-disable @nx/enforce-module-boundaries` vive en `agent-config-resolver.service.ts`.
+- **`ValidationPipe` global con `forbidNonWhitelisted: true`:** un campo nuevo de `TradingConfig` que no esté declarado en `CreateTradingConfigDto` **y** `UpdateTradingConfigDto` hace que el request entero responda 400 — no que el campo se ignore.
+- **Los getters de `PrismaService` son 1:1 con los modelos:** dropear un modelo sin borrar su getter (o agregarlo sin declararlo) rompe el build.
+- Todo interruptor de comportamiento de trading nace **apagado** en la migración: una instalación existente que despliegue sin tocar su config debe producir exactamente las mismas órdenes que antes.
 
 > Las actualizaciones por ciclo/fix van como fragmentos aditivos en `updates/` —
 > este archivo base solo lo modifica la consolidación (ver `sdd/context/context_prompt.md` sección 6).

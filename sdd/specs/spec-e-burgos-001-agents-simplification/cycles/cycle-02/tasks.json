@@ -35,8 +35,13 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817154000_drop_orphan_agent_tables/migration.sql",
+        "apps/api/src/prisma/prisma.service.ts",
+        "apps/api/src/__mocks__/generated-prisma.ts"
+      ]
     },
     {
       "id": "TASK-004",
@@ -45,8 +50,15 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
+        "apps/api/prisma/migrations/20260817153000_add_user_risk_policies/migration.sql",
+        "apps/api/src/trading/dto/trading-config.dto.ts",
+        "apps/api/src/prisma/prisma.service.ts",
+        "sdd/schema.json"
+      ]
     },
     {
       "id": "TASK-005",
@@ -55,8 +67,13 @@
       "estimation_hours": 2.5,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817151000_add_position_protection_state/migration.sql",
+        "apps/api/src/__mocks__/generated-prisma.ts",
+        "sdd/schema.json"
+      ]
     },
     {
       "id": "TASK-006",
@@ -65,8 +82,12 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817152000_add_trade_decision_fk/migration.sql",
+        "sdd/schema.json"
+      ]
     },
     {
       "id": "TASK-007",

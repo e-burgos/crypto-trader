@@ -481,3 +481,29 @@ TASK-006 → TASK-016 (Trade.decisionId)
 ```
 
 > IDs `TASK-[NNN]` — el scope es el `tasks.json` del ciclo; los mismos IDs van en ambos archivos.
+
+## Pendiente de documentar en contexto
+
+- **TASK-004 — desviación respecto a la descripción original de este documento.** La descripción
+  de TASK-004 (líneas 130-141) listaba los límites de riesgo agregado por usuario (RF-06,
+  HU-02-06) como campos nuevos de `TradingConfig`. `architect.md` §3 (decisión D2) resolvió esto
+  distinto: esos límites viven en una tabla nueva `user_risk_policies` (1:1 con `User`), no en
+  `TradingConfig` — evita elegir "cuál config gana" cuando dos configs del mismo usuario
+  difieren, y evita reforzar la confusión ya detectada entre presupuesto de LLM
+  (`AgentBudgetPolicy.dailyUsdBudget`) y límite de pérdida de trading (hallazgo 1.1-2 de
+  `architect.md`). TASK-004 implementó lo que `architect.md` define como autoridad: 17 columnas
+  nuevas en `trading_configs` (política de SELL, sizing, protección nativa, herramientas de
+  ganancia — sin los límites agregados) + la migración y el modelo `UserRiskPolicy` completos
+  (`20260817153000_add_user_risk_policies`). Ninguna otra task del ciclo tenía asignada esta
+  migración; quedó bajo TASK-004 por ser la única con `HU-02-06` en su `user_stories`.
+- **`apps/api/src/prisma/prisma.service.ts` no estaba en el alcance de archivos original de
+  TASK-004/005/006/003**, pero sus getters son 1:1 con los modelos de Prisma: agregar
+  `UserRiskPolicy` y dropear `AgentModelPolicy`/`AgentToolInvocation` sin actualizarlo rompe el
+  build de `apps/api` (el cliente generado ya no expone esos modelos). Se tocó de forma mínima y
+  mecánica (alta/baja de 3 getters, cero lógica) en TASK-004 y TASK-003.
+- **DTO de `UserRiskPolicy` (`EP-004`/`EP-005`, `apps/api/src/trading/dto/user-risk-policy.dto.ts`
+  en `architect.md` §15) no se creó en esta oleada.** El modelo y la migración existen y
+  compilan, pero el DTO y el wiring de controller/service quedan pendientes — `trading.service.ts`
+  y `trading.controller.ts` estaban fuera del alcance de archivos autorizado para este batch.
+  Candidato natural para TASK-015 (que ya cablea `RiskBudgetService`/`PortfolioContextService`
+  contra esta misma tabla) o una task dedicada si el conductor del ciclo prefiere separarlo.

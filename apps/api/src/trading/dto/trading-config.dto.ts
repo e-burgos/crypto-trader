@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -215,6 +216,187 @@ export class CreateTradingConfigDto {
   @IsEnum(RiskProfileEnum)
   @IsOptional()
   riskProfile?: RiskProfileEnum;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Interruptor maestro del corte de pérdida por señal. false = veto actual de minProfitPct intacto',
+  })
+  @IsBoolean()
+  @IsOptional()
+  lossCutEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 1,
+    example: 0.85,
+    description: 'Confianza mínima (0..1) del agente para habilitar la venta en pérdida',
+  })
+  @IsNumber({}, { message: 'Umbral de confianza de corte de pérdida debe ser un número válido' })
+  @Min(0, { message: 'Umbral de confianza de corte de pérdida debe ser mayor o igual a $constraint1' })
+  @Max(1, { message: 'Umbral de confianza de corte de pérdida no puede superar $constraint1' })
+  @IsOptional()
+  lossCutConfidenceThreshold?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 0.5,
+    example: 0.005,
+    description: 'Pérdida mínima (fracción) para considerar el corte de pérdida — evita churn por ruido',
+  })
+  @IsNumber({}, { message: 'Pérdida mínima de corte debe ser un número válido' })
+  @Min(0, { message: 'Pérdida mínima de corte debe ser mayor o igual a $constraint1' })
+  @Max(0.5, { message: 'Pérdida mínima de corte no puede superar $constraint1' })
+  @IsOptional()
+  lossCutMinLossPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 100,
+    example: 2,
+    description: 'Múltiplo de la fricción de salida que la pérdida evitada debe superar',
+  })
+  @IsNumber({}, { message: 'Ratio de borde de corte de pérdida debe ser un número válido' })
+  @Min(0, { message: 'Ratio de borde de corte de pérdida debe ser mayor o igual a $constraint1' })
+  @Max(100, { message: 'Ratio de borde de corte de pérdida no puede superar $constraint1' })
+  @IsOptional()
+  lossCutMinEdgeRatio?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'false = executeBuy usa calculateTradeQuantity sin modulación (factor 1, sin AEGIS ni FORGE)',
+  })
+  @IsBoolean()
+  @IsOptional()
+  smartSizingEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.05,
+    maximum: 1,
+    example: 0.5,
+    description: 'Factor aplicado cuando el verdict de AEGIS es REDUCE',
+  })
+  @IsNumber({}, { message: 'Factor de reducción de tamaño debe ser un número válido' })
+  @Min(0.05, { message: 'Factor de reducción de tamaño debe ser al menos $constraint1' })
+  @Max(1, { message: 'Factor de reducción de tamaño no puede superar $constraint1' })
+  @IsOptional()
+  reduceSizeFactor?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Coloca OCO real al abrir posición (solo LIVE/TESTNET; se ignora en SANDBOX)',
+  })
+  @IsBoolean()
+  @IsOptional()
+  nativeProtectionEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Opt-in agresivo: cerrar a mercado si la protección no se logra colocar tras los reintentos',
+  })
+  @IsBoolean()
+  @IsOptional()
+  closeOnProtectionFailure?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 0.05,
+    example: 0.002,
+    description:
+      'Distancia entre el stopPrice y el price límite de la pierna STOP_LOSS_LIMIT',
+  })
+  @IsNumber({}, { message: 'Offset de stop-limit debe ser un número válido' })
+  @Min(0, { message: 'Offset de stop-limit debe ser mayor o igual a $constraint1' })
+  @Max(0.05, { message: 'Offset de stop-limit no puede superar $constraint1' })
+  @IsOptional()
+  stopLimitOffsetPct?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Activa el trailing stop. Mientras esté activo, el take-profit fijo queda desactivado',
+  })
+  @IsBoolean()
+  @IsOptional()
+  trailingStopEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.02,
+    description: 'Distancia del stop bajo el máximo visto (trailing)',
+  })
+  @IsNumber({}, { message: 'Porcentaje de trailing stop debe ser un número válido' })
+  @Min(0.001, { message: 'Porcentaje de trailing stop debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de trailing stop no puede superar $constraint1' })
+  @IsOptional()
+  trailingStopPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.01,
+    description: 'Ganancia no realizada mínima para empezar a trailear',
+  })
+  @IsNumber({}, { message: 'Porcentaje de activación de trailing debe ser un número válido' })
+  @Min(0.001, { message: 'Porcentaje de activación de trailing debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de activación de trailing no puede superar $constraint1' })
+  @IsOptional()
+  trailingActivationPct?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Activa la venta parcial escalonada de take-profit',
+  })
+  @IsBoolean()
+  @IsOptional()
+  partialTpEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.02,
+    description: 'Ganancia que dispara la venta parcial',
+  })
+  @IsNumber({}, { message: 'Porcentaje de disparo de TP parcial debe ser un número válido' })
+  @Min(0.001, { message: 'Porcentaje de disparo de TP parcial debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de disparo de TP parcial no puede superar $constraint1' })
+  @IsOptional()
+  partialTpTriggerPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0.05,
+    maximum: 1,
+    example: 0.5,
+    description: 'Fracción de la posición que se vende en el TP parcial',
+  })
+  @IsNumber({}, { message: 'Porcentaje de venta de TP parcial debe ser un número válido' })
+  @Min(0.05, { message: 'Porcentaje de venta de TP parcial debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de venta de TP parcial no puede superar $constraint1' })
+  @IsOptional()
+  partialTpSellPct?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Tras el TP parcial, sube el stop a breakeven neto de fees',
+  })
+  @IsBoolean()
+  @IsOptional()
+  moveStopToBreakevenAfterPartial?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 5,
+    maximum: 43200,
+    example: 1440,
+    description: 'Antigüedad máxima (minutos) de una posición antes de cerrarla por tiempo. null = desactivado',
+  })
+  @IsInt({ message: 'Máximo de minutos de posición abierta debe ser un entero' })
+  @Min(5, { message: 'Máximo de minutos de posición abierta debe ser al menos $constraint1' })
+  @Max(43200, { message: 'Máximo de minutos de posición abierta no puede superar $constraint1' })
+  @IsOptional()
+  maxPositionHoldMinutes?: number;
 }
 
 export class UpdateTradingConfigDto {
@@ -341,6 +523,187 @@ export class UpdateTradingConfigDto {
   @IsEnum(RiskProfileEnum)
   @IsOptional()
   riskProfile?: RiskProfileEnum;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Interruptor maestro del corte de pérdida por señal. false = veto actual de minProfitPct intacto',
+  })
+  @IsBoolean()
+  @IsOptional()
+  lossCutEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 1,
+    example: 0.85,
+    description: 'Confianza mínima (0..1) del agente para habilitar la venta en pérdida',
+  })
+  @IsNumber({}, { message: 'Umbral de confianza de corte de pérdida debe ser un número válido' })
+  @Min(0, { message: 'Umbral de confianza de corte de pérdida debe ser mayor o igual a $constraint1' })
+  @Max(1, { message: 'Umbral de confianza de corte de pérdida no puede superar $constraint1' })
+  @IsOptional()
+  lossCutConfidenceThreshold?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 0.5,
+    example: 0.005,
+    description: 'Pérdida mínima (fracción) para considerar el corte de pérdida — evita churn por ruido',
+  })
+  @IsNumber({}, { message: 'Pérdida mínima de corte debe ser un número válido' })
+  @Min(0, { message: 'Pérdida mínima de corte debe ser mayor o igual a $constraint1' })
+  @Max(0.5, { message: 'Pérdida mínima de corte no puede superar $constraint1' })
+  @IsOptional()
+  lossCutMinLossPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 100,
+    example: 2,
+    description: 'Múltiplo de la fricción de salida que la pérdida evitada debe superar',
+  })
+  @IsNumber({}, { message: 'Ratio de borde de corte de pérdida debe ser un número válido' })
+  @Min(0, { message: 'Ratio de borde de corte de pérdida debe ser mayor o igual a $constraint1' })
+  @Max(100, { message: 'Ratio de borde de corte de pérdida no puede superar $constraint1' })
+  @IsOptional()
+  lossCutMinEdgeRatio?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'false = executeBuy usa calculateTradeQuantity sin modulación (factor 1, sin AEGIS ni FORGE)',
+  })
+  @IsBoolean()
+  @IsOptional()
+  smartSizingEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.05,
+    maximum: 1,
+    example: 0.5,
+    description: 'Factor aplicado cuando el verdict de AEGIS es REDUCE',
+  })
+  @IsNumber({}, { message: 'Factor de reducción de tamaño debe ser un número válido' })
+  @Min(0.05, { message: 'Factor de reducción de tamaño debe ser al menos $constraint1' })
+  @Max(1, { message: 'Factor de reducción de tamaño no puede superar $constraint1' })
+  @IsOptional()
+  reduceSizeFactor?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Coloca OCO real al abrir posición (solo LIVE/TESTNET; se ignora en SANDBOX)',
+  })
+  @IsBoolean()
+  @IsOptional()
+  nativeProtectionEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Opt-in agresivo: cerrar a mercado si la protección no se logra colocar tras los reintentos',
+  })
+  @IsBoolean()
+  @IsOptional()
+  closeOnProtectionFailure?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    maximum: 0.05,
+    example: 0.002,
+    description:
+      'Distancia entre el stopPrice y el price límite de la pierna STOP_LOSS_LIMIT',
+  })
+  @IsNumber({}, { message: 'Offset de stop-limit debe ser un número válido' })
+  @Min(0, { message: 'Offset de stop-limit debe ser mayor o igual a $constraint1' })
+  @Max(0.05, { message: 'Offset de stop-limit no puede superar $constraint1' })
+  @IsOptional()
+  stopLimitOffsetPct?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Activa el trailing stop. Mientras esté activo, el take-profit fijo queda desactivado',
+  })
+  @IsBoolean()
+  @IsOptional()
+  trailingStopEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.02,
+    description: 'Distancia del stop bajo el máximo visto (trailing)',
+  })
+  @IsNumber({}, { message: 'Porcentaje de trailing stop debe ser un número válido' })
+  @Min(0.001, { message: 'Porcentaje de trailing stop debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de trailing stop no puede superar $constraint1' })
+  @IsOptional()
+  trailingStopPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.01,
+    description: 'Ganancia no realizada mínima para empezar a trailear',
+  })
+  @IsNumber({}, { message: 'Porcentaje de activación de trailing debe ser un número válido' })
+  @Min(0.001, { message: 'Porcentaje de activación de trailing debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de activación de trailing no puede superar $constraint1' })
+  @IsOptional()
+  trailingActivationPct?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Activa la venta parcial escalonada de take-profit',
+  })
+  @IsBoolean()
+  @IsOptional()
+  partialTpEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.001,
+    maximum: 1,
+    example: 0.02,
+    description: 'Ganancia que dispara la venta parcial',
+  })
+  @IsNumber({}, { message: 'Porcentaje de disparo de TP parcial debe ser un número válido' })
+  @Min(0.001, { message: 'Porcentaje de disparo de TP parcial debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de disparo de TP parcial no puede superar $constraint1' })
+  @IsOptional()
+  partialTpTriggerPct?: number;
+
+  @ApiPropertyOptional({
+    minimum: 0.05,
+    maximum: 1,
+    example: 0.5,
+    description: 'Fracción de la posición que se vende en el TP parcial',
+  })
+  @IsNumber({}, { message: 'Porcentaje de venta de TP parcial debe ser un número válido' })
+  @Min(0.05, { message: 'Porcentaje de venta de TP parcial debe ser al menos $constraint1' })
+  @Max(1, { message: 'Porcentaje de venta de TP parcial no puede superar $constraint1' })
+  @IsOptional()
+  partialTpSellPct?: number;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Tras el TP parcial, sube el stop a breakeven neto de fees',
+  })
+  @IsBoolean()
+  @IsOptional()
+  moveStopToBreakevenAfterPartial?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 5,
+    maximum: 43200,
+    example: 1440,
+    description: 'Antigüedad máxima (minutos) de una posición antes de cerrarla por tiempo. null = desactivado',
+  })
+  @IsInt({ message: 'Máximo de minutos de posición abierta debe ser un entero' })
+  @Min(5, { message: 'Máximo de minutos de posición abierta debe ser al menos $constraint1' })
+  @Max(43200, { message: 'Máximo de minutos de posición abierta no puede superar $constraint1' })
+  @IsOptional()
+  maxPositionHoldMinutes?: number;
 }
 
 export class StartAgentDto {

@@ -243,7 +243,7 @@
       "trading_configs": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "migrated",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "migration_file": "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
@@ -439,7 +439,7 @@
       "positions": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "migrated",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "migration_file": "apps/api/prisma/migrations/20260817151000_add_position_protection_state/migration.sql",
@@ -615,7 +615,7 @@
       "trades": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "migrated",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "migration_file": "apps/api/prisma/migrations/20260817152000_add_trade_decision_fk/migration.sql",
@@ -703,7 +703,7 @@
       "user_risk_policies": {
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "migrated",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "migration_file": "apps/api/prisma/migrations/20260817153000_add_user_risk_policies/migration.sql",

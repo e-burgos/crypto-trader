@@ -19,8 +19,12 @@
       "created_in_cycle": "número de ciclo donde se definió por primera vez",
       "updated_in_cycle": "número del último ciclo que lo modificó (null si nunca se actualizó)",
       "description": "qué hace el endpoint",
-      "path_params": ["param1"],
-      "required_headers": ["Header-Name"],
+      "path_params": [
+        "param1"
+      ],
+      "required_headers": [
+        "Header-Name"
+      ],
       "request_body": {},
       "responses": {
         "200": "descripción"
@@ -33,5 +37,97 @@
         }
       ]
     }
+  },
+  "apps/api": {
+    "endpoints": [
+      {
+        "id": "EP-001",
+        "method": "GET",
+        "path": "/agents/scorecard",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Scorecard de calidad de decisión por agente: win rate, P&L medio, costo medio y valor neto, agregados por régimen de mercado. Excluye del cómputo las evaluaciones PENDING y NOT_EVALUABLE y las expone como conteos aparte. Endpoint pre-existente en el código, registrado en el arnés SDD en este ciclo con el contrato post-cycle-01.",
+        "path_params": [],
+        "required_headers": [
+          "Authorization"
+        ],
+        "query_params": {
+          "agentId": "Filtra por agente (valor del enum AgentId)",
+          "model": "Filtra por modelo LLM",
+          "provider": "Filtra por proveedor LLM",
+          "symbol": "Filtra por símbolo de mercado",
+          "mode": "Filtra por modo de trading (SANDBOX|TESTNET|LIVE)",
+          "riskProfile": "Filtra por perfil de riesgo",
+          "marketRegime": "Filtra por régimen de mercado calculado",
+          "from": "Fecha ISO desde",
+          "to": "Fecha ISO hasta"
+        },
+        "request_body": {},
+        "responses": {
+          "200": "{ totalDecisions, winRate, avgPnlUsd, avgCostUsd, netValueUsd, pendingCount, notEvaluableCount, byMarketRegime: [{ regime, count, winRate }] }",
+          "401": "JWT ausente o inválido"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-002",
+        "method": "GET",
+        "path": "/agents/scorecard/summary",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Resumen agregado del scorecard: total evaluado, win/loss rate, P&L medio por decisión, costo total y ROI. Suma pendingCount y notEvaluableCount para distinguir lo aún no evaluable de lo neutro. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",
+        "path_params": [],
+        "required_headers": [
+          "Authorization"
+        ],
+        "query_params": {
+          "agentId": "Filtra por agente (valor del enum AgentId)",
+          "model": "Filtra por modelo LLM",
+          "provider": "Filtra por proveedor LLM",
+          "symbol": "Filtra por símbolo de mercado",
+          "mode": "Filtra por modo de trading (SANDBOX|TESTNET|LIVE)",
+          "riskProfile": "Filtra por perfil de riesgo",
+          "marketRegime": "Filtra por régimen de mercado calculado",
+          "from": "Fecha ISO desde",
+          "to": "Fecha ISO hasta"
+        },
+        "request_body": {},
+        "responses": {
+          "200": "{ totalEvaluated, winRate, lossRate, avgPnlPerDecision, totalCostUsd, roi, pendingCount, notEvaluableCount }",
+          "401": "JWT ausente o inválido"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-003",
+        "method": "GET",
+        "path": "/users/me/llm/usage",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Estadísticas de uso y costo LLM del usuario, por proveedor, por modelo y por día. Tras el cycle-01 el costo de tráfico OpenRouter se resuelve con el pricing en vivo del catálogo; label cubre OPENROUTER y TOGETHER y unpricedCallCount expone las llamadas que no se pudieron tarifar. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",
+        "path_params": [],
+        "required_headers": [
+          "Authorization"
+        ],
+        "query_params": {
+          "period": "Ventana de agregación: 7d | 30d | 90d | all (default 30d)"
+        },
+        "request_body": {},
+        "responses": {
+          "200": "{ period, from, to, totalCostUsd, totalInputTokens, totalOutputTokens, byProvider: [{ provider, label, inputTokens, outputTokens, costUsd, callCount, unpricedCallCount, byModel: [{ model, label, inputTokens, outputTokens, costUsd, callCount }] }], dailySeries: [{ date, costUsd, inputTokens, outputTokens }] }",
+          "401": "JWT ausente o inválido"
+        },
+        "changelog": []
+      }
+    ]
   }
 }

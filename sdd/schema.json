@@ -28,5 +28,300 @@
         }
       ]
     }
+  },
+  "apps/api": {
+    "tables": {
+      "llm_usage_logs": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817000000_add_pricing_source_and_not_evaluable/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": [
+              "PRIMARY KEY"
+            ]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "FK users(id) ON DELETE CASCADE"
+            ]
+          },
+          "provider": {
+            "type": "LLMProvider",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "enum: CLAUDE, OPENAI, GROQ, GEMINI, MISTRAL, TOGETHER, OPENROUTER"
+          },
+          "model": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "modelo pedido"
+          },
+          "input_tokens": {
+            "type": "Int",
+            "constraints": [
+              "NOT NULL"
+            ]
+          },
+          "output_tokens": {
+            "type": "Int",
+            "constraints": [
+              "NOT NULL"
+            ]
+          },
+          "cost_usd": {
+            "type": "Float",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "cycle-01: para OPENROUTER se calcula con el pricing en vivo del catálogo, ya no queda en 0"
+          },
+          "source": {
+            "type": "LLMSource",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "TRADING | CHAT"
+          },
+          "agent_id": {
+            "type": "AgentId",
+            "constraints": [
+              "NULL"
+            ],
+            "notes": "slot de modelo que originó la llamada; incluye routing y synthesis"
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "actual_model": {
+            "type": "String",
+            "constraints": [
+              "NULL"
+            ],
+            "notes": "modelo realmente servido por OpenRouter cuando hubo fallback; es contra este que se tarifa"
+          },
+          "request_id": {
+            "type": "String",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "pricing_source": {
+            "type": "PricingSource",
+            "constraints": [
+              "NULL"
+            ],
+            "notes": "NUEVO cycle-01: LIVE_OPENROUTER | STALE_CACHE | STATIC_TABLE | UNPRICED. null = fila anterior al ciclo. Hace distinguible un costo 0 real (modelo :free) de un costo no tarifado"
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": [
+              "NOT NULL"
+            ]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_llm_usage_logs",
+            "type": "PRIMARY",
+            "columns": [
+              "id"
+            ]
+          },
+          {
+            "name": "idx_llm_usage_logs_user_created",
+            "type": "INDEX",
+            "columns": [
+              "user_id",
+              "created_at"
+            ]
+          },
+          {
+            "name": "idx_llm_usage_logs_user_provider",
+            "type": "INDEX",
+            "columns": [
+              "user_id",
+              "provider"
+            ]
+          },
+          {
+            "name": "idx_llm_usage_logs_agent_created",
+            "type": "INDEX",
+            "columns": [
+              "agent_id",
+              "created_at"
+            ]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-17",
+            "migration": "20260817000000_add_pricing_source_and_not_evaluable",
+            "change": "tabla pre-existente registrada en el arnés; se agrega la columna nullable pricing_source (enum PricingSource) para trazar el origen de la tarifa aplicada"
+          }
+        ]
+      },
+      "agent_decision_evaluations": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817000000_add_pricing_source_and_not_evaluable/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": [
+              "PRIMARY KEY"
+            ]
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "AgentDecision evaluada; sin FK declarada en Prisma (estado pre-existente)"
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "FK users(id) ON DELETE CASCADE"
+            ]
+          },
+          "horizon_minutes": {
+            "type": "Int",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "15 | 60 | 240 | 1440"
+          },
+          "status": {
+            "type": "AgentOutcomeStatus @default(PENDING)",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "cycle-01 agrega NOT_EVALUABLE: horizonte vencido sin precio de mercado disponible (CE-01)"
+          },
+          "price_at_decision": {
+            "type": "Float",
+            "constraints": [
+              "NOT NULL"
+            ],
+            "notes": "de AgentDecision.indicators"
+          },
+          "price_at_evaluation": {
+            "type": "Float",
+            "constraints": [
+              "NULL"
+            ],
+            "notes": "cycle-01: precio real de mercado al horizonte via MarketService.getPriceAt; null cuando la decision queda NOT_EVALUABLE"
+          },
+          "realized_pnl_usd": {
+            "type": "Float",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "hypothetical_pnl_usd": {
+            "type": "Float",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "missed_opportunity_usd": {
+            "type": "Float",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "max_adverse_move_pct": {
+            "type": "Float",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "max_favorable_move_pct": {
+            "type": "Float",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "market_regime": {
+            "type": "String",
+            "constraints": [
+              "NULL"
+            ],
+            "notes": "HIGH_VOLATILITY | TRENDING_UP | TRENDING_DOWN | RANGING"
+          },
+          "evaluated_at": {
+            "type": "DateTime",
+            "constraints": [
+              "NULL"
+            ]
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": [
+              "NOT NULL"
+            ]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_agent_decision_evaluations",
+            "type": "PRIMARY",
+            "columns": [
+              "id"
+            ]
+          },
+          {
+            "name": "uk_agent_decision_evaluations_decision_horizon",
+            "type": "UNIQUE",
+            "columns": [
+              "decision_id",
+              "horizon_minutes"
+            ]
+          },
+          {
+            "name": "idx_agent_decision_evaluations_user_decision",
+            "type": "INDEX",
+            "columns": [
+              "user_id",
+              "decision_id"
+            ]
+          },
+          {
+            "name": "idx_agent_decision_evaluations_status_created",
+            "type": "INDEX",
+            "columns": [
+              "status",
+              "created_at"
+            ]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-17",
+            "migration": "20260817000000_add_pricing_source_and_not_evaluable",
+            "change": "tabla pre-existente registrada en el arnés; se agrega el valor NOT_EVALUABLE al enum AgentOutcomeStatus y el UNIQUE (decision_id, horizon_minutes) que hace idempotente el cableado de scheduleEvaluation. La tabla esta vacia en todos los entornos: el unique no requiere deduplicacion"
+          }
+        ]
+      }
+    }
   }
 }

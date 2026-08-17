@@ -244,3 +244,25 @@ TASK-011 ───────────────────────�
 Camino crítico: `TASK-001/002/003 → TASK-010` y `TASK-005 → TASK-006` y `TASK-008 → TASK-009`, todos convergiendo en `TASK-012` (cierre de ciclo). TASK-004, TASK-007 y TASK-011 son independientes entre sí y pueden ejecutarse en paralelo con cualquier otra rama antes de TASK-012.
 
 > IDs `TASK-[NNN]` — el scope es el `tasks.json` del ciclo; los mismos IDs van en ambos archivos.
+
+---
+
+## Pendiente de documentar en contexto
+
+### TASK-005 — desviaciones del contrato D2 (architect.md §3.2)
+
+- **`slot` tipado como `AgentId` (prisma), no `ModelSlotId`.** `agent-identity.ts` — el único
+  archivo que debía definir `ModelSlotId`/`PersonaAgentId` — es explícitamente el alcance de
+  TASK-012, que no es dependencia de TASK-005 en el grafo de `tasks.json`. `AgentId` (prisma)
+  ya tiene los 8 valores que `ModelSlotId` necesita, así que el comportamiento es idéntico;
+  cuando TASK-012 cree `agent-identity.ts`, `resolveClient`/`ResolvedAgentClient` deben migrar
+  su firma de `AgentId` a `ModelSlotId`.
+- **No se redefinió la interfaz `ResolvedAgentConfig` existente.** El contrato D2 la redefine con
+  campo `slot` (en vez de `agentId`) y agrega `'preset'`/`'override'`/`'credential'` a `source`.
+  Renombrar `agentId` → `slot` en la interfaz ya consumida por `agent-config.controller.ts`,
+  `admin-agent-config.controller.ts` y `market.service.ts` rompería esos callers, y esta task es
+  aditiva (`resolveConfig` sigue con callers propios hasta TASK-006). Se agregó en su lugar
+  `ResolvedAgentClient` (nueva, con `slot`) sin tocar `ResolvedAgentConfig`. `resolveClient`
+  mapea internamente `resolveConfig`'s `source: 'fallback'` → `'preset'` para hablar el
+  vocabulario de `ResolutionSource` del contrato. TASK-006 es quien debe decidir si al migrar
+  callers conviene fusionar/renombrar ambas interfaces.

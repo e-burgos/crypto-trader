@@ -15,8 +15,12 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/domain/risk-budget.service.ts",
+        "apps/api/src/agents/domain/risk-budget.service.spec.ts",
+        "apps/api/src/agents/domain/agent-domain.module.ts"
+      ]
     },
     {
       "id": "TASK-002",
@@ -25,8 +29,12 @@
       "estimation_hours": 2.5,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/risk/trade-simulation.ts",
+        "libs/trading-engine/src/lib/risk/trade-simulation.spec.ts",
+        "libs/trading-engine/src/lib/index.ts"
+      ]
     },
     {
       "id": "TASK-003",
@@ -35,8 +43,12 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/domain/portfolio-context.service.ts",
+        "apps/api/src/agents/domain/portfolio-context.service.spec.ts",
+        "apps/api/src/agents/domain/agent-domain.module.ts"
+      ]
     },
     {
       "id": "TASK-004",
@@ -55,8 +67,12 @@
       "estimation_hours": 3.5,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-config-resolver.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.spec.ts",
+        "apps/api/src/agents/agent-config.module.ts"
+      ]
     },
     {
       "id": "TASK-006",
@@ -75,8 +91,17 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/llm/model-pricing.service.ts",
+        "apps/api/src/llm/model-pricing.service.spec.ts",
+        "apps/api/src/llm/llm-usage.service.ts",
+        "apps/api/src/llm/llm-usage.service.spec.ts",
+        "apps/api/src/llm/llm.module.ts",
+        "apps/api/src/openrouter/openrouter-models-api.service.ts",
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817120000_add_llm_usage_pricing_source/migration.sql"
+      ]
     },
     {
       "id": "TASK-008",

@@ -14,6 +14,7 @@ describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => 
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
   }
 

@@ -11,6 +11,7 @@ describe('TradingProcessor — resolveBuySizing (TASK-011)', () => {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
   );
 
   const resolve = (

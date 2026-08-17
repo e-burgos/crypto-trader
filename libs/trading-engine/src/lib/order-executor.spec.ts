@@ -257,6 +257,29 @@ describe('SandboxOrderExecutor', () => {
         executor.cancelProtectionOrder('BTCUSDT', {}),
       ).resolves.toBeUndefined();
     });
+
+    it('getOpenOrders lists live protection orders for the symbol', async () => {
+      await executor.placeMarketOrder('BTCUSDT', TradeType.BUY, 0.1);
+      const placed = await executor.placeProtectionOrder({
+        symbol: 'BTCUSDT',
+        quantity: 0.1,
+        stopPrice: 63_000,
+        stopLimitPrice: 62_900,
+        takeProfitPrice: 70_000,
+        referencePrice: 65_000,
+        clientOrderId: 'prot-pos-1-1',
+      });
+
+      const open = await executor.getOpenOrders('BTCUSDT');
+      expect(open).toEqual([
+        {
+          orderId: placed.orderListId,
+          clientOrderId: 'prot-pos-1-1',
+          orderListId: placed.orderListId,
+        },
+      ]);
+      expect(await executor.getOpenOrders('ETHUSDT')).toEqual([]);
+    });
   });
 });
 
@@ -271,6 +294,7 @@ describe('LiveOrderExecutor', () => {
       placeOcoSellOrder: vi.fn(),
       getOcoStatus: vi.fn(),
       cancelOcoOrderList: vi.fn(),
+      getOpenOrders: vi.fn(),
     };
   }
 
@@ -417,6 +441,18 @@ describe('LiveOrderExecutor', () => {
     await executor.cancelProtectionOrder('BTCUSDT', {});
 
     expect(binance.cancelOcoOrderList).not.toHaveBeenCalled();
+  });
+
+  it('getOpenOrders delegates to the binance client', async () => {
+    const binance = createBinanceMock();
+    const orders = [{ orderId: '1', clientOrderId: 'prot-1-1', orderListId: '9' }];
+    binance.getOpenOrders.mockResolvedValue(orders);
+    const executor = new LiveOrderExecutor(binance);
+
+    const result = await executor.getOpenOrders('BTCUSDT');
+
+    expect(result).toBe(orders);
+    expect(binance.getOpenOrders).toHaveBeenCalledWith('BTCUSDT');
   });
 
   it('delegates getBalance and getPrice', async () => {

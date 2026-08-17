@@ -31,6 +31,12 @@ export interface ProtectionOrderResult {
   placedAt: Date;
 }
 
+export interface OpenOrderSummary {
+  orderId: string;
+  clientOrderId: string;
+  orderListId: string | null;
+}
+
 /**
  * Abstract order executor — real Binance or sandbox.
  */
@@ -63,6 +69,7 @@ export interface OrderExecutorPort {
     ref: ProtectionOrderRef,
   ): Promise<ExchangeOrderStatus>;
   cancelProtectionOrder(symbol: string, ref: ProtectionOrderRef): Promise<void>;
+  getOpenOrders(symbol: string): Promise<OpenOrderSummary[]>;
 }
 
 interface SandboxProtection {
@@ -70,6 +77,7 @@ interface SandboxProtection {
   quantity: number;
   stopPrice: number;
   takeProfitPrice: number;
+  clientOrderId: string | null;
 }
 
 /**
@@ -203,6 +211,7 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
       quantity: req.quantity,
       stopPrice: req.stopPrice,
       takeProfitPrice: req.takeProfitPrice,
+      clientOrderId: req.clientOrderId ?? null,
     });
 
     const { base } = this.parseSymbol(req.symbol);
@@ -288,6 +297,19 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     });
   }
 
+  async getOpenOrders(symbol: string): Promise<OpenOrderSummary[]> {
+    const open: OpenOrderSummary[] = [];
+    for (const [orderListId, entry] of this.protections) {
+      if (entry.symbol !== symbol) continue;
+      open.push({
+        orderId: orderListId,
+        clientOrderId: entry.clientOrderId ?? '',
+        orderListId,
+      });
+    }
+    return open;
+  }
+
   private parseSymbol(symbol: string): { base: string; quote: string } {
     for (const quote of ['USDT', 'USDC']) {
       if (symbol.endsWith(quote)) {
@@ -345,6 +367,7 @@ export class LiveOrderExecutor implements OrderExecutorPort {
         orderListId: string,
       ): Promise<ExchangeOrderStatus>;
       cancelOcoOrderList(symbol: string, orderListId: string): Promise<void>;
+      getOpenOrders(symbol: string): Promise<OpenOrderSummary[]>;
     },
   ) {}
 
@@ -435,6 +458,10 @@ export class LiveOrderExecutor implements OrderExecutorPort {
   ): Promise<void> {
     if (!ref.orderListId) return;
     await this.binance.cancelOcoOrderList(symbol, ref.orderListId);
+  }
+
+  async getOpenOrders(symbol: string): Promise<OpenOrderSummary[]> {
+    return this.binance.getOpenOrders(symbol);
   }
 }
 

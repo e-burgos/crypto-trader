@@ -9,6 +9,7 @@ export type {
   ProtectionOrderRequest,
   ProtectionOrderRef,
   ProtectionOrderResult,
+  OpenOrderSummary,
 } from './order-executor';
 
 export { PositionManager } from './position-manager';

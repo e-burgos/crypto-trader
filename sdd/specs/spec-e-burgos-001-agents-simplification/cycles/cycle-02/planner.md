@@ -538,3 +538,38 @@ TASK-006 → TASK-016 (Trade.decisionId)
   (mismo mecanismo que `placeMarketOrder`, factorizado en un `fillAtPrice` privado
   compartido) — coherente con que SANDBOX no simula un libro de órdenes real y con que
   `nativeProtectionEnabled` ya se ignora en SANDBOX según esa misma sección.
+- **TASK-012/TASK-013 — `OrderExecutorPort` se extendió a 9 métodos, sumando `getOpenOrders`**,
+  no listado en el contrato de §5.4 de `architect.md` (que enumera 8). El barrido de OCO zombie
+  de §7.1 fila 5 exige `getOpenOrders(symbol)` — método que solo existe en `BinanceRestClient`,
+  no en el port. Extenderlo (en vez de que `ReconciliationService` importe `BinanceRestClient`
+  directamente) mantiene la inversión de dependencia: la reconciliación solo conoce el port,
+  igual que el resto del processor. `LiveOrderExecutor.getOpenOrders` delega 1:1;
+  `SandboxOrderExecutor.getOpenOrders` devuelve las protecciones simuladas del símbolo (para
+  poder testear el contrato) — sin impacto real porque `nativeProtectionEnabled` ya se ignora en
+  SANDBOX (§5.6), así que SANDBOX nunca ejecuta el barrido en el flujo real.
+- **TASK-012/TASK-013 — nuevo archivo `apps/api/src/trading/protection-retry.ts`**, no listado en
+  la tabla de archivos de `architect.md` §15. Contiene la única implementación del algoritmo de
+  reintento de §6 paso 3 (3 intentos, backoff 250/1000/3000ms con jitter ±20%, solo códigos
+  reintentables, `listClientOrderId` persistido antes de cada llamada) como función pura
+  reutilizada tal cual por `TradingProcessor.placeNativeProtection` (colocación inicial en
+  `executeBuy`) y por `ReconciliationService.attemptProtection` (reintento del ciclo siguiente,
+  §7.1). Extraerla evita reimplementar el mismo backoff dos veces y es lo que hace que
+  `startingFailureCount` continúe la numeración de `listClientOrderId` entre ciclos sin
+  coordinación adicional.
+- **TASK-013 — barrido de huérfanos con salvaguarda cross-config no descrita en `architect.md`.**
+  `getOpenOrders(symbol)` es a nivel de cuenta+símbolo en Binance, no por `TradingConfig`; si dos
+  configs del mismo usuario operan el mismo símbolo, el barrido de la reconciliación de una config
+  cancelaría la OCO legítima de la otra. Se agregó una consulta adicional
+  (`addExternalLiveOrderIds`) que suma al set de `orderListId` "vivos" las posiciones `PROTECTED`
+  de otras configs del mismo usuario/asset/pair/mode antes de barrer. No hay CA que lo pida
+  explícitamente; es una salvaguarda de correctitud directamente derivada del hallazgo 1.1-3 del
+  architect (bloqueo de saldo por OCO).
+- **TASK-012/TASK-013 — la regla "toda salida cancela la protección antes de vender" (§5.4,
+  hallazgo 1.1-3) se aplicó en este mismo batch a los 3 caminos de salida que ya existían en el
+  alcance de archivos (`executeLLMSell`, el cierre por stop/TP de `checkOpenPositions` en
+  `trading.processor.ts`, y `closePositionManually` en `trading.service.ts`)**, aunque
+  `architect.md` la describe como aplicable también al parcial de TP de TASK-014 (aún no
+  implementado, no existe ese camino todavía). Sin esto, cualquier SELL sobre una posición
+  `PROTECTED` fallaría por saldo bloqueado en la OCO en cuanto TASK-012 empezara a colocar
+  protección real — no tenía sentido entregar la colocación sin el release correspondiente en los
+  caminos de salida ya existentes.

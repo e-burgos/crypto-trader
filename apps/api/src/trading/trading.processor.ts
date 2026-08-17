@@ -10,6 +10,8 @@ import { MarketService } from '../market/market.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { EvaluationService } from '../agents/evaluation/evaluation.service';
+import { ReconciliationService } from './reconciliation.service';
+import { placeProtectionWithRetry } from './protection-retry';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -22,6 +24,7 @@ import {
   resolveTradeQuantity,
   evaluateSellPolicy,
 } from '@crypto-trader/trading-engine';
+import type { OrderExecutorPort } from '@crypto-trader/trading-engine';
 
 import {
   Decision,
@@ -63,6 +66,7 @@ export class TradingProcessor {
     private readonly orchestratorService: OrchestratorService,
     private readonly agentConfigResolver: AgentConfigResolverService,
     private readonly evaluationService: EvaluationService,
+    private readonly reconciliationService: ReconciliationService,
   ) {}
 
   @Process('run-cycle')
@@ -132,6 +136,28 @@ export class TradingProcessor {
           binanceCreds.secretEncrypted,
           binanceCreds.secretIv,
         );
+      }
+
+      // 2b. Reconcile exchange state before any new decision (LIVE/TESTNET only)
+      if ((isLiveMode || isTestnetMode) && binanceApiKey && binanceSecret) {
+        await this.reconciliationService
+          .reconcile({
+            userId,
+            config,
+            symbol: pair.symbol,
+            executor: new LiveOrderExecutor(
+              new BinanceRestClient({
+                apiKey: binanceApiKey,
+                apiSecret: binanceSecret,
+                testnet: isTestnetMode,
+              }),
+            ),
+          })
+          .catch((err) => {
+            this.logger.warn(
+              `Reconciliation failed for user=${userId} config=${configId}: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          });
       }
 
       // 3. Verify LLM health — agent-aware check (Spec 38, Fix P2)
@@ -851,8 +877,18 @@ export class TradingProcessor {
       quantity: order.quantity,
     });
 
+    const nativeProtectionEnabled = !!config.nativeProtectionEnabled;
     const savedPosition = await this.prisma.position.create({
-      data: positionData as any,
+      data: nativeProtectionEnabled
+        ? ({
+            ...positionData,
+            protectionStatus: 'PENDING',
+            stopPrice: order.price * (1 - config.stopLossPct),
+            takeProfitPrice: order.price * (1 + config.takeProfitPct),
+            highWaterPrice: order.price,
+            initialQuantity: order.quantity,
+          } as any)
+        : (positionData as any),
     });
 
     await this.prisma.trade.create({
@@ -883,6 +919,198 @@ export class TradingProcessor {
     this.gateway.emitToUser(userId, 'trade:executed', {
       position: savedPosition,
     });
+
+    if (nativeProtectionEnabled) {
+      await this.placeNativeProtection(
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        savedPosition,
+        order,
+      );
+    }
+  }
+
+  private async placeNativeProtection(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+    order: { price: number; quantity: number },
+  ) {
+    const referencePrice = order.price;
+    const stopPrice = position.stopPrice ?? referencePrice * (1 - config.stopLossPct);
+    const takeProfitPrice =
+      position.takeProfitPrice ?? referencePrice * (1 + config.takeProfitPct);
+    const stopLimitPrice = stopPrice * (1 - (config.stopLimitOffsetPct ?? 0.002));
+
+    const outcome = await placeProtectionWithRetry({
+      executor,
+      request: {
+        symbol,
+        quantity: order.quantity,
+        stopPrice,
+        stopLimitPrice,
+        takeProfitPrice,
+        referencePrice,
+      },
+      startingFailureCount: 0,
+      clientOrderIdFor: (attempt) => `prot-${position.id}-${attempt}`,
+      beforeAttempt: async (attempt) => {
+        await this.prisma.position.update({
+          where: { id: position.id },
+          data: { protectionFailureCount: attempt },
+        });
+      },
+    });
+
+    if (outcome.outcome === 'PLACED') {
+      await this.prisma.position.update({
+        where: { id: position.id },
+        data: {
+          protectionStatus: 'PROTECTED',
+          protectionOrderListId: outcome.result.orderListId,
+          protectionStopOrderId: outcome.result.stopOrderId,
+          protectionLimitOrderId: outcome.result.limitOrderId,
+          protectionPlacedAt: outcome.result.placedAt,
+          protectionLastError: null,
+        },
+      });
+      return;
+    }
+
+    const lastError = `${outcome.code}:${outcome.message}`.slice(0, 180);
+    await this.prisma.position.update({
+      where: { id: position.id },
+      data: { protectionStatus: 'UNPROTECTED', protectionLastError: lastError },
+    });
+    await this.notificationsService
+      .create(
+        userId,
+        NotificationType.AGENT_ERROR,
+        JSON.stringify({ key: 'positionUnprotected', positionId: position.id }),
+      )
+      .catch(() => null);
+    this.gateway.emitToUser(userId, 'position:unprotected', {
+      positionId: position.id,
+      error: lastError,
+    });
+
+    if (config.closeOnProtectionFailure) {
+      await this.closePositionAfterProtectionFailure(
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        position,
+      );
+    }
+  }
+
+  private async closePositionAfterProtectionFailure(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+  ) {
+    const closeOrder = await executor.placeMarketOrder(
+      symbol,
+      TradeType.SELL,
+      position.quantity,
+    );
+    const posData = {
+      ...position,
+      asset: position.asset as any,
+      pair: position.pair as any,
+      mode: position.mode as any,
+      status: position.status as any,
+      exitPrice: position.exitPrice ?? undefined,
+      exitAt: position.exitAt ?? undefined,
+      pnl: position.pnl ?? undefined,
+    };
+    const { position: closedPosition, pnl } = this.positionManager.closePosition(
+      posData,
+      closeOrder.price,
+    );
+
+    const claimed = await this.prisma.position.updateMany({
+      where: { id: position.id, status: 'OPEN' },
+      data: {
+        status: 'CLOSED',
+        exitPrice: closedPosition.exitPrice,
+        exitAt: closedPosition.exitAt,
+        pnl: closedPosition.pnl,
+        fees: closedPosition.fees,
+        exitReason: 'PROTECTION_FAILURE',
+      },
+    });
+    if (claimed.count === 0) return;
+
+    await this.prisma.trade.create({
+      data: {
+        userId,
+        positionId: position.id,
+        type: TradeType.SELL,
+        price: closeOrder.price,
+        quantity: closeOrder.quantity,
+        fee: closeOrder.price * closeOrder.quantity * TRADE_FEE_PCT,
+        mode,
+        binanceOrderId: closeOrder.orderId,
+      },
+    });
+
+    await this.notificationsService
+      .create(
+        userId,
+        NotificationType.STOP_LOSS_TRIGGERED,
+        JSON.stringify({
+          key: 'stopLoss',
+          qty: closeOrder.quantity.toString(),
+          asset: config.asset,
+          price: closeOrder.price.toFixed(2),
+          pnl: pnl.toFixed(2),
+        }),
+      )
+      .catch(() => null);
+    this.gateway.emitToUser(userId, 'position:updated', {
+      position: closedPosition,
+    });
+  }
+
+  private async releaseProtectionIfNeeded(
+    symbol: string,
+    executor: OrderExecutorPort,
+    position: {
+      id: string;
+      protectionStatus?: string;
+      protectionOrderListId?: string | null;
+      protectionStopOrderId?: string | null;
+    },
+  ) {
+    if (position.protectionStatus !== 'PROTECTED') return;
+    try {
+      await executor.cancelProtectionOrder(symbol, {
+        orderListId: position.protectionOrderListId,
+        stopOrderId: position.protectionStopOrderId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Failed to release native protection for position ${position.id} before selling: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    await this.prisma.position
+      .update({
+        where: { id: position.id },
+        data: { protectionStatus: 'RELEASED' },
+      })
+      .catch(() => null);
   }
 
   private async executeLLMSell(
@@ -968,6 +1196,8 @@ export class TradingProcessor {
         );
         continue;
       }
+
+      await this.releaseProtectionIfNeeded(symbol, executor, pos);
 
       const order = await executor.placeMarketOrder(
         symbol,
@@ -1138,6 +1368,8 @@ export class TradingProcessor {
       );
 
       if (shouldStopLoss || shouldTakeProfit) {
+        await this.releaseProtectionIfNeeded(symbol, executor, pos);
+
         const order = await executor.placeMarketOrder(
           symbol,
           TradeType.SELL,

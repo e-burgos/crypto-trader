@@ -240,8 +240,20 @@
         "TASK-007",
         "TASK-008"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/protection-retry.ts",
+        "apps/api/src/trading/protection-retry.spec.ts",
+        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts",
+        "libs/trading-engine/src/lib/order-executor.ts",
+        "libs/trading-engine/src/lib/order-executor.spec.ts",
+        "libs/trading-engine/src/lib/index.ts"
+      ]
     },
     {
       "id": "TASK-013",
@@ -256,8 +268,17 @@
         "TASK-008",
         "TASK-012"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/trading/reconciliation.service.ts",
+        "apps/api/src/trading/reconciliation.service.spec.ts",
+        "apps/api/src/trading/trading.processor.reconciliation-order.spec.ts",
+        "libs/trading-engine/src/lib/order-executor.ts",
+        "libs/trading-engine/src/lib/order-executor.spec.ts",
+        "libs/trading-engine/src/lib/index.ts"
+      ]
     },
     {
       "id": "TASK-014",

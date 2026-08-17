@@ -678,6 +678,24 @@ export class TradingService implements OnModuleInit {
       executor = new LiveOrderExecutor(
         new BinanceRestClient({ apiKey, apiSecret, testnet: isTestnet }),
       );
+      if (position.protectionStatus === 'PROTECTED') {
+        try {
+          await executor.cancelProtectionOrder(symbol, {
+            orderListId: position.protectionOrderListId,
+            stopOrderId: position.protectionStopOrderId,
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Failed to release native protection for position ${position.id} before manual close: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+        await this.prisma.position
+          .update({
+            where: { id: position.id },
+            data: { protectionStatus: 'RELEASED' },
+          })
+          .catch(() => null);
+      }
       const order = await executor.placeMarketOrder(
         symbol,
         TradeType.SELL,

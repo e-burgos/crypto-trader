@@ -1,23 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgentId } from '../../generated/prisma/enums';
-
-export type PersonaAgentId =
-  | 'orchestrator'
-  | 'platform'
-  | 'operations'
-  | 'market'
-  | 'blockchain'
-  | 'risk';
-
-const PERSONA_AGENT_IDS: readonly PersonaAgentId[] = [
-  'orchestrator',
-  'platform',
-  'operations',
-  'market',
-  'blockchain',
-  'risk',
-];
+import { PERSONA_AGENT_IDS, PersonaAgentId } from './agent-identity';
 
 const CACHE_TTL_MS = 60_000;
 

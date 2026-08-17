@@ -206,8 +206,17 @@
       "estimation_hours": 3.5,
       "story_points": 5,
       "depends_on": ["TASK-004", "TASK-006", "TASK-007", "TASK-009", "TASK-010", "TASK-011"],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-identity.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/agents/agent-prompt.service.ts",
+        "apps/api/src/admin/agents/admin-agents.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.spec.ts",
+        "apps/api/src/agents/agent-config.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts"
+      ]
     }
   ]
 }

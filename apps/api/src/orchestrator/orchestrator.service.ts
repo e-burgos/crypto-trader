@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SubAgentService, SubAgentId } from './sub-agent.service';
+import { SubAgentService } from './sub-agent.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
-import { AgentId, LLMProvider } from '../../generated/prisma/enums';
+import { PersonaAgentId } from '../agents/agent-identity';
+import { LLMProvider } from '../../generated/prisma/enums';
 import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
@@ -358,25 +359,21 @@ export class OrchestratorService {
       const providerCalls: Promise<{ provider: string; model: string }>[] = [
         this.agentConfigResolver.resolveClient(
           userId,
-          AgentId.market,
+          'market',
           typedOverride,
         ),
         this.agentConfigResolver.resolveClient(
           userId,
-          AgentId.operations,
+          'operations',
           typedOverride,
         ),
-        this.agentConfigResolver.resolveClient(
-          userId,
-          AgentId.risk,
-          typedOverride,
-        ),
+        this.agentConfigResolver.resolveClient(userId, 'risk', typedOverride),
       ];
       if (hasMacroData) {
         providerCalls.push(
           this.agentConfigResolver.resolveClient(
             userId,
-            AgentId.blockchain,
+            'blockchain',
             typedOverride,
           ),
         );
@@ -490,7 +487,7 @@ export class OrchestratorService {
     try {
       const resolved = await this.agentConfigResolver.resolveClient(
         userId,
-        AgentId.synthesis,
+        'synthesis',
         typedOverride,
       );
       synthesisProvider = resolved.provider;
@@ -644,7 +641,7 @@ export class OrchestratorService {
    * Used for multi-domain queries (e.g. "buy ETH now + what is a liquidity pool?").
    */
   async synthesizeCrossAgent(
-    responses: Array<{ agentId: SubAgentId; response: string }>,
+    responses: Array<{ agentId: PersonaAgentId; response: string }>,
     originalQuery: string,
     userId: string,
     locale?: string,

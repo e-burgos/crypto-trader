@@ -5,10 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DocumentProcessorService } from '../../orchestrator/document-processor.service';
-import {
-  AgentPromptService,
-  PersonaAgentId,
-} from '../../agents/agent-prompt.service';
+import { AgentPromptService } from '../../agents/agent-prompt.service';
+import { PersonaAgentId } from '../../agents/agent-identity';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 
 const ALLOWED_MIME_TYPES = [

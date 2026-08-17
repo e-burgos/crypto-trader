@@ -12,6 +12,7 @@ import {
   OpenRouterProvider,
 } from '@crypto-trader/analysis';
 import type { LLMProvider as AnalysisLLMProvider } from '@crypto-trader/shared';
+import { MODEL_SLOT_IDS, ModelSlotId } from './agent-identity';
 
 export interface ResolvedAgentConfig {
   agentId: AgentId;
@@ -34,11 +35,10 @@ export interface AgentHealthReport {
   agents: AgentHealthItem[];
 }
 
-// slot stays typed as AgentId until agent-identity.ts introduces ModelSlotId (architect.md §7.3)
 export type ResolutionSource = 'override' | 'user' | 'admin' | 'preset' | 'credential';
 
 export interface ResolvedAgentClient {
-  slot: AgentId;
+  slot: ModelSlotId;
   provider: LLMProvider;
   model: string;
   source: ResolutionSource;
@@ -119,11 +119,10 @@ export class AgentConfigResolverService {
    * Resolve configs for all configurable agents (excluding abstract 'orchestrator').
    */
   async resolveAllConfigs(userId: string): Promise<ResolvedAgentConfig[]> {
-    const configurableAgents = Object.values(AgentId).filter(
-      (id) => id !== AgentId.orchestrator,
-    );
     return Promise.all(
-      configurableAgents.map((agentId) => this.resolveConfig(agentId, userId)),
+      MODEL_SLOT_IDS.map((slot) =>
+        this.resolveConfig(slot as unknown as AgentId, userId),
+      ),
     );
   }
 
@@ -176,7 +175,7 @@ export class AgentConfigResolverService {
    */
   async resolveClient(
     userId: string,
-    slot: AgentId,
+    slot: ModelSlotId,
     override?: { provider: LLMProvider; model: string },
   ): Promise<ResolvedAgentClient> {
     if (override) {
@@ -200,7 +199,7 @@ export class AgentConfigResolverService {
       }
     }
 
-    const resolved = await this.resolveConfig(slot, userId);
+    const resolved = await this.resolveConfig(slot as unknown as AgentId, userId);
     const resolvedCred = await this.findActiveCredential(
       userId,
       resolved.provider,

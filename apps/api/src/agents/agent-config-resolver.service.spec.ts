@@ -19,7 +19,7 @@ import {
   AgentConfigResolverService,
   NoLLMCredentialError,
 } from './agent-config-resolver.service';
-import { AgentId, LLMProvider } from '../../generated/prisma/enums';
+import { LLMProvider } from '../../generated/prisma/enums';
 
 describe('AgentConfigResolverService.resolveClient', () => {
   let service: AgentConfigResolverService;
@@ -68,7 +68,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
     const cred = buildCred({ provider: LLMProvider.CLAUDE });
     mockPrisma.lLMCredential.findFirst.mockResolvedValueOnce(cred);
 
-    const result = await service.resolveClient('user1', AgentId.market, {
+    const result = await service.resolveClient('user1', 'market', {
       provider: LLMProvider.CLAUDE,
       model: 'claude-opus-4',
     });
@@ -76,7 +76,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
     expect(result.source).toBe('override');
     expect(result.provider).toBe(LLMProvider.CLAUDE);
     expect(result.model).toBe('claude-opus-4');
-    expect(result.slot).toBe(AgentId.market);
+    expect(result.slot).toBe('market');
     expect(mockAgentConfigService.getUserAgentConfig).not.toHaveBeenCalled();
     expect(
       mockPlatformLLMProviderService.assertProviderActive,
@@ -94,7 +94,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
       model: 'gpt-4o',
     });
 
-    const result = await service.resolveClient('user1', AgentId.market, {
+    const result = await service.resolveClient('user1', 'market', {
       provider: LLMProvider.CLAUDE,
       model: 'claude-opus-4',
     });
@@ -114,7 +114,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
       buildCred({ provider: LLMProvider.OPENAI, selectedModel: 'gpt-4o' }),
     );
 
-    const result = await service.resolveClient('user1', AgentId.market);
+    const result = await service.resolveClient('user1', 'market');
 
     expect(result.source).toBe('user');
     expect(result.provider).toBe(LLMProvider.OPENAI);
@@ -131,7 +131,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
       buildCred({ provider: LLMProvider.GROQ, selectedModel: 'llama-3.3-70b' }),
     );
 
-    const result = await service.resolveClient('user1', AgentId.risk);
+    const result = await service.resolveClient('user1', 'risk');
 
     expect(result.source).toBe('admin');
     expect(result.provider).toBe(LLMProvider.GROQ);
@@ -144,7 +144,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
       buildCred({ provider: LLMProvider.OPENROUTER, selectedModel: null }),
     );
 
-    const result = await service.resolveClient('user1', AgentId.blockchain);
+    const result = await service.resolveClient('user1', 'blockchain');
 
     expect(result.source).toBe('preset');
   });
@@ -161,7 +161,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
         }),
       );
 
-    const result = await service.resolveClient('user1', AgentId.blockchain);
+    const result = await service.resolveClient('user1', 'blockchain');
 
     expect(result.source).toBe('credential');
     expect(result.provider).toBe(LLMProvider.OPENROUTER);
@@ -174,7 +174,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
     mockPrisma.lLMCredential.findFirst.mockResolvedValue(null);
 
     await expect(
-      service.resolveClient('user1', AgentId.market),
+      service.resolveClient('user1', 'market'),
     ).rejects.toThrow(NoLLMCredentialError);
   });
 
@@ -187,7 +187,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
     );
 
     await expect(
-      service.resolveClient('user1', AgentId.market, {
+      service.resolveClient('user1', 'market', {
         provider: LLMProvider.CLAUDE,
         model: 'claude-opus-4',
       }),
@@ -202,7 +202,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
       }),
     );
 
-    await service.resolveClient('user1', AgentId.market, {
+    await service.resolveClient('user1', 'market', {
       provider: LLMProvider.OPENROUTER,
       model: 'nvidia/nemotron-3-super-120b-a12b:free',
     });
@@ -220,7 +220,7 @@ describe('AgentConfigResolverService.resolveClient', () => {
       buildCred({ provider: LLMProvider.CLAUDE }),
     );
 
-    await service.resolveClient('user1', AgentId.market, {
+    await service.resolveClient('user1', 'market', {
       provider: LLMProvider.CLAUDE,
       model: 'claude-opus-4',
     });

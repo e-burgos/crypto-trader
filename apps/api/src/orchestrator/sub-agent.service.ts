@@ -2,18 +2,11 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { RagService } from './rag.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
-import { AgentId, LLMProvider, LLMSource } from '../../generated/prisma/enums';
+import { LLMProvider, LLMSource } from '../../generated/prisma/enums';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { AgentPromptService } from '../agents/agent-prompt.service';
+import { PersonaAgentId, resolveModelSlot } from '../agents/agent-identity';
 import { captureRateLimits } from '@crypto-trader/analysis';
-
-export type SubAgentId =
-  | 'platform'
-  | 'operations'
-  | 'market'
-  | 'blockchain'
-  | 'risk'
-  | 'orchestrator';
 
 export type AgentTask =
   | 'technical_signal'
@@ -191,7 +184,7 @@ export class SubAgentService {
    * Uses AgentConfigResolver to determine provider/model per agent.
    */
   async call(
-    agentId: SubAgentId,
+    agentId: PersonaAgentId,
     task: AgentTask,
     context: Record<string, unknown>,
     userId: string,
@@ -200,7 +193,7 @@ export class SubAgentService {
     /** Override the automatic provider/model resolution */
     override?: { provider: LLMProvider; model: string },
   ): Promise<string> {
-    const slot = this.resolveModelSlot(agentId, task, preferCheap);
+    const slot = resolveModelSlot(agentId, task, preferCheap);
 
     const {
       client,
@@ -277,16 +270,5 @@ export class SubAgentService {
       );
       throw err;
     }
-  }
-
-  private resolveModelSlot(
-    agentId: SubAgentId,
-    task: AgentTask,
-    preferCheap: boolean,
-  ): AgentId {
-    if (agentId !== 'orchestrator') return agentId as AgentId;
-    return task === 'intent_classification' || preferCheap
-      ? AgentId.routing
-      : AgentId.synthesis;
   }
 }

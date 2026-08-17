@@ -13,6 +13,7 @@ import {
   resolveFallbackModel,
 } from './agent-presets';
 import { OpenRouterModelsApiService } from '../openrouter/openrouter-models-api.service';
+import { isModelSlot } from './agent-identity';
 
 @Injectable()
 export class AgentConfigService {
@@ -43,7 +44,7 @@ export class AgentConfigService {
     model: string,
   ) {
     // Users cannot configure the abstract 'orchestrator' — use routing/synthesis
-    if (agentId === AgentId.orchestrator) {
+    if (!isModelSlot(agentId)) {
       throw new BadRequestException(
         'Use "routing" or "synthesis" to configure the orchestrator models.',
       );
@@ -101,7 +102,7 @@ export class AgentConfigService {
 
     for (const [agentIdStr, entry] of Object.entries(preset)) {
       const agentId = agentIdStr as AgentId;
-      if (agentId === AgentId.orchestrator) continue; // internal only
+      if (!isModelSlot(agentId)) continue;
 
       await this.prisma.agentConfig.upsert({
         where: { userId_agentId: { userId, agentId } },

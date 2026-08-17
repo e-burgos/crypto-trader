@@ -296,3 +296,36 @@ Camino crítico: `TASK-001/002/003 → TASK-010` y `TASK-005 → TASK-006` y `TA
   hace que `@nx/enforce-module-boundaries` clasifique la lib como lazy-loaded y rompa el lint de
   `market.service.ts`/`provider-health.service.ts` (imports estáticos de la misma lib). Volver el
   import estático restaura el comportamiento previo a esta task.
+
+### TASK-012 — resolución de la indirección `AgentId` y patrón nuevo a documentar
+
+- **Nuevo módulo `apps/api/src/agents/agent-identity.ts`** (contrato D6/§7.3): único archivo que
+  conoce el mapeo identidad↔slot (`PERSONA_AGENT_IDS`/`PersonaAgentId`, `MODEL_SLOT_IDS`/`ModelSlotId`,
+  `resolveModelSlot`, `isPersonaAgent`, `isModelSlot`). Migrados a consumirlo: `sub-agent.service.ts`
+  (borra `SubAgentId` y el método privado `resolveModelSlot`), `agent-prompt.service.ts` (borra su
+  `PersonaAgentId`/`PERSONA_AGENT_IDS` locales), `admin-agents.service.ts` (ajusta el import),
+  `agent-config-resolver.service.ts` (`resolveAllConfigs` itera `MODEL_SLOT_IDS` en vez de filtrar
+  `Object.values(AgentId)`), `agent-config.service.ts` (los 2 guardas contra `orchestrator` —
+  `upsertUserAgentConfig` y `applyPreset`, esta última no estaba en la tabla del architect pero es
+  el mismo guard duplicado — pasan a `isModelSlot(agentId)`), `orchestrator.service.ts` (los 5 sitios
+  que llamaban `resolveClient(userId, AgentId.<slot>, ...)` pasan a literales `'market'`/`'operations'`/
+  etc., tipados contra `ModelSlotId`). Resuelve la nota pendiente de TASK-005: `resolveClient`/
+  `ResolvedAgentClient.slot` migraron de `AgentId` a `ModelSlotId` (cast `as unknown as AgentId` en
+  el borde hacia `resolveConfig`, que sigue tipado con el enum Prisma sin cambios, por decisión
+  explícita de TASK-005/006 de no redefinir `ResolvedAgentConfig`).
+- **Fuera de alcance deliberado — otras 2 enumeraciones de agentId no migradas.**
+  `orchestrator/dto/intent-classification.dto.ts` tiene su propio `SubAgentId` (5 valores, sin
+  `orchestrator`) y `chat.service.ts` mantiene su propio `validAgents: AgentId[]` (mismos 5). Ninguna
+  hace el mapeo identidad↔slot que `agent-identity.ts` centraliza — son listas de "agentes
+  enrutables desde chat", un concepto distinto — y `architect.md` §7.3 nombra explícitamente solo 3
+  sitios a migrar. Quedan como candidatas a unificación en un cycle futuro si el Reviewer lo
+  considera valioso; no se tocaron para no exceder el contrato.
+- **Verificación final de cierre (CA-015 a CA-019):** `pnpm nx run-many -t test lint build -p api
+  analysis trading-engine data-fetcher openrouter` verde (293 tests api, 0 errores lint, builds OK
+  — la única señal en rojo es un `TS4111` no bloqueante del plugin `vite:dts` en
+  `libs/trading-engine/src/lib/risk/trade-simulation.ts:40` de TASK-002, preexistente, exit code 0).
+  Grep de los 6 subsistemas podados: cero referencias fuera de `sdd/`, `docs/` y `.nx/cache` (build
+  cache stale de un build previo a TASK-011, no es código fuente). Diff neto
+  `git diff --shortstat 99da56d -- apps/api/src/agents apps/api/src/orchestrator` (incluye el
+  working tree de TASK-012, sin commitear): 36 files changed, 1941 insertions(+), 2594 deletions(-)
+  → neto **-653 líneas**.

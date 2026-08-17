@@ -37,16 +37,6 @@ export interface LLMAnalysisResult {
 }
 
 /**
- * Configuration for LLM analysis.
- */
-export interface LLMAnalyzerConfig {
-  /** Maximum retries on parse failure (default: 2) */
-  maxRetries?: number;
-  /** Temperature (0-1, default: 0.3) */
-  temperature?: number;
-}
-
-/**
  * Build the structured prompt for LLM analysis.
  */
 export function buildAnalysisPrompt(input: LLMAnalysisInput): {

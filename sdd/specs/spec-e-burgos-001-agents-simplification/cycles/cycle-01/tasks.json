@@ -154,8 +154,23 @@
       "estimation_hours": 2.5,
       "story_points": 3,
       "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/tools/agent-tool-registry.ts",
+        "apps/api/src/agents/tools/agent-tool-registry.spec.ts",
+        "apps/api/src/agents/tools/agent-tool.interface.ts",
+        "apps/api/src/agents/tools/agent-tools.module.ts",
+        "apps/api/src/agents/tools/context-planner.service.ts",
+        "apps/api/src/agents/tools/context-planner.spec.ts",
+        "apps/api/src/agents/tools/decision-memory.tool.ts",
+        "apps/api/src/agents/tools/market-edge.tool.ts",
+        "apps/api/src/agents/tools/portfolio-context.tool.ts",
+        "apps/api/src/agents/tools/risk-budget.tool.ts",
+        "apps/api/src/agents/tools/token-budget.tool.ts",
+        "apps/api/src/agents/tools/trade-simulation.tool.ts",
+        "apps/api/src/agents/tools/trade-simulation.tool.spec.ts",
+        "apps/api/src/app/app.module.ts"
+      ]
     },
     {
       "id": "TASK-011",
@@ -164,8 +179,16 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/model-router.service.ts",
+        "apps/api/src/agents/model-router.spec.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "libs/analysis/src/lib/llm/llm-analyzer.ts",
+        "libs/analysis/src/lib/llm/llm-types.ts",
+        "libs/analysis/src/lib/llm/llm.spec.ts",
+        "libs/analysis/src/lib/llm/index.ts"
+      ]
     },
     {
       "id": "TASK-012",

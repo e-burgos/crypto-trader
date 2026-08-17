@@ -1,6 +1,5 @@
 export type {
   LLMProviderClient,
-  LLMAnalyzerConfig,
   LLMUsage,
   LLMResponse,
   LLMAnalysisResult,
@@ -27,7 +26,5 @@ export type { TogetherProviderConfig } from './together.provider';
 
 export { OpenRouterProvider } from './openrouter.provider';
 export type { OpenRouterProviderConfig } from './openrouter.provider';
-
-export { LLMAnalyzer } from './llm-analyzer';
 
 export { createLLMProvider } from './llm-factory';

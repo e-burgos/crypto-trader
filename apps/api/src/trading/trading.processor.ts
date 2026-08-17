@@ -1147,9 +1147,4 @@ export class TradingProcessor {
     }
     throw new Error(`Cannot parse symbol: ${symbol}`);
   }
-
-  private buildNewsAggregator_unused() {
-    // Kept for reference — bot now reads from DB via MarketService
-    return null;
-  }
 }

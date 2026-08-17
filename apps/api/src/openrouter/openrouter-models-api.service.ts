@@ -31,6 +31,17 @@ export class OpenRouterModelsApiService {
     return this.modelsService.getFreeModels();
   }
 
+  async getModelById(modelId: string): Promise<OpenRouterModelInfo | null> {
+    try {
+      return await this.modelsService.getModelById(modelId);
+    } catch (err) {
+      this.logger.warn(
+        `Failed to fetch OpenRouter model ${modelId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
+  }
+
   async isModelAvailable(modelId: string): Promise<boolean> {
     return this.modelsService.isModelAvailable(modelId);
   }

@@ -110,7 +110,7 @@
         "path": "/users/me/llm/usage",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "defined",
+        "status": "implemented",
         "created_in_cycle": 1,
         "updated_in_cycle": null,
         "description": "Estadísticas de uso y costo LLM del usuario, por proveedor, por modelo y por día. Tras el cycle-01 el costo de tráfico OpenRouter se resuelve con el pricing en vivo del catálogo; label cubre OPENROUTER y TOGETHER y unpricedCallCount expone las llamadas que no se pudieron tarifar. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",

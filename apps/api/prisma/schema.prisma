@@ -103,6 +103,13 @@ enum LLMSource {
   ANALYSIS
 }
 
+enum PricingSource {
+  LIVE_OPENROUTER
+  STALE_CACHE
+  STATIC_TABLE
+  UNPRICED
+}
+
 enum ChatRole {
   USER
   ASSISTANT
@@ -543,19 +550,20 @@ model AgentDocument {
 }
 
 model LlmUsageLog {
-  id           String      @id @default(cuid())
-  userId       String
-  provider     LLMProvider
-  model        String
-  inputTokens  Int
-  outputTokens Int
-  costUsd      Float
-  source       LLMSource
-  agentId      AgentId?
-  decisionId   String?
-  actualModel  String?
-  requestId    String?
-  createdAt    DateTime    @default(now())
+  id            String         @id @default(cuid())
+  userId        String
+  provider      LLMProvider
+  model         String
+  inputTokens   Int
+  outputTokens  Int
+  costUsd       Float
+  pricingSource PricingSource?
+  source        LLMSource
+  agentId       AgentId?
+  decisionId    String?
+  actualModel   String?
+  requestId     String?
+  createdAt     DateTime       @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

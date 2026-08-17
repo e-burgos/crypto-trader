@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LLMProviderClient, LLMResponse } from './llm-types';
+import { LLMCallOptions, LLMProviderClient, LLMResponse } from './llm-types';
 
 export interface GroqProviderConfig {
   apiKey: string;
@@ -22,12 +22,13 @@ export class GroqProvider implements LLMProviderClient {
   async complete(
     systemPrompt: string,
     userPrompt: string,
+    options?: LLMCallOptions,
   ): Promise<LLMResponse> {
     const response = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
         model: this.model,
-        max_tokens: this.maxTokens,
+        max_tokens: options?.maxTokens ?? this.maxTokens,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -50,6 +51,7 @@ export class GroqProvider implements LLMProviderClient {
         outputTokens: data.usage?.completion_tokens ?? 0,
       },
       headers: response.headers as Record<string, string>,
+      truncated: data.choices?.[0]?.finish_reason === 'length',
     };
   }
 }

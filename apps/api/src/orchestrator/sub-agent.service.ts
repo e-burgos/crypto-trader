@@ -7,6 +7,10 @@ import { AgentConfigResolverService } from '../agents/agent-config-resolver.serv
 import { AgentPromptService } from '../agents/agent-prompt.service';
 import { PersonaAgentId, resolveModelSlot } from '../agents/agent-identity';
 import { captureRateLimits } from '@crypto-trader/analysis';
+import {
+  LLMTruncatedResponseError,
+  resolveMaxTokensForTask,
+} from './agent-task-limits';
 
 export type AgentTask =
   | 'technical_signal'
@@ -228,7 +232,13 @@ export class SubAgentService {
     const userPrompt = buildTaskUserPrompt(task, context);
 
     try {
-      const response = await client.complete(systemPrompt, userPrompt);
+      const response = await client.complete(systemPrompt, userPrompt, {
+        maxTokens: resolveMaxTokensForTask(task),
+      });
+
+      if (response.truncated) {
+        throw new LLMTruncatedResponseError(agentId, task);
+      }
 
       // Track call for health monitoring
       recordCall(userId, provider, true);

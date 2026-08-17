@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LLMProviderClient, LLMResponse } from './llm-types';
+import { LLMCallOptions, LLMProviderClient, LLMResponse } from './llm-types';
 
 export interface GeminiProviderConfig {
   apiKey: string;
@@ -22,13 +22,16 @@ export class GeminiProvider implements LLMProviderClient {
   async complete(
     systemPrompt: string,
     userPrompt: string,
+    options?: LLMCallOptions,
   ): Promise<LLMResponse> {
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
       {
         system_instruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { maxOutputTokens: this.maxTokens },
+        generationConfig: {
+          maxOutputTokens: options?.maxTokens ?? this.maxTokens,
+        },
       },
       {
         headers: { 'Content-Type': 'application/json' },
@@ -44,6 +47,7 @@ export class GeminiProvider implements LLMProviderClient {
         outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
       },
       headers: response.headers as Record<string, string>,
+      truncated: data.candidates?.[0]?.finishReason === 'MAX_TOKENS',
     };
   }
 }

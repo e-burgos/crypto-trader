@@ -16,6 +16,16 @@ export interface LLMResponse {
   usage: LLMUsage;
   headers?: Record<string, string>;
   actualModel?: string;
+  truncated?: boolean;
+  cacheReadTokens?: number;
+}
+
+/**
+ * Per-call options a provider may accept, independent of its construction config.
+ */
+export interface LLMCallOptions {
+  maxTokens?: number;
+  cacheSystemPrompt?: boolean;
 }
 
 /**
@@ -25,7 +35,11 @@ export interface LLMProviderClient {
   /** Unique provider name */
   readonly name: string;
   /** Send prompt and get response with text + usage */
-  complete(systemPrompt: string, userPrompt: string): Promise<LLMResponse>;
+  complete(
+    systemPrompt: string,
+    userPrompt: string,
+    options?: LLMCallOptions,
+  ): Promise<LLMResponse>;
 }
 
 /**

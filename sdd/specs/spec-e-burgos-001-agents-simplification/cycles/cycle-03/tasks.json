@@ -64,8 +64,27 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/analysis/src/lib/llm/prompt-cache.ts",
+        "libs/analysis/src/lib/llm/prompt-cache.spec.ts",
+        "libs/analysis/src/lib/llm/llm-types.ts",
+        "libs/analysis/src/lib/llm/index.ts",
+        "libs/analysis/src/lib/llm/claude.provider.ts",
+        "libs/analysis/src/lib/llm/claude.provider.spec.ts",
+        "libs/analysis/src/lib/llm/openrouter.provider.ts",
+        "libs/analysis/src/lib/llm/openrouter.provider.spec.ts",
+        "libs/analysis/src/lib/llm/openai.provider.ts",
+        "libs/analysis/src/lib/llm/openai.provider.spec.ts",
+        "libs/analysis/src/lib/llm/groq.provider.ts",
+        "libs/analysis/src/lib/llm/groq.provider.spec.ts",
+        "libs/analysis/src/lib/llm/gemini.provider.ts",
+        "libs/analysis/src/lib/llm/gemini.provider.spec.ts",
+        "libs/analysis/src/lib/llm/mistral.provider.ts",
+        "libs/analysis/src/lib/llm/mistral.provider.spec.ts",
+        "libs/analysis/src/lib/llm/together.provider.ts",
+        "libs/analysis/src/lib/llm/together.provider.spec.ts"
+      ]
     },
     {
       "id": "TASK-006",
@@ -74,8 +93,13 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/agent-task-limits.ts",
+        "apps/api/src/orchestrator/agent-task-limits.spec.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.spec.ts"
+      ]
     },
     {
       "id": "TASK-007",
@@ -124,7 +148,7 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -154,8 +178,12 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.isolation.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts"
+      ]
     }
   ]
 }

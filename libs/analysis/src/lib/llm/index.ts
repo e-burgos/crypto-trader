@@ -3,8 +3,18 @@ export type {
   LLMUsage,
   LLMResponse,
   LLMAnalysisResult,
+  LLMCallOptions,
 } from './llm-types';
 export { buildAnalysisPrompt, parseLLMResponse } from './llm-types';
+
+export type { PromptCacheStyle, PromptCacheCapability } from './prompt-cache';
+export {
+  resolvePromptCacheCapability,
+  estimatePromptTokens,
+  shouldMarkPromptForCache,
+  isCacheControlRejection,
+  postWithCacheControlRetry,
+} from './prompt-cache';
 
 export { ClaudeProvider } from './claude.provider';
 export type { ClaudeProviderConfig } from './claude.provider';

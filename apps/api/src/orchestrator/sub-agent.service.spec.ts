@@ -3,6 +3,10 @@ import { SubAgentService } from './sub-agent.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { AgentPromptService } from '../agents/agent-prompt.service';
 import { AgentId } from '../../generated/prisma/enums';
+import {
+  AGENT_TASK_MAX_TOKENS,
+  LLMTruncatedResponseError,
+} from './agent-task-limits';
 
 const mockLLMProvider = {
   name: 'mock',
@@ -89,6 +93,7 @@ describe('SubAgentService', () => {
       expect(mockLLMProvider.complete).toHaveBeenCalledWith(
         expect.stringContaining('SIGMA'),
         expect.stringContaining('indicadores'),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.technical_signal },
       );
     });
 
@@ -151,6 +156,7 @@ describe('SubAgentService', () => {
       expect(mockLLMProvider.complete).toHaveBeenCalledWith(
         expect.stringContaining('AEGIS'),
         expect.any(String),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.risk_gate },
       );
     });
 
@@ -243,6 +249,105 @@ describe('SubAgentService', () => {
           'user-1',
         ),
       ).rejects.toThrow('AgentDefinition for "risk"');
+    });
+
+    it.each([
+      ['risk_gate', AGENT_TASK_MAX_TOKENS.risk_gate],
+      ['sizing_suggestion', AGENT_TASK_MAX_TOKENS.sizing_suggestion],
+      ['macro_context', AGENT_TASK_MAX_TOKENS.macro_context],
+      ['decision_synthesis', AGENT_TASK_MAX_TOKENS.decision_synthesis],
+    ] as const)(
+      'should request the max_tokens limit for task %s regardless of agent (CA-050, CA-051)',
+      async (task, expectedMaxTokens) => {
+        mockLLMProvider.complete.mockResolvedValue({
+          text: '{}',
+          usage: { inputTokens: 10, outputTokens: 5 },
+        });
+
+        await service.call('risk', task, {}, 'user-1');
+
+        expect(mockLLMProvider.complete).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.any(String),
+          { maxTokens: expectedMaxTokens },
+        );
+      },
+    );
+
+    it('should request the same max_tokens limit for the same task from two different agents (CA-051)', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{}',
+        usage: { inputTokens: 10, outputTokens: 5 },
+      });
+
+      await service.call('market', 'technical_signal', {}, 'user-1');
+      await service.call('orchestrator', 'decision_synthesis', {}, 'user-1');
+
+      expect(mockLLMProvider.complete).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.any(String),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.technical_signal },
+      );
+      expect(mockLLMProvider.complete).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.any(String),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.decision_synthesis },
+      );
+    });
+
+    it('should throw LLMTruncatedResponseError when the response is truncated, never returning a partial decision (CA-052, CE-06)', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"riskScore":30,"verdict":"PASS"',
+        usage: { inputTokens: 200, outputTokens: 350 },
+        truncated: true,
+      });
+
+      await expect(
+        service.call(
+          'risk',
+          'risk_gate',
+          { portfolio: [], indicators: { rsi: 45 } },
+          'user-1',
+        ),
+      ).rejects.toThrow(LLMTruncatedResponseError);
+    });
+
+    it('should follow the same failure path as a rejected call when the response is truncated', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY"',
+        usage: { inputTokens: 100, outputTokens: 500 },
+        truncated: true,
+      });
+
+      await expect(
+        service.call(
+          'market',
+          'technical_signal',
+          { indicators: { rsi: 28 } },
+          'user-1',
+        ),
+      ).rejects.toThrow('LLM response truncated');
+
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not treat a complete response as truncated', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"ok"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+        truncated: false,
+      });
+
+      const result = await service.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 28 } },
+        'user-1',
+      );
+
+      expect(result).toContain('BUY');
     });
   });
 });

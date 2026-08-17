@@ -140,4 +140,126 @@ describe('OpenRouterProvider', () => {
     const body = mockedAxios.post.mock.calls[0][1];
     expect(body.model).toBe('anthropic/claude-sonnet-4.6');
   });
+
+  it('should mark the system message with cache_control for anthropic/* models above the minimum (CA-047)', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [{ message: { content: 'ok' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      },
+    });
+
+    const provider = new OpenRouterProvider({
+      apiKey: 'sk-or-test',
+      model: 'anthropic/claude-sonnet-4',
+    });
+    const longSystemPrompt = 'x'.repeat(1024 * 4);
+    await provider.complete(longSystemPrompt, 'usr');
+
+    const body = mockedAxios.post.mock.calls[0][1];
+    expect(body.messages[0]).toEqual({
+      role: 'system',
+      content: [
+        {
+          type: 'text',
+          text: longSystemPrompt,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+    });
+  });
+
+  it('should NOT mark non-anthropic openrouter models even with a long prompt (CA-048)', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [{ message: { content: 'ok' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      },
+    });
+
+    const provider = new OpenRouterProvider({
+      apiKey: 'sk-or-test',
+      model: 'meta-llama/llama-3.3-70b',
+    });
+    const longSystemPrompt = 'x'.repeat(1024 * 4);
+    await provider.complete(longSystemPrompt, 'usr');
+
+    const body = mockedAxios.post.mock.calls[0][1];
+    expect(body.messages[0]).toEqual({
+      role: 'system',
+      content: longSystemPrompt,
+    });
+  });
+
+  it('should retry without cache_control when the provider rejects the mark (CE-05)', async () => {
+    mockedAxios.post
+      .mockRejectedValueOnce({
+        response: {
+          status: 400,
+          data: { error: { message: 'unsupported: cache_control' } },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: 'ok' } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        },
+      });
+
+    const provider = new OpenRouterProvider({
+      apiKey: 'sk-or-test',
+      model: 'anthropic/claude-sonnet-4',
+    });
+    const result = await provider.complete('x'.repeat(1024 * 4), 'usr');
+
+    expect(result.text).toBe('ok');
+    expect(mockedAxios.post).toHaveBeenCalledTimes(2);
+    const secondBody = mockedAxios.post.mock.calls[1][1];
+    expect(secondBody.messages[0].content).toBe('x'.repeat(1024 * 4));
+  });
+
+  it('should use the max_tokens passed via call options over the constructor default', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [{ message: { content: 'ok' } }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      },
+    });
+
+    const provider = new OpenRouterProvider({ apiKey: 'sk-or-test' });
+    await provider.complete('sys', 'usr', { maxTokens: 500 });
+
+    const body = mockedAxios.post.mock.calls[0][1];
+    expect(body.max_tokens).toBe(500);
+  });
+
+  it('should mark truncated=true when finish_reason is length', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [
+          { message: { content: 'partial' }, finish_reason: 'length' },
+        ],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      },
+    });
+
+    const provider = new OpenRouterProvider({ apiKey: 'sk-or-test' });
+    const result = await provider.complete('sys', 'usr');
+
+    expect(result.truncated).toBe(true);
+  });
+
+  it('should mark truncated=false when finish_reason is stop', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [{ message: { content: 'done' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      },
+    });
+
+    const provider = new OpenRouterProvider({ apiKey: 'sk-or-test' });
+    const result = await provider.complete('sys', 'usr');
+
+    expect(result.truncated).toBe(false);
+  });
 });

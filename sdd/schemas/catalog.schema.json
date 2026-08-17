@@ -28,7 +28,7 @@
         "additionalProperties": false,
         "properties": {
           "dir": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "file": { "type": "string", "const": "skill.md" }
+          "file": { "type": "string", "enum": ["skill.md", "SKILL.md"] }
         }
       }
     },

@@ -252,7 +252,7 @@
         "path": "/trading/positions",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "updated",
+        "status": "implemented",
         "created_in_cycle": 2,
         "updated_in_cycle": 3,
         "description": "Posiciones del usuario paginadas. Endpoint pre-existente, registrado con la respuesta extendida del cycle-02: cada posicion suma el estado de proteccion nativa y de la maquina de trailing/parciales. Cambio aditivo: los clientes existentes ignoran los campos nuevos.",

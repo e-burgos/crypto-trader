@@ -4,7 +4,10 @@ import {
   shouldExitByTime,
   resolvePartialTakeProfit,
   applyPartialExit,
+  resolveProtectionRearm,
+  PROTECTION_REARM_MIN_STOP_DELTA_PCT,
   TrailingState,
+  ProtectionRearmInput,
 } from './position-manager';
 import { PositionData, PositionStatus, Asset, QuoteCurrency, TradingMode } from '@crypto-trader/shared';
 
@@ -343,5 +346,81 @@ describe('applyPartialExit', () => {
   it('does not close the position', () => {
     const result = applyPartialExit(position, 103, 0.5);
     expect(result.quantity).toBeGreaterThan(0);
+  });
+});
+
+describe('resolveProtectionRearm', () => {
+  const baseInput: ProtectionRearmInput = {
+    protectionStatus: 'PROTECTED',
+    activeStopPrice: 100,
+    desiredStopPrice: 100.2,
+    remainingQuantity: 1,
+    nativeProtectionEnabled: true,
+    isSandbox: false,
+  };
+
+  it('rearms when the stop moves at least 0.1% (CA-069)', () => {
+    const result = resolveProtectionRearm({
+      ...baseInput,
+      activeStopPrice: 100,
+      desiredStopPrice: 100.15, // 0.15% — clearly past the 0.1% threshold
+    });
+    expect(result.action).toBe('REARM');
+    if (result.action === 'REARM') {
+      expect(result.deltaPct).toBeGreaterThanOrEqual(
+        PROTECTION_REARM_MIN_STOP_DELTA_PCT,
+      );
+    }
+  });
+
+  it('rearms on a downward stop move past the threshold too', () => {
+    const result = resolveProtectionRearm({
+      ...baseInput,
+      activeStopPrice: 100,
+      desiredStopPrice: 99.8,
+    });
+    expect(result.action).toBe('REARM');
+  });
+
+  it('does not rearm below the 0.1% threshold (CA-070)', () => {
+    const result = resolveProtectionRearm({
+      ...baseInput,
+      activeStopPrice: 100,
+      desiredStopPrice: 100.05,
+    });
+    expect(result).toEqual({ action: 'NONE', reason: 'BELOW_THRESHOLD' });
+  });
+
+  it('never rearms in SANDBOX', () => {
+    const result = resolveProtectionRearm({ ...baseInput, isSandbox: true });
+    expect(result).toEqual({ action: 'NONE', reason: 'SANDBOX' });
+  });
+
+  it('never rearms with nativeProtectionEnabled off', () => {
+    const result = resolveProtectionRearm({
+      ...baseInput,
+      nativeProtectionEnabled: false,
+    });
+    expect(result).toEqual({ action: 'NONE', reason: 'DISABLED' });
+  });
+
+  it('never rearms when the position is not currently PROTECTED', () => {
+    const result = resolveProtectionRearm({
+      ...baseInput,
+      protectionStatus: 'RELEASED',
+    });
+    expect(result).toEqual({ action: 'NONE', reason: 'NOT_PROTECTED' });
+  });
+
+  it('never rearms without a usable active or desired stop price', () => {
+    expect(
+      resolveProtectionRearm({ ...baseInput, activeStopPrice: null }),
+    ).toEqual({ action: 'NONE', reason: 'NO_STOP' });
+    expect(
+      resolveProtectionRearm({ ...baseInput, desiredStopPrice: null }),
+    ).toEqual({ action: 'NONE', reason: 'NO_STOP' });
+    expect(
+      resolveProtectionRearm({ ...baseInput, remainingQuantity: 0 }),
+    ).toEqual({ action: 'NONE', reason: 'NO_STOP' });
   });
 });

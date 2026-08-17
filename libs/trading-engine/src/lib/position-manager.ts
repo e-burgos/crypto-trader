@@ -90,6 +90,53 @@ export function updateTrailingStop(
   };
 }
 
+export const PROTECTION_REARM_MIN_STOP_DELTA_PCT = 0.001;
+
+export interface ProtectionRearmInput {
+  protectionStatus: string;
+  activeStopPrice: number | null;
+  desiredStopPrice: number | null;
+  remainingQuantity: number;
+  nativeProtectionEnabled: boolean;
+  isSandbox: boolean;
+}
+
+export type ProtectionRearmDecision =
+  | {
+      action: 'NONE';
+      reason: 'DISABLED' | 'SANDBOX' | 'NOT_PROTECTED' | 'BELOW_THRESHOLD' | 'NO_STOP';
+    }
+  | { action: 'REARM'; deltaPct: number };
+
+export function resolveProtectionRearm(
+  input: ProtectionRearmInput,
+): ProtectionRearmDecision {
+  if (!input.nativeProtectionEnabled) return { action: 'NONE', reason: 'DISABLED' };
+  if (input.isSandbox) return { action: 'NONE', reason: 'SANDBOX' };
+  if (input.protectionStatus !== 'PROTECTED') {
+    return { action: 'NONE', reason: 'NOT_PROTECTED' };
+  }
+  const { activeStopPrice, desiredStopPrice, remainingQuantity } = input;
+  if (
+    activeStopPrice == null ||
+    !Number.isFinite(activeStopPrice) ||
+    activeStopPrice <= 0 ||
+    desiredStopPrice == null ||
+    !Number.isFinite(desiredStopPrice) ||
+    desiredStopPrice <= 0 ||
+    !Number.isFinite(remainingQuantity) ||
+    remainingQuantity <= 0
+  ) {
+    return { action: 'NONE', reason: 'NO_STOP' };
+  }
+
+  const deltaPct = Math.abs(desiredStopPrice - activeStopPrice) / activeStopPrice;
+  if (deltaPct < PROTECTION_REARM_MIN_STOP_DELTA_PCT) {
+    return { action: 'NONE', reason: 'BELOW_THRESHOLD' };
+  }
+  return { action: 'REARM', deltaPct };
+}
+
 export function shouldExitByTime(
   entryAt: Date,
   now: Date,

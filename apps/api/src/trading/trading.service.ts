@@ -588,7 +588,7 @@ export class TradingService implements OnModuleInit {
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = { userId };
     if (status) where.status = status;
-    const [positions, total] = await Promise.all([
+    const [rawPositions, total] = await Promise.all([
       this.prisma.position.findMany({
         where,
         orderBy: { entryAt: 'desc' },
@@ -607,6 +607,15 @@ export class TradingService implements OnModuleInit {
           fees: true,
           status: true,
           pnl: true,
+          protectionStatus: true,
+          stopPrice: true,
+          takeProfitPrice: true,
+          highWaterPrice: true,
+          trailingActive: true,
+          initialQuantity: true,
+          partialExitCount: true,
+          realizedPnl: true,
+          exitReason: true,
           config: {
             select: {
               stopLossPct: true,
@@ -635,6 +644,18 @@ export class TradingService implements OnModuleInit {
       }),
       this.prisma.position.count({ where }),
     ]);
+    const positions = rawPositions.map((position) => ({
+      ...position,
+      protectionStatus: position.protectionStatus,
+      stopPrice: position.stopPrice ?? null,
+      takeProfitPrice: position.takeProfitPrice ?? null,
+      highWaterPrice: position.highWaterPrice ?? null,
+      trailingActive: position.trailingActive,
+      initialQuantity: position.initialQuantity ?? null,
+      partialExitCount: position.partialExitCount,
+      realizedPnl: position.realizedPnl,
+      exitReason: position.exitReason ?? null,
+    }));
     return { positions, total, page, limit };
   }
 

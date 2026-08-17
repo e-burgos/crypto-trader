@@ -181,21 +181,73 @@ describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => 
   });
 
   describe('checkOpenPositions — automatic stop-loss/take-profit has no AgentDecision (CA-028)', () => {
-    it('creates the Trade without a decisionId field, defaulting to null in the DB', () => {
-      const fs = require('fs');
-      const source = fs.readFileSync(
-        require('path').join(__dirname, 'trading.processor.ts'),
-        'utf8',
+    it('creates the Trade without a decisionId field, defaulting to null in the DB', async () => {
+      const position = {
+        id: 'pos-stop-1',
+        userId: 'user-1',
+        configId: 'config-1',
+        asset: 'BTC',
+        pair: 'USDT',
+        mode: 'SANDBOX',
+        entryPrice: 100,
+        quantity: 1,
+        entryAt: new Date(),
+        status: 'OPEN',
+        exitPrice: null,
+        exitAt: null,
+        pnl: null,
+        fees: 0,
+        stopPrice: null,
+        highWaterPrice: null,
+        trailingActive: false,
+        partialExitCount: 0,
+      };
+      const stopLossConfig = {
+        ...baseConfig,
+        stopLossPct: 0.03,
+        takeProfitPct: 0.05,
+        trailingStopEnabled: false,
+        trailingStopPct: 0.02,
+        trailingActivationPct: 0.01,
+        partialTpEnabled: false,
+        maxPositionHoldMinutes: null,
+      };
+
+      const prisma = {
+        position: {
+          findMany: jest.fn().mockResolvedValue([position]),
+          update: jest.fn().mockResolvedValue({}),
+        },
+        trade: { create: jest.fn().mockResolvedValue({}) },
+        sandboxWallet: {
+          upsert: jest.fn().mockResolvedValue({ balance: 10_000 }),
+        },
+        $transaction: jest.fn(async (fn: any) =>
+          fn({
+            sandboxWallet: {
+              upsert: jest.fn().mockResolvedValue({}),
+              findUnique: jest.fn().mockResolvedValue({ balance: 10_100 }),
+            },
+          }),
+        ),
+      };
+      const processor = buildProcessor(prisma);
+
+      // Price 96 breaches the 3% stop-loss on a 100 entry — no decisionContext supplied.
+      await (processor as any).checkOpenPositions(
+        'user-1',
+        stopLossConfig,
+        'BTCUSDT',
+        'SANDBOX',
+        undefined,
+        undefined,
+        96,
+        undefined,
       );
 
-      const start = source.indexOf('private async checkOpenPositions');
-      const end = source.indexOf(
-        'private parseSymbolForSandbox',
-        start,
-      );
-      const body = source.slice(start, end);
-
-      expect(body).not.toMatch(/decisionId/);
+      expect(prisma.trade.create).toHaveBeenCalledTimes(1);
+      const tradeArgs = (prisma.trade.create as jest.Mock).mock.calls[0][0].data;
+      expect(tradeArgs.decisionId).toBeUndefined();
     });
   });
 });

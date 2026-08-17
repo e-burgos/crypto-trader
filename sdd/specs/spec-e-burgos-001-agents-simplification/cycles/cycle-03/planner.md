@@ -458,3 +458,31 @@ capas distintas (writer vs. reader) y TASK-008 depende de que TASK-007 exista.
   escritura del caché, no solo en el de lectura. No hay CA/CE de cycle-03 que lo exija
   explícitamente (CA-043..046 y CE-04 cubren comportamiento del caché, no atribución), así que se
   documenta como deuda en vez de expandir el alcance de TASK-004.
+
+### TASK-014 — `creditSandboxWallet` no se extrajo de `executeLLMSell`
+
+- architect.md §10.3 paso 1 describe el crédito de wallet SANDBOX como "tres copias del mismo
+  `$transaction`" en `closeAtMarket`, `executePartialTakeProfit` y `executeLLMSell`, y pide
+  unificarlas en `creditSandboxWallet`. Se extrajo el método y se usó en los dos primeros sitios
+  (dentro de `checkOpenPositions`, ahora `closePositionAtMarket`, y en `executePartialTakeProfit`),
+  pero **no en `executeLLMSell`**: ese tercer sitio es exactamente el que
+  `trading.processor.isolation.spec.ts` — "should use $transaction for sandbox wallet operations
+  in executeLLMSell" — sigue verificando por slicing de texto, y el propio architect.md §14 acepta
+  esa aserción como deuda fuera de alcance de este ciclo ("Las otras 3 aserciones de slicing...
+  siguen frágiles — Fuera de alcance (§10.3)"). Extraer también de `executeLLMSell` la hubiera roto
+  sin necesidad. Queda pendiente unificar el tercer sitio cuando esa deuda de tests se aborde.
+
+### TASK-011 — `ensureNativeProtection` solo cubre el camino de cancelar+recolocar
+
+- El segundo punto de llamada (después de `executePartialTakeProfit`) no invoca
+  `ensureNativeProtection`: como `releaseProtectionIfNeeded` ya deja `protectionStatus = 'RELEASED'`
+  antes de la venta parcial, `resolveProtectionRearm` siempre devolvería `NOT_PROTECTED` ahí — exactamente
+  lo que architect.md §9.3 anticipa ("así que este camino llama directo a la colocación, sin
+  cancelar"). Para no arriesgar una doble colocación de OCO si alguna vez se generalizara
+  `ensureNativeProtection` a "colocar directo cuando no está protegido" (riesgo de -2010 con la OCO
+  vieja aún viva tras una cancelación fallida, CE-09), se extrajo un helper de nivel más bajo
+  (`attemptProtectionPlacement` + `applyProtectionOutcome`, ambos privados en `TradingProcessor`)
+  que `placeNativeProtection` (BUY), `ensureNativeProtection` (re-arme) y `executePartialTakeProfit`
+  reutilizan sin duplicar la lógica de PLACED/FAILED. `ensureNativeProtection` en sí solo hace
+  cancelar→RELEASED→recolocar, y únicamente se llama cuando `resolveProtectionRearm` devuelve
+  `REARM`.

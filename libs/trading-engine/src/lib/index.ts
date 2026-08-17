@@ -18,6 +18,8 @@ export {
   shouldExitByTime,
   resolvePartialTakeProfit,
   applyPartialExit,
+  resolveProtectionRearm,
+  PROTECTION_REARM_MIN_STOP_DELTA_PCT,
 } from './position-manager';
 export type {
   OpenPositionParams,
@@ -28,6 +30,8 @@ export type {
   ResolvePartialTakeProfitInput,
   PartialTakeProfitResult,
   ApplyPartialExitResult,
+  ProtectionRearmInput,
+  ProtectionRearmDecision,
 } from './position-manager';
 
 export { simulateTrade, SLIPPAGE_PCT_BY_ASSET } from './risk/trade-simulation';

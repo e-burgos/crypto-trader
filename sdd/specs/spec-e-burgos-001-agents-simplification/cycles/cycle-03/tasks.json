@@ -163,8 +163,14 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/position-manager.ts",
+        "libs/trading-engine/src/lib/position-manager.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.protection-rearm.spec.ts"
+      ]
     },
     {
       "id": "TASK-012",
@@ -173,8 +179,12 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.service.positions.spec.ts",
+        "sdd/api.json"
+      ]
     },
     {
       "id": "TASK-013",

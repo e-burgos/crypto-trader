@@ -8,12 +8,10 @@ import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
 } from './dto/intent-classification.dto';
-import {
-  AegisVerdict,
-  DecisionPayload,
-  SubAgentResult,
-} from './dto/decision-synthesis.dto';
+import { DecisionPayload, SubAgentResult } from './dto/decision-synthesis.dto';
+import { parseAegisVerdict, isOverridableBlock } from './dto/aegis-verdict.schema';
 import { NewsEnrichment } from './dto/news-enrichment.dto';
+import { safeParseJson } from './json-parse.util';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { IndicatorSnapshot } from '@crypto-trader/shared';
@@ -22,27 +20,6 @@ export interface NewsItemInput {
   id: string;
   headline: string;
   summary?: string | null;
-}
-
-// ── JSON parsing helpers ─────────────────────────────────────────────────────
-
-function safeParseJson<T>(raw: string, fallback: T): T {
-  try {
-    // Strip thinking tags from reasoning models (Qwen3, DeepSeek-R1, etc.)
-    let cleaned = raw.replace(/<think>[\s\S]*?<\/think>\s*/g, '');
-    // Strip markdown code fences if present
-    cleaned = cleaned.replace(/```(?:json)?\s*/gi, '').trim();
-    try {
-      return JSON.parse(cleaned) as T;
-    } catch {
-      // Extract the outermost JSON object or array from the text
-      const match = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-      if (match) return JSON.parse(match[0]) as T;
-      return fallback;
-    }
-  } catch {
-    return fallback;
-  }
 }
 
 // ── OrchestratorService ──────────────────────────────────────────────────────
@@ -447,21 +424,13 @@ export class OrchestratorService {
     }
 
     // AEGIS verdict gate
-    const aegisVerdict = safeParseJson<Partial<AegisVerdict>>(aegisOutput, {});
+    const aegisVerdict = parseAegisVerdict(aegisOutput);
     if (aegisVerdict.verdict === 'BLOCK') {
-      const reason = aegisVerdict.reason ?? 'Riesgo elevado detectado';
-      const alerts = aegisVerdict.alerts ?? [];
+      const { reason, alerts } = aegisVerdict;
 
-      // Ignore false-positive blocks about single-asset concentration.
-      // Each bot trades one specific pair by design, so 100% concentration
-      // in that asset is expected and not a real risk signal.
-      const isFalseConcentrationBlock =
-        /concentraci[oó]n|exposici[oó]n.*(?:un solo|single|[\d]+%.*(?:portfolio|cartera))/i.test(
-          reason,
-        );
-      if (isFalseConcentrationBlock) {
+      if (isOverridableBlock(aegisVerdict)) {
         this.logger.log(
-          `AEGIS BLOCK overridden (single-asset concentration is expected) for config=${configId}: ${reason}`,
+          `AEGIS BLOCK overridden (${aegisVerdict.blockReasons.join(', ')}) for config=${configId}: ${reason}`,
         );
       } else {
         this.logger.warn(

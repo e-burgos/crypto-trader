@@ -10,10 +10,24 @@ export interface SubAgentResult {
   provider?: string;
 }
 
+export const AEGIS_BLOCK_REASONS = [
+  'SINGLE_ASSET_CONCENTRATION',
+  'PORTFOLIO_EXPOSURE',
+  'DRAWDOWN',
+  'DAILY_LOSS_LIMIT',
+  'MAX_POSITIONS',
+  'VOLATILITY',
+  'SYSTEMIC_RISK',
+  'INSUFFICIENT_BALANCE',
+  'OTHER',
+] as const;
+export type AegisBlockReason = (typeof AEGIS_BLOCK_REASONS)[number];
+
 export interface AegisVerdict {
   riskScore: number;
   verdict: 'PASS' | 'REDUCE' | 'BLOCK';
   positionSizeMultiplier: number;
+  blockReasons: AegisBlockReason[];
   reason: string;
   alerts: string[];
 }

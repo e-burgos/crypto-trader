@@ -209,6 +209,89 @@ describe('OrchestratorService', () => {
       );
     });
 
+    it('should keep the BLOCK when blockReasons has a non-overridable reason, even if reason text mentions concentración (CA-029)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'risk' && task === 'risk_gate') {
+            return Promise.resolve(
+              '{"riskScore":91,"verdict":"BLOCK","positionSizeMultiplier":0,"blockReasons":["DRAWDOWN"],"reason":"Concentración de riesgo detectada por drawdown","alerts":[]}',
+            );
+          }
+          if (agentId === 'market' && task === 'technical_signal') {
+            return Promise.resolve(
+              '{"signal":"BUY","confidence":0.78,"reasoning":"RSI oversold"}',
+            );
+          }
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.decision).toBe('HOLD');
+      expect(result.reasoning).toContain('AEGIS BLOCK');
+      expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
+        'orchestrator',
+        'decision_synthesis',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('should override the BLOCK only when blockReasons is exactly [SINGLE_ASSET_CONCENTRATION], read from the typed field (CA-030)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'market' && task === 'technical_signal') {
+            return Promise.resolve(
+              '{"signal":"BUY","confidence":0.78,"reasoning":"RSI oversold + MACD cross"}',
+            );
+          }
+          if (agentId === 'market' && task === 'news_sentiment') {
+            return Promise.resolve(
+              '{"sentiment":0.65,"impact":"positive","reasoning":"ETF news dominates"}',
+            );
+          }
+          if (agentId === 'operations' && task === 'sizing_suggestion') {
+            return Promise.resolve(
+              '{"recommendation":"proceed","maxTradeSize":0.04,"reasoning":"within limit"}',
+            );
+          }
+          if (agentId === 'risk' && task === 'risk_gate') {
+            return Promise.resolve(
+              '{"riskScore":60,"verdict":"BLOCK","positionSizeMultiplier":1.0,"blockReasons":["SINGLE_ASSET_CONCENTRATION"],"reason":"Portfolio 100% concentrado en BTC","alerts":[]}',
+            );
+          }
+          if (agentId === 'orchestrator' && task === 'decision_synthesis') {
+            return Promise.resolve(
+              '{"decision":"BUY","confidence":0.74,"reasoning":"Strong technical","waitMinutes":15}',
+            );
+          }
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.decision).toBe('BUY');
+      expect(
+        mockSubAgentService.call.mock.calls.some(
+          (call: unknown[]) =>
+            call[0] === 'orchestrator' && call[1] === 'decision_synthesis',
+        ),
+      ).toBe(true);
+    });
+
     it('should still return a decision when one sub-agent call fails', async () => {
       mockSubAgentService.call.mockImplementation(
         (agentId: string, task: string) => {

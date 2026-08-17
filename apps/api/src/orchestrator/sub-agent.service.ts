@@ -87,7 +87,11 @@ RECORDATORIO: Este bot opera UN par específico (${(context.config as Record<str
 ${JSON.stringify(context.derivatives, null, 2)}
 Incorpora estos datos en tu evaluación de riesgo sistémico.`;
       }
-      prompt += `\nEmite tu veredicto de riesgo en JSON.`;
+      prompt += `\nEmite tu veredicto de riesgo en JSON con este formato exacto:
+{ "riskScore": 0, "verdict": "PASS|REDUCE|BLOCK", "positionSizeMultiplier": 1.0, "blockReasons": [], "reason": "...", "alerts": [] }
+
+blockReasons SOLO cuando verdict = BLOCK; array vacío en PASS/REDUCE. Valores permitidos: SINGLE_ASSET_CONCENTRATION | PORTFOLIO_EXPOSURE | DRAWDOWN | DAILY_LOSS_LIMIT | MAX_POSITIONS | VOLATILITY | SYSTEMIC_RISK | INSUFFICIENT_BALANCE | OTHER.
+positionSizeMultiplier ∈ [0,1] — 1.0 = sin reducción.`;
       return prompt;
     }
 

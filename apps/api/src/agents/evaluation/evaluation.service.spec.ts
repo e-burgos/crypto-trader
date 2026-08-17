@@ -270,6 +270,83 @@ describe('EvaluationProcessor', () => {
       });
     });
 
+    it('resolves as a no-op (does not throw) when create collides with P2002', async () => {
+      const prisma = createMockPrisma();
+      prisma.agentDecision.findUnique.mockResolvedValue({
+        id: 'dec-p2002',
+        userId: 'user-1',
+        asset: 'BTC',
+        pair: 'USDT',
+        decision: 'BUY',
+        indicators: { currentPrice: 50000 },
+        createdAt: new Date(),
+      });
+      const marketService = createMockMarketService();
+      marketService.getPriceAt.mockResolvedValue(51000);
+      prisma.agentDecisionEvaluation.create.mockRejectedValueOnce({
+        code: 'P2002',
+        meta: { target: ['decisionId', 'horizonMinutes'] },
+      });
+
+      const { processor } = buildProcessor(prisma, marketService);
+      const job = {
+        data: { decisionId: 'dec-p2002', horizonMinutes: 60 },
+      } as any;
+
+      await expect(processor.evaluate(job)).resolves.toBeUndefined();
+    });
+
+    it('propagates non-P2002 errors from the WIN/LOSS create so the job can be retried', async () => {
+      const prisma = createMockPrisma();
+      prisma.agentDecision.findUnique.mockResolvedValue({
+        id: 'dec-other-error',
+        userId: 'user-1',
+        asset: 'BTC',
+        pair: 'USDT',
+        decision: 'BUY',
+        indicators: { currentPrice: 50000 },
+        createdAt: new Date(),
+      });
+      const marketService = createMockMarketService();
+      marketService.getPriceAt.mockResolvedValue(51000);
+      prisma.agentDecisionEvaluation.create.mockRejectedValueOnce(
+        new Error('connection lost'),
+      );
+
+      const { processor } = buildProcessor(prisma, marketService);
+      const job = {
+        data: { decisionId: 'dec-other-error', horizonMinutes: 60 },
+      } as any;
+
+      await expect(processor.evaluate(job)).rejects.toThrow(
+        'connection lost',
+      );
+    });
+
+    it('resolves as a no-op when the NOT_EVALUABLE create collides with P2002', async () => {
+      const prisma = createMockPrisma();
+      prisma.agentDecision.findUnique.mockResolvedValue({
+        id: 'dec-p2002-ne',
+        userId: 'user-1',
+        asset: 'BTC',
+        pair: 'USDT',
+        decision: 'BUY',
+        indicators: {},
+        createdAt: new Date(),
+      });
+      const marketService = createMockMarketService();
+      prisma.agentDecisionEvaluation.create.mockRejectedValueOnce({
+        code: 'P2002',
+      });
+
+      const { processor } = buildProcessor(prisma, marketService);
+      const job = {
+        data: { decisionId: 'dec-p2002-ne', horizonMinutes: 15 },
+      } as any;
+
+      await expect(processor.evaluate(job)).resolves.toBeUndefined();
+    });
+
     it('skips when decision not found', async () => {
       const prisma = createMockPrisma();
       prisma.agentDecision.findUnique.mockResolvedValue(null);

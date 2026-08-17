@@ -16,6 +16,15 @@ const LOSS_THRESHOLD = -0.005;
 const HOLD_SIGNIFICANT_PCT = 0.02;
 const HIGH_VOL_PCT = 0.03;
 
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'P2002'
+  );
+}
+
 @Processor(EVALUATION_QUEUE)
 export class EvaluationProcessor {
   private readonly logger = new Logger(EvaluationProcessor.name);
@@ -91,23 +100,33 @@ export class EvaluationProcessor {
 
     const marketRegime = this.calculateMarketRegime(priceChange);
 
-    await this.prisma.agentDecisionEvaluation.create({
-      data: {
-        decisionId,
-        userId: decision.userId,
-        horizonMinutes,
-        status: status as AgentOutcomeStatus,
-        priceAtDecision,
-        priceAtEvaluation,
-        realizedPnlUsd,
-        hypotheticalPnlUsd,
-        missedOpportunityUsd,
-        maxAdverseMovePct: priceChange < 0 ? Math.abs(priceChange) * 100 : 0,
-        maxFavorableMovePct: priceChange > 0 ? priceChange * 100 : 0,
-        marketRegime,
-        evaluatedAt: new Date(),
-      },
-    });
+    try {
+      await this.prisma.agentDecisionEvaluation.create({
+        data: {
+          decisionId,
+          userId: decision.userId,
+          horizonMinutes,
+          status: status as AgentOutcomeStatus,
+          priceAtDecision,
+          priceAtEvaluation,
+          realizedPnlUsd,
+          hypotheticalPnlUsd,
+          missedOpportunityUsd,
+          maxAdverseMovePct: priceChange < 0 ? Math.abs(priceChange) * 100 : 0,
+          maxFavorableMovePct: priceChange > 0 ? priceChange * 100 : 0,
+          marketRegime,
+          evaluatedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) {
+        this.logger.log(
+          `Evaluation already created concurrently for decision=${decisionId} horizon=${horizonMinutes}m — no-op`,
+        );
+        return;
+      }
+      throw error;
+    }
 
     this.logger.log(
       `Evaluation created: decision=${decisionId} status=${status} regime=${marketRegime}`,
@@ -120,17 +139,27 @@ export class EvaluationProcessor {
     horizonMinutes: number,
     priceAtDecision: number,
   ) {
-    await this.prisma.agentDecisionEvaluation.create({
-      data: {
-        decisionId,
-        userId,
-        horizonMinutes,
-        status: 'NOT_EVALUABLE' as AgentOutcomeStatus,
-        priceAtDecision,
-        priceAtEvaluation: null,
-        evaluatedAt: new Date(),
-      },
-    });
+    try {
+      await this.prisma.agentDecisionEvaluation.create({
+        data: {
+          decisionId,
+          userId,
+          horizonMinutes,
+          status: 'NOT_EVALUABLE' as AgentOutcomeStatus,
+          priceAtDecision,
+          priceAtEvaluation: null,
+          evaluatedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) {
+        this.logger.log(
+          `NOT_EVALUABLE evaluation already created concurrently for decision=${decisionId} horizon=${horizonMinutes}m — no-op`,
+        );
+        return;
+      }
+      throw error;
+    }
     this.logger.warn(
       `Evaluation NOT_EVALUABLE: decision=${decisionId} horizon=${horizonMinutes}m`,
     );

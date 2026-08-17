@@ -1,0 +1,42 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 3,
+  "module": "trading-agents-core",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "apps": [
+    "apps/api",
+    "apps/web",
+    "libs/analysis",
+    "libs/openrouter",
+    "libs/trading-engine",
+    "libs/shared"
+  ],
+  "phase": "llm-cost-reduction-and-cycle-02-followups",
+  "flow": "full",
+  "objectives": [
+    "Gate determinista pre-LLM: sin señal en indicadores (sin cruces, RSI neutro, sin cambio significativo de precio ni posiciones abiertas) el ciclo resuelve HOLD y persiste su AgentDecision sin llamar a ningun LLM",
+    "Cache compartido por (asset, pair, timeframe) con TTL para senal tecnica y macro (CIPHER a TTL de horas), compartido entre bots y usuarios, extendiendo el patron del cache existente de data-source/sentimiento",
+    "Prompt caching de proveedor (Anthropic cache_control / OpenRouter) para los system prompts estaticos de 650-830 tokens, con degradacion silenciosa donde el modelo no lo soporte",
+    "max_tokens por tarea (300-400 para risk_gate y sizing en vez del default 1024)",
+    "Registrar el consumo real por ciclo en AgentDecision.llmCostUsd — hoy sin ningun escritor en el flujo real — y exponer costo/dia por bot en analytics (endpoint nuevo + panel en apps/web)",
+    "Reinterpretacion ejecutable en CI del criterio de la spec (−50% de costo sin degradar decisiones): el escenario de referencia y el backtest no existen como infraestructura; el functional define el criterio observable y el architect el harness determinista, precedente CA-001 (cycle-01) y CA-012 (cycle-02)",
+    "Follow-up cycle-02 PRIORIDAD 1 [DEPLOY-BLOCKER]: migrar apps/web al wire nuevo de agentes — agentId → slot en hooks/use-agent-config.ts y pages/dashboard/settings/agents.tsx, y source → el union completo de ResolutionSource (override | user | admin | preset | credential)",
+    "Follow-up cycle-02: re-armar la OCO nativa cuando el trailing o el breakeven mueven el stop (umbral de 0.1% sobre el stop vigente), cerrando la degradacion a polling y el take-profit zombie de la OCO viva",
+    "Follow-up cycle-02: extender el select de TradingService.getPositions con los campos nuevos de Position y pasar EP-008 a implemented",
+    "Follow-up cycle-02: guard estatico en el pipeline contra la reintroduccion de isFalseConcentrationBlock y del cast 'as unknown as AgentId' (CA-031/CA-034), con el patron readFileSync de trading.processor.isolation.spec.ts",
+    "Follow-up cycle-02: reescribir las aserciones de string-matching sobre el rango de texto fuente de checkOpenPositions en los dos specs de regresion"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-08-17",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

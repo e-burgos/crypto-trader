@@ -10,6 +10,7 @@
       "spec": "spec-e-burgos-001-agents-simplification",
       "apps": [
         "apps/api",
+        "apps/web",
         "libs/trading-engine",
         "libs/analysis",
         "libs/data-fetcher",

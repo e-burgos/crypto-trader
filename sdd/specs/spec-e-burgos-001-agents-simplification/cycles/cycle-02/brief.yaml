@@ -1,0 +1,239 @@
+# sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 2
+module: trading-agents-core
+phase: smart-sell-and-active-risk-management
+date: 2026-08-17
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Que la inteligencia que el sistema ya paga en análisis determine efectivamente cuánto se
+  compra, cuándo se vende y cuánto riesgo se acepta: cablear al camino real de ejecución el
+  andamio de dominio que el cycle-01 dejó registrado sin inyectores (RiskBudgetService,
+  PortfolioContextService, simulateTrade), reemplazar el veto absoluto de minProfitPct sobre
+  el SELL por una política explícita, proteger las posiciones con órdenes nativas del exchange
+  y vincular cada Trade con la AgentDecision que lo justificó.
+
+scope:
+  - >-
+    SELL en pérdida por señal — eliminar el veto absoluto de minProfitPct
+    (apps/api/src/trading/trading.processor.ts:879-890: `if (profitPct < minProfitPct) continue`)
+    y reemplazarlo por una política explícita y configurable en TradingConfig: el SELL en
+    pérdida se permite cuando la confianza del agente supera un umbral. minProfitPct deja de ser
+    un veto y pasa a ser el piso del camino "toma de ganancia"; el corte de pérdida por señal es
+    un camino distinto con su propio umbral. Default conservador en la migración: el
+    comportamiento de un bot ya corriendo no puede cambiar sin que su config lo habilite
+    (riesgo declarado en la spec §5).
+  - >-
+    Sizing inteligente cableado — hoy el tamaño de orden es
+    `balance × maxTradePct` fijo (libs/trading-engine/src/lib/order-executor.ts,
+    `calculateTradeQuantity`). Pasa a ser maxTradePct como TECHO, modulado por el
+    `positionSizeMultiplier` de AEGIS (dto/decision-synthesis.dto.ts:16) y el `maxTradeSize` de
+    FORGE (sub-agent.service.ts:73), hoy ambos solo visibles en analytics
+    (analytics.service.ts:240-243). El techo nunca se supera: modular es reducir.
+  - >-
+    Verdict REDUCE de AEGIS — hoy sin ningún manejo (orchestrator.service.ts solo trata BLOCK).
+    Implementarlo como reducción de tamaño de la orden, no como bloqueo, con semántica
+    definida por el architect y verificable por test.
+  - >-
+    Regla estructurada en lugar del override por regex — reemplazar `isFalseConcentrationBlock`
+    (orchestrator.service.ts:458-465, regex `/concentraci[oó]n|exposici[oó]n.../i` sobre el
+    texto libre de `reason`) por un campo tipado en la respuesta del agente + una regla
+    estructurada evaluable. Un BLOCK legítimo nunca debe anularse por cómo esté redactado el
+    motivo, ni un falso positivo de concentración depender de que el LLM elija la palabra
+    "concentración".
+  - >-
+    Protección nativa del exchange — implementar órdenes LIMIT, STOP_LOSS_LIMIT y OCO en
+    libs/data-fetcher/src/lib/binance/binance-rest.client.ts (hoy solo MARKET) y colocar SL/TP
+    como órdenes reales al abrir posición (spot). Incluye las reglas de lot-size / minNotional /
+    tick-size de Binance spot y su manejo de error. Sin credenciales reales en este entorno:
+    se valida con tests unitarios/mocks sobre el contrato del cliente (payload, firma, params,
+    manejo de rechazo), no contra testnet real.
+  - >-
+    Reconciliación de estado al inicio de cada ciclo — antes de decidir, el ciclo consulta el
+    estado real de las órdenes abiertas en el exchange y concilia con Position/Trade locales
+    (SL/TP ejecutados fuera de ciclo, órdenes canceladas, fills parciales). Es lo que cierra la
+    ventana de desprotección entre ciclos y ante caídas del proceso.
+  - >-
+    Herramientas de ganancia, configurables en TradingConfig con default conservador
+    (apagadas o neutras): trailing stop, take-profit escalonado (venta parcial + mover el stop a
+    breakeven) y salida por tiempo máximo de posición.
+  - >-
+    Riesgo agregado por usuario — exposición total por activo sumada entre todas las
+    TradingConfig del usuario, pérdida diaria máxima y drawdown que pausa agentes
+    automáticamente, aplicados en el camino real de ejecución usando RiskBudgetService y
+    PortfolioContextService (apps/api/src/agents/domain/) y `simulateTrade`
+    (libs/trading-engine/src/lib/risk/), YA rescatados y testeados en el cycle-01 y registrados
+    en AppModule sin inyectores — andamio deliberado que este ciclo debe conectar.
+  - >-
+    Trazabilidad — FK `Trade.decisionId → AgentDecision` (hoy el modelo Trade no tiene relación
+    con AgentDecision) para que cada orden ejecutada quede vinculada a su justificación. Nullable
+    en la migración: las filas históricas no tienen decisión asociada y no se backfillean.
+  - >-
+    FOLLOW-UP cycle-01 — capturar P2002 en `EvaluationProcessor.evaluate`: el check-then-create
+    sobre el UNIQUE (decisionId, horizonMinutes) puede fallar el job por colisión concurrente en
+    vez de resolverse como no-op explícito (hoy converge solo por el reintento de Bull).
+  - >-
+    FOLLOW-UP cycle-01 — fusionar `ResolvedAgentConfig` y `ResolvedAgentClient` y eliminar el
+    cast `as unknown as AgentId` del borde `resolveClient → resolveConfig`, migrando los 3
+    consumidores con vocabulario viejo (agent-config.controller.ts,
+    admin-agent-config.controller.ts, market.service.ts) a `ModelSlotId`. Aprovechar para quitar
+    el JSDoc narrativo del archivo (regla de cero comentarios).
+  - >-
+    FOLLOW-UP cycle-01 — decidir el destino de las tablas huérfanas `agent_tool_invocations`
+    (+ enum AgentToolName) y `agent_model_policies`, sin escritores tras la poda. Decisión
+    explícita del architect (dropear con migración propia vs conservar con justificación
+    escrita); lo que NO puede es quedar sin decidir por tercer ciclo consecutivo.
+
+out_of_scope:
+  - >-
+    UI de los campos nuevos de TradingConfig en apps/web (trailing, parciales, salida por
+    tiempo, umbrales de riesgo agregado). El ciclo es backend: los campos llegan con default
+    conservador vía migración y DTO. Exponerlos en el formulario es trabajo de un ciclo
+    posterior o de una spec de frontend.
+  - Gate determinista pre-LLM, caché por (asset, pair, timeframe), prompt caching de proveedor y max_tokens por tarea (cycle-03)
+  - Registrar `llmCostUsd` real por ciclo en AgentDecision y costo/día por bot en analytics (cycle-03)
+  - >-
+    Abstracción de exchange y futuros — leverage, shorts, positionSide, ExchangeClient genérico,
+    BinanceWsClient (spec-e-burgos-002). Este ciclo implementa órdenes nativas SOBRE el
+    BinanceRestClient existente, sin generalizar la interfaz.
+  - Chat con function calling real y RAG (spec-e-burgos-003)
+  - >-
+    Unificar las 2 enumeraciones de agentId restantes (intent-classification.dto.ts y
+    chat.service.ts) contra agent-identity.ts — sigue siendo candidato de cycle-03, no bloquea
+    nada de este ciclo.
+
+dependencies_required:
+  - >-
+    cycle-01 de esta spec, completed (2026-08-17) — aporta los 3 servicios de dominio que este
+    ciclo cablea (RiskBudgetService, PortfolioContextService, simulateTrade), `getKlines(..., range)`
+    en BinanceRestClient y AgentPromptService/AgentConfigResolverService ya unificados.
+
+environment_constraints:
+  - >-
+    NO hay base de datos corriendo. Las migraciones Prisma se escriben A MANO como SQL aditivo
+    (mismo procedimiento del cycle-01, que produjo 2 migraciones así), se declara el cambio en
+    apps/api/prisma/schema.prisma y se registra en sdd/schema.json con el nombre exacto del
+    directorio de migración creado. Nunca correr `prisma migrate dev`.
+  - >-
+    NO hay credenciales Binance reales ni acceso a testnet. El criterio de aceptación de la spec
+    dice "OCO colocada en testnet": se satisface con tests unitarios/de integración mockeados
+    sobre el contrato del cliente REST (params enviados, firma, parsing de la respuesta, manejo
+    de rechazo por lot-size/notional). El architect debe reescribir ese CA en términos
+    ejecutables en CI y el reviewer validar contra la reinterpretación, no contra la letra
+    (precedente del cycle-01: CA-001).
+  - >-
+    Todo cambio de comportamiento de trading va detrás de config con default conservador: un bot
+    ya corriendo no puede cambiar de conducta por el solo hecho de desplegar este ciclo.
+
+agent_contexts:
+  functional:
+    goal: >-
+      Traducir venta inteligente y gestión activa de riesgo a historias de usuario verificables
+      desde la perspectiva del dueño del bot: cortar una pérdida cuando el agente lo indica con
+      alta convicción, no arriesgar más de lo que el análisis justifica, no quedar desprotegido
+      entre ciclos ni ante una caída del proceso, asegurar ganancia parcial sin cerrar toda la
+      posición, y no perder más de X por día en toda su cuenta. Definir criterios de aceptación
+      MEDIBLES POR TEST DE SIMULACIÓN para cada una — la spec exige explícitamente que el
+      criterio de aceptación sea demostrable con tests: corte de pérdida por señal, sizing
+      modulado, OCO colocada, trailing/parciales ejecutando, límites agregados bloqueando
+      sobre-exposición, y cada Trade nuevo referenciando su AgentDecision. Un CA que no pueda
+      ejecutarse en CI sin BD ni credenciales debe reescribirse hasta que pueda.
+    business_context: >-
+      La plataforma opera bots de trading cripto con 6 agentes-personaje (KRYPTO, NEXUS, FORGE,
+      SIGMA, CIPHER, AEGIS) que analizan el mercado vía LLM y deciden operar. Hoy el sistema
+      paga el análisis completo y después lo ignora en la ejecución: compra siempre el mismo
+      porcentaje fijo del balance sin importar qué dijeron FORGE ni AEGIS, no puede vender en
+      pérdida aunque el agente lo pida con máxima confianza (solo sale por stop-loss fijo), deja
+      las posiciones sin orden de protección en el exchange entre ciclos de 5 a 30 minutos, y no
+      tiene ningún límite de riesgo que mire la cuenta completa del usuario en vez de un bot
+      aislado. El objetivo de negocio es obtener ganancias de forma segura y con justificación
+      de análisis previo: este ciclo es donde la justificación empieza a tener consecuencias
+      sobre el dinero.
+    relevant_spec_sections:
+      - "1. Contexto y diagnóstico — hallazgo B (la inteligencia de venta/riesgo existe pero está desconectada de la ejecución)"
+      - "3. Alcance por ciclo — Cycle-02, puntos 1 a 7 y su criterio de aceptación"
+      - "5. Riesgos — feature-flag por config y default conservador; reglas de lot-size/notional en OCO spot"
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/functional.md
+
+  planner:
+    goal: >-
+      Ordenar el ciclo con la secuencia de riesgo correcta, que acá es la inversa del cycle-01:
+      primero el andamio de datos y contratos (migración de TradingConfig + FK Trade.decisionId,
+      órdenes nativas en BinanceRestClient con sus tests, campo tipado del verdict de AEGIS),
+      DESPUÉS el cableado que cambia comportamiento (sizing modulado, política de SELL, SL/TP
+      reales, trailing/parciales, límites agregados), cada uno detrás de su default conservador.
+      Separar los 3 follow-ups del cycle-01 como tasks propias e independientes — no mezclarlos
+      con el cableado de trading, para que un problema en uno no bloquee al otro. Criterio de
+      done por task: `pnpm nx run-many -t test lint` verde y el test de simulación del CA que
+      esa task habilita. Estimar horas y story points.
+    note: "Recibe el output del Funcional y del Arquitecto — no necesita la spec completa"
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/planner.md
+
+  architect:
+    goal: >-
+      Definir (1) la política de SELL que reemplaza al veto de minProfitPct: qué campos nuevos
+      lleva TradingConfig, cómo se combinan confianza del agente, profitPct actual y
+      riskRewardRatio de simulateTrade, y cuál es el default que preserva el comportamiento
+      actual; (2) la fórmula exacta de sizing con maxTradePct como techo y la semántica del
+      verdict REDUCE, incluyendo qué pasa si AEGIS y FORGE se contradicen; (3) el contrato de
+      LIMIT/STOP_LOSS_LIMIT/OCO en BinanceRestClient — params, firma, validación de
+      lot-size/minNotional/tick-size, y qué hacer cuando el exchange rechaza la orden de
+      protección DESPUÉS de que la compra ya se ejecutó (caso crítico); (4) el algoritmo de
+      reconciliación al inicio de ciclo y su idempotencia; (5) cómo se aplican los límites
+      agregados (exposición por activo entre configs, pérdida diaria, drawdown que pausa
+      agentes) invocando RiskBudgetService/PortfolioContextService, y en qué punto exacto del
+      pipeline se evalúan; (6) el campo tipado que reemplaza al regex de isFalseConcentrationBlock
+      y su regla estructurada; (7) el SQL aditivo escrito a mano de TODAS las migraciones del
+      ciclo (TradingConfig, Trade.decisionId, y la decisión sobre las tablas huérfanas), con el
+      nombre de directorio exacto que después va a sdd/schema.json; (8) la reescritura ejecutable
+      del CA "OCO colocada en testnet" para un CI sin credenciales.
+    existing_tables:
+      - "TradingConfig (buyThreshold, sellThreshold, stopLossPct, takeProfitPct, minProfitPct, maxTradePct, maxConcurrentPositions, minIntervalMinutes, orderPriceOffsetPct, mode, isRunning, riskProfile)"
+      - "Position (entryPrice, quantity, entryAt, exitPrice, exitAt, status, pnl, fees) — sin campos de protección ni de orden nativa"
+      - "Trade (type, price, quantity, fee, executedAt, mode, binanceOrderId) — SIN relación a AgentDecision"
+      - "AgentDecision"
+      - "agent_tool_invocations (+ enum AgentToolName) y agent_model_policies — huérfanas desde el cycle-01, destino a decidir"
+    existing_endpoints: ["EP-001", "EP-002", "EP-003"]
+    note: >-
+      Servicios ya disponibles y sin inyectores, listos para cablear: RiskBudgetService y
+      PortfolioContextService (apps/api/src/agents/domain/, provistos por AgentDomainModule),
+      y `simulateTrade` + `SLIPPAGE_PCT_BY_ASSET` (libs/trading-engine/src/lib/risk/, exportados
+      por el barrel; `simulateTrade` devuelve `riskRewardRatio` justamente para la política de
+      SELL de este ciclo). Leer sus specs antes de definir contratos nuevos — no re-especificar
+      lo que ya existe y está testeado.
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/architect.md
+
+  implementor_back:
+    goal: >-
+      Implementar una task a la vez sobre el contrato del Arquitecto, dejando
+      `pnpm nx run-many -t test lint build` verde en cada una. Todo cambio de comportamiento de
+      trading detrás de config con default conservador. Migraciones escritas a mano (no hay BD).
+      Cero comentarios en el código (regla global del repo) — los 3 bloques de contexto que
+      justifican una línea van en architect.md, no en el archivo .ts.
+    app: apps/api
+    app_context: sdd/context/apps/api/context_prompt.md
+    additional_contexts:
+      - sdd/context/libs/trading-engine/context_prompt.md
+      - sdd/context/libs/data-fetcher/context_prompt.md
+      - sdd/context/libs/shared/context_prompt.md
+    note: "Recibe una task a la vez del Planner."
+
+  reviewer:
+    goal: >-
+      Validar el output del ciclo contra el criterio de aceptación de la spec, que acá es
+      explícitamente de TESTS DE SIMULACIÓN: que exista y pase un test por cada uno de corte de
+      pérdida por señal, sizing modulado (techo respetado + modulación aplicada), colocación de
+      OCO/STOP_LOSS_LIMIT (mockeada, con la reinterpretación del architect para un CI sin
+      credenciales), trailing stop y take-profit parcial ejecutando, y límites agregados
+      bloqueando sobre-exposición; y que cada Trade nuevo referencie su AgentDecision. Verificar
+      además que RiskBudgetService, PortfolioContextService y simulateTrade dejaron de ser
+      andamio (tienen inyectores/llamadores reales), que ningún cambio de comportamiento se
+      activa sin config explícita en una instalación existente, que el regex
+      isFalseConcentrationBlock ya no existe en el árbol, y que los 3 follow-ups del cycle-01
+      quedaron resueltos o explícitamente re-diferidos con justificación. `pnpm sdd:validate` y
+      `pnpm sdd:rebuild-tasks-index` en verde antes de cerrar.
+    checklist: sdd/skills/sdd-reviewer/checklist.md
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/cycle.json

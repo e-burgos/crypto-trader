@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 2,
+  "module": "trading-agents-core",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "apps": [
+    "apps/api",
+    "libs/trading-engine",
+    "libs/data-fetcher",
+    "libs/shared"
+  ],
+  "phase": "smart-sell-and-active-risk-management",
+  "flow": "full",
+  "objectives": [
+    "Reemplazar el veto absoluto de minProfitPct sobre el SELL (trading.processor.ts:879-890) por una política explícita y configurable: cortar pérdidas por señal cuando la confianza del agente supera un umbral",
+    "Cablear el sizing inteligente: maxTradePct como techo modulado por el positionSizeMultiplier de AEGIS y el maxTradeSize de FORGE, hoy visibles solo en analytics, e implementar el verdict REDUCE que no tiene manejo",
+    "Implementar órdenes LIMIT/STOP_LOSS_LIMIT/OCO en BinanceRestClient (hoy solo MARKET) y colocar SL/TP como órdenes reales al abrir posición en spot, con reconciliación de estado al inicio de cada ciclo",
+    "Agregar herramientas de ganancia configurables en TradingConfig con default conservador: trailing stop, take-profit escalonado (venta parcial + stop a breakeven) y salida por tiempo máximo de posición",
+    "Aplicar riesgo agregado por usuario (exposición total por activo entre configs, pérdida diaria máxima, drawdown que pausa agentes) cableando RiskBudgetService, PortfolioContextService y simulateTrade, registrados sin inyectores en el cycle-01",
+    "Agregar la FK Trade.decisionId → AgentDecision para vincular cada orden ejecutada con la justificación que la produjo",
+    "Reemplazar el override por regex del BLOCK de AEGIS (orchestrator.service.ts isFalseConcentrationBlock) por un campo tipado en la respuesta del agente y una regla estructurada evaluable",
+    "Follow-up cycle-01: capturar P2002 en EvaluationProcessor.evaluate para que la colisión concurrente sobre el UNIQUE (decisionId, horizonMinutes) sea un no-op explícito y no un job fallido",
+    "Follow-up cycle-01: fusionar ResolvedAgentConfig y ResolvedAgentClient, eliminar el cast 'as unknown as AgentId' del borde resolveClient → resolveConfig y migrar los 3 consumidores restantes al vocabulario ModelSlotId",
+    "Follow-up cycle-01: decidir explícitamente el destino de las tablas huérfanas agent_tool_invocations (+ enum AgentToolName) y agent_model_policies, sin escritores tras la poda"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-08-17",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

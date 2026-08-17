@@ -149,9 +149,14 @@ export class BinanceRestClient {
     symbol: string,
     interval: CandleInterval,
     limit = 200,
+    range?: { startTime?: number; endTime?: number },
   ): Promise<Candle[]> {
+    const params: Record<string, unknown> = { symbol, interval, limit };
+    if (range?.startTime !== undefined) params['startTime'] = range.startTime;
+    if (range?.endTime !== undefined) params['endTime'] = range.endTime;
+
     const { data } = await this.client.get<unknown[][]>('/api/v3/klines', {
-      params: { symbol, interval, limit },
+      params,
     });
 
     return data.map((k) => ({

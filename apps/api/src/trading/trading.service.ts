@@ -13,6 +13,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { MarketService } from '../market/market.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { EvaluationService } from '../agents/evaluation/evaluation.service';
 import {
   CreateTradingConfigDto,
   UpdateTradingConfigDto,
@@ -73,6 +74,7 @@ export class TradingService implements OnModuleInit {
     private readonly marketService: MarketService,
     private readonly orchestratorService: OrchestratorService,
     private readonly agentConfigResolver: AgentConfigResolverService,
+    private readonly evaluationService: EvaluationService,
   ) {}
 
   /**
@@ -993,7 +995,7 @@ export class TradingService implements OnModuleInit {
     );
 
     // Persist the decision
-    await this.prisma.agentDecision.create({
+    const savedDecision = await this.prisma.agentDecision.create({
       data: {
         userId,
         asset: config.asset,
@@ -1013,6 +1015,14 @@ export class TradingService implements OnModuleInit {
         } as any,
       },
     });
+
+    this.evaluationService
+      .scheduleEvaluation(savedDecision.id)
+      .catch((err) =>
+        this.logger.warn(
+          `scheduleEvaluation failed for ${savedDecision.id}: ${err instanceof Error ? err.message : String(err)}`,
+        ),
+      );
 
     // Notify via websocket
     this.gateway.emitToUser(userId, 'agent:decision', {

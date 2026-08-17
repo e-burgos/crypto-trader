@@ -89,6 +89,35 @@ describe('BinanceRestClient', () => {
         'Network error',
       );
     });
+
+    it('should include startTime/endTime when range is passed', async () => {
+      getMockClient().get.mockResolvedValue({ data: [] });
+
+      await client.getKlines('BTCUSDT', '1m', 3, {
+        startTime: 1000,
+        endTime: 2000,
+      });
+
+      expect(getMockClient().get).toHaveBeenCalledWith('/api/v3/klines', {
+        params: {
+          symbol: 'BTCUSDT',
+          interval: '1m',
+          limit: 3,
+          startTime: 1000,
+          endTime: 2000,
+        },
+      });
+    });
+
+    it('should omit startTime/endTime when range is not passed', async () => {
+      getMockClient().get.mockResolvedValue({ data: [] });
+
+      await client.getKlines('BTCUSDT', '1m', 3);
+
+      expect(getMockClient().get).toHaveBeenCalledWith('/api/v3/klines', {
+        params: { symbol: 'BTCUSDT', interval: '1m', limit: 3 },
+      });
+    });
   });
 
   describe('getTickerPrice', () => {

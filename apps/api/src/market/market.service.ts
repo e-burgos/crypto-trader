@@ -621,6 +621,31 @@ ${numbered}`;
     );
   }
 
+  async getPriceAt(symbol: string, at: Date): Promise<number | null> {
+    try {
+      if (Date.now() - at.getTime() < 60_000) {
+        return await this.binance.getTickerPrice(symbol);
+      }
+
+      const atMs = at.getTime();
+      const candles = await this.binance.getKlines(
+        symbol,
+        '1m' as CandleInterval,
+        3,
+        { startTime: atMs - 60_000, endTime: atMs + 60_000 },
+      );
+      const candle = candles.find(
+        (c) => c.openTime <= atMs && atMs <= c.closeTime,
+      );
+      return candle ? candle.close : null;
+    } catch (err) {
+      this.logger.warn(
+        `getPriceAt failed for ${symbol}@${at.toISOString()}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
+  }
+
   async getSnapshot(symbol: string) {
     const VALID_SYMBOLS = ['BTCUSDT', 'BTCUSDC', 'ETHUSDT', 'ETHUSDC'];
     const sym = symbol.toUpperCase();

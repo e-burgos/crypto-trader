@@ -10,6 +10,7 @@ import { UsersModule } from '../users/users.module';
 import { MarketModule } from '../market/market.module';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
+import { EvaluationModule } from '../agents/evaluation/evaluation.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AgentConfigModule } from '../agents/agent-config.module';
     MarketModule,
     OrchestratorModule,
     AgentConfigModule,
+    EvaluationModule,
   ],
   controllers: [TradingController],
   providers: [TradingService, TradingProcessor],

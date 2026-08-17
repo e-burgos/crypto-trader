@@ -2,25 +2,29 @@ import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MarketService } from '../../market/market.service';
 import { AgentOutcomeStatus } from '../../../generated/prisma/enums';
-import { EVALUATION_QUEUE } from './evaluation.service';
+import { EVALUATION_QUEUE, EvaluationService } from './evaluation.service';
 
 interface EvaluateJobData {
   decisionId: string;
   horizonMinutes: number;
 }
 
-/** Heuristic thresholds */
-const WIN_THRESHOLD = 0.005; // 0.5%
-const LOSS_THRESHOLD = -0.005; // -0.5%
-const HOLD_SIGNIFICANT_PCT = 0.02; // 2%
-const HIGH_VOL_PCT = 0.03; // 3%
+const WIN_THRESHOLD = 0.005;
+const LOSS_THRESHOLD = -0.005;
+const HOLD_SIGNIFICANT_PCT = 0.02;
+const HIGH_VOL_PCT = 0.03;
 
 @Processor(EVALUATION_QUEUE)
 export class EvaluationProcessor {
   private readonly logger = new Logger(EvaluationProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly marketService: MarketService,
+    private readonly evaluationService: EvaluationService,
+  ) {}
 
   @Process('evaluate')
   async evaluate(job: Job<EvaluateJobData>) {
@@ -37,26 +41,50 @@ export class EvaluationProcessor {
       return;
     }
 
-    // Use the last known price from indicators as priceAtDecision
+    const existing = await this.prisma.agentDecisionEvaluation.findUnique({
+      where: {
+        decisionId_horizonMinutes: { decisionId, horizonMinutes },
+      },
+    });
+    if (existing) {
+      this.logger.log(
+        `Evaluation already exists for decision=${decisionId} horizon=${horizonMinutes}m — skipping`,
+      );
+      return;
+    }
+
     const indicators = decision.indicators as Record<string, unknown>;
     const priceAtDecision =
       (indicators?.currentPrice as number) ??
+      (indicators?.price as number) ??
       (indicators?.close as number) ??
       0;
 
-    // Simulate "current price" by looking at any trade that happened,
-    // or fall back to the decision price (evaluations will be NEUTRAL).
-    // In production this would call Binance/market API; here we query recent trades.
-    const trade = await this.prisma.trade.findFirst({
-      where: { userId: decision.userId },
-      orderBy: { executedAt: 'desc' },
-    });
-    const priceAtEvaluation = trade?.price ?? priceAtDecision;
+    if (!(priceAtDecision > 0)) {
+      await this.createNotEvaluable(decisionId, decision.userId, horizonMinutes, 0);
+      return;
+    }
 
-    const priceChange =
-      priceAtDecision > 0
-        ? (priceAtEvaluation - priceAtDecision) / priceAtDecision
-        : 0;
+    const symbol = `${decision.asset}${decision.pair}`;
+    const evaluatedAtTarget = new Date(
+      decision.createdAt.getTime() + horizonMinutes * 60_000,
+    );
+    const priceAtEvaluation = await this.marketService.getPriceAt(
+      symbol,
+      evaluatedAtTarget,
+    );
+
+    if (priceAtEvaluation === null) {
+      await this.createNotEvaluable(
+        decisionId,
+        decision.userId,
+        horizonMinutes,
+        priceAtDecision,
+      );
+      return;
+    }
+
+    const priceChange = (priceAtEvaluation - priceAtDecision) / priceAtDecision;
 
     const { status, realizedPnlUsd, hypotheticalPnlUsd, missedOpportunityUsd } =
       this.calculateOutcome(decision.decision, priceChange, priceAtDecision);
@@ -84,6 +112,33 @@ export class EvaluationProcessor {
     this.logger.log(
       `Evaluation created: decision=${decisionId} status=${status} regime=${marketRegime}`,
     );
+  }
+
+  private async createNotEvaluable(
+    decisionId: string,
+    userId: string,
+    horizonMinutes: number,
+    priceAtDecision: number,
+  ) {
+    await this.prisma.agentDecisionEvaluation.create({
+      data: {
+        decisionId,
+        userId,
+        horizonMinutes,
+        status: 'NOT_EVALUABLE' as AgentOutcomeStatus,
+        priceAtDecision,
+        priceAtEvaluation: null,
+        evaluatedAt: new Date(),
+      },
+    });
+    this.logger.warn(
+      `Evaluation NOT_EVALUABLE: decision=${decisionId} horizon=${horizonMinutes}m`,
+    );
+  }
+
+  @Process('cleanup')
+  async runCleanup() {
+    await this.evaluationService.cleanup();
   }
 
   @Process('schedule-evaluations')
@@ -121,7 +176,11 @@ export class EvaluationProcessor {
             await job.queue.add(
               'evaluate',
               { decisionId: decision.id, horizonMinutes: horizon },
-              { delay: delayMs, removeOnComplete: true },
+              {
+                delay: delayMs,
+                jobId: `eval:${decision.id}:${horizon}`,
+                removeOnComplete: true,
+              },
             );
             scheduled++;
           }

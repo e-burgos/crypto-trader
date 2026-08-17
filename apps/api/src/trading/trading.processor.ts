@@ -9,6 +9,7 @@ import { TRADING_QUEUE } from './trading.service';
 import { MarketService } from '../market/market.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { EvaluationService } from '../agents/evaluation/evaluation.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -49,6 +50,7 @@ export class TradingProcessor {
     private readonly marketService: MarketService,
     private readonly orchestratorService: OrchestratorService,
     private readonly agentConfigResolver: AgentConfigResolverService,
+    private readonly evaluationService: EvaluationService,
   ) {}
 
   @Process('run-cycle')
@@ -354,6 +356,14 @@ export class TradingProcessor {
           } as any,
         },
       });
+
+      this.evaluationService
+        .scheduleEvaluation(savedDecision.id)
+        .catch((err) =>
+          this.logger.warn(
+            `scheduleEvaluation failed for ${savedDecision.id}: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
 
       // Emit decision to WebSocket
       this.gateway.emitToUser(userId, 'agent:decision', savedDecision);

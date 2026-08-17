@@ -146,6 +146,7 @@ enum AgentOutcomeStatus {
   NEUTRAL
   MISSED_OPPORTUNITY
   AVOIDED_LOSS
+  NOT_EVALUABLE
 }
 
 // ── Spec 40 — Market Data Sources ────────────────────────────────────────────
@@ -748,6 +749,7 @@ model AgentDecisionEvaluation {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([decisionId, horizonMinutes])
   @@index([userId, decisionId])
   @@index([status, createdAt])
   @@map("agent_decision_evaluations")

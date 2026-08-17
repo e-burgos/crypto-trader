@@ -507,3 +507,34 @@ TASK-006 → TASK-016 (Trade.decisionId)
   y `trading.controller.ts` estaban fuera del alcance de archivos autorizado para este batch.
   Candidato natural para TASK-015 (que ya cablea `RiskBudgetService`/`PortfolioContextService`
   contra esta misma tabla) o una task dedicada si el conductor del ciclo prefiere separarlo.
+- **TASK-007/TASK-008 — `ExchangeOrderState`/`ExchangeOrderStatus` viven en `libs/shared`, no en
+  `libs/data-fetcher`.** `architect.md` §5.1 los define junto al resto del contrato de
+  `BinanceRestClient`, pero §15 (tabla de archivos) lista `libs/shared` como modificado para
+  "estados de orden". Se siguió la tabla de §15: ambos tipos se agregaron a
+  `libs/shared/src/types/interfaces.ts` y se re-exportan desde ahí. Esto es lo que permite que
+  `libs/trading-engine/order-executor.ts` (el `OrderExecutorPort` extendido) los use sin que
+  `trading-engine` pase a depender de `data-fetcher` — no había ningún precedente de esa
+  dependencia entre libs y `LiveOrderExecutor` ya evita el acoplamiento tipando su constructor
+  estructuralmente en vez de importar `BinanceRestClient`. El resto del contrato de §5.1
+  (`SymbolFilters`, `OrderValidationError`, `OcoOrderResult`, etc.) sí quedó en `data-fetcher`,
+  tal como indica el título de esa sección.
+- **TASK-007 — se eliminó `getLotSizeFilter`/`LotSizeFilter` en vez de dejarlo junto a
+  `getSymbolFilters`.** `architect.md` describe "extender" el caché de filtros; no tenía
+  consumidores fuera del propio `binance-rest.client.ts` (`placeMarketOrder` era el único
+  caller), así que se reemplazó por `getSymbolFilters(symbol).lotSize` en vez de mantener dos
+  métodos que golpean el mismo caché con nombres distintos. El contrato de §5.1 solo lista
+  `getSymbolFilters`, consistente con esta lectura.
+- **TASK-007/TASK-008 — tabla de códigos reintentables exportada desde `binance-rest.client.ts`
+  (`RETRYABLE_BINANCE_ERROR_CODES`, `isRetryableBinanceErrorCode`, `getBinanceErrorCode`), sin
+  método explícito en el contrato de `architect.md` §5.1.** La tabla de §5.3 no está atada a
+  ningún método de la clase — es información que el retry-loop de `executeBuy` (TASK-012,
+  `apps/api`, fuera de este alcance) va a necesitar para decidir si reintenta la colocación de
+  la protección. Se expuso como utilidades puras del cliente (el lugar natural donde se parsea
+  el error de Binance) en vez de dejarlas sin implementar a la espera de TASK-012.
+- **TASK-008 — `SandboxOrderExecutor.placeLimitOrder`/`placeStopLossLimitOrder` no están
+  descritos en `architect.md` §5.6** (esa sección solo cubre `placeProtectionOrder`/
+  `getProtectionOrderStatus`/`cancelProtectionOrder`). Como `OrderExecutorPort` exige los 8
+  métodos en toda implementación, se resolvieron como fills inmediatos al precio pedido
+  (mismo mecanismo que `placeMarketOrder`, factorizado en un `fillAtPrice` privado
+  compartido) — coherente con que SANDBOX no simula un libro de órdenes real y con que
+  `nativeProtectionEnabled` ya se ignora en SANDBOX según esa misma sección.

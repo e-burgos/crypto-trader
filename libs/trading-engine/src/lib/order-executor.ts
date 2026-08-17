@@ -4,8 +4,32 @@ import {
   TradeRecord,
   TradeType,
   TradingMode,
+  ExchangeOrderStatus,
 } from '@crypto-trader/shared';
 import { TRADE_FEE_PCT } from '@crypto-trader/shared';
+
+export interface ProtectionOrderRequest {
+  symbol: string;
+  quantity: number;
+  stopPrice: number;
+  stopLimitPrice: number;
+  takeProfitPrice: number;
+  referencePrice: number;
+  clientOrderId?: string;
+}
+
+export interface ProtectionOrderRef {
+  orderListId?: string | null;
+  stopOrderId?: string | null;
+}
+
+export interface ProtectionOrderResult {
+  kind: 'OCO' | 'SIMULATED';
+  orderListId: string | null;
+  stopOrderId: string | null;
+  limitOrderId: string | null;
+  placedAt: Date;
+}
 
 /**
  * Abstract order executor — real Binance or sandbox.
@@ -18,6 +42,34 @@ export interface OrderExecutorPort {
   ): Promise<OrderResult>;
   getBalance(asset: string): Promise<Balance>;
   getPrice(symbol: string): Promise<number>;
+  placeLimitOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+    price: number,
+  ): Promise<OrderResult>;
+  placeStopLossLimitOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+    stopPrice: number,
+    limitPrice: number,
+  ): Promise<OrderResult>;
+  placeProtectionOrder(
+    req: ProtectionOrderRequest,
+  ): Promise<ProtectionOrderResult>;
+  getProtectionOrderStatus(
+    symbol: string,
+    ref: ProtectionOrderRef,
+  ): Promise<ExchangeOrderStatus>;
+  cancelProtectionOrder(symbol: string, ref: ProtectionOrderRef): Promise<void>;
+}
+
+interface SandboxProtection {
+  symbol: string;
+  quantity: number;
+  stopPrice: number;
+  takeProfitPrice: number;
 }
 
 /**
@@ -25,6 +77,8 @@ export interface OrderExecutorPort {
  */
 export class SandboxOrderExecutor implements OrderExecutorPort {
   private balances: Map<string, Balance>;
+  private readonly protections = new Map<string, SandboxProtection>();
+  private protectionCounter = 0;
 
   constructor(initialBalance = 10_000) {
     this.balances = new Map();
@@ -61,12 +115,12 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     return this.balances.get(asset) ?? { asset, free: 0, locked: 0 };
   }
 
-  async placeMarketOrder(
+  private async fillAtPrice(
     symbol: string,
     side: TradeType,
     quantity: number,
+    price: number,
   ): Promise<OrderResult> {
-    const price = await this.getPrice(symbol);
     const cost = price * quantity;
     const fee = cost * TRADE_FEE_PCT;
 
@@ -112,6 +166,128 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     };
   }
 
+  async placeMarketOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+  ): Promise<OrderResult> {
+    const price = await this.getPrice(symbol);
+    return this.fillAtPrice(symbol, side, quantity, price);
+  }
+
+  async placeLimitOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+    price: number,
+  ): Promise<OrderResult> {
+    return this.fillAtPrice(symbol, side, quantity, price);
+  }
+
+  async placeStopLossLimitOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+    _stopPrice: number,
+    limitPrice: number,
+  ): Promise<OrderResult> {
+    return this.fillAtPrice(symbol, side, quantity, limitPrice);
+  }
+
+  async placeProtectionOrder(
+    req: ProtectionOrderRequest,
+  ): Promise<ProtectionOrderResult> {
+    const id = `sandbox-oco-${++this.protectionCounter}`;
+    this.protections.set(id, {
+      symbol: req.symbol,
+      quantity: req.quantity,
+      stopPrice: req.stopPrice,
+      takeProfitPrice: req.takeProfitPrice,
+    });
+
+    const { base } = this.parseSymbol(req.symbol);
+    const baseBalance = await this.getBalance(base);
+    this.balances.set(base, {
+      asset: base,
+      free: baseBalance.free - req.quantity,
+      locked: baseBalance.locked + req.quantity,
+    });
+
+    return {
+      kind: 'SIMULATED',
+      orderListId: id,
+      stopOrderId: null,
+      limitOrderId: null,
+      placedAt: new Date(),
+    };
+  }
+
+  async getProtectionOrderStatus(
+    symbol: string,
+    ref: ProtectionOrderRef,
+  ): Promise<ExchangeOrderStatus> {
+    const entry = ref.orderListId
+      ? this.protections.get(ref.orderListId)
+      : undefined;
+    if (!entry) {
+      return {
+        state: 'MISSING',
+        filledLeg: null,
+        executedPrice: null,
+        executedQuantity: null,
+        orderId: null,
+      };
+    }
+
+    const price = this.currentPrices.get(symbol);
+    if (price !== undefined) {
+      if (price <= entry.stopPrice) {
+        return {
+          state: 'FILLED',
+          filledLeg: 'STOP',
+          executedPrice: price,
+          executedQuantity: entry.quantity,
+          orderId: ref.orderListId ?? null,
+        };
+      }
+      if (price >= entry.takeProfitPrice) {
+        return {
+          state: 'FILLED',
+          filledLeg: 'TAKE_PROFIT',
+          executedPrice: price,
+          executedQuantity: entry.quantity,
+          orderId: ref.orderListId ?? null,
+        };
+      }
+    }
+
+    return {
+      state: 'ACTIVE',
+      filledLeg: null,
+      executedPrice: null,
+      executedQuantity: null,
+      orderId: ref.orderListId ?? null,
+    };
+  }
+
+  async cancelProtectionOrder(
+    symbol: string,
+    ref: ProtectionOrderRef,
+  ): Promise<void> {
+    if (!ref.orderListId) return;
+    const entry = this.protections.get(ref.orderListId);
+    if (!entry) return;
+    this.protections.delete(ref.orderListId);
+
+    const { base } = this.parseSymbol(symbol);
+    const baseBalance = await this.getBalance(base);
+    this.balances.set(base, {
+      asset: base,
+      free: baseBalance.free + entry.quantity,
+      locked: Math.max(0, baseBalance.locked - entry.quantity),
+    });
+  }
+
   private parseSymbol(symbol: string): { base: string; quote: string } {
     for (const quote of ['USDT', 'USDC']) {
       if (symbol.endsWith(quote)) {
@@ -135,6 +311,40 @@ export class LiveOrderExecutor implements OrderExecutorPort {
       ): Promise<OrderResult>;
       getBalances(): Promise<Balance[]>;
       getTickerPrice(symbol: string): Promise<number>;
+      placeLimitOrder(
+        symbol: string,
+        side: TradeType,
+        quantity: number,
+        price: number,
+      ): Promise<OrderResult>;
+      placeStopLossLimitOrder(
+        symbol: string,
+        side: TradeType,
+        quantity: number,
+        stopPrice: number,
+        limitPrice: number,
+      ): Promise<OrderResult>;
+      placeOcoSellOrder(
+        symbol: string,
+        params: {
+          quantity: number;
+          takeProfitPrice: number;
+          stopPrice: number;
+          stopLimitPrice: number;
+          listClientOrderId?: string;
+          referencePrice?: number;
+        },
+      ): Promise<{
+        orderListId: string;
+        stopOrderId: string;
+        limitOrderId: string;
+        placedAt: Date;
+      }>;
+      getOcoStatus(
+        symbol: string,
+        orderListId: string,
+      ): Promise<ExchangeOrderStatus>;
+      cancelOcoOrderList(symbol: string, orderListId: string): Promise<void>;
     },
   ) {}
 
@@ -155,6 +365,76 @@ export class LiveOrderExecutor implements OrderExecutorPort {
 
   async getPrice(symbol: string): Promise<number> {
     return this.binance.getTickerPrice(symbol);
+  }
+
+  async placeLimitOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+    price: number,
+  ): Promise<OrderResult> {
+    return this.binance.placeLimitOrder(symbol, side, quantity, price);
+  }
+
+  async placeStopLossLimitOrder(
+    symbol: string,
+    side: TradeType,
+    quantity: number,
+    stopPrice: number,
+    limitPrice: number,
+  ): Promise<OrderResult> {
+    return this.binance.placeStopLossLimitOrder(
+      symbol,
+      side,
+      quantity,
+      stopPrice,
+      limitPrice,
+    );
+  }
+
+  async placeProtectionOrder(
+    req: ProtectionOrderRequest,
+  ): Promise<ProtectionOrderResult> {
+    const result = await this.binance.placeOcoSellOrder(req.symbol, {
+      quantity: req.quantity,
+      takeProfitPrice: req.takeProfitPrice,
+      stopPrice: req.stopPrice,
+      stopLimitPrice: req.stopLimitPrice,
+      listClientOrderId: req.clientOrderId,
+      referencePrice: req.referencePrice,
+    });
+
+    return {
+      kind: 'OCO',
+      orderListId: result.orderListId,
+      stopOrderId: result.stopOrderId,
+      limitOrderId: result.limitOrderId,
+      placedAt: result.placedAt,
+    };
+  }
+
+  async getProtectionOrderStatus(
+    symbol: string,
+    ref: ProtectionOrderRef,
+  ): Promise<ExchangeOrderStatus> {
+    if (!ref.orderListId) {
+      return {
+        state: 'MISSING',
+        filledLeg: null,
+        executedPrice: null,
+        executedQuantity: null,
+        orderId: null,
+      };
+    }
+    return this.binance.getOcoStatus(symbol, ref.orderListId);
+  }
+
+  async cancelProtectionOrder(
+    symbol: string,
+    ref: ProtectionOrderRef,
+  ): Promise<void> {
+    if (!ref.orderListId) return;
+    await this.binance.cancelOcoOrderList(symbol, ref.orderListId);
   }
 }
 

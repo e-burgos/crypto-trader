@@ -110,8 +110,13 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+        "libs/data-fetcher/src/lib/binance/index.ts",
+        "libs/shared/src/types/interfaces.ts"
+      ]
     },
     {
       "id": "TASK-008",
@@ -120,8 +125,16 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": ["TASK-007"],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+        "libs/data-fetcher/src/lib/binance/index.ts",
+        "libs/trading-engine/src/lib/order-executor.ts",
+        "libs/trading-engine/src/lib/order-executor.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "libs/shared/src/types/interfaces.ts"
+      ]
     },
     {
       "id": "TASK-009",

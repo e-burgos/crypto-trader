@@ -1,20 +1,11 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { decrypt } from '../users/utils/encryption.util';
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import {
-  createLLMProvider,
-  LLMProviderClient,
-  OpenRouterProvider,
-} from '@crypto-trader/analysis';
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import { LLMProvider } from '@crypto-trader/shared';
 import { RagService } from './rag.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
-import { LLMSource } from '../../generated/prisma/enums';
+import { AgentId, LLMProvider, LLMSource } from '../../generated/prisma/enums';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
-import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
+import { captureRateLimits } from '@crypto-trader/analysis';
 
 export type SubAgentId =
   | 'platform'
@@ -488,12 +479,9 @@ export class SubAgentService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly agentConfigResolver: AgentConfigResolverService,
     @Optional() private readonly ragService?: RagService,
     @Optional() private readonly llmUsageService?: LLMUsageService,
-    @Optional()
-    private readonly agentConfigResolver?: AgentConfigResolverService,
-    @Optional()
-    private readonly platformLLMProviderService?: PlatformLLMProviderService,
   ) {}
 
   /**
@@ -530,17 +518,13 @@ export class SubAgentService {
     /** Override the automatic provider/model resolution */
     override?: { provider: LLMProvider; model: string },
   ): Promise<string> {
-    // Determine which config agent to resolve:
-    // - orchestrator + cheap (intent_classification) → routing
-    // - orchestrator + expensive (decision_synthesis, cross_agent_synthesis) → synthesis
-    // - others → same agentId
-    const configAgentId = this.resolveConfigAgentId(agentId, task, preferCheap);
+    const slot = this.resolveModelSlot(agentId, task, preferCheap);
 
     const {
       client,
-      provider: providerEnum,
+      provider,
       model,
-    } = await this.getProvider(userId, configAgentId, override);
+    } = await this.agentConfigResolver.resolveClient(userId, slot, override);
     let systemPrompt = await this.resolveSystemPrompt(agentId);
 
     // Inject RAG context when searching by user message content
@@ -568,12 +552,11 @@ export class SubAgentService {
       const response = await client.complete(systemPrompt, userPrompt);
 
       // Track call for health monitoring
-      recordCall(userId, providerEnum, true);
+      recordCall(userId, provider, true);
 
       // Capture rate limits from response headers
       if (response.headers) {
-        const { captureRateLimits } = await import('@crypto-trader/analysis');
-        captureRateLimits(userId, providerEnum, response.headers);
+        captureRateLimits(userId, provider, response.headers);
       }
 
       // Log usage asynchronously (fire-and-forget)
@@ -585,11 +568,11 @@ export class SubAgentService {
         this.llmUsageService
           .log({
             userId,
-            provider: providerEnum as any,
+            provider,
             model,
             usage: response.usage,
             source,
-            agentId: configAgentId,
+            agentId: slot,
             actualModel: response.actualModel,
           })
           .catch((err) =>
@@ -603,7 +586,7 @@ export class SubAgentService {
     } catch (err) {
       recordCall(
         userId,
-        providerEnum,
+        provider,
         false,
         err instanceof Error ? err.message : String(err),
       );
@@ -614,135 +597,14 @@ export class SubAgentService {
     }
   }
 
-  /**
-   * Maps a sub-agent call to the correct config AgentId for model resolution.
-   */
-  private resolveConfigAgentId(
+  private resolveModelSlot(
     agentId: SubAgentId,
     task: AgentTask,
     preferCheap: boolean,
-  ): string {
-    if (agentId === 'orchestrator') {
-      // Intent classification uses fast/cheap "routing" model
-      if (task === 'intent_classification' || preferCheap) return 'routing';
-      // Decision synthesis and cross-agent synthesis use powerful "synthesis" model
-      return 'synthesis';
-    }
-    return agentId;
-  }
-
-  /**
-   * Get an LLMProviderClient for a specific agent.
-   * Resolution order:
-   *   1. Explicit override
-   *   2. AgentConfigResolver (user > admin > fallback)
-   *   3. Fallback: first active credential
-   */
-  async getProvider(
-    userId: string,
-    configAgentId: string,
-    override?: { provider: LLMProvider; model: string },
-  ): Promise<{
-    client: LLMProviderClient;
-    provider: LLMProvider;
-    model: string;
-  }> {
-    // Helper: validate resolved provider is active at platform level (Spec 38, Fix P4)
-    const assertActive = async (provider: LLMProvider) => {
-      if (this.platformLLMProviderService) {
-        await this.platformLLMProviderService.assertProviderActive(provider);
-      }
-    };
-
-    // 1. Explicit override
-    if (override) {
-      const cred = await this.prisma.lLMCredential.findFirst({
-        where: { userId, provider: override.provider as any, isActive: true },
-      });
-      if (cred) {
-        await assertActive(override.provider);
-        const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-        const client =
-          override.provider === LLMProvider.OPENROUTER
-            ? new OpenRouterProvider({
-                apiKey,
-                model: override.model,
-                fallbackModels: (cred as any).fallbackModels ?? [],
-              })
-            : createLLMProvider(override.provider, apiKey, override.model);
-        return {
-          client,
-          provider: override.provider,
-          model: override.model,
-        };
-      }
-    }
-
-    // 2. AgentConfigResolver — resolve per-agent config
-    if (this.agentConfigResolver) {
-      try {
-        const resolved = await this.agentConfigResolver.resolveConfig(
-          configAgentId as any,
-          userId,
-        );
-        const cred = await this.prisma.lLMCredential.findFirst({
-          where: { userId, provider: resolved.provider as any, isActive: true },
-        });
-        if (cred) {
-          await assertActive(resolved.provider as unknown as LLMProvider);
-          const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-          const client =
-            resolved.provider === (LLMProvider.OPENROUTER as any)
-              ? new OpenRouterProvider({
-                  apiKey,
-                  model: resolved.model,
-                  fallbackModels: (cred as any).fallbackModels ?? [],
-                })
-              : createLLMProvider(
-                  resolved.provider as unknown as LLMProvider,
-                  apiKey,
-                  resolved.model,
-                );
-          return {
-            client,
-            provider: resolved.provider as unknown as LLMProvider,
-            model: resolved.model,
-          };
-        }
-      } catch (err) {
-        this.logger.warn(
-          `AgentConfigResolver failed for ${configAgentId}: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
-
-    // 3. Fallback: first active credential
-    const allCreds = await this.prisma.lLMCredential.findMany({
-      where: { userId, isActive: true },
-    });
-
-    if (allCreds.length > 0) {
-      const cred = allCreds[0];
-      const credProvider = cred.provider as LLMProvider;
-      await assertActive(credProvider);
-      const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-      const client =
-        credProvider === LLMProvider.OPENROUTER
-          ? new OpenRouterProvider({
-              apiKey,
-              model: cred.selectedModel,
-              fallbackModels: (cred as any).fallbackModels ?? [],
-            })
-          : createLLMProvider(credProvider, apiKey, cred.selectedModel);
-      return {
-        client,
-        provider: credProvider,
-        model: cred.selectedModel ?? client.name,
-      };
-    }
-
-    throw new Error(
-      `No active LLM credentials for user ${userId}. Configure them in Settings.`,
-    );
+  ): AgentId {
+    if (agentId !== 'orchestrator') return agentId as AgentId;
+    return task === 'intent_classification' || preferCheap
+      ? AgentId.routing
+      : AgentId.synthesis;
   }
 }

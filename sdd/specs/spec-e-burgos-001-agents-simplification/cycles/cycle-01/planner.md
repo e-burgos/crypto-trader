@@ -266,3 +266,33 @@ Camino crítico: `TASK-001/002/003 → TASK-010` y `TASK-005 → TASK-006` y `TA
   mapea internamente `resolveConfig`'s `source: 'fallback'` → `'preset'` para hablar el
   vocabulario de `ResolutionSource` del contrato. TASK-006 es quien debe decidir si al migrar
   callers conviene fusionar/renombrar ambas interfaces.
+
+### TASK-006 — desviaciones y decisiones al migrar callers
+
+- **No se fusionaron `ResolvedAgentConfig` y `ResolvedAgentClient`.** `market.service.ts`,
+  `agent-config.controller.ts` y `admin-agent-config.controller.ts` (fuera del alcance de esta
+  task — otro implementor trabaja en `market/**` en paralelo) siguen consumiendo
+  `resolveConfig`/`ResolvedAgentConfig` sin cambios. Fusionar hubiera exigido tocarlos.
+- **`orchestrator.service.ts` también consumía `SubAgentService.getProvider`** directamente
+  (`getProvider(userId, 'market'|'operations'|'risk'|'blockchain'|'synthesis', override)`) en
+  4 sitios, algo que ni `architect.md` ni `planner.md` mencionaban explícitamente. Al borrar
+  `getProvider` de `SubAgentService` (contrato D2), `orchestrator.service.ts` pasó a inyectar
+  `AgentConfigResolverService` directamente y llamar `resolveClient(userId, AgentId.<slot>, override)`
+  en esos mismos 4 sitios — mismo costo (siempre construyó un cliente descartable solo para leer
+  `provider`/`model`, igual que antes), mismo comportamiento no bloqueante.
+- **El mapeo `orchestrator+cheap→routing` / `orchestrator+expensive→synthesis`** se mantuvo como
+  método privado `resolveModelSlot` dentro de `sub-agent.service.ts` (reemplaza a
+  `resolveConfigAgentId`, ahora tipado a `AgentId` en vez de `string`). No se creó
+  `agent-identity.ts` — sigue siendo alcance de TASK-012 según D6 §7.3.
+- **`sub-agent-provider-guard.spec.ts` se borró** en vez de adaptarse: probaba exclusivamente
+  `SubAgentService.getProvider` (cascada override/resolver/fallback + `assertProviderActive`),
+  método eliminado por esta task. Su cobertura ya existe 1:1 en
+  `agent-config-resolver.service.spec.ts` (TASK-005) sobre `resolveClient`, que es ahora el único
+  punto que ejecuta esa cascada. Duplicar los tests contra un método que ya no existe no aporta.
+- **El import dinámico `await import('@crypto-trader/analysis')` de `captureRateLimits`** en
+  `sub-agent.service.ts` se volvió estático. Al quitar el import estático de
+  `createLLMProvider`/`OpenRouterProvider` (movidos a `AgentConfigResolverService` en TASK-005),
+  ese import dinámico quedó como el único uso de `@crypto-trader/analysis` en el archivo, lo que
+  hace que `@nx/enforce-module-boundaries` clasifique la lib como lazy-loaded y rompa el lint de
+  `market.service.ts`/`provider-health.service.ts` (imports estáticos de la misma lib). Volver el
+  import estático restaura el comportamiento previo a esta task.

@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubAgentService } from './sub-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { AgentId } from '../../generated/prisma/enums';
 
 const mockLLMProvider = {
   name: 'mock',
@@ -10,38 +12,25 @@ const mockLLMProvider = {
 const mockCaptureRateLimits = jest.fn();
 
 jest.mock('@crypto-trader/analysis', () => ({
-  createLLMProvider: jest.fn(() => mockLLMProvider),
   captureRateLimits: (...args: unknown[]) => mockCaptureRateLimits(...args),
 }));
 
-jest.mock('../users/utils/encryption.util', () => ({
-  decrypt: jest.fn(() => 'decrypted-api-key'),
-}));
-
-jest.mock('../llm/model-ranking', () => ({
-  suggestModel: jest.fn((providers, useCase, preferCheap) => {
-    if (providers.includes('GROQ')) {
-      return { provider: 'GROQ', model: 'llama-3.3-70b-versatile' };
-    }
-    if (providers.length > 0) {
-      return { provider: providers[0], model: 'some-model' };
-    }
-    return null;
-  }),
-}));
-
-const mockCredential = {
-  provider: 'GROQ',
-  apiKeyEncrypted: 'enc-key',
-  apiKeyIv: 'iv',
-  selectedModel: 'llama-3.3-70b-versatile',
+const mockPrismaService = {
+  agentDefinition: {
+    findUnique: jest.fn(),
+  },
 };
 
-const mockPrismaService = {
-  lLMCredential: {
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-  },
+const mockResolvedClient = {
+  slot: AgentId.market,
+  provider: 'GROQ',
+  model: 'llama-3.3-70b-versatile',
+  source: 'credential',
+  client: mockLLMProvider,
+};
+
+const mockAgentConfigResolver = {
+  resolveClient: jest.fn(),
 };
 
 describe('SubAgentService', () => {
@@ -49,63 +38,27 @@ describe('SubAgentService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrismaService.agentDefinition.findUnique.mockResolvedValue(null);
+    mockAgentConfigResolver.resolveClient.mockResolvedValue(
+      mockResolvedClient,
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubAgentService,
         { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: AgentConfigResolverService,
+          useValue: mockAgentConfigResolver,
+        },
       ],
     }).compile();
 
     service = module.get<SubAgentService>(SubAgentService);
   });
 
-  describe('getProvider', () => {
-    it('should resolve from first active credential', async () => {
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([
-        mockCredential,
-      ]);
-
-      const result = await service.getProvider('user-1', 'market');
-
-      expect(mockPrismaService.lLMCredential.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1', isActive: true }),
-        }),
-      );
-      expect(result.client).toBe(mockLLMProvider);
-      expect(result.provider).toBe('GROQ');
-      expect(result.model).toBe('llama-3.3-70b-versatile');
-    });
-
-    it('should fallback to any active credential', async () => {
-      const openaiCred = {
-        ...mockCredential,
-        provider: 'OPENAI',
-        selectedModel: 'gpt-4o',
-      };
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([openaiCred]);
-
-      const result = await service.getProvider('user-1', 'market');
-      expect(result.client).toBe(mockLLMProvider);
-    });
-
-    it('should throw if no active credentials found', async () => {
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([]);
-
-      await expect(service.getProvider('user-1', 'market')).rejects.toThrow(
-        'No active LLM credentials',
-      );
-    });
-  });
-
   describe('call', () => {
-    beforeEach(() => {
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([
-        mockCredential,
-      ]);
-    });
-
-    it('should call LLM with correct system prompt for market agent', async () => {
+    it('should resolve the client via AgentConfigResolverService for the agent slot', async () => {
       mockLLMProvider.complete.mockResolvedValue({
         text: '{"signal":"BUY","confidence":0.8,"reasoning":"RSI oversold"}',
         usage: { inputTokens: 100, outputTokens: 50 },
@@ -119,9 +72,56 @@ describe('SubAgentService', () => {
       );
 
       expect(result).toContain('BUY');
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledWith(
+        'user-1',
+        AgentId.market,
+        undefined,
+      );
       expect(mockLLMProvider.complete).toHaveBeenCalledWith(
         expect.stringContaining('SIGMA'),
         expect.stringContaining('indicadores'),
+      );
+    });
+
+    it('should resolve the "routing" slot for orchestrator intent classification', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"agentId":"market","confidence":0.9}',
+        usage: { inputTokens: 30, outputTokens: 10 },
+      });
+
+      await service.call(
+        'orchestrator',
+        'intent_classification',
+        { message: 'hola' },
+        'user-1',
+        true,
+      );
+
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledWith(
+        'user-1',
+        AgentId.routing,
+        undefined,
+      );
+    });
+
+    it('should resolve the "synthesis" slot for orchestrator decision synthesis', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"decision":"HOLD","confidence":0.5}',
+        usage: { inputTokens: 30, outputTokens: 10 },
+      });
+
+      await service.call(
+        'orchestrator',
+        'decision_synthesis',
+        {},
+        'user-1',
+        false,
+      );
+
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledWith(
+        'user-1',
+        AgentId.synthesis,
+        undefined,
       );
     });
 
@@ -155,7 +155,6 @@ describe('SubAgentService', () => {
         usage: { inputTokens: 50, outputTokens: 20 },
         headers: mockHeaders,
       });
-      mockCaptureRateLimits.mockClear();
 
       await service.call(
         'market',
@@ -176,7 +175,6 @@ describe('SubAgentService', () => {
         text: '{"signal":"HOLD","confidence":0.5,"reasoning":"flat"}',
         usage: { inputTokens: 50, outputTokens: 20 },
       });
-      mockCaptureRateLimits.mockClear();
 
       await service.call(
         'market',
@@ -186,6 +184,21 @@ describe('SubAgentService', () => {
       );
 
       expect(mockCaptureRateLimits).not.toHaveBeenCalled();
+    });
+
+    it('should propagate the error raised by AgentConfigResolverService', async () => {
+      mockAgentConfigResolver.resolveClient.mockRejectedValueOnce(
+        new Error('No active LLM credentials for user user-1.'),
+      );
+
+      await expect(
+        service.call(
+          'market',
+          'technical_signal',
+          { indicators: { rsi: 50 } },
+          'user-1',
+        ),
+      ).rejects.toThrow('No active LLM credentials');
     });
   });
 });

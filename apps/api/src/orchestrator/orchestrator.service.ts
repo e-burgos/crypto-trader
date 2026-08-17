@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubAgentService, SubAgentId } from './sub-agent.service';
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import { LLMProvider } from '@crypto-trader/shared';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { AgentId, LLMProvider } from '../../generated/prisma/enums';
 import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
@@ -53,6 +53,7 @@ export class OrchestratorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subAgent: SubAgentService,
+    private readonly agentConfigResolver: AgentConfigResolverService,
   ) {}
 
   // ── A) Intent Classification ───────────────────────────────────────────────
@@ -355,13 +356,29 @@ export class OrchestratorService {
     let blockchainModel: { provider?: string; model?: string } = {};
     try {
       const providerCalls: Promise<{ provider: string; model: string }>[] = [
-        this.subAgent.getProvider(userId, 'market', typedOverride),
-        this.subAgent.getProvider(userId, 'operations', typedOverride),
-        this.subAgent.getProvider(userId, 'risk', typedOverride),
+        this.agentConfigResolver.resolveClient(
+          userId,
+          AgentId.market,
+          typedOverride,
+        ),
+        this.agentConfigResolver.resolveClient(
+          userId,
+          AgentId.operations,
+          typedOverride,
+        ),
+        this.agentConfigResolver.resolveClient(
+          userId,
+          AgentId.risk,
+          typedOverride,
+        ),
       ];
       if (hasMacroData) {
         providerCalls.push(
-          this.subAgent.getProvider(userId, 'blockchain', typedOverride),
+          this.agentConfigResolver.resolveClient(
+            userId,
+            AgentId.blockchain,
+            typedOverride,
+          ),
         );
       }
       const [mkt, ops, rsk, blk] = await Promise.allSettled(providerCalls);
@@ -471,9 +488,9 @@ export class OrchestratorService {
 
     // Resolve model info before the synthesis call
     try {
-      const resolved = await this.subAgent.getProvider(
+      const resolved = await this.agentConfigResolver.resolveClient(
         userId,
-        'synthesis',
+        AgentId.synthesis,
         typedOverride,
       );
       synthesisProvider = resolved.provider;

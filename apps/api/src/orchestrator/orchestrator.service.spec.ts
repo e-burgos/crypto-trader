@@ -2,10 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrchestratorService } from './orchestrator.service';
 import { SubAgentService } from './sub-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 
 const mockSubAgentService = {
   call: jest.fn(),
-  getProvider: jest.fn(),
+};
+
+const mockAgentConfigResolver = {
+  resolveClient: jest.fn(),
 };
 
 const mockPrismaService = {
@@ -65,6 +69,10 @@ describe('OrchestratorService', () => {
         OrchestratorService,
         { provide: SubAgentService, useValue: mockSubAgentService },
         { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: AgentConfigResolverService,
+          useValue: mockAgentConfigResolver,
+        },
       ],
     }).compile();
 
@@ -77,6 +85,10 @@ describe('OrchestratorService', () => {
       intervalMinutes: 10,
     });
     mockPrismaService.agentDecision.findFirst.mockResolvedValue(null);
+    mockAgentConfigResolver.resolveClient.mockResolvedValue({
+      provider: 'GROQ',
+      model: 'llama-3.3-70b-versatile',
+    });
   });
 
   // ── classifyIntent ─────────────────────────────────────────────────────────

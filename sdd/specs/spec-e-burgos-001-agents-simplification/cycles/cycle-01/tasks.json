@@ -81,8 +81,14 @@
       "estimation_hours": 2.5,
       "story_points": 3,
       "depends_on": ["TASK-005"],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.isolation.spec.ts"
+      ]
     },
     {
       "id": "TASK-007",
@@ -110,8 +116,14 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.spec.ts"
+      ]
     },
     {
       "id": "TASK-009",
@@ -120,8 +132,20 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": ["TASK-008"],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/evaluation/evaluation.processor.ts",
+        "apps/api/src/agents/evaluation/evaluation.module.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.spec.ts",
+        "apps/api/src/market/market.service.ts",
+        "apps/api/src/market/market.service.get-price-at.spec.ts",
+        "apps/api/src/__mocks__/generated-prisma.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817130000_add_not_evaluable_and_evaluation_unique/migration.sql"
+      ]
     },
     {
       "id": "TASK-010",

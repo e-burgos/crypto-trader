@@ -4,6 +4,10 @@ describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => 
   const gatewayMock = { emitToUser: jest.fn() };
   const notificationsMock = { create: jest.fn().mockResolvedValue({}) };
 
+  const aggregateRiskServiceMock = {
+    assertBuyAllowed: jest.fn().mockResolvedValue({ allowed: true, blockedBy: null }),
+  };
+
   function buildProcessor(prisma: any) {
     return new TradingProcessor(
       prisma,
@@ -15,6 +19,7 @@ describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => 
       {} as any,
       {} as any,
       {} as any,
+      aggregateRiskServiceMock as any,
     );
   }
 

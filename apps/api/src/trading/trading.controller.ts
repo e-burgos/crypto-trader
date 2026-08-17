@@ -28,6 +28,7 @@ import {
   StopAgentDto,
   StopAgentsByModeDto,
 } from './dto/trading-config.dto';
+import { UpdateUserRiskPolicyDto } from './dto/user-risk-policy.dto';
 import { generateAgentName } from './trading-agent-utils';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -124,6 +125,33 @@ export class TradingController {
         riskProfile: body.riskProfile ?? 'MODERATE',
       }),
     };
+  }
+
+  // ── Aggregate risk policy ────────────────────────────────────────────────
+
+  @Get('risk-policy')
+  @ApiOperation({
+    summary: 'Obtener la política de riesgo agregado del usuario',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Política de riesgo agregado (o defaults inactivos si no tiene fila)',
+  })
+  getRiskPolicy(@CurrentUser() user: RequestUser) {
+    return this.tradingService.getRiskPolicy(user.userId);
+  }
+
+  @Put('risk-policy')
+  @ApiOperation({
+    summary: 'Actualizar (upsert) la política de riesgo agregado del usuario',
+  })
+  @ApiResponse({ status: 200, description: 'Política actualizada' })
+  @ApiResponse({ status: 400, description: 'Validación de rangos fallida' })
+  updateRiskPolicy(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: UpdateUserRiskPolicyDto,
+  ) {
+    return this.tradingService.updateRiskPolicy(user.userId, dto);
   }
 
   // ── Agent lifecycle ───────────────────────────────────────────────────────

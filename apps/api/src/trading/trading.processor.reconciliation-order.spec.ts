@@ -80,6 +80,7 @@ describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-0
       agentConfigResolver as any,
       {} as any,
       reconciliationService as any,
+      {} as any,
     );
 
     await processor.runCycle({
@@ -132,6 +133,7 @@ describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-0
       agentConfigResolver as any,
       {} as any,
       reconciliationService as any,
+      {} as any,
     );
 
     await processor.runCycle({

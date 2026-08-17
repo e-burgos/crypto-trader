@@ -12,6 +12,7 @@ import { AgentConfigResolverService } from '../agents/agent-config-resolver.serv
 import { EvaluationService } from '../agents/evaluation/evaluation.service';
 import { ReconciliationService } from './reconciliation.service';
 import { placeProtectionWithRetry } from './protection-retry';
+import { AggregateRiskService } from '../agents/domain/aggregate-risk.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -23,8 +24,17 @@ import {
   PositionManager,
   resolveTradeQuantity,
   evaluateSellPolicy,
+  updateTrailingStop,
+  shouldExitByTime,
+  resolvePartialTakeProfit,
+  applyPartialExit,
 } from '@crypto-trader/trading-engine';
-import type { OrderExecutorPort } from '@crypto-trader/trading-engine';
+import type {
+  OrderExecutorPort,
+  TrailingConfig,
+  TrailingState,
+  PartialTakeProfitResult,
+} from '@crypto-trader/trading-engine';
 
 import {
   Decision,
@@ -67,6 +77,7 @@ export class TradingProcessor {
     private readonly agentConfigResolver: AgentConfigResolverService,
     private readonly evaluationService: EvaluationService,
     private readonly reconciliationService: ReconciliationService,
+    private readonly aggregateRiskService: AggregateRiskService,
   ) {}
 
   @Process('run-cycle')
@@ -505,6 +516,7 @@ export class TradingProcessor {
         binanceApiKey,
         binanceSecret,
         cachedMarketPrice,
+        decisionContext,
       );
 
       // 12. Schedule next cycle — uses the same effectiveWaitMinutes computed above.
@@ -771,6 +783,29 @@ export class TradingProcessor {
       const quantity = sizing.quantity;
       if (quantity <= 0) return;
 
+      const aggregateVerdict = await this.aggregateRiskService.assertBuyAllowed({
+        userId,
+        asset: config.asset,
+        mode: config.mode,
+        plannedNotionalUsd: quantity * livePrice,
+      });
+      if (!aggregateVerdict.allowed) {
+        this.logger.log(
+          `BUY blocked by aggregate risk for user ${userId}: ${aggregateVerdict.blockedBy}`,
+        );
+        await this.notificationsService
+          .create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({
+              key: 'aggregateRiskBlocked',
+              blockedBy: aggregateVerdict.blockedBy ?? '',
+            }),
+          )
+          .catch(() => null);
+        return;
+      }
+
       const cost = livePrice * quantity;
       const fee = cost * TRADE_FEE_PCT;
       const total = cost + fee;
@@ -860,6 +895,29 @@ export class TradingProcessor {
     }
     const quantity = sizing.quantity;
     if (quantity <= 0) return;
+
+    const aggregateVerdict = await this.aggregateRiskService.assertBuyAllowed({
+      userId,
+      asset: config.asset,
+      mode: config.mode,
+      plannedNotionalUsd: quantity * referencePrice,
+    });
+    if (!aggregateVerdict.allowed) {
+      this.logger.log(
+        `BUY blocked by aggregate risk for user ${userId}: ${aggregateVerdict.blockedBy}`,
+      );
+      await this.notificationsService
+        .create(
+          userId,
+          NotificationType.AGENT_ERROR,
+          JSON.stringify({
+            key: 'aggregateRiskBlocked',
+            blockedBy: aggregateVerdict.blockedBy ?? '',
+          }),
+        )
+        .catch(() => null);
+      return;
+    }
 
     const order = await executor.placeMarketOrder(
       symbol,
@@ -1288,6 +1346,104 @@ export class TradingProcessor {
     }
   }
 
+  private async executePartialTakeProfit(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    pos: any,
+    posData: any,
+    partial: PartialTakeProfitResult,
+    trailingState: TrailingState,
+    decisionContext?: DecisionExecutionContext,
+  ) {
+    await this.releaseProtectionIfNeeded(symbol, executor, pos);
+
+    const order = await executor.placeMarketOrder(
+      symbol,
+      TradeType.SELL,
+      partial.sellQuantity,
+    );
+    const applied = applyPartialExit(posData, order.price, partial.sellQuantity);
+
+    const currentStop =
+      trailingState.stopPrice ?? pos.entryPrice * (1 - config.stopLossPct);
+    const newStopPrice =
+      partial.newStopPrice != null
+        ? Math.max(currentStop, partial.newStopPrice)
+        : trailingState.stopPrice;
+
+    await this.prisma.position.update({
+      where: { id: pos.id },
+      data: {
+        quantity: applied.quantity,
+        realizedPnl: (pos.realizedPnl ?? 0) + applied.realizedPnlDelta,
+        fees: (pos.fees ?? 0) + applied.fees,
+        partialExitCount: (pos.partialExitCount ?? 0) + 1,
+        stopPrice: newStopPrice,
+        highWaterPrice: trailingState.highWaterPrice,
+        trailingActive: trailingState.trailingActive,
+      },
+    });
+
+    await this.prisma.trade.create({
+      data: {
+        userId,
+        positionId: pos.id,
+        type: TradeType.SELL,
+        price: order.price,
+        quantity: order.quantity,
+        fee: order.price * order.quantity * TRADE_FEE_PCT,
+        mode,
+        binanceOrderId: order.orderId,
+        decisionId: decisionContext?.decisionId ?? null,
+      },
+    });
+
+    if (mode === TradingMode.SANDBOX) {
+      const proceeds = order.price * order.quantity;
+      const fee = proceeds * TRADE_FEE_PCT;
+      const updatedWallet = await this.prisma.$transaction(async (tx) => {
+        await tx.sandboxWallet.upsert({
+          where: { userId_currency: { userId, currency: pos.pair as any } },
+          create: {
+            userId,
+            currency: pos.pair as any,
+            balance: 10_000 + proceeds - fee,
+          },
+          update: { balance: { increment: proceeds - fee } },
+        });
+        return tx.sandboxWallet.findUnique({
+          where: { userId_currency: { userId, currency: pos.pair as any } },
+        });
+      });
+      this.gateway.emitToUser(userId, 'wallet:updated', {
+        currency: pos.pair,
+        balance: updatedWallet?.balance,
+      });
+    }
+
+    await this.notificationsService.create(
+      userId,
+      NotificationType.TAKE_PROFIT_HIT,
+      JSON.stringify({
+        key: 'partialTakeProfit',
+        qty: partial.sellQuantity.toString(),
+        asset: config.asset,
+        price: order.price.toFixed(2),
+        pnl: applied.realizedPnlDelta.toFixed(2),
+      }),
+    );
+    this.gateway.emitToUser(userId, 'position:updated', {
+      position: {
+        ...pos,
+        quantity: applied.quantity,
+        realizedPnl: (pos.realizedPnl ?? 0) + applied.realizedPnlDelta,
+      },
+    });
+  }
+
   private async checkOpenPositions(
     userId: string,
     config: any,
@@ -1296,6 +1452,7 @@ export class TradingProcessor {
     apiKey?: string,
     apiSecret?: string,
     cachedPrice?: number,
+    decisionContext?: DecisionExecutionContext,
   ) {
     const openPositions = await this.prisma.position.findMany({
       where: {
@@ -1345,6 +1502,114 @@ export class TradingProcessor {
       cachedPrice ?? (await executor.getPrice(symbol).catch(() => null));
     if (!currentPrice) return;
 
+    const partialFilters = config.partialTpEnabled
+      ? await new BinanceRestClient({})
+          .getSymbolFilters(symbol)
+          .catch(() => null)
+      : null;
+    const lotStep = partialFilters?.lotSize.stepSize ?? 1e-8;
+    const minNotional = partialFilters?.notional.minNotional ?? 0;
+
+    const trailingCfg: TrailingConfig = {
+      trailingStopEnabled: !!config.trailingStopEnabled,
+      trailingStopPct: config.trailingStopPct ?? 0.02,
+      trailingActivationPct: config.trailingActivationPct ?? 0.01,
+    };
+
+    const closeAtMarket = async (
+      pos: any,
+      posData: any,
+      exitReason: 'STOP_LOSS' | 'TRAILING_STOP' | 'TAKE_PROFIT' | 'TIME_EXIT',
+    ) => {
+      await this.releaseProtectionIfNeeded(symbol, executor, pos);
+
+      const order = await executor.placeMarketOrder(
+        symbol,
+        TradeType.SELL,
+        pos.quantity,
+      );
+      const { position: closedPosition, pnl } =
+        this.positionManager.closePosition(posData, order.price);
+
+      await this.prisma.position.update({
+        where: { id: pos.id },
+        data: {
+          exitPrice: closedPosition.exitPrice,
+          exitAt: closedPosition.exitAt,
+          status: 'CLOSED',
+          pnl: closedPosition.pnl,
+          fees: closedPosition.fees,
+          exitReason,
+        },
+      });
+
+      await this.prisma.trade.create({
+        data: {
+          userId,
+          positionId: pos.id,
+          type: TradeType.SELL,
+          price: order.price,
+          quantity: order.quantity,
+          fee: order.price * order.quantity * TRADE_FEE_PCT,
+          mode,
+          binanceOrderId: order.orderId,
+        },
+      });
+
+      // ── For SANDBOX: credit proceeds back to wallet ─────────────────────
+      if (mode === TradingMode.SANDBOX) {
+        const proceeds = order.price * order.quantity;
+        const fee = proceeds * TRADE_FEE_PCT;
+        const updatedWallet = await this.prisma.$transaction(async (tx) => {
+          await tx.sandboxWallet.upsert({
+            where: { userId_currency: { userId, currency: pos.pair as any } },
+            create: {
+              userId,
+              currency: pos.pair as any,
+              balance: 10_000 + proceeds - fee,
+            },
+            update: { balance: { increment: proceeds - fee } },
+          });
+          return tx.sandboxWallet.findUnique({
+            where: { userId_currency: { userId, currency: pos.pair as any } },
+          });
+        });
+        this.gateway.emitToUser(userId, 'wallet:updated', {
+          currency: pos.pair,
+          balance: updatedWallet?.balance,
+        });
+      }
+
+      const notifType =
+        exitReason === 'TAKE_PROFIT'
+          ? NotificationType.TAKE_PROFIT_HIT
+          : NotificationType.STOP_LOSS_TRIGGERED;
+      const notifKey: Record<typeof exitReason, string> = {
+        STOP_LOSS: 'stopLoss',
+        TRAILING_STOP: 'trailingStop',
+        TIME_EXIT: 'timeExit',
+        TAKE_PROFIT: 'takeProfit',
+      };
+
+      await this.notificationsService.create(
+        userId,
+        notifType,
+        JSON.stringify({
+          key: notifKey[exitReason],
+          qty: pos.quantity.toString(),
+          asset: config.asset,
+          price: order.price.toFixed(2),
+          pnl: pnl.toFixed(2),
+        }),
+      );
+      this.gateway.emitToUser(userId, 'trade:executed', {
+        position: closedPosition,
+      });
+      this.gateway.emitToUser(userId, 'position:updated', {
+        position: closedPosition,
+      });
+    };
+
     for (const pos of openPositions) {
       const posData = {
         ...pos,
@@ -1356,96 +1621,96 @@ export class TradingProcessor {
         exitAt: pos.exitAt ?? undefined,
         pnl: pos.pnl ?? undefined,
       };
-      const shouldStopLoss = this.positionManager.shouldStopLoss(
-        posData,
+
+      const trailingState = updateTrailingStop(
+        {
+          entryPrice: pos.entryPrice,
+          stopPrice: pos.stopPrice ?? null,
+          highWaterPrice: pos.highWaterPrice ?? null,
+          trailingActive: !!pos.trailingActive,
+        },
         currentPrice,
+        trailingCfg,
         config.stopLossPct,
       );
-      const shouldTakeProfit = this.positionManager.shouldTakeProfit(
-        posData,
-        currentPrice,
-        config.takeProfitPct,
-      );
 
-      if (shouldStopLoss || shouldTakeProfit) {
-        await this.releaseProtectionIfNeeded(symbol, executor, pos);
+      if (
+        shouldExitByTime(
+          pos.entryAt,
+          new Date(),
+          config.maxPositionHoldMinutes ?? null,
+        )
+      ) {
+        await closeAtMarket(pos, posData, 'TIME_EXIT');
+        continue;
+      }
 
-        const order = await executor.placeMarketOrder(
-          symbol,
-          TradeType.SELL,
-          pos.quantity,
+      const effectiveStop =
+        trailingState.stopPrice ?? pos.entryPrice * (1 - config.stopLossPct);
+      if (currentPrice <= effectiveStop) {
+        await closeAtMarket(
+          pos,
+          posData,
+          trailingState.trailingActive ? 'TRAILING_STOP' : 'STOP_LOSS',
         );
-        const { position: closedPosition, pnl } =
-          this.positionManager.closePosition(posData, order.price);
+        continue;
+      }
 
+      const partial: PartialTakeProfitResult | null = config.partialTpEnabled
+        ? resolvePartialTakeProfit({
+            entryPrice: pos.entryPrice,
+            quantity: pos.quantity,
+            currentPrice,
+            partialExitCount: pos.partialExitCount ?? 0,
+            cfg: {
+              partialTpEnabled: true,
+              partialTpTriggerPct: config.partialTpTriggerPct ?? 0.02,
+              partialTpSellPct: config.partialTpSellPct ?? 0.5,
+              moveStopToBreakevenAfterPartial:
+                config.moveStopToBreakevenAfterPartial ?? true,
+            },
+            lotStep,
+            minNotional,
+          })
+        : null;
+
+      if (partial) {
+        await this.executePartialTakeProfit(
+          userId,
+          config,
+          symbol,
+          mode,
+          executor,
+          pos,
+          posData,
+          partial,
+          trailingState,
+          decisionContext,
+        );
+        continue;
+      }
+
+      if (
+        !config.trailingStopEnabled &&
+        currentPrice >= pos.entryPrice * (1 + config.takeProfitPct)
+      ) {
+        await closeAtMarket(pos, posData, 'TAKE_PROFIT');
+        continue;
+      }
+
+      const stopChanged = trailingState.stopPrice !== (pos.stopPrice ?? null);
+      const highWaterChanged =
+        trailingState.highWaterPrice !== (pos.highWaterPrice ?? null);
+      const trailingActiveChanged =
+        trailingState.trailingActive !== !!pos.trailingActive;
+      if (stopChanged || highWaterChanged || trailingActiveChanged) {
         await this.prisma.position.update({
           where: { id: pos.id },
           data: {
-            exitPrice: closedPosition.exitPrice,
-            exitAt: closedPosition.exitAt,
-            status: 'CLOSED',
-            pnl: closedPosition.pnl,
-            fees: closedPosition.fees,
+            stopPrice: trailingState.stopPrice,
+            highWaterPrice: trailingState.highWaterPrice,
+            trailingActive: trailingState.trailingActive,
           },
-        });
-
-        await this.prisma.trade.create({
-          data: {
-            userId,
-            positionId: pos.id,
-            type: TradeType.SELL,
-            price: order.price,
-            quantity: order.quantity,
-            fee: order.price * order.quantity * TRADE_FEE_PCT,
-            mode,
-            binanceOrderId: order.orderId,
-          },
-        });
-
-        // ── For SANDBOX: credit proceeds back to wallet ─────────────────────
-        if (mode === TradingMode.SANDBOX) {
-          const proceeds = order.price * order.quantity;
-          const fee = proceeds * TRADE_FEE_PCT;
-          const updatedWallet = await this.prisma.$transaction(async (tx) => {
-            await tx.sandboxWallet.upsert({
-              where: { userId_currency: { userId, currency: pos.pair as any } },
-              create: {
-                userId,
-                currency: pos.pair as any,
-                balance: 10_000 + proceeds - fee,
-              },
-              update: { balance: { increment: proceeds - fee } },
-            });
-            return tx.sandboxWallet.findUnique({
-              where: { userId_currency: { userId, currency: pos.pair as any } },
-            });
-          });
-          this.gateway.emitToUser(userId, 'wallet:updated', {
-            currency: pos.pair,
-            balance: updatedWallet?.balance,
-          });
-        }
-
-        const notifType = shouldStopLoss
-          ? NotificationType.STOP_LOSS_TRIGGERED
-          : NotificationType.TAKE_PROFIT_HIT;
-
-        await this.notificationsService.create(
-          userId,
-          notifType,
-          JSON.stringify({
-            key: shouldStopLoss ? 'stopLoss' : 'takeProfit',
-            qty: pos.quantity.toString(),
-            asset: config.asset,
-            price: order.price.toFixed(2),
-            pnl: pnl.toFixed(2),
-          }),
-        );
-        this.gateway.emitToUser(userId, 'trade:executed', {
-          position: closedPosition,
-        });
-        this.gateway.emitToUser(userId, 'position:updated', {
-          position: closedPosition,
         });
       }
     }

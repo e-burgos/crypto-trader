@@ -12,6 +12,7 @@ import { MarketModule } from '../market/market.module';
 import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
 import { EvaluationModule } from '../agents/evaluation/evaluation.module';
+import { AgentDomainModule } from '../agents/domain/agent-domain.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { EvaluationModule } from '../agents/evaluation/evaluation.module';
     OrchestratorModule,
     AgentConfigModule,
     EvaluationModule,
+    AgentDomainModule,
   ],
   controllers: [TradingController],
   providers: [TradingService, TradingProcessor, ReconciliationService],

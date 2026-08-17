@@ -291,8 +291,19 @@
       "depends_on": [
         "TASK-004"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/position-manager.ts",
+        "libs/trading-engine/src/lib/position-manager.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.exit-machine.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts",
+        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
+        "apps/api/src/trading/trading.processor.reconciliation-order.spec.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts"
+      ]
     },
     {
       "id": "TASK-015",
@@ -305,8 +316,22 @@
       "depends_on": [
         "TASK-004"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/domain/aggregate-risk.service.ts",
+        "apps/api/src/agents/domain/aggregate-risk.service.spec.ts",
+        "apps/api/src/agents/domain/risk-budget.service.ts",
+        "apps/api/src/agents/domain/risk-budget.service.spec.ts",
+        "apps/api/src/agents/domain/agent-domain.module.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.aggregate-risk.spec.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.service.risk-policy.spec.ts",
+        "apps/api/src/trading/trading.controller.ts",
+        "apps/api/src/trading/dto/user-risk-policy.dto.ts",
+        "sdd/api.json"
+      ]
     },
     {
       "id": "TASK-016",

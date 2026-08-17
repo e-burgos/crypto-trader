@@ -176,4 +176,51 @@ describe('RiskBudgetService', () => {
       expect(result.blockedBy).toBe('MAX_POSITIONS');
     });
   });
+
+  describe('assessAggregate', () => {
+    it('sums Position.pnl across all configs of the user since the given date, without a configId filter', async () => {
+      const findMany = jest
+        .fn()
+        .mockResolvedValue([{ pnl: -20 }, { pnl: 5 }, { pnl: null }]);
+      const prisma = createMockPrisma({
+        position: { count: jest.fn().mockResolvedValue(0), findMany },
+      });
+      const { service } = buildService(prisma);
+      const since = new Date('2026-08-17T00:00:00.000Z');
+
+      const result = await service.assessAggregate({ userId: 'user-1', since });
+
+      expect(result.realizedPnlUsd).toBe(-15);
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            status: 'CLOSED',
+            exitAt: { gte: since },
+          }),
+        }),
+      );
+      const whereArg = findMany.mock.calls[0][0].where;
+      expect(whereArg).not.toHaveProperty('configId');
+    });
+
+    it('does not touch RiskBudgetService.assess — assess() keeps its own AgentBudgetPolicy-based semantics untouched', async () => {
+      const prisma = createMockPrisma({
+        agentBudgetPolicy: { findUnique: jest.fn().mockResolvedValue(null) },
+        position: {
+          count: jest.fn().mockResolvedValue(0),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        tradingConfig: {
+          findUnique: jest.fn().mockResolvedValue({ maxConcurrentPositions: 5 }),
+        },
+      });
+      const { service } = buildService(prisma);
+
+      const assessed = await service.assess({ userId: 'user-1', configId: 'cfg-1' });
+
+      expect(prisma.agentBudgetPolicy.findUnique).toHaveBeenCalled();
+      expect(assessed.dailyLossLimitUsd).toBe(5);
+    });
+  });
 });

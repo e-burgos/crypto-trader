@@ -11,6 +11,15 @@ export interface RiskBudgetInput {
   windowHours?: number;
 }
 
+export interface AggregateRiskBudgetInput {
+  userId: string;
+  since: Date;
+}
+
+export interface AggregateRiskBudgetAssessment {
+  realizedPnlUsd: number;
+}
+
 export type RiskBudgetBlockReason =
   | 'MAX_POSITIONS'
   | 'DAILY_LOSS_LIMIT'
@@ -72,6 +81,17 @@ export class RiskBudgetService {
       drawdownPct: round4(drawdownPct),
       maxDrawdownPct: MAX_DRAWDOWN_PCT,
     };
+  }
+
+  async assessAggregate(
+    input: AggregateRiskBudgetInput,
+  ): Promise<AggregateRiskBudgetAssessment> {
+    const realizedPnlUsd = await this.sumRealizedPnl(
+      input.userId,
+      undefined,
+      input.since,
+    );
+    return { realizedPnlUsd: round(realizedPnlUsd) };
   }
 
   private async countOpenPositions(

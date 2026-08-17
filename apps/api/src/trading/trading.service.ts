@@ -19,6 +19,10 @@ import {
   UpdateTradingConfigDto,
   StartAgentDto,
 } from './dto/trading-config.dto';
+import {
+  UpdateUserRiskPolicyDto,
+  UserRiskPolicyResponse,
+} from './dto/user-risk-policy.dto';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 // eslint-disable-next-line @nx/enforce-module-boundaries
@@ -50,6 +54,39 @@ const DEFAULTS = {
   maxConcurrentPositions: 2,
   minIntervalMinutes: 5,
 };
+
+const DEFAULT_RISK_POLICY: UserRiskPolicyResponse = {
+  enabled: false,
+  maxAssetExposureUsd: null,
+  maxAssetExposurePct: null,
+  maxDailyLossUsd: null,
+  maxDrawdownPct: null,
+  pauseAgentsOnDrawdown: true,
+  pausedAt: null,
+  pausedReason: null,
+};
+
+function toRiskPolicyResponse(policy: {
+  enabled: boolean;
+  maxAssetExposureUsd: number | null;
+  maxAssetExposurePct: number | null;
+  maxDailyLossUsd: number | null;
+  maxDrawdownPct: number | null;
+  pauseAgentsOnDrawdown: boolean;
+  pausedAt: Date | null;
+  pausedReason: string | null;
+}): UserRiskPolicyResponse {
+  return {
+    enabled: policy.enabled,
+    maxAssetExposureUsd: policy.maxAssetExposureUsd,
+    maxAssetExposurePct: policy.maxAssetExposurePct,
+    maxDailyLossUsd: policy.maxDailyLossUsd,
+    maxDrawdownPct: policy.maxDrawdownPct,
+    pauseAgentsOnDrawdown: policy.pauseAgentsOnDrawdown,
+    pausedAt: policy.pausedAt,
+    pausedReason: policy.pausedReason,
+  };
+}
 
 export const TRADING_QUEUE = 'trading-agent';
 
@@ -209,6 +246,37 @@ export class TradingService implements OnModuleInit {
       where: { id: configId },
       data: { ...dto } as any,
     });
+  }
+
+  // ── Aggregate risk policy ────────────────────────────────────────────────
+
+  async getRiskPolicy(userId: string): Promise<UserRiskPolicyResponse> {
+    const policy = await this.prisma.userRiskPolicy.findUnique({
+      where: { userId },
+    });
+    if (!policy) return DEFAULT_RISK_POLICY;
+    return toRiskPolicyResponse(policy);
+  }
+
+  async updateRiskPolicy(
+    userId: string,
+    dto: UpdateUserRiskPolicyDto,
+  ): Promise<UserRiskPolicyResponse> {
+    const data = {
+      enabled: dto.enabled,
+      maxAssetExposureUsd: dto.maxAssetExposureUsd ?? null,
+      maxAssetExposurePct: dto.maxAssetExposurePct ?? null,
+      maxDailyLossUsd: dto.maxDailyLossUsd ?? null,
+      maxDrawdownPct: dto.maxDrawdownPct ?? null,
+      pauseAgentsOnDrawdown: dto.pauseAgentsOnDrawdown ?? true,
+      ...(dto.enabled === false ? { pausedAt: null, pausedReason: null } : {}),
+    };
+    const policy = await this.prisma.userRiskPolicy.upsert({
+      where: { userId },
+      create: { userId, ...data },
+      update: data,
+    });
+    return toRiskPolicyResponse(policy);
   }
 
   async initSandboxWallets(

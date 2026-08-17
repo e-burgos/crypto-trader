@@ -32,6 +32,10 @@ describe('TradingProcessor — native SL/TP protection on BUY (TASK-012)', () =>
     };
   }
 
+  const aggregateRiskServiceMock = {
+    assertBuyAllowed: jest.fn().mockResolvedValue({ allowed: true, blockedBy: null }),
+  };
+
   function buildProcessor(prisma: any) {
     return new TradingProcessor(
       prisma,
@@ -43,6 +47,7 @@ describe('TradingProcessor — native SL/TP protection on BUY (TASK-012)', () =>
       {} as any,
       {} as any,
       {} as any,
+      aggregateRiskServiceMock as any,
     );
   }
 

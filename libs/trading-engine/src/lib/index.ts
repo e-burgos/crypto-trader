@@ -12,8 +12,23 @@ export type {
   OpenOrderSummary,
 } from './order-executor';
 
-export { PositionManager } from './position-manager';
-export type { OpenPositionParams, ClosePositionResult } from './position-manager';
+export {
+  PositionManager,
+  updateTrailingStop,
+  shouldExitByTime,
+  resolvePartialTakeProfit,
+  applyPartialExit,
+} from './position-manager';
+export type {
+  OpenPositionParams,
+  ClosePositionResult,
+  TrailingConfig,
+  TrailingState,
+  PartialTakeProfitConfig,
+  ResolvePartialTakeProfitInput,
+  PartialTakeProfitResult,
+  ApplyPartialExitResult,
+} from './position-manager';
 
 export { simulateTrade, SLIPPAGE_PCT_BY_ASSET } from './risk/trade-simulation';
 export type {

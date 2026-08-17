@@ -484,6 +484,33 @@ TASK-006 → TASK-016 (Trade.decisionId)
 
 ## Pendiente de documentar en contexto
 
+- **TASK-014 — no se implementó el re-arm de la OCO nativa cuando el trailing/breakeven mueve el
+  stop (`architect.md` §8.3, último bullet: "cualquier movimiento del stop mayor a 0.1% dispara
+  `cancelProtectionOrder` + `placeProtectionOrder` con los nuevos niveles").** Lo implementado:
+  `checkOpenPositions` sigue la regla no-negociable de §5.4 (cancelar la protección antes de
+  vender) en todo camino de salida, incluido el parcial nuevo — eso es obligatorio para que el
+  `placeMarketOrder(SELL)` no falle por saldo bloqueado. Lo que NO se hizo es recolocar una OCO
+  nueva con el stop trailed cuando la posición sigue abierta (sin vender): con
+  `nativeProtectionEnabled` + `trailingStopEnabled`/`partialTpEnabled` activos simultáneamente, la
+  posición degrada a protección por polling (igual que SANDBOX) en vez de sostener una OCO al
+  nivel trailed. Es una degradación segura, no un estado roto: el polling de `checkOpenPositions`
+  sigue corriendo cada ciclo y cierra a mercado exactamente en el stop trailed local (cancelando
+  cualquier OCO obsoleta primero), así que el trailing SÍ se respeta — solo con la latencia de un
+  ciclo en vez de ejecución instantánea en el exchange. Se omitió por costo/riesgo: replicar el
+  algoritmo de `placeProtectionWithRetry` en cada movimiento de trailing es una segunda
+  superficie de reintentos/errores de Binance sin ningún CA de este ciclo que lo exija (CA-017 a
+  CA-021 no mencionan la OCO). Candidato natural para un fix o task dedicada si el producto
+  necesita protección nativa continua durante el trailing.
+- **TASK-014 — la máquina de estados completa (`closeAtMarket`, la porción SANDBOX del crédito de
+  wallet) quedó inline dentro de `checkOpenPositions` en vez de extraerse a un método propio.**
+  Motivo: dos regresiones ya existentes (`trading.processor.isolation.spec.ts` y
+  `trading.processor.decision-traceability.spec.ts`) hacen *string-matching* sobre el rango de
+  texto fuente entre `private async checkOpenPositions` y `private parseSymbolForSandbox` —
+  exigen que ese rango contenga `$transaction`/`tx.sandboxWallet.*` y **no** contenga la palabra
+  `decisionId`. El único código nuevo que sí necesita `decisionId` (el `Trade` del parcial, por
+  `architect.md` §8.3: "con `decisionId` de la decisión del ciclo") se extrajo a
+  `executePartialTakeProfit`, un método aparte colocado **antes** de `checkOpenPositions` en el
+  archivo — así ninguna de las dos regresiones se rompe y el contrato se cumple igual.
 - **TASK-004 — desviación respecto a la descripción original de este documento.** La descripción
   de TASK-004 (líneas 130-141) listaba los límites de riesgo agregado por usuario (RF-06,
   HU-02-06) como campos nuevos de `TradingConfig`. `architect.md` §3 (decisión D2) resolvió esto

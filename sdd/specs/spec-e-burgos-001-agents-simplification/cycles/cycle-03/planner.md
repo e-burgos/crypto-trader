@@ -486,3 +486,23 @@ capas distintas (writer vs. reader) y TASK-008 depende de que TASK-007 exista.
   reutilizan sin duplicar la lógica de PLACED/FAILED. `ensureNativeProtection` en sí solo hace
   cancelar→RELEASED→recolocar, y únicamente se llama cuando `resolveProtectionRearm` devuelve
   `REARM`.
+
+### TASK-002 — `buildGateSnapshot` recibe `close` y `takenAt` como parámetros explícitos
+
+- El contrato literal de architect.md §2.2 declara `buildGateSnapshot(input: { indicators,
+  newsFingerprint, macroFingerprint, positionsFingerprint })`, asumiendo que el precio de cierre
+  sale de `indicators` (`IndicatorSnapshot`). Esa interfaz (`libs/shared/src/types/interfaces.ts`)
+  **no tiene** campo `close` — solo `Candle.close` lo tiene, y el snapshot de indicadores no lleva
+  velas. El código existente de `orchestrator.service.ts` ya lee
+  `(indicators as unknown as Record<string, unknown>)?.close` esperando un campo que en runtime
+  nunca está poblado (bug pre-existente, fuera de alcance de este ciclo). Implementar el contrato
+  tal cual habría dejado `close` siempre `undefined` → el gate fallaría PRICE_MOVED en todo ciclo o,
+  peor, tomaría un `NaN` silencioso.
+- Desviación mínima: `buildGateSnapshot` recibe `close: number` como sibling de `indicators`, y el
+  llamador (`TradingProcessor`) lo resuelve del último candle ya usado para construir
+  `indicatorSnapshot` (`candles[candles.length - 1].close`) — el mismo precio, sin una llamada
+  adicional. También se agregó `takenAt: number` explícito (en vez de un `Date.now()` interno) para
+  mantener la función 100% pura, en línea con la regla del propio architect.md §2.1 de "sin
+  `Date.now()` interno" para el resto del gate. Ningún CA/CE se ve afectado: el contrato de
+  `evaluateDeterministicGate` (la función que sí especifica el architect en detalle) se implementó
+  exactamente como está descrito.

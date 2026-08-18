@@ -47,6 +47,7 @@ describe('TradingProcessor — native SL/TP protection on BUY (TASK-012)', () =>
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
       aggregateRiskServiceMock as any,
     );
   }

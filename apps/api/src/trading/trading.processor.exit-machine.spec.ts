@@ -41,6 +41,7 @@ describe('TradingProcessor — checkOpenPositions exit state machine (TASK-014)'
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
       aggregateRiskServiceMock as any,
     );
   }

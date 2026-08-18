@@ -298,6 +298,8 @@ model TradingConfig {
   partialTpSellPct                Float   @default(0.5)
   moveStopToBreakevenAfterPartial Boolean @default(true)
   maxPositionHoldMinutes          Int?
+  deterministicGateEnabled        Boolean @default(false)
+  gatePriceChangePct              Float   @default(0.005)
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -407,6 +409,7 @@ model AgentDecision {
   /// Orchestration metadata: { orchestrated: boolean, subAgentResults: SubAgentResult[] }
   metadata      Json?
   llmCostUsd          Float?
+  llmCallCount        Int           @default(0)
   dataCostUsd         Float?
   expectedNetValueUsd Float?
   modelRoutingReason  String?
@@ -416,6 +419,7 @@ model AgentDecision {
   trades Trade[]
 
   @@index([userId, createdAt])
+  @@index([createdAt])
   @@map("agent_decisions")
 }
 

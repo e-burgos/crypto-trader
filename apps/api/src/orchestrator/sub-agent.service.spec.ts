@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SubAgentService } from './sub-agent.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { AgentPromptService } from '../agents/agent-prompt.service';
+import { LLMUsageService } from '../llm/llm-usage.service';
+import { LlmCostAccumulator } from '../llm/llm-cost-accumulator';
 import { AgentId } from '../../generated/prisma/enums';
 import {
   AGENT_TASK_MAX_TOKENS,
@@ -348,6 +350,82 @@ describe('SubAgentService', () => {
       );
 
       expect(result).toContain('BUY');
+    });
+  });
+
+  describe('cost accumulator wiring', () => {
+    const mockLlmUsageService = { log: jest.fn() };
+
+    let accumulatorService: SubAgentService;
+
+    beforeEach(async () => {
+      jest.clearAllMocks();
+      mockAgentPromptService.getSystemPrompt.mockResolvedValue('generic prompt');
+      mockAgentConfigResolver.resolveClient.mockResolvedValue(mockResolvedClient);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          SubAgentService,
+          {
+            provide: AgentConfigResolverService,
+            useValue: mockAgentConfigResolver,
+          },
+          { provide: AgentPromptService, useValue: mockAgentPromptService },
+          { provide: LLMUsageService, useValue: mockLlmUsageService },
+        ],
+      }).compile();
+
+      accumulatorService = module.get<SubAgentService>(SubAgentService);
+    });
+
+    it('tracks the usage log promise on the accumulator when one is provided', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"ok"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+      mockLlmUsageService.log.mockResolvedValue({
+        costUsd: 0.01,
+        pricingSource: 'STATIC_TABLE',
+        inputTokens: 100,
+        outputTokens: 50,
+      });
+
+      const accumulator = new LlmCostAccumulator();
+      await accumulatorService.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 28 } },
+        'user-1',
+        false,
+        undefined,
+        accumulator,
+      );
+
+      const summary = await accumulator.settle();
+      expect(summary.costUsd).toBeCloseTo(0.01, 6);
+      expect(summary.llmCallCount).toBe(1);
+    });
+
+    it('falls back to fire-and-forget logging when no accumulator is provided', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"ok"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+      mockLlmUsageService.log.mockResolvedValue({
+        costUsd: 0.01,
+        pricingSource: 'STATIC_TABLE',
+        inputTokens: 100,
+        outputTokens: 50,
+      });
+
+      await accumulatorService.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 28 } },
+        'user-1',
+      );
+
+      expect(mockLlmUsageService.log).toHaveBeenCalledTimes(1);
     });
   });
 });

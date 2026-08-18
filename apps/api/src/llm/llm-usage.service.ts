@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LLMProvider, LLMSource } from '../../generated/prisma/enums';
 import { MODEL_PRICING } from './model-pricing';
-import { ModelPricingService } from './model-pricing.service';
+import { ModelPricingService, PricingSourceValue } from './model-pricing.service';
 
 export interface LLMUsageLogParams {
   userId: string;
@@ -14,6 +14,14 @@ export interface LLMUsageLogParams {
   decisionId?: string;
   actualModel?: string;
   requestId?: string;
+}
+
+export interface LLMUsageOutcome {
+  /** null ⇔ pricingSource === 'UNPRICED' — never a disguised zero (CE-07) */
+  costUsd: number | null;
+  pricingSource: PricingSourceValue;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface LLMUsageStats {
@@ -67,7 +75,7 @@ export class LLMUsageService {
     private readonly modelPricing: ModelPricingService,
   ) {}
 
-  async log(params: LLMUsageLogParams): Promise<void> {
+  async log(params: LLMUsageLogParams): Promise<LLMUsageOutcome> {
     try {
       const pricing = await this.modelPricing.resolve(
         params.provider,
@@ -91,10 +99,23 @@ export class LLMUsageService {
           requestId: params.requestId ?? undefined,
         },
       });
+
+      return {
+        costUsd: pricing.source === 'UNPRICED' ? null : costUsd,
+        pricingSource: pricing.source,
+        inputTokens: params.usage.inputTokens,
+        outputTokens: params.usage.outputTokens,
+      };
     } catch (err) {
       this.logger.warn(
         `Failed to log LLM usage: ${err instanceof Error ? err.message : String(err)}`,
       );
+      return {
+        costUsd: null,
+        pricingSource: 'UNPRICED',
+        inputTokens: params.usage.inputTokens,
+        outputTokens: params.usage.outputTokens,
+      };
     }
   }
 

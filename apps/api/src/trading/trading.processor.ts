@@ -8,6 +8,7 @@ import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
 import { MarketService } from '../market/market.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
+import { DecisionGateService } from '../orchestrator/decision-gate.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { EvaluationService } from '../agents/evaluation/evaluation.service';
 import { ReconciliationService } from './reconciliation.service';
@@ -48,6 +49,7 @@ import { decrypt } from '../users/utils/encryption.util';
 import type { AgentHealthReport } from '../agents/agent-config-resolver.service';
 import type {
   AegisVerdict,
+  DecisionPayload,
   ForgeSizingSummary,
 } from '../orchestrator/dto/decision-synthesis.dto';
 
@@ -75,6 +77,7 @@ export class TradingProcessor {
     private readonly usersService: UsersService,
     private readonly marketService: MarketService,
     private readonly orchestratorService: OrchestratorService,
+    private readonly decisionGateService: DecisionGateService,
     private readonly agentConfigResolver: AgentConfigResolverService,
     private readonly evaluationService: EvaluationService,
     private readonly reconciliationService: ReconciliationService,
@@ -151,8 +154,9 @@ export class TradingProcessor {
       }
 
       // 2b. Reconcile exchange state before any new decision (LIVE/TESTNET only)
+      let reconciliationConfirmed = true;
       if ((isLiveMode || isTestnetMode) && binanceApiKey && binanceSecret) {
-        await this.reconciliationService
+        reconciliationConfirmed = await this.reconciliationService
           .reconcile({
             userId,
             config,
@@ -165,10 +169,12 @@ export class TradingProcessor {
               }),
             ),
           })
+          .then(() => true)
           .catch((err) => {
             this.logger.warn(
               `Reconciliation failed for user=${userId} config=${configId}: ${err instanceof Error ? err.message : String(err)}`,
             );
+            return false;
           });
       }
 
@@ -304,6 +310,7 @@ export class TradingProcessor {
           confidence: true,
           reasoning: true,
           createdAt: true,
+          metadata: true,
         },
       });
       const recentDecisions = recentDbDecisions.map((d) => ({
@@ -345,20 +352,43 @@ export class TradingProcessor {
         );
       }
 
+      const gateEvaluation = await this.decisionGateService.evaluate({
+        userId,
+        configId,
+        deterministicGateEnabled: config.deterministicGateEnabled,
+        gatePriceChangePct: config.gatePriceChangePct,
+        minIntervalMinutes: config.minIntervalMinutes,
+        close: candles.length > 0 ? candles[candles.length - 1].close : NaN,
+        indicators: indicatorSnapshot,
+        newsItems: newsItems.map((n) => ({
+          headline: n.headline,
+          sentiment: n.sentiment,
+        })),
+        enrichedData,
+        reconciliationConfirmed,
+        previousDecision: recentDbDecisions[0]
+          ? { metadata: recentDbDecisions[0].metadata }
+          : null,
+      });
+
       // 9. Call OrchestratorService (uses AgentConfigResolver for model selection)
-      const orchestratedDecision =
-        await this.orchestratorService.orchestrateDecision(
-          userId,
-          configId,
-          indicatorSnapshot,
-          newsItems.map((n) => ({
-            headline: n.headline,
-            sentiment: n.sentiment,
-            summary: n.summary ?? null,
-          })),
-          undefined,
-          enrichedData,
-        );
+      const orchestratedDecision = gateEvaluation.applied
+        ? (gateEvaluation.payload as DecisionPayload)
+        : await this.orchestratorService.orchestrateDecision(
+            userId,
+            configId,
+            indicatorSnapshot,
+            newsItems.map((n) => ({
+              headline: n.headline,
+              sentiment: n.sentiment,
+              summary: n.summary ?? null,
+            })),
+            undefined,
+            enrichedData,
+          );
+
+      const gateMetadata = orchestratedDecision.gate ?? gateEvaluation.gate;
+
       // Adapt DecisionPayload to the shape expected by the rest of the processor
       const decision = {
         decision: orchestratedDecision.decision as Decision,
@@ -371,6 +401,10 @@ export class TradingProcessor {
         llmModel: orchestratedDecision.llmModel,
         risk: orchestratedDecision.risk,
         sizing: orchestratedDecision.sizing,
+        llmCostUsd: orchestratedDecision.llmCostUsd ?? null,
+        llmCallCount: orchestratedDecision.llmCallCount ?? 0,
+        pricedCallCount: orchestratedDecision.pricedCallCount ?? 0,
+        unpricedCallCount: orchestratedDecision.unpricedCallCount ?? 0,
       };
 
       // Compute effective wait: AGENT mode respects LLM suggestion, CUSTOM mode uses user config.
@@ -400,11 +434,20 @@ export class TradingProcessor {
           configId: config.id,
           configName: config.name || undefined,
           mode: config.mode as any,
+          llmCostUsd: decision.llmCostUsd,
+          llmCallCount: decision.llmCallCount,
           metadata: {
             orchestrated: decision.orchestrated,
             subAgentResults: decision.subAgentResults,
             llmProvider: decision.llmProvider ?? null,
             llmModel: decision.llmModel ?? null,
+            gate: gateMetadata ?? null,
+            cost: {
+              llmCallCount: decision.llmCallCount,
+              pricedCallCount: decision.pricedCallCount,
+              unpricedCallCount: decision.unpricedCallCount,
+              complete: decision.unpricedCallCount === 0,
+            },
           } as any,
         },
       });

@@ -66,6 +66,7 @@ describe('TradingProcessor — executeLLMSell sell policy wiring (TASK-010)', ()
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
     );
   }
 

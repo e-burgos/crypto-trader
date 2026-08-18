@@ -4,6 +4,7 @@ import { OrchestratorService } from './orchestrator.service';
 import { SubAgentService } from './sub-agent.service';
 import { EmbeddingService } from './embedding.service';
 import { RagService } from './rag.service';
+import { DecisionGateService } from './decision-gate.service';
 import {
   DocumentProcessorService,
   DocumentProcessor,
@@ -29,12 +30,14 @@ import { SharedCacheModule } from '../cache/shared-cache.module';
     RagService,
     DocumentProcessorService,
     DocumentProcessor,
+    DecisionGateService,
   ],
   exports: [
     OrchestratorService,
     SubAgentService,
     RagService,
     DocumentProcessorService,
+    DecisionGateService,
   ],
 })
 export class OrchestratorModule {}

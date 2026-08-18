@@ -207,6 +207,97 @@ describe('OrchestratorService', () => {
       expect(mockSubAgentService.call).toHaveBeenCalledTimes(5); // 4 parallel + 1 synthesis
     });
 
+    it('TASK-007: settles the tracked LLM cost onto the returned DecisionPayload', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (
+          agentId: string,
+          task: string,
+          _context: unknown,
+          _userId: string,
+          _preferCheap: boolean,
+          _override: unknown,
+          costAccumulator?: { track: (p: Promise<unknown>) => void },
+        ) => {
+          costAccumulator?.track(
+            Promise.resolve({
+              costUsd: 0.01,
+              pricingSource: 'STATIC_TABLE',
+              inputTokens: 100,
+              outputTokens: 50,
+            }),
+          );
+          if (agentId === 'market' && task === 'technical_signal')
+            return Promise.resolve(
+              '{"signal":"BUY","confidence":0.78,"reasoning":"RSI oversold"}',
+            );
+          if (agentId === 'market' && task === 'news_sentiment')
+            return Promise.resolve('{"sentiment":0.65,"impact":"positive"}');
+          if (agentId === 'operations' && task === 'sizing_suggestion')
+            return Promise.resolve(
+              '{"recommendation":"proceed","maxTradeSize":0.04}',
+            );
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve(
+              '{"riskScore":42,"verdict":"PASS","positionSizeMultiplier":1.0,"reason":"ok","alerts":[]}',
+            );
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve(
+              '{"decision":"BUY","confidence":0.74,"reasoning":"ok","waitMinutes":15}',
+            );
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      // 4 parallel + 1 synthesis = 5 tracked outcomes, each priced at 0.01
+      expect(result.llmCallCount).toBe(5);
+      expect(result.llmCostUsd).toBeCloseTo(0.05, 6);
+    });
+
+    it('CE-07: keeps llmCostUsd null (never a disguised zero) when every tracked call is unpriced', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (
+          agentId: string,
+          task: string,
+          _context: unknown,
+          _userId: string,
+          _preferCheap: boolean,
+          _override: unknown,
+          costAccumulator?: { track: (p: Promise<unknown>) => void },
+        ) => {
+          costAccumulator?.track(
+            Promise.resolve({
+              costUsd: null,
+              pricingSource: 'UNPRICED',
+              inputTokens: 100,
+              outputTokens: 50,
+            }),
+          );
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve(
+              '{"decision":"HOLD","confidence":0.5,"reasoning":"ok","waitMinutes":15}',
+            );
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.llmCallCount).toBe(5);
+      expect(result.llmCostUsd).toBeNull();
+    });
+
     it('should return HOLD immediately when AEGIS verdict is BLOCK', async () => {
       setupSubAgentMocks('BLOCK');
 
@@ -220,6 +311,9 @@ describe('OrchestratorService', () => {
       expect(result.decision).toBe('HOLD');
       expect(result.orchestrated).toBe(true);
       expect(result.reasoning).toContain('AEGIS BLOCK');
+      // TASK-007: the cost accumulator settles even on the early BLOCK return path
+      expect(result.llmCallCount).toBe(0);
+      expect(result.llmCostUsd).toBeNull();
       // Synthesis call should NOT be made after BLOCK
       expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
         'orchestrator',
@@ -406,6 +500,7 @@ describe('OrchestratorService', () => {
         'user-1',
         false,
         undefined,
+        expect.anything(),
       );
     });
 
@@ -490,6 +585,7 @@ describe('OrchestratorService', () => {
         'user-1',
         false,
         undefined,
+        expect.anything(),
       );
       // AEGIS receives derivatives
       expect(mockSubAgentService.call).toHaveBeenCalledWith(
@@ -501,6 +597,7 @@ describe('OrchestratorService', () => {
         'user-1',
         false,
         undefined,
+        expect.anything(),
       );
       // No CIPHER call (no macro data)
       expect(mockSubAgentService.call).not.toHaveBeenCalledWith(

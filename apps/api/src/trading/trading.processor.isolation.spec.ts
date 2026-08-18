@@ -131,6 +131,7 @@ describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () =
         {} as any,
         {} as any,
         {} as any,
+        {} as any,
       );
 
       await (processor as any).creditSandboxWallet('user-1', 'USDT', 100, 1);

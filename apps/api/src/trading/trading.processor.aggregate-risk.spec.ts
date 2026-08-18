@@ -31,6 +31,7 @@ describe('TradingProcessor — executeBuy aggregate risk gate (TASK-015)', () =>
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
       aggregateRiskService,
     );
   }

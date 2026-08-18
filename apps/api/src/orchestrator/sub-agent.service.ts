@@ -1,6 +1,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { RagService } from './rag.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
+import { LlmCostAccumulator } from '../llm/llm-cost-accumulator';
 import { recordCall } from '../llm/provider-health.service';
 import { LLMProvider, LLMSource } from '../../generated/prisma/enums';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
@@ -200,6 +201,7 @@ export class SubAgentService {
     preferCheap = false,
     /** Override the automatic provider/model resolution */
     override?: { provider: LLMProvider; model: string },
+    costAccumulator?: LlmCostAccumulator,
   ): Promise<string> {
     const slot = resolveModelSlot(agentId, task, preferCheap);
 
@@ -248,27 +250,29 @@ export class SubAgentService {
         captureRateLimits(userId, provider, response.headers);
       }
 
-      // Log usage asynchronously (fire-and-forget)
       if (this.llmUsageService) {
         const source =
           task === 'intent_classification' || task === 'cross_agent_synthesis'
             ? LLMSource.CHAT
             : LLMSource.TRADING;
-        this.llmUsageService
-          .log({
-            userId,
-            provider,
-            model,
-            usage: response.usage,
-            source,
-            agentId: slot,
-            actualModel: response.actualModel,
-          })
-          .catch((err) =>
+        const usageLogged = this.llmUsageService.log({
+          userId,
+          provider,
+          model,
+          usage: response.usage,
+          source,
+          agentId: slot,
+          actualModel: response.actualModel,
+        });
+        if (costAccumulator) {
+          costAccumulator.track(usageLogged);
+        } else {
+          usageLogged.catch((err) =>
             this.logger.warn(
               `Usage log failed: ${err instanceof Error ? err.message : String(err)}`,
             ),
           );
+        }
       }
 
       return response.text;

@@ -397,6 +397,28 @@ export class CreateTradingConfigDto {
   @Max(43200, { message: 'Máximo de minutos de posición abierta no puede superar $constraint1' })
   @IsOptional()
   maxPositionHoldMinutes?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Activa el gate determinista pre-LLM: si el mercado no muestra señal desde la última decisión, resuelve HOLD sin llamar al LLM',
+  })
+  @IsBoolean()
+  @IsOptional()
+  deterministicGateEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.0005,
+    maximum: 0.05,
+    example: 0.005,
+    description:
+      'Umbral de cambio de precio del gate determinista (fracción). Por debajo, el gate nunca aplica; por encima, silencia movimientos relevantes',
+  })
+  @IsNumber({}, { message: 'Umbral de cambio de precio del gate debe ser un número válido' })
+  @Min(0.0005, { message: 'Umbral de cambio de precio del gate debe ser al menos $constraint1 (0.05%)' })
+  @Max(0.05, { message: 'Umbral de cambio de precio del gate no puede superar $constraint1 (5%)' })
+  @IsOptional()
+  gatePriceChangePct?: number;
 }
 
 export class UpdateTradingConfigDto {
@@ -704,6 +726,28 @@ export class UpdateTradingConfigDto {
   @Max(43200, { message: 'Máximo de minutos de posición abierta no puede superar $constraint1' })
   @IsOptional()
   maxPositionHoldMinutes?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Activa el gate determinista pre-LLM: si el mercado no muestra señal desde la última decisión, resuelve HOLD sin llamar al LLM',
+  })
+  @IsBoolean()
+  @IsOptional()
+  deterministicGateEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 0.0005,
+    maximum: 0.05,
+    example: 0.005,
+    description:
+      'Umbral de cambio de precio del gate determinista (fracción). Por debajo, el gate nunca aplica; por encima, silencia movimientos relevantes',
+  })
+  @IsNumber({}, { message: 'Umbral de cambio de precio del gate debe ser un número válido' })
+  @Min(0.0005, { message: 'Umbral de cambio de precio del gate debe ser al menos $constraint1 (0.05%)' })
+  @Max(0.05, { message: 'Umbral de cambio de precio del gate no puede superar $constraint1 (5%)' })
+  @IsOptional()
+  gatePriceChangePct?: number;
 }
 
 export class StartAgentDto {

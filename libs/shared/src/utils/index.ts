@@ -1,5 +1,7 @@
 import { TRADE_FEE_PCT } from '../constants';
 
+export * from './fingerprint';
+
 /**
  * Calculate P&L for a closed position including fees on both sides.
  */

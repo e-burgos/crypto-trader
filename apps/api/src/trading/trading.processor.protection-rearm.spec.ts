@@ -20,6 +20,7 @@ describe('TradingProcessor — native protection re-arm on stop move (TASK-011)'
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
       aggregateRiskServiceMock as any,
     );
   }
@@ -234,6 +235,7 @@ describe('TradingProcessor — native protection after a partial take-profit (TA
       prisma,
       gatewayMock as any,
       notificationsMock as any,
+      {} as any,
       {} as any,
       {} as any,
       {} as any,

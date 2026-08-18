@@ -184,10 +184,10 @@
         "path": "/trading/config",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "implemented",
+        "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": null,
-        "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse.",
+        "updated_in_cycle": 3,
+        "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. El cycle-03 suma 2 campos mas del gate determinista pre-LLM: deterministicGateEnabled, gatePriceChangePct. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse.",
         "path_params": [],
         "required_headers": [
           "Authorization"
@@ -210,14 +210,22 @@
           "partialTpTriggerPct": "number 0.001..1 (default 0.02)",
           "partialTpSellPct": "number 0.05..1 (default 0.5)",
           "moveStopToBreakevenAfterPartial": "boolean (default true)",
-          "maxPositionHoldMinutes": "integer 5..43200 | null (default null = apagado)"
+          "maxPositionHoldMinutes": "integer 5..43200 | null (default null = apagado)",
+          "deterministicGateEnabled": "boolean (default false) — activa el gate determinista pre-LLM (cycle-03)",
+          "gatePriceChangePct": "number 0.0005..0.05 (default 0.005) — umbral de cambio de precio del gate (cycle-03)"
         },
         "responses": {
-          "201": "TradingConfig creada, con los 15 campos nuevos en su valor por default",
+          "201": "TradingConfig creada, con los campos nuevos en su valor por default",
           "400": "Validacion fallida o campo no declarado (forbidNonWhitelisted)",
           "401": "JWT ausente o invalido"
         },
-        "changelog": []
+        "changelog": [
+          {
+            "cycle": 3,
+            "date": "2026-08-18",
+            "change": "Suma deterministicGateEnabled y gatePriceChangePct al DTO (gate determinista pre-LLM, ambos opcionales, defaults preservan el comportamiento actual)."
+          }
+        ]
       },
       {
         "id": "EP-007",
@@ -225,10 +233,10 @@
         "path": "/trading/config/{id}",
         "module": "trading-agents-core",
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
-        "status": "implemented",
+        "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": null,
-        "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo.",
+        "updated_in_cycle": 3,
+        "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo. El cycle-03 suma los mismos 2 campos del gate determinista que EP-006.",
         "path_params": [
           "id"
         ],
@@ -244,7 +252,13 @@
           "401": "JWT ausente o invalido",
           "404": "Config no encontrada para el usuario"
         },
-        "changelog": []
+        "changelog": [
+          {
+            "cycle": 3,
+            "date": "2026-08-18",
+            "change": "Suma deterministicGateEnabled y gatePriceChangePct al DTO (gate determinista pre-LLM, ambos opcionales, defaults preservan el comportamiento actual)."
+          }
+        ]
       },
       {
         "id": "EP-008",

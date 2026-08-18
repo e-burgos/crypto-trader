@@ -1,3 +1,9 @@
+import {
+  DeterministicGateSnapshot,
+  GateConditionReport,
+  GateSkipReason,
+} from '@crypto-trader/analysis';
+
 export interface SubAgentResult {
   agentId: string;
   task: string;
@@ -38,6 +44,13 @@ export interface ForgeSizingSummary {
   reasoning: string;
 }
 
+export interface DecisionGateInfo {
+  applied: boolean;
+  reason?: GateSkipReason;
+  conditions?: Partial<GateConditionReport>;
+  snapshot?: DeterministicGateSnapshot | null;
+}
+
 export interface DecisionPayload {
   decision: 'BUY' | 'SELL' | 'HOLD';
   confidence: number;
@@ -51,7 +64,12 @@ export interface DecisionPayload {
   /** LLM model used for the synthesis call */
   llmModel?: string;
   /** AEGIS risk verdict for this cycle, parsed with parseAegisVerdict */
-  risk: AegisVerdict;
+  risk?: AegisVerdict;
   /** FORGE sizing suggestion for this cycle, parsed with parseForgeSizing */
-  sizing: ForgeSizingSummary;
+  sizing?: ForgeSizingSummary;
+  llmCostUsd?: number | null;
+  llmCallCount?: number;
+  pricedCallCount?: number;
+  unpricedCallCount?: number;
+  gate?: DecisionGateInfo;
 }

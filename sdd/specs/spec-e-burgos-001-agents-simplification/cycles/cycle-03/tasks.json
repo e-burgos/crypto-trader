@@ -47,8 +47,36 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/analysis/src/lib/gate/gate-thresholds.ts",
+        "libs/analysis/src/lib/gate/deterministic-gate.ts",
+        "libs/analysis/src/lib/gate/deterministic-gate.spec.ts",
+        "libs/analysis/src/lib/gate/gate-reasoning.ts",
+        "libs/analysis/src/lib/gate/gate-reasoning.spec.ts",
+        "libs/analysis/src/lib/gate/index.ts",
+        "libs/analysis/src/index.ts",
+        "libs/shared/src/utils/fingerprint.ts",
+        "libs/shared/src/utils/fingerprint.spec.ts",
+        "libs/shared/src/utils/index.ts",
+        "apps/api/src/orchestrator/decision-gate.service.ts",
+        "apps/api/src/orchestrator/decision-gate.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.module.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/dto/trading-config.dto.ts",
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817160000_add_cost_gate_fields/migration.sql",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
+        "apps/api/src/trading/trading.processor.exit-machine.spec.ts",
+        "apps/api/src/trading/trading.processor.reconciliation-order.spec.ts",
+        "apps/api/src/trading/trading.processor.isolation.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts",
+        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
+        "apps/api/src/trading/trading.processor.aggregate-risk.spec.ts",
+        "apps/api/src/trading/trading.processor.protection-rearm.spec.ts",
+        "sdd/api.json"
+      ]
     },
     {
       "id": "TASK-003",
@@ -57,8 +85,14 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": ["TASK-002"],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/decision-gate.service.ts",
+        "apps/api/src/orchestrator/dto/decision-synthesis.dto.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.deterministic-gate.spec.ts",
+        "apps/api/prisma/schema.prisma"
+      ]
     },
     {
       "id": "TASK-004",
@@ -136,8 +170,21 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/llm/llm-usage.service.ts",
+        "apps/api/src/llm/llm-usage.service.spec.ts",
+        "apps/api/src/llm/llm-cost-accumulator.ts",
+        "apps/api/src/llm/llm-cost-accumulator.spec.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "apps/api/src/orchestrator/dto/decision-synthesis.dto.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817160000_add_cost_gate_fields/migration.sql"
+      ]
     },
     {
       "id": "TASK-008",

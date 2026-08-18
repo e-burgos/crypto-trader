@@ -93,7 +93,7 @@ describe('LLMUsageService', () => {
       expect(call.data.costUsd).toBe(0);
     });
 
-    it('should not throw when prisma create fails', async () => {
+    it('should not throw when prisma create fails, and marks the outcome UNPRICED', async () => {
       mockPrisma.llmUsageLog.create.mockRejectedValue(new Error('DB down'));
 
       await expect(
@@ -104,7 +104,12 @@ describe('LLMUsageService', () => {
           usage: { inputTokens: 100, outputTokens: 50 },
           source: 'ANALYSIS' as any,
         }),
-      ).resolves.toBeUndefined();
+      ).resolves.toEqual({
+        costUsd: null,
+        pricingSource: 'UNPRICED',
+        inputTokens: 100,
+        outputTokens: 50,
+      });
     });
 
     it('should calculate cost correctly for Together AI models', async () => {
@@ -217,8 +222,47 @@ describe('LLMUsageService', () => {
           usage: { inputTokens: 100, outputTokens: 50 },
           source: 'TRADING' as any,
         }),
-      ).resolves.toBeUndefined();
+      ).resolves.toEqual({
+        costUsd: null,
+        pricingSource: 'UNPRICED',
+        inputTokens: 100,
+        outputTokens: 50,
+      });
       expect(mockPrisma.llmUsageLog.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('log — returned outcome (CE-07)', () => {
+    it('returns the same cost it persisted, never recomputed', async () => {
+      mockPrisma.llmUsageLog.create.mockResolvedValue({});
+
+      const outcome = await service.log({
+        userId: 'u1',
+        provider: 'CLAUDE' as any,
+        model: 'claude-sonnet-4-6',
+        usage: { inputTokens: 1000, outputTokens: 500 },
+        source: 'TRADING' as any,
+      });
+
+      expect(outcome.costUsd).toBeCloseTo(0.0105, 6);
+      expect(outcome.pricingSource).toBe('STATIC_TABLE');
+      expect(outcome.inputTokens).toBe(1000);
+      expect(outcome.outputTokens).toBe(500);
+    });
+
+    it('returns costUsd: null (never 0) when the cascade is UNPRICED', async () => {
+      mockPrisma.llmUsageLog.create.mockResolvedValue({});
+
+      const outcome = await service.log({
+        userId: 'u1',
+        provider: 'OPENAI' as any,
+        model: 'unknown-model-xyz',
+        usage: { inputTokens: 500, outputTokens: 200 },
+        source: 'TRADING' as any,
+      });
+
+      expect(outcome.costUsd).toBeNull();
+      expect(outcome.pricingSource).toBe('UNPRICED');
     });
   });
 

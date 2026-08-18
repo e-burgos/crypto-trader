@@ -13,6 +13,7 @@ import { parseAegisVerdict, isOverridableBlock } from './dto/aegis-verdict.schem
 import { parseForgeSizing } from './dto/forge-sizing.schema';
 import { NewsEnrichment } from './dto/news-enrichment.dto';
 import { safeParseJson } from './json-parse.util';
+import { LlmCostAccumulator } from '../llm/llm-cost-accumulator';
 import {
   SignalCacheService,
   DEFAULT_ANALYSIS_TIMEFRAME,
@@ -146,6 +147,8 @@ export class OrchestratorService {
       throw new Error(`Config ${configId} not found for user ${userId}`);
     }
 
+    const costAccumulator = new LlmCostAccumulator();
+
     // Cast override to typed LLMProvider if present
     const typedOverride = llmOverride
       ? {
@@ -256,6 +259,7 @@ export class OrchestratorService {
             userId,
             false,
             typedOverride,
+            costAccumulator,
           ),
       ),
       cachedSentiment
@@ -267,6 +271,7 @@ export class OrchestratorService {
             userId,
             false,
             typedOverride,
+            costAccumulator,
           ),
       this.subAgent.call(
         'operations',
@@ -299,6 +304,7 @@ export class OrchestratorService {
         userId,
         false,
         typedOverride,
+        costAccumulator,
       ),
       this.subAgent.call(
         'risk',
@@ -307,6 +313,7 @@ export class OrchestratorService {
         userId,
         false,
         typedOverride,
+        costAccumulator,
       ),
     ];
 
@@ -325,6 +332,7 @@ export class OrchestratorService {
               userId,
               false,
               typedOverride,
+              costAccumulator,
             ),
         ),
       );
@@ -457,6 +465,7 @@ export class OrchestratorService {
         this.logger.warn(
           `AEGIS BLOCK for user=${userId} config=${configId}: ${reason}`,
         );
+        const blockCostSummary = await costAccumulator.settle();
         return {
           decision: 'HOLD',
           confidence: 1.0,
@@ -466,6 +475,10 @@ export class OrchestratorService {
           subAgentResults,
           risk: aegisVerdict,
           sizing: forgeSizing,
+          llmCostUsd: blockCostSummary.costUsd,
+          llmCallCount: blockCostSummary.llmCallCount,
+          pricedCallCount: blockCostSummary.pricedCallCount,
+          unpricedCallCount: blockCostSummary.unpricedCallCount,
         };
       }
     }
@@ -504,6 +517,7 @@ export class OrchestratorService {
         userId,
         false,
         typedOverride,
+        costAccumulator,
       );
     } catch (synthErr) {
       this.logger.warn(
@@ -523,6 +537,7 @@ export class OrchestratorService {
       }
 
       // Partial data available — return HOLD with explanation
+      const partialCostSummary = await costAccumulator.settle();
       return {
         decision: 'HOLD' as const,
         confidence: 0.3,
@@ -533,6 +548,10 @@ export class OrchestratorService {
         subAgentResults,
         risk: aegisVerdict,
         sizing: forgeSizing,
+        llmCostUsd: partialCostSummary.costUsd,
+        llmCallCount: partialCostSummary.llmCallCount,
+        pricedCallCount: partialCostSummary.pricedCallCount,
+        unpricedCallCount: partialCostSummary.unpricedCallCount,
       };
     }
 
@@ -551,6 +570,8 @@ export class OrchestratorService {
       ? (synthesis.decision as DecisionType)
       : 'HOLD';
 
+    const costSummary = await costAccumulator.settle();
+
     return {
       decision,
       confidence:
@@ -566,6 +587,10 @@ export class OrchestratorService {
       llmModel: synthesisModel,
       risk: aegisVerdict,
       sizing: forgeSizing,
+      llmCostUsd: costSummary.costUsd,
+      llmCallCount: costSummary.llmCallCount,
+      pricedCallCount: costSummary.pricedCallCount,
+      unpricedCallCount: costSummary.unpricedCallCount,
     };
   }
 

@@ -20,7 +20,9 @@
     {
       "id": "TASK-001",
       "title": "DEPLOY-BLOCKER — Migrar apps/web al wire slot/ResolutionSource",
-      "user_stories": ["HU-03-08"],
+      "user_stories": [
+        "HU-03-08"
+      ],
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
@@ -43,7 +45,9 @@
     {
       "id": "TASK-002",
       "title": "Gate determinista: evaluación de las 5 condiciones \"sin señal\" con fail-closed",
-      "user_stories": ["HU-03-01"],
+      "user_stories": [
+        "HU-03-01"
+      ],
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
@@ -81,10 +85,14 @@
     {
       "id": "TASK-003",
       "title": "Gate determinista: persistir AgentDecision (llmCostUsd=0) y emitir evento WS",
-      "user_stories": ["HU-03-01"],
+      "user_stories": [
+        "HU-03-01"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
-      "depends_on": ["TASK-002"],
+      "depends_on": [
+        "TASK-002"
+      ],
       "status": "done",
       "files": [
         "apps/api/src/orchestrator/decision-gate.service.ts",
@@ -97,7 +105,9 @@
     {
       "id": "TASK-004",
       "title": "Caché compartido de señal técnica/macro por (asset, pair, timeframe)",
-      "user_stories": ["HU-03-02"],
+      "user_stories": [
+        "HU-03-02"
+      ],
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
@@ -122,7 +132,9 @@
     {
       "id": "TASK-005",
       "title": "Prompt caching de proveedor con degradación silenciosa",
-      "user_stories": ["HU-03-03"],
+      "user_stories": [
+        "HU-03-03"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
@@ -151,7 +163,9 @@
     {
       "id": "TASK-006",
       "title": "max_tokens configurable por tipo de tarea (risk_gate, sizing)",
-      "user_stories": ["HU-03-04"],
+      "user_stories": [
+        "HU-03-04"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
@@ -166,7 +180,9 @@
     {
       "id": "TASK-007",
       "title": "Escribir AgentDecision.llmCostUsd con tarifa real en llamadas LLM",
-      "user_stories": ["HU-03-05"],
+      "user_stories": [
+        "HU-03-05"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
@@ -189,37 +205,68 @@
     {
       "id": "TASK-008",
       "title": "Endpoint de costo LLM por bot/día y agregado de plataforma",
-      "user_stories": ["HU-03-05", "HU-03-06"],
+      "user_stories": [
+        "HU-03-05",
+        "HU-03-06"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-003", "TASK-007"],
-      "status": "pending",
-      "files": []
+      "depends_on": [
+        "TASK-003",
+        "TASK-007"
+      ],
+      "status": "done",
+      "files": [
+        "apps/api/src/analytics/analytics.service.ts",
+        "apps/api/src/analytics/analytics.controller.ts",
+        "apps/api/src/analytics/analytics.service.spec.ts",
+        "apps/api/src/admin/analytics/admin-analytics.controller.ts",
+        "apps/api/src/admin/admin.module.ts",
+        "sdd/api.json"
+      ]
     },
     {
       "id": "TASK-009",
       "title": "Harness determinista de verificación del ahorro de costo (-50%)",
-      "user_stories": ["HU-03-07"],
+      "user_stories": [
+        "HU-03-07"
+      ],
       "estimation_hours": 4,
       "story_points": 5,
-      "depends_on": ["TASK-002", "TASK-004", "TASK-005", "TASK-006"],
-      "status": "pending",
-      "files": []
+      "depends_on": [
+        "TASK-002",
+        "TASK-004",
+        "TASK-005",
+        "TASK-006"
+      ],
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/cost-harness/scenarios.fixture.ts",
+        "apps/api/src/orchestrator/cost-harness/counting-llm-client.ts",
+        "apps/api/src/orchestrator/cost-harness/cost-model.ts",
+        "apps/api/src/orchestrator/cost-harness/llm-cost-harness.spec.ts"
+      ]
     },
     {
       "id": "TASK-010",
       "title": "Panel de costo/día por bot en la página de analytics (apps/web)",
-      "user_stories": ["HU-03-05"],
+      "user_stories": [
+        "HU-03-05"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-008"],
+      "depends_on": [
+        "TASK-008"
+      ],
       "status": "pending",
       "files": []
     },
     {
       "id": "TASK-011",
       "title": "FOLLOW-UP — Re-armar la orden de protección nativa al mover el stop",
-      "user_stories": ["HU-03-09"],
+      "user_stories": [
+        "HU-03-09"
+      ],
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
@@ -235,7 +282,9 @@
     {
       "id": "TASK-012",
       "title": "FOLLOW-UP — Extender select de getPositions y pasar EP-008 a implemented",
-      "user_stories": ["HU-03-10"],
+      "user_stories": [
+        "HU-03-10"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
@@ -249,17 +298,24 @@
     {
       "id": "TASK-013",
       "title": "FOLLOW-UP — Guard estático anti-regresión (isFalseConcentrationBlock / cast AgentId)",
-      "user_stories": ["HU-03-11"],
+      "user_stories": [
+        "HU-03-11"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/testing/source-scanner.ts",
+        "apps/api/src/testing/forbidden-symbols.spec.ts"
+      ]
     },
     {
       "id": "TASK-014",
       "title": "FOLLOW-UP — Reescribir aserciones de checkOpenPositions sin string-matching",
-      "user_stories": ["HU-03-12"],
+      "user_stories": [
+        "HU-03-12"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],

@@ -7,10 +7,34 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrchestratorService } from './orchestrator.service';
 import { SubAgentService } from './sub-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { SignalCacheService } from '../cache/signal-cache.service';
 
 const mockSubAgentService = {
   call: jest.fn(),
-  getProvider: jest.fn(),
+};
+
+const mockAgentConfigResolver = {
+  resolveClient: jest.fn(),
+};
+
+const mockSignalCacheService = {
+  getOrComputeTechnical: jest.fn(
+    (
+      _asset: string,
+      _pair: string,
+      _timeframe: string,
+      compute: () => Promise<string>,
+    ) => compute(),
+  ),
+  getOrComputeMacro: jest.fn(
+    (
+      _asset: string,
+      _pair: string,
+      _timeframe: string,
+      compute: () => Promise<string>,
+    ) => compute(),
+  ),
 };
 
 describe('OrchestratorService — Isolation (Phase A Regression)', () => {
@@ -55,6 +79,11 @@ describe('OrchestratorService — Isolation (Phase A Regression)', () => {
         OrchestratorService,
         { provide: SubAgentService, useValue: mockSubAgentService },
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: AgentConfigResolverService,
+          useValue: mockAgentConfigResolver,
+        },
+        { provide: SignalCacheService, useValue: mockSignalCacheService },
       ],
     }).compile();
 

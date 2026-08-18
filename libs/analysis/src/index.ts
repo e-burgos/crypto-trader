@@ -1,5 +1,6 @@
 export * from './lib/indicators';
 export * from './lib/llm';
+export * from './lib/gate';
 export {
   captureRateLimits,
   getRateLimits,

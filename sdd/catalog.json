@@ -30,75 +30,75 @@
   "skills": [
     {
       "dir": "generate-api-contract",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "generate-nestjs-module",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "generate-prisma-schema",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "generate-react-component",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "generate-springboot-api",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "init-nx-workspace",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "scaffold-nx",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-architect",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-data-schemas",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-file-structure",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-functional",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-hermes",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-implementor-back",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-implementor-front",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-orchestrator",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-planner",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "sdd-reviewer",
-      "file": "skill.md"
+      "file": "SKILL.md"
     },
     {
       "dir": "setup-graphify",
-      "file": "skill.md"
+      "file": "SKILL.md"
     }
   ],
   "prompts": [

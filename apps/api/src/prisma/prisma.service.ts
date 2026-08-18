@@ -94,14 +94,11 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get agentBudgetPolicy() {
     return this._client.agentBudgetPolicy;
   }
-  get agentModelPolicy() {
-    return this._client.agentModelPolicy;
-  }
-  get agentToolInvocation() {
-    return this._client.agentToolInvocation;
-  }
   get agentDecisionEvaluation() {
     return this._client.agentDecisionEvaluation;
+  }
+  get userRiskPolicy() {
+    return this._client.userRiskPolicy;
   }
 
   $queryRaw<T = unknown>(

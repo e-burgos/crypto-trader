@@ -1,0 +1,354 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "cycle": 2,
+  "module": "trading-agents-core",
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/trading-engine"
+  ],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": {
+    "tasks_generated": true
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "FOLLOW-UP — No-op explícito ante colisión P2002 en EvaluationProcessor",
+      "user_stories": [
+        "HU-02-09"
+      ],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/evaluation/evaluation.processor.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "FOLLOW-UP — Fusionar ResolvedAgentConfig/ResolvedAgentClient y eliminar casts inseguros",
+      "user_stories": [
+        "HU-02-10"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-identity.ts",
+        "apps/api/src/agents/agent-config-resolver.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.spec.ts",
+        "apps/api/src/agents/agent-prompt.service.ts",
+        "apps/api/src/agents/agent-config.controller.ts",
+        "apps/api/src/agents/admin-agent-config.controller.ts",
+        "apps/api/src/agents/index.ts",
+        "apps/api/src/chat/chat.service.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.service.ts"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "FOLLOW-UP — Decisión y migración de las tablas huérfanas",
+      "user_stories": [
+        "HU-02-11"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817154000_drop_orphan_agent_tables/migration.sql",
+        "apps/api/src/prisma/prisma.service.ts",
+        "apps/api/src/__mocks__/generated-prisma.ts"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "Migración Prisma — TradingConfig: umbrales de política de venta y herramientas de riesgo/ganancia",
+      "user_stories": [
+        "HU-02-01",
+        "HU-02-05",
+        "HU-02-06"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
+        "apps/api/prisma/migrations/20260817153000_add_user_risk_policies/migration.sql",
+        "apps/api/src/trading/dto/trading-config.dto.ts",
+        "apps/api/src/prisma/prisma.service.ts",
+        "sdd/schema.json"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "Migración Prisma — Position: estado explícito de protección",
+      "user_stories": [
+        "HU-02-03",
+        "HU-02-04"
+      ],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817151000_add_position_protection_state/migration.sql",
+        "apps/api/src/__mocks__/generated-prisma.ts",
+        "sdd/schema.json"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Migración Prisma — Trade.decisionId (FK nullable a AgentDecision)",
+      "user_stories": [
+        "HU-02-07"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817152000_add_trade_decision_fk/migration.sql",
+        "sdd/schema.json"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "title": "BinanceRestClient — órdenes LIMIT y STOP_LOSS_LIMIT + validación lot-size/minNotional/tick-size",
+      "user_stories": [
+        "HU-02-03"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+        "libs/data-fetcher/src/lib/binance/index.ts",
+        "libs/shared/src/types/interfaces.ts"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "title": "BinanceRestClient — orden OCO + consulta de estado de orden",
+      "user_stories": [
+        "HU-02-03",
+        "HU-02-04"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-007"
+      ],
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+        "libs/data-fetcher/src/lib/binance/index.ts",
+        "libs/trading-engine/src/lib/order-executor.ts",
+        "libs/trading-engine/src/lib/order-executor.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "libs/shared/src/types/interfaces.ts"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Campo tipado de bloqueo en AegisVerdict + regla estructurada que reemplaza isFalseConcentrationBlock",
+      "user_stories": [
+        "HU-02-08"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/dto/decision-synthesis.dto.ts",
+        "apps/api/src/orchestrator/dto/aegis-verdict.schema.ts",
+        "apps/api/src/orchestrator/dto/aegis-verdict.schema.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/json-parse.util.ts",
+        "apps/api/prisma/seed/agents.ts"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Política de SELL — corte de pérdida por señal reemplaza el veto de minProfitPct",
+      "user_stories": [
+        "HU-02-01"
+      ],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/sell-policy.ts",
+        "libs/trading-engine/src/lib/sell-policy.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-011",
+      "title": "Sizing modulado con techo inviolable + verdict REDUCE de AEGIS",
+      "user_stories": [
+        "HU-02-02"
+      ],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/sizing.ts",
+        "libs/trading-engine/src/lib/sizing.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "apps/api/src/orchestrator/dto/decision-synthesis.dto.ts",
+        "apps/api/src/orchestrator/dto/forge-sizing.schema.ts",
+        "apps/api/src/orchestrator/dto/forge-sizing.schema.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-012",
+      "title": "Colocación de SL/TP nativo al abrir posición + estado \"desprotegida\"",
+      "user_stories": [
+        "HU-02-03"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-005",
+        "TASK-007",
+        "TASK-008"
+      ],
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/protection-retry.ts",
+        "apps/api/src/trading/protection-retry.spec.ts",
+        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts",
+        "libs/trading-engine/src/lib/order-executor.ts",
+        "libs/trading-engine/src/lib/order-executor.spec.ts",
+        "libs/trading-engine/src/lib/index.ts"
+      ]
+    },
+    {
+      "id": "TASK-013",
+      "title": "Reconciliación de estado al inicio de ciclo",
+      "user_stories": [
+        "HU-02-04"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-005",
+        "TASK-008",
+        "TASK-012"
+      ],
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/trading/reconciliation.service.ts",
+        "apps/api/src/trading/reconciliation.service.spec.ts",
+        "apps/api/src/trading/trading.processor.reconciliation-order.spec.ts",
+        "libs/trading-engine/src/lib/order-executor.ts",
+        "libs/trading-engine/src/lib/order-executor.spec.ts",
+        "libs/trading-engine/src/lib/index.ts"
+      ]
+    },
+    {
+      "id": "TASK-014",
+      "title": "Herramientas de ganancia — trailing stop, take-profit escalonado y salida por tiempo",
+      "user_stories": [
+        "HU-02-05"
+      ],
+      "estimation_hours": 5.5,
+      "story_points": 8,
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/position-manager.ts",
+        "libs/trading-engine/src/lib/position-manager.spec.ts",
+        "libs/trading-engine/src/lib/index.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.exit-machine.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts",
+        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
+        "apps/api/src/trading/trading.processor.reconciliation-order.spec.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-015",
+      "title": "Límites de riesgo agregado por usuario cableados al camino real de ejecución",
+      "user_stories": [
+        "HU-02-06"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/domain/aggregate-risk.service.ts",
+        "apps/api/src/agents/domain/aggregate-risk.service.spec.ts",
+        "apps/api/src/agents/domain/risk-budget.service.ts",
+        "apps/api/src/agents/domain/risk-budget.service.spec.ts",
+        "apps/api/src/agents/domain/agent-domain.module.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.aggregate-risk.spec.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.service.risk-policy.spec.ts",
+        "apps/api/src/trading/trading.controller.ts",
+        "apps/api/src/trading/dto/user-risk-policy.dto.ts",
+        "sdd/api.json"
+      ]
+    },
+    {
+      "id": "TASK-016",
+      "title": "Trazabilidad — setear Trade.decisionId en el flujo real de ejecución",
+      "user_stories": [
+        "HU-02-07"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [
+        "TASK-006"
+      ],
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts"
+      ]
+    }
+  ]
+}

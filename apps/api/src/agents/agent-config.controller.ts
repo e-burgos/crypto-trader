@@ -21,7 +21,8 @@ import {
 } from '../auth/decorators/current-user.decorator';
 import { AgentConfigService } from './agent-config.service';
 import { AgentConfigResolverService } from './agent-config-resolver.service';
-import { AgentId, LLMProvider } from '../../generated/prisma/enums';
+import { LLMProvider } from '../../generated/prisma/enums';
+import { ModelSlotId } from './agent-identity';
 
 class UpsertAgentConfigDto {
   @IsEnum(LLMProvider)
@@ -70,7 +71,7 @@ export class AgentConfigController {
   ) {
     return this.agentConfigService.upsertUserAgentConfig(
       user.userId,
-      agentId as AgentId,
+      agentId as ModelSlotId,
       dto.provider,
       dto.model,
     );
@@ -84,7 +85,7 @@ export class AgentConfigController {
   ) {
     return this.agentConfigService.deleteUserAgentConfig(
       user.userId,
-      agentId as AgentId,
+      agentId as ModelSlotId,
     );
   }
 

@@ -1,0 +1,168 @@
+# sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 3
+module: trading-agents-core
+phase: llm-cost-reduction-and-cycle-02-followups
+date: 2026-08-17
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Reducir el costo LLM por ciclo de decisión al menos 50% en el escenario de referencia
+  (bot BTC/USDT, 15 min) sin degradar la calidad de las decisiones, haciendo el costo real
+  medible y visible por bot/día; y cerrar la spec dejando apps/web alineado con el wire de
+  agentes (prerrequisito de deploy) y saldados los follow-ups del cycle-02 que afectan la
+  seguridad de las posiciones protegidas.
+
+scope:
+  # --- Spec §3 Cycle-03 — reducción del costo por decisión ---
+  - 'Gate determinista pre-LLM: si los indicadores no muestran señal (sin cruces, RSI neutro, sin cambio significativo de precio ni posiciones abiertas), el ciclo resuelve HOLD y persiste la AgentDecision sin llamar a ningún LLM'
+  - 'Caché compartido por (asset, pair, timeframe) con TTL para señal técnica y macro (CIPHER a TTL de horas), compartido entre bots y usuarios, extendiendo el patrón del caché existente de sentimiento/data-source'
+  - 'Prompt caching de proveedor (Anthropic cache_control / OpenRouter) para los system prompts estáticos de 650-830 tokens, con degradación silenciosa donde el modelo no lo soporte'
+  - 'max_tokens por tarea (300-400 para risk_gate y sizing en vez del default 1024), configurable por tarea y no por agente'
+  - 'Registrar el consumo real por ciclo en AgentDecision.llmCostUsd (hoy sin ningún escritor en el flujo real: solo lo leen los agregados de EvaluationService) y exponer costo/día por bot en analytics (endpoint nuevo + panel en apps/web)'
+  - 'Reinterpretación ejecutable en CI del criterio de la spec (−50% de costo sin degradar decisiones): el escenario de referencia y el backtest NO existen como infraestructura — el functional define el criterio observable y el architect el harness determinista, con el precedente de CA-001 (cycle-01) y CA-012 (cycle-02)'
+
+  # --- Follow-ups obligatorios del reviewer de cycle-02 ---
+  - 'PRIORIDAD 1 [DEPLOY-BLOCKER] — migrar apps/web al wire nuevo de agentes: agentId → slot en hooks/use-agent-config.ts y en pages/dashboard/settings/agents.tsx (8 lecturas de config.agentId), y source → el union completo de ResolutionSource (override | user | admin | preset | credential). Hoy los nombres de agente quedan vacíos, los filtros risk/routing no matchean y guardar dispara PUT /users/me/agents/undefined/config'
+  - 'Re-armar la OCO nativa cuando el trailing o el breakeven mueven el stop: cancelProtectionOrder + placeProtectionOrder con niveles nuevos y cantidad remanente, con umbral de 0.1% sobre el stop vigente para no recolocar en cada tick. Cierra la degradación a polling aceptada en cycle-02 y elimina el take-profit zombie que sobrevive en la OCO viva'
+  - 'Extender el select de TradingService.getPositions con los campos nuevos de Position (protectionStatus, stopPrice, takeProfitPrice, highWaterPrice, trailingActive, initialQuantity, partialExitCount, realizedPnl, exitReason) y pasar EP-008 a implemented en sdd/api.json'
+  - 'Guard estático en el pipeline de tests contra la reintroducción de isFalseConcentrationBlock y del cast "as unknown as AgentId" (CA-031/CA-034), con el patrón readFileSync ya usado en trading.processor.isolation.spec.ts'
+  - 'Reescribir las aserciones de string-matching sobre el rango de texto fuente de checkOpenPositions (trading.processor.isolation.spec.ts y trading.processor.decision-traceability.spec.ts) para que no haya que acomodar el código al test'
+
+out_of_scope:
+  - 'UI de configuración de los 17 campos nuevos de TradingConfig y de la política de riesgo agregado (EP-004/EP-005) — follow-up 6 del reviewer de cycle-02. DECISIÓN DEL ORQUESTADOR: queda como deuda documentada para una spec de UI dedicada. Es una superficie de formularios ajena al eje de costo de este ciclo, y meterla junto al deploy-blocker arriesga el cierre de la spec. Hoy esos campos solo se configuran por API'
+  - 'Columnas de estado de protección/trailing de posiciones en la UI de apps/web (el backend sí las expone en este ciclo vía EP-008)'
+  - 'Migración del enum Prisma AgentId (8 valores) — decidido en architect cycle-01 §7'
+  - 'Abstracción de exchange, futuros y segundo exchange — spec-e-burgos-002'
+  - 'Function calling real, RAG y unificación de prompts del chat — spec-e-burgos-003'
+  - 'Múltiples escalones de take-profit parcial (resolvePartialTakeProfit soporta uno solo por diseño)'
+  - 'Cambiar el comportamiento de trading por defecto: todo interruptor nuevo nace apagado y una instalación existente que despliegue este ciclo sin tocar su config debe producir las mismas órdenes y las mismas decisiones que antes'
+
+dependencies_required:
+  - 'cycle-01 (poda y observabilidad de costo) — completed'
+  - 'cycle-02 (venta inteligente y gestión activa de riesgo) — completed'
+
+constraints:
+  - 'Sin BD corriendo: las migraciones se escriben como SQL aditivo a mano y se registran en sdd/schema.json (convención vigente de apps/api §4)'
+  - 'Sin credenciales reales ni acceso a testnet: todo se verifica contra mocks de la capa HTTP/LLM, con assert explícito de no-invocación cuando el gate determinista debe evitar la llamada'
+  - 'Cero comentarios en el código de implementación (excepciones del CLAUDE.md); el sdd-reviewer lo verifica al cerrar'
+  - 'Defaults conservadores: el gate determinista y el caché nacen con la configuración que preserva el comportamiento actual, y su activación es explícita'
+  - 'ValidationPipe global con forbidNonWhitelisted: todo campo nuevo de TradingConfig debe declararse en CreateTradingConfigDto Y UpdateTradingConfigDto o el request entero responde 400'
+  - 'apps/web declara su propia interfaz del response de agentes: el typecheck no detecta desalineaciones de wire — la migración del deploy-blocker se verifica con tests, no con tsc'
+
+agent_contexts:
+  functional:
+    goal: |
+      Traducir la reducción de costo a historias de usuario y criterios de aceptación observables
+      sin backtest ni escenario de referencia preexistente. Debe definir: (a) qué significa
+      "sin señal" en términos del negocio para que un HOLD sin LLM sea legítimo y no una decisión
+      perdida; (b) la reinterpretación ejecutable del criterio "−50% de costo sin degradar
+      decisiones" — qué se mide, contra qué línea base y con qué fixture determinista; (c) qué ve
+      el usuario del costo por bot/día; (d) el criterio de aceptación de la migración de apps/web,
+      que hoy es un bug visible (nombres vacíos, filtros rotos, guardado que falla).
+    business_context: |
+      El sistema hace 5-6 llamadas LLM por ciclo cada 5-30 min: ≈$1,40/día/bot con modelos clase
+      Haiku y $4-5/día con modelos mejores, lineal por bot. La mayoría de los ciclos no producen
+      ninguna operación: se paga análisis completo para terminar en HOLD. El usuario paga ese costo
+      con sus propias credenciales LLM y hoy el dashboard le reporta ~$0 porque nada escribe el
+      costo real por decisión. Reducir el costo no puede costar decisiones correctas: si el gate
+      determinista silencia un ciclo donde había señal, el bot deja de operar y el ahorro es una
+      pérdida encubierta.
+    relevant_spec_sections:
+      - '§3 Cycle-03 — Reducción del costo por decisión (los 5 puntos y su criterio de aceptación)'
+      - '§1 Hallazgo C — Costo LLM alto, sin medición real'
+      - '§5 Riesgos — feature-flag por config y default conservador'
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/functional.md
+
+  planner:
+    goal: |
+      Convertir el functional en tasks técnicas ordenadas y estimadas, separando backend y
+      frontend. La TASK del deploy-blocker de apps/web es prioridad 1 y no depende de ninguna task
+      de costo: debe poder cerrarse aunque el resto del ciclo se alargue. Las tasks de frontend que
+      consumen el endpoint de costo/día dependen de la task backend que lo implementa.
+    note: 'Recibe el output del Funcional; no necesita la especificación completa'
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/planner.md
+
+  architect:
+    goal: |
+      Definir: (1) dónde vive el gate determinista y con qué señales lo evalúa (indicadores de
+      libs/analysis, cambio de precio y posiciones abiertas), garantizando que un HOLD sin LLM
+      persista igual su AgentDecision y sus eventos WS; (2) el caché compartido por
+      (asset, pair, timeframe) — DataSourceCacheService es in-memory por proceso, así que
+      "compartido entre bots y usuarios" con réplicas exige decidir explícitamente Redis (ya en el
+      stack) vs proceso, y fijar TTLs por tipo de señal (CIPHER en horas); (3) el contrato de
+      prompt caching en libs/openrouter con degradación silenciosa por modelo; (4) max_tokens por
+      tarea; (5) el camino de escritura de AgentDecision.llmCostUsd (hoy sin escritor) y el
+      contrato del endpoint de costo/día por bot; (6) el harness determinista que hace verificable
+      en CI el −50% y la no-degradación; (7) el re-arme de la OCO con umbral de 0.1%, decidiendo
+      qué parte es función pura en libs/trading-engine y qué parte es orquestación en apps/api.
+    existing_tables:
+      - 'agent_decisions (llmCostUsd, dataCostUsd, expectedNetValueUsd, metadata — pre-existentes)'
+      - 'llm_usage_logs (status: updated)'
+      - 'trading_configs (status: migrated — 17 campos agregados en cycle-02)'
+      - 'positions (status: migrated)'
+      - 'agent_decision_evaluations (status: updated)'
+    existing_endpoints:
+      - 'EP-001 GET /agents/scorecard — implemented'
+      - 'EP-002 GET /agents/scorecard/summary — implemented'
+      - 'EP-003 GET /users/me/llm/usage — implemented'
+      - 'EP-008 GET /trading/positions — defined (pasa a implemented en este ciclo)'
+    key_context:
+      - 'ModelPricingService ya resuelve tarifa con cascada LIVE_OPENROUTER → STALE_CACHE → STATIC_TABLE → UNPRICED y nunca lanza: el costo real es calculable, falta escribirlo por decisión'
+      - 'AgentPromptService es la única fuente de system prompts (tabla AgentDefinition, caché TTL 60s): el prompt caching de proveedor se decide sobre ese contenido estático'
+      - 'apps/api/src/market/data-source-cache.service.ts es el patrón de caché TTL vigente (Map en memoria, devuelve stale si el proveedor falla)'
+      - 'ReconciliationService corre antes de toda decisión en LIVE/TESTNET: el gate determinista no puede saltearlo'
+      - 'Regla no negociable de cycle-02: cancelar la protección antes de vender (releaseProtectionIfNeeded) — el re-arme de OCO opera sobre la misma superficie'
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/architect.md
+
+  implementor_back:
+    goal: |
+      Implementar el gate determinista, el caché compartido, el prompt caching y max_tokens por
+      tarea, la escritura de llmCostUsd por ciclo y el endpoint de costo/día por bot; más los
+      follow-ups backend: re-arme de la OCO al mover el stop, extensión del select de getPositions
+      (EP-008), guard estático CA-031/CA-034 en el pipeline y reescritura de las dos aserciones de
+      string-matching sobre checkOpenPositions.
+    apps:
+      - apps/api
+      - libs/analysis
+      - libs/openrouter
+      - libs/trading-engine
+      - libs/shared
+    app_context:
+      - sdd/context/apps/api/context_prompt.md
+      - sdd/context/apps/api/constitution.md
+      - sdd/context/libs/analysis/context_prompt.md
+      - sdd/context/libs/openrouter/context_prompt.md
+      - sdd/context/libs/trading-engine/context_prompt.md
+      - sdd/context/libs/shared/context_prompt.md
+    note: 'Recibe una task a la vez del Planner. Los contextos de subproyecto están consolidados a cycle-02: no hay fragmentos pendientes en updates/'
+
+  implementor_front:
+    goal: |
+      PRIORIDAD 1 — migrar apps/web al wire nuevo de agentes (agentId → slot, union completo de
+      ResolutionSource) en hooks/use-agent-config.ts y pages/dashboard/settings/agents.tsx,
+      cubriendo con tests el desalineamiento que el typecheck no detecta porque el front declara su
+      propia interfaz del response. Después: panel de costo/día por bot en la página de analytics,
+      consumiendo el endpoint nuevo.
+    app: apps/web
+    app_context:
+      - sdd/context/apps/web/context_prompt.md
+      - sdd/context/apps/web/constitution.md
+    note: |
+      Recibe una task a la vez del Planner. El panel de costo depende de la task backend que
+      implementa el endpoint; la migración del wire de agentes NO depende de nada y va primero.
+      Convenciones no negociables de apps/web: todo dato del servidor por TanStack Query, todo
+      texto por t('clave') en es.ts y en.ts, componentes stateless desde @crypto-trader/ui,
+      Tailwind para estilos. La UI de configuración de los 17 campos de TradingConfig está
+      explícitamente fuera de alcance.
+
+  reviewer:
+    goal: |
+      Validar todo el output del ciclo y cerrar la spec. Además del checklist habitual: verificar
+      que el ahorro de costo esté demostrado por el harness determinista y no por estimación, que
+      ningún escenario con señal quede silenciado por el gate, que el deploy-blocker de apps/web
+      esté efectivamente cerrado (era prerrequisito de deploy) y que la deuda de UI diferida quede
+      registrada como follow-up explícito al pasar el módulo a completed_modules.
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/cycle.json

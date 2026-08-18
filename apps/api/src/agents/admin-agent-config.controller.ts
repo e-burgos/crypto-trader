@@ -17,8 +17,9 @@ import {
   type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 import { AgentConfigService } from './agent-config.service';
-import { AgentId, LLMProvider } from '../../generated/prisma/enums';
+import { LLMProvider } from '../../generated/prisma/enums';
 import { AgentPresetName } from './agent-presets';
+import { ModelSlotId } from './agent-identity';
 
 class UpsertAdminAgentConfigDto {
   @IsEnum(LLMProvider)
@@ -67,7 +68,7 @@ export class AdminAgentConfigController {
     @Body() dto: UpsertAdminAgentConfigDto,
   ) {
     return this.agentConfigService.upsertAdminAgentConfig(
-      agentId as AgentId,
+      agentId as ModelSlotId,
       dto.provider,
       dto.model,
       user.userId,

@@ -1,18 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SubAgentService, SubAgentId } from './sub-agent.service';
-// eslint-disable-next-line @nx/enforce-module-boundaries
-import { LLMProvider } from '@crypto-trader/shared';
+import { SubAgentService } from './sub-agent.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { PersonaAgentId } from '../agents/agent-identity';
+import { LLMProvider } from '../../generated/prisma/enums';
 import {
   IntentClassification,
   SubAgentId as IntentSubAgentId,
 } from './dto/intent-classification.dto';
-import {
-  AegisVerdict,
-  DecisionPayload,
-  SubAgentResult,
-} from './dto/decision-synthesis.dto';
+import { DecisionPayload, SubAgentResult } from './dto/decision-synthesis.dto';
+import { parseAegisVerdict, isOverridableBlock } from './dto/aegis-verdict.schema';
+import { parseForgeSizing } from './dto/forge-sizing.schema';
 import { NewsEnrichment } from './dto/news-enrichment.dto';
+import { safeParseJson } from './json-parse.util';
+import { LlmCostAccumulator } from '../llm/llm-cost-accumulator';
+import {
+  SignalCacheService,
+  DEFAULT_ANALYSIS_TIMEFRAME,
+} from '../cache/signal-cache.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { IndicatorSnapshot } from '@crypto-trader/shared';
@@ -21,27 +26,6 @@ export interface NewsItemInput {
   id: string;
   headline: string;
   summary?: string | null;
-}
-
-// ── JSON parsing helpers ─────────────────────────────────────────────────────
-
-function safeParseJson<T>(raw: string, fallback: T): T {
-  try {
-    // Strip thinking tags from reasoning models (Qwen3, DeepSeek-R1, etc.)
-    let cleaned = raw.replace(/<think>[\s\S]*?<\/think>\s*/g, '');
-    // Strip markdown code fences if present
-    cleaned = cleaned.replace(/```(?:json)?\s*/gi, '').trim();
-    try {
-      return JSON.parse(cleaned) as T;
-    } catch {
-      // Extract the outermost JSON object or array from the text
-      const match = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-      if (match) return JSON.parse(match[0]) as T;
-      return fallback;
-    }
-  } catch {
-    return fallback;
-  }
 }
 
 // ── OrchestratorService ──────────────────────────────────────────────────────
@@ -53,6 +37,8 @@ export class OrchestratorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly subAgent: SubAgentService,
+    private readonly agentConfigResolver: AgentConfigResolverService,
+    private readonly signalCache: SignalCacheService,
   ) {}
 
   // ── A) Intent Classification ───────────────────────────────────────────────
@@ -161,6 +147,8 @@ export class OrchestratorService {
       throw new Error(`Config ${configId} not found for user ${userId}`);
     }
 
+    const costAccumulator = new LlmCostAccumulator();
+
     // Cast override to typed LLMProvider if present
     const typedOverride = llmOverride
       ? {
@@ -168,6 +156,8 @@ export class OrchestratorService {
           model: llmOverride.model,
         }
       : undefined;
+
+    const analysisTimeframe = DEFAULT_ANALYSIS_TIMEFRAME;
 
     // ── SIGMA sentiment cache ────────────────────────────────────────────────
     // Reuse a recent SIGMA news_sentiment result from any bot of the same user
@@ -257,13 +247,20 @@ export class OrchestratorService {
     const hasMacroData = Object.keys(macroContext).length > 0;
 
     const parallelCalls: Promise<string>[] = [
-      this.subAgent.call(
-        'market',
-        'technical_signal',
-        techContext,
-        userId,
-        false,
-        typedOverride,
+      this.signalCache.getOrComputeTechnical(
+        config.asset,
+        config.pair,
+        analysisTimeframe,
+        () =>
+          this.subAgent.call(
+            'market',
+            'technical_signal',
+            techContext,
+            userId,
+            false,
+            typedOverride,
+            costAccumulator,
+          ),
       ),
       cachedSentiment
         ? Promise.resolve(cachedSentiment)
@@ -274,6 +271,7 @@ export class OrchestratorService {
             userId,
             false,
             typedOverride,
+            costAccumulator,
           ),
       this.subAgent.call(
         'operations',
@@ -306,6 +304,7 @@ export class OrchestratorService {
         userId,
         false,
         typedOverride,
+        costAccumulator,
       ),
       this.subAgent.call(
         'risk',
@@ -314,19 +313,27 @@ export class OrchestratorService {
         userId,
         false,
         typedOverride,
+        costAccumulator,
       ),
     ];
 
     // Conditionally add CIPHER macro_context (only if macro data available)
     if (hasMacroData) {
       parallelCalls.push(
-        this.subAgent.call(
-          'blockchain',
-          'macro_context',
-          macroContext,
-          userId,
-          false,
-          typedOverride,
+        this.signalCache.getOrComputeMacro(
+          config.asset,
+          config.pair,
+          analysisTimeframe,
+          () =>
+            this.subAgent.call(
+              'blockchain',
+              'macro_context',
+              macroContext,
+              userId,
+              false,
+              typedOverride,
+              costAccumulator,
+            ),
         ),
       );
     }
@@ -355,13 +362,25 @@ export class OrchestratorService {
     let blockchainModel: { provider?: string; model?: string } = {};
     try {
       const providerCalls: Promise<{ provider: string; model: string }>[] = [
-        this.subAgent.getProvider(userId, 'market', typedOverride),
-        this.subAgent.getProvider(userId, 'operations', typedOverride),
-        this.subAgent.getProvider(userId, 'risk', typedOverride),
+        this.agentConfigResolver.resolveClient(
+          userId,
+          'market',
+          typedOverride,
+        ),
+        this.agentConfigResolver.resolveClient(
+          userId,
+          'operations',
+          typedOverride,
+        ),
+        this.agentConfigResolver.resolveClient(userId, 'risk', typedOverride),
       ];
       if (hasMacroData) {
         providerCalls.push(
-          this.subAgent.getProvider(userId, 'blockchain', typedOverride),
+          this.agentConfigResolver.resolveClient(
+            userId,
+            'blockchain',
+            typedOverride,
+          ),
         );
       }
       const [mkt, ops, rsk, blk] = await Promise.allSettled(providerCalls);
@@ -433,26 +452,20 @@ export class OrchestratorService {
     }
 
     // AEGIS verdict gate
-    const aegisVerdict = safeParseJson<Partial<AegisVerdict>>(aegisOutput, {});
+    const aegisVerdict = parseAegisVerdict(aegisOutput);
+    const forgeSizing = parseForgeSizing(forgeOutput);
     if (aegisVerdict.verdict === 'BLOCK') {
-      const reason = aegisVerdict.reason ?? 'Riesgo elevado detectado';
-      const alerts = aegisVerdict.alerts ?? [];
+      const { reason, alerts } = aegisVerdict;
 
-      // Ignore false-positive blocks about single-asset concentration.
-      // Each bot trades one specific pair by design, so 100% concentration
-      // in that asset is expected and not a real risk signal.
-      const isFalseConcentrationBlock =
-        /concentraci[oó]n|exposici[oó]n.*(?:un solo|single|[\d]+%.*(?:portfolio|cartera))/i.test(
-          reason,
-        );
-      if (isFalseConcentrationBlock) {
+      if (isOverridableBlock(aegisVerdict)) {
         this.logger.log(
-          `AEGIS BLOCK overridden (single-asset concentration is expected) for config=${configId}: ${reason}`,
+          `AEGIS BLOCK overridden (${aegisVerdict.blockReasons.join(', ')}) for config=${configId}: ${reason}`,
         );
       } else {
         this.logger.warn(
           `AEGIS BLOCK for user=${userId} config=${configId}: ${reason}`,
         );
+        const blockCostSummary = await costAccumulator.settle();
         return {
           decision: 'HOLD',
           confidence: 1.0,
@@ -460,6 +473,12 @@ export class OrchestratorService {
           waitMinutes: 30,
           orchestrated: true,
           subAgentResults,
+          risk: aegisVerdict,
+          sizing: forgeSizing,
+          llmCostUsd: blockCostSummary.costUsd,
+          llmCallCount: blockCostSummary.llmCallCount,
+          pricedCallCount: blockCostSummary.pricedCallCount,
+          unpricedCallCount: blockCostSummary.unpricedCallCount,
         };
       }
     }
@@ -471,7 +490,7 @@ export class OrchestratorService {
 
     // Resolve model info before the synthesis call
     try {
-      const resolved = await this.subAgent.getProvider(
+      const resolved = await this.agentConfigResolver.resolveClient(
         userId,
         'synthesis',
         typedOverride,
@@ -498,6 +517,7 @@ export class OrchestratorService {
         userId,
         false,
         typedOverride,
+        costAccumulator,
       );
     } catch (synthErr) {
       this.logger.warn(
@@ -517,6 +537,7 @@ export class OrchestratorService {
       }
 
       // Partial data available — return HOLD with explanation
+      const partialCostSummary = await costAccumulator.settle();
       return {
         decision: 'HOLD' as const,
         confidence: 0.3,
@@ -525,6 +546,12 @@ export class OrchestratorService {
         waitMinutes: 15,
         orchestrated: true,
         subAgentResults,
+        risk: aegisVerdict,
+        sizing: forgeSizing,
+        llmCostUsd: partialCostSummary.costUsd,
+        llmCallCount: partialCostSummary.llmCallCount,
+        pricedCallCount: partialCostSummary.pricedCallCount,
+        unpricedCallCount: partialCostSummary.unpricedCallCount,
       };
     }
 
@@ -543,6 +570,8 @@ export class OrchestratorService {
       ? (synthesis.decision as DecisionType)
       : 'HOLD';
 
+    const costSummary = await costAccumulator.settle();
+
     return {
       decision,
       confidence:
@@ -556,6 +585,12 @@ export class OrchestratorService {
       subAgentResults,
       llmProvider: synthesisProvider,
       llmModel: synthesisModel,
+      risk: aegisVerdict,
+      sizing: forgeSizing,
+      llmCostUsd: costSummary.costUsd,
+      llmCallCount: costSummary.llmCallCount,
+      pricedCallCount: costSummary.pricedCallCount,
+      unpricedCallCount: costSummary.unpricedCallCount,
     };
   }
 
@@ -627,7 +662,7 @@ export class OrchestratorService {
    * Used for multi-domain queries (e.g. "buy ETH now + what is a liquidity pool?").
    */
   async synthesizeCrossAgent(
-    responses: Array<{ agentId: SubAgentId; response: string }>,
+    responses: Array<{ agentId: PersonaAgentId; response: string }>,
     originalQuery: string,
     userId: string,
     locale?: string,

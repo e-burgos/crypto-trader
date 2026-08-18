@@ -2,10 +2,34 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrchestratorService } from './orchestrator.service';
 import { SubAgentService } from './sub-agent.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { SignalCacheService } from '../cache/signal-cache.service';
 
 const mockSubAgentService = {
   call: jest.fn(),
-  getProvider: jest.fn(),
+};
+
+const mockAgentConfigResolver = {
+  resolveClient: jest.fn(),
+};
+
+const mockSignalCacheService = {
+  getOrComputeTechnical: jest.fn(
+    (
+      _asset: string,
+      _pair: string,
+      _timeframe: string,
+      compute: () => Promise<string>,
+    ) => compute(),
+  ),
+  getOrComputeMacro: jest.fn(
+    (
+      _asset: string,
+      _pair: string,
+      _timeframe: string,
+      compute: () => Promise<string>,
+    ) => compute(),
+  ),
 };
 
 const mockPrismaService = {
@@ -65,6 +89,11 @@ describe('OrchestratorService', () => {
         OrchestratorService,
         { provide: SubAgentService, useValue: mockSubAgentService },
         { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: AgentConfigResolverService,
+          useValue: mockAgentConfigResolver,
+        },
+        { provide: SignalCacheService, useValue: mockSignalCacheService },
       ],
     }).compile();
 
@@ -77,6 +106,10 @@ describe('OrchestratorService', () => {
       intervalMinutes: 10,
     });
     mockPrismaService.agentDecision.findFirst.mockResolvedValue(null);
+    mockAgentConfigResolver.resolveClient.mockResolvedValue({
+      provider: 'GROQ',
+      model: 'llama-3.3-70b-versatile',
+    });
   });
 
   // ── classifyIntent ─────────────────────────────────────────────────────────
@@ -174,6 +207,97 @@ describe('OrchestratorService', () => {
       expect(mockSubAgentService.call).toHaveBeenCalledTimes(5); // 4 parallel + 1 synthesis
     });
 
+    it('TASK-007: settles the tracked LLM cost onto the returned DecisionPayload', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (
+          agentId: string,
+          task: string,
+          _context: unknown,
+          _userId: string,
+          _preferCheap: boolean,
+          _override: unknown,
+          costAccumulator?: { track: (p: Promise<unknown>) => void },
+        ) => {
+          costAccumulator?.track(
+            Promise.resolve({
+              costUsd: 0.01,
+              pricingSource: 'STATIC_TABLE',
+              inputTokens: 100,
+              outputTokens: 50,
+            }),
+          );
+          if (agentId === 'market' && task === 'technical_signal')
+            return Promise.resolve(
+              '{"signal":"BUY","confidence":0.78,"reasoning":"RSI oversold"}',
+            );
+          if (agentId === 'market' && task === 'news_sentiment')
+            return Promise.resolve('{"sentiment":0.65,"impact":"positive"}');
+          if (agentId === 'operations' && task === 'sizing_suggestion')
+            return Promise.resolve(
+              '{"recommendation":"proceed","maxTradeSize":0.04}',
+            );
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve(
+              '{"riskScore":42,"verdict":"PASS","positionSizeMultiplier":1.0,"reason":"ok","alerts":[]}',
+            );
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve(
+              '{"decision":"BUY","confidence":0.74,"reasoning":"ok","waitMinutes":15}',
+            );
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      // 4 parallel + 1 synthesis = 5 tracked outcomes, each priced at 0.01
+      expect(result.llmCallCount).toBe(5);
+      expect(result.llmCostUsd).toBeCloseTo(0.05, 6);
+    });
+
+    it('CE-07: keeps llmCostUsd null (never a disguised zero) when every tracked call is unpriced', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (
+          agentId: string,
+          task: string,
+          _context: unknown,
+          _userId: string,
+          _preferCheap: boolean,
+          _override: unknown,
+          costAccumulator?: { track: (p: Promise<unknown>) => void },
+        ) => {
+          costAccumulator?.track(
+            Promise.resolve({
+              costUsd: null,
+              pricingSource: 'UNPRICED',
+              inputTokens: 100,
+              outputTokens: 50,
+            }),
+          );
+          if (agentId === 'orchestrator' && task === 'decision_synthesis')
+            return Promise.resolve(
+              '{"decision":"HOLD","confidence":0.5,"reasoning":"ok","waitMinutes":15}',
+            );
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.llmCallCount).toBe(5);
+      expect(result.llmCostUsd).toBeNull();
+    });
+
     it('should return HOLD immediately when AEGIS verdict is BLOCK', async () => {
       setupSubAgentMocks('BLOCK');
 
@@ -187,6 +311,9 @@ describe('OrchestratorService', () => {
       expect(result.decision).toBe('HOLD');
       expect(result.orchestrated).toBe(true);
       expect(result.reasoning).toContain('AEGIS BLOCK');
+      // the cost accumulator settles even on the early BLOCK return path
+      expect(result.llmCallCount).toBe(0);
+      expect(result.llmCostUsd).toBeNull();
       // Synthesis call should NOT be made after BLOCK
       expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
         'orchestrator',
@@ -195,6 +322,89 @@ describe('OrchestratorService', () => {
         expect.anything(),
         expect.anything(),
       );
+    });
+
+    it('should keep the BLOCK when blockReasons has a non-overridable reason, even if reason text mentions concentración (CA-029)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'risk' && task === 'risk_gate') {
+            return Promise.resolve(
+              '{"riskScore":91,"verdict":"BLOCK","positionSizeMultiplier":0,"blockReasons":["DRAWDOWN"],"reason":"Concentración de riesgo detectada por drawdown","alerts":[]}',
+            );
+          }
+          if (agentId === 'market' && task === 'technical_signal') {
+            return Promise.resolve(
+              '{"signal":"BUY","confidence":0.78,"reasoning":"RSI oversold"}',
+            );
+          }
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.decision).toBe('HOLD');
+      expect(result.reasoning).toContain('AEGIS BLOCK');
+      expect(mockSubAgentService.call).not.toHaveBeenCalledWith(
+        'orchestrator',
+        'decision_synthesis',
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('should override the BLOCK only when blockReasons is exactly [SINGLE_ASSET_CONCENTRATION], read from the typed field (CA-030)', async () => {
+      mockSubAgentService.call.mockImplementation(
+        (agentId: string, task: string) => {
+          if (agentId === 'market' && task === 'technical_signal') {
+            return Promise.resolve(
+              '{"signal":"BUY","confidence":0.78,"reasoning":"RSI oversold + MACD cross"}',
+            );
+          }
+          if (agentId === 'market' && task === 'news_sentiment') {
+            return Promise.resolve(
+              '{"sentiment":0.65,"impact":"positive","reasoning":"ETF news dominates"}',
+            );
+          }
+          if (agentId === 'operations' && task === 'sizing_suggestion') {
+            return Promise.resolve(
+              '{"recommendation":"proceed","maxTradeSize":0.04,"reasoning":"within limit"}',
+            );
+          }
+          if (agentId === 'risk' && task === 'risk_gate') {
+            return Promise.resolve(
+              '{"riskScore":60,"verdict":"BLOCK","positionSizeMultiplier":1.0,"blockReasons":["SINGLE_ASSET_CONCENTRATION"],"reason":"Portfolio 100% concentrado en BTC","alerts":[]}',
+            );
+          }
+          if (agentId === 'orchestrator' && task === 'decision_synthesis') {
+            return Promise.resolve(
+              '{"decision":"BUY","confidence":0.74,"reasoning":"Strong technical","waitMinutes":15}',
+            );
+          }
+          return Promise.resolve('{}');
+        },
+      );
+
+      const result = await service.orchestrateDecision(
+        'user-1',
+        'config-1',
+        mockIndicators as any,
+        mockNews,
+      );
+
+      expect(result.decision).toBe('BUY');
+      expect(
+        mockSubAgentService.call.mock.calls.some(
+          (call: unknown[]) =>
+            call[0] === 'orchestrator' && call[1] === 'decision_synthesis',
+        ),
+      ).toBe(true);
     });
 
     it('should still return a decision when one sub-agent call fails', async () => {
@@ -290,6 +500,7 @@ describe('OrchestratorService', () => {
         'user-1',
         false,
         undefined,
+        expect.anything(),
       );
     });
 
@@ -374,6 +585,7 @@ describe('OrchestratorService', () => {
         'user-1',
         false,
         undefined,
+        expect.anything(),
       );
       // AEGIS receives derivatives
       expect(mockSubAgentService.call).toHaveBeenCalledWith(
@@ -385,6 +597,7 @@ describe('OrchestratorService', () => {
         'user-1',
         false,
         undefined,
+        expect.anything(),
       );
       // No CIPHER call (no macro data)
       expect(mockSubAgentService.call).not.toHaveBeenCalledWith(

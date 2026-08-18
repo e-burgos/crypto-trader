@@ -1,6 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SubAgentService } from './sub-agent.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { AgentPromptService } from '../agents/agent-prompt.service';
+import { LLMUsageService } from '../llm/llm-usage.service';
+import { LlmCostAccumulator } from '../llm/llm-cost-accumulator';
+import { AgentId } from '../../generated/prisma/enums';
+import {
+  AGENT_TASK_MAX_TOKENS,
+  LLMTruncatedResponseError,
+} from './agent-task-limits';
 
 const mockLLMProvider = {
   name: 'mock',
@@ -10,38 +18,32 @@ const mockLLMProvider = {
 const mockCaptureRateLimits = jest.fn();
 
 jest.mock('@crypto-trader/analysis', () => ({
-  createLLMProvider: jest.fn(() => mockLLMProvider),
   captureRateLimits: (...args: unknown[]) => mockCaptureRateLimits(...args),
 }));
 
-jest.mock('../users/utils/encryption.util', () => ({
-  decrypt: jest.fn(() => 'decrypted-api-key'),
-}));
-
-jest.mock('../llm/model-ranking', () => ({
-  suggestModel: jest.fn((providers, useCase, preferCheap) => {
-    if (providers.includes('GROQ')) {
-      return { provider: 'GROQ', model: 'llama-3.3-70b-versatile' };
-    }
-    if (providers.length > 0) {
-      return { provider: providers[0], model: 'some-model' };
-    }
-    return null;
-  }),
-}));
-
-const mockCredential = {
-  provider: 'GROQ',
-  apiKeyEncrypted: 'enc-key',
-  apiKeyIv: 'iv',
-  selectedModel: 'llama-3.3-70b-versatile',
+const mockAgentPromptService = {
+  getSystemPrompt: jest.fn(),
 };
 
-const mockPrismaService = {
-  lLMCredential: {
-    findFirst: jest.fn(),
-    findMany: jest.fn(),
-  },
+const SYSTEM_PROMPT_BY_AGENT: Record<string, string> = {
+  orchestrator: 'You are KRYPTO',
+  platform: 'You are NEXUS',
+  operations: 'You are FORGE',
+  market: 'You are SIGMA',
+  blockchain: 'You are CIPHER',
+  risk: 'You are AEGIS',
+};
+
+const mockResolvedClient = {
+  slot: AgentId.market,
+  provider: 'GROQ',
+  model: 'llama-3.3-70b-versatile',
+  source: 'credential',
+  client: mockLLMProvider,
+};
+
+const mockAgentConfigResolver = {
+  resolveClient: jest.fn(),
 };
 
 describe('SubAgentService', () => {
@@ -49,63 +51,29 @@ describe('SubAgentService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockAgentPromptService.getSystemPrompt.mockImplementation((agentId: string) =>
+      Promise.resolve(SYSTEM_PROMPT_BY_AGENT[agentId] ?? 'generic prompt'),
+    );
+    mockAgentConfigResolver.resolveClient.mockResolvedValue(
+      mockResolvedClient,
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubAgentService,
-        { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: AgentConfigResolverService,
+          useValue: mockAgentConfigResolver,
+        },
+        { provide: AgentPromptService, useValue: mockAgentPromptService },
       ],
     }).compile();
 
     service = module.get<SubAgentService>(SubAgentService);
   });
 
-  describe('getProvider', () => {
-    it('should resolve from first active credential', async () => {
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([
-        mockCredential,
-      ]);
-
-      const result = await service.getProvider('user-1', 'market');
-
-      expect(mockPrismaService.lLMCredential.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1', isActive: true }),
-        }),
-      );
-      expect(result.client).toBe(mockLLMProvider);
-      expect(result.provider).toBe('GROQ');
-      expect(result.model).toBe('llama-3.3-70b-versatile');
-    });
-
-    it('should fallback to any active credential', async () => {
-      const openaiCred = {
-        ...mockCredential,
-        provider: 'OPENAI',
-        selectedModel: 'gpt-4o',
-      };
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([openaiCred]);
-
-      const result = await service.getProvider('user-1', 'market');
-      expect(result.client).toBe(mockLLMProvider);
-    });
-
-    it('should throw if no active credentials found', async () => {
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([]);
-
-      await expect(service.getProvider('user-1', 'market')).rejects.toThrow(
-        'No active LLM credentials',
-      );
-    });
-  });
-
   describe('call', () => {
-    beforeEach(() => {
-      mockPrismaService.lLMCredential.findMany.mockResolvedValue([
-        mockCredential,
-      ]);
-    });
-
-    it('should call LLM with correct system prompt for market agent', async () => {
+    it('should resolve the client via AgentConfigResolverService for the agent slot', async () => {
       mockLLMProvider.complete.mockResolvedValue({
         text: '{"signal":"BUY","confidence":0.8,"reasoning":"RSI oversold"}',
         usage: { inputTokens: 100, outputTokens: 50 },
@@ -119,9 +87,57 @@ describe('SubAgentService', () => {
       );
 
       expect(result).toContain('BUY');
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledWith(
+        'user-1',
+        AgentId.market,
+        undefined,
+      );
       expect(mockLLMProvider.complete).toHaveBeenCalledWith(
         expect.stringContaining('SIGMA'),
         expect.stringContaining('indicadores'),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.technical_signal },
+      );
+    });
+
+    it('should resolve the "routing" slot for orchestrator intent classification', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"agentId":"market","confidence":0.9}',
+        usage: { inputTokens: 30, outputTokens: 10 },
+      });
+
+      await service.call(
+        'orchestrator',
+        'intent_classification',
+        { message: 'hola' },
+        'user-1',
+        true,
+      );
+
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledWith(
+        'user-1',
+        AgentId.routing,
+        undefined,
+      );
+    });
+
+    it('should resolve the "synthesis" slot for orchestrator decision synthesis', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"decision":"HOLD","confidence":0.5}',
+        usage: { inputTokens: 30, outputTokens: 10 },
+      });
+
+      await service.call(
+        'orchestrator',
+        'decision_synthesis',
+        {},
+        'user-1',
+        false,
+      );
+
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledWith(
+        'user-1',
+        AgentId.synthesis,
+        undefined,
       );
     });
 
@@ -142,6 +158,7 @@ describe('SubAgentService', () => {
       expect(mockLLMProvider.complete).toHaveBeenCalledWith(
         expect.stringContaining('AEGIS'),
         expect.any(String),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.risk_gate },
       );
     });
 
@@ -155,7 +172,6 @@ describe('SubAgentService', () => {
         usage: { inputTokens: 50, outputTokens: 20 },
         headers: mockHeaders,
       });
-      mockCaptureRateLimits.mockClear();
 
       await service.call(
         'market',
@@ -176,7 +192,6 @@ describe('SubAgentService', () => {
         text: '{"signal":"HOLD","confidence":0.5,"reasoning":"flat"}',
         usage: { inputTokens: 50, outputTokens: 20 },
       });
-      mockCaptureRateLimits.mockClear();
 
       await service.call(
         'market',
@@ -186,6 +201,231 @@ describe('SubAgentService', () => {
       );
 
       expect(mockCaptureRateLimits).not.toHaveBeenCalled();
+    });
+
+    it('should propagate the error raised by AgentConfigResolverService', async () => {
+      mockAgentConfigResolver.resolveClient.mockRejectedValueOnce(
+        new Error('No active LLM credentials for user user-1.'),
+      );
+
+      await expect(
+        service.call(
+          'market',
+          'technical_signal',
+          { indicators: { rsi: 50 } },
+          'user-1',
+        ),
+      ).rejects.toThrow('No active LLM credentials');
+    });
+
+    it('should resolve the system prompt via AgentPromptService for the agent id', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"HOLD","confidence":0.5,"reasoning":"flat"}',
+        usage: { inputTokens: 50, outputTokens: 20 },
+      });
+
+      await service.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 50 } },
+        'user-1',
+      );
+
+      expect(mockAgentPromptService.getSystemPrompt).toHaveBeenCalledWith(
+        'market',
+      );
+    });
+
+    it('should propagate AgentPromptUnavailableError raised by AgentPromptService', async () => {
+      mockAgentPromptService.getSystemPrompt.mockRejectedValueOnce(
+        new Error(
+          'AgentDefinition for "risk" is missing, inactive, or has an empty systemPrompt.',
+        ),
+      );
+
+      await expect(
+        service.call(
+          'risk',
+          'risk_gate',
+          { portfolio: [], indicators: { rsi: 45 } },
+          'user-1',
+        ),
+      ).rejects.toThrow('AgentDefinition for "risk"');
+    });
+
+    it.each([
+      ['risk_gate', AGENT_TASK_MAX_TOKENS.risk_gate],
+      ['sizing_suggestion', AGENT_TASK_MAX_TOKENS.sizing_suggestion],
+      ['macro_context', AGENT_TASK_MAX_TOKENS.macro_context],
+      ['decision_synthesis', AGENT_TASK_MAX_TOKENS.decision_synthesis],
+    ] as const)(
+      'should request the max_tokens limit for task %s regardless of agent (CA-050, CA-051)',
+      async (task, expectedMaxTokens) => {
+        mockLLMProvider.complete.mockResolvedValue({
+          text: '{}',
+          usage: { inputTokens: 10, outputTokens: 5 },
+        });
+
+        await service.call('risk', task, {}, 'user-1');
+
+        expect(mockLLMProvider.complete).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.any(String),
+          { maxTokens: expectedMaxTokens },
+        );
+      },
+    );
+
+    it('should request the same max_tokens limit for the same task from two different agents (CA-051)', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{}',
+        usage: { inputTokens: 10, outputTokens: 5 },
+      });
+
+      await service.call('market', 'technical_signal', {}, 'user-1');
+      await service.call('orchestrator', 'decision_synthesis', {}, 'user-1');
+
+      expect(mockLLMProvider.complete).toHaveBeenNthCalledWith(
+        1,
+        expect.any(String),
+        expect.any(String),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.technical_signal },
+      );
+      expect(mockLLMProvider.complete).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.any(String),
+        { maxTokens: AGENT_TASK_MAX_TOKENS.decision_synthesis },
+      );
+    });
+
+    it('should throw LLMTruncatedResponseError when the response is truncated, never returning a partial decision (CA-052, CE-06)', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"riskScore":30,"verdict":"PASS"',
+        usage: { inputTokens: 200, outputTokens: 350 },
+        truncated: true,
+      });
+
+      await expect(
+        service.call(
+          'risk',
+          'risk_gate',
+          { portfolio: [], indicators: { rsi: 45 } },
+          'user-1',
+        ),
+      ).rejects.toThrow(LLMTruncatedResponseError);
+    });
+
+    it('should follow the same failure path as a rejected call when the response is truncated', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY"',
+        usage: { inputTokens: 100, outputTokens: 500 },
+        truncated: true,
+      });
+
+      await expect(
+        service.call(
+          'market',
+          'technical_signal',
+          { indicators: { rsi: 28 } },
+          'user-1',
+        ),
+      ).rejects.toThrow('LLM response truncated');
+
+      expect(mockAgentConfigResolver.resolveClient).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not treat a complete response as truncated', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"ok"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+        truncated: false,
+      });
+
+      const result = await service.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 28 } },
+        'user-1',
+      );
+
+      expect(result).toContain('BUY');
+    });
+  });
+
+  describe('cost accumulator wiring', () => {
+    const mockLlmUsageService = { log: jest.fn() };
+
+    let accumulatorService: SubAgentService;
+
+    beforeEach(async () => {
+      jest.clearAllMocks();
+      mockAgentPromptService.getSystemPrompt.mockResolvedValue('generic prompt');
+      mockAgentConfigResolver.resolveClient.mockResolvedValue(mockResolvedClient);
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          SubAgentService,
+          {
+            provide: AgentConfigResolverService,
+            useValue: mockAgentConfigResolver,
+          },
+          { provide: AgentPromptService, useValue: mockAgentPromptService },
+          { provide: LLMUsageService, useValue: mockLlmUsageService },
+        ],
+      }).compile();
+
+      accumulatorService = module.get<SubAgentService>(SubAgentService);
+    });
+
+    it('tracks the usage log promise on the accumulator when one is provided', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"ok"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+      mockLlmUsageService.log.mockResolvedValue({
+        costUsd: 0.01,
+        pricingSource: 'STATIC_TABLE',
+        inputTokens: 100,
+        outputTokens: 50,
+      });
+
+      const accumulator = new LlmCostAccumulator();
+      await accumulatorService.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 28 } },
+        'user-1',
+        false,
+        undefined,
+        accumulator,
+      );
+
+      const summary = await accumulator.settle();
+      expect(summary.costUsd).toBeCloseTo(0.01, 6);
+      expect(summary.llmCallCount).toBe(1);
+    });
+
+    it('falls back to fire-and-forget logging when no accumulator is provided', async () => {
+      mockLLMProvider.complete.mockResolvedValue({
+        text: '{"signal":"BUY","confidence":0.8,"reasoning":"ok"}',
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
+      mockLlmUsageService.log.mockResolvedValue({
+        costUsd: 0.01,
+        pricingSource: 'STATIC_TABLE',
+        inputTokens: 100,
+        outputTokens: 50,
+      });
+
+      await accumulatorService.call(
+        'market',
+        'technical_signal',
+        { indicators: { rsi: 28 } },
+        'user-1',
+      );
+
+      expect(mockLlmUsageService.log).toHaveBeenCalledTimes(1);
     });
   });
 });

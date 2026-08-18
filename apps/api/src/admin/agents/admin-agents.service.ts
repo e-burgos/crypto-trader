@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DocumentProcessorService } from '../../orchestrator/document-processor.service';
+import { AgentPromptService } from '../../agents/agent-prompt.service';
+import { PersonaAgentId } from '../../agents/agent-identity';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 
 const ALLOWED_MIME_TYPES = [
@@ -20,6 +22,7 @@ export class AdminAgentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly documentProcessor: DocumentProcessorService,
+    private readonly agentPromptService: AgentPromptService,
   ) {}
 
   // ── CRUD AgentDefinitions ────────────────────────────────────────────────
@@ -65,7 +68,7 @@ export class AdminAgentsService {
     });
     if (!agent) throw new NotFoundException(`Agent ${id} not found`);
 
-    return this.prisma.agentDefinition.update({
+    const updated = await this.prisma.agentDefinition.update({
       where: { id: id as any },
       data: {
         ...(dto.systemPrompt !== undefined && {
@@ -74,6 +77,12 @@ export class AdminAgentsService {
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
+
+    if (dto.systemPrompt !== undefined || dto.isActive !== undefined) {
+      this.agentPromptService.invalidate(id as PersonaAgentId);
+    }
+
+    return updated;
   }
 
   // ── Documents ──────────────────────────────────────────────────────────────

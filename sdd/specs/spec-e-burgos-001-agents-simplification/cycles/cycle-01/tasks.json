@@ -1,0 +1,222 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-001-agents-simplification",
+  "cycle": 1,
+  "module": "trading-agents-core",
+  "apps": ["apps/api", "libs/analysis", "libs/openrouter"],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": { "tasks_generated": true },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Rescatar RiskBudgetTool como servicio de dominio",
+      "user_stories": ["HU-01-04"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/domain/risk-budget.service.ts",
+        "apps/api/src/agents/domain/risk-budget.service.spec.ts",
+        "apps/api/src/agents/domain/agent-domain.module.ts"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "Rescatar TradeSimulationTool como servicio de dominio",
+      "user_stories": ["HU-01-04"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "libs/trading-engine/src/lib/risk/trade-simulation.ts",
+        "libs/trading-engine/src/lib/risk/trade-simulation.spec.ts",
+        "libs/trading-engine/src/lib/index.ts"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "Rescatar PortfolioContextTool como servicio de dominio",
+      "user_stories": ["HU-01-04"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/domain/portfolio-context.service.ts",
+        "apps/api/src/agents/domain/portfolio-context.service.spec.ts",
+        "apps/api/src/agents/domain/agent-domain.module.ts"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "AgentDefinition como única fuente de system prompts",
+      "user_stories": ["HU-01-03"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-prompt.service.ts",
+        "apps/api/src/agents/agent-prompt.service.spec.ts",
+        "apps/api/src/agents/agent-config.module.ts",
+        "apps/api/src/admin/admin.module.ts",
+        "apps/api/src/admin/agents/admin-agents.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.spec.ts",
+        "apps/api/project.json"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "Crear servicio único de resolución provider/modelo",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-config-resolver.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.spec.ts",
+        "apps/api/src/agents/agent-config.module.ts"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Migrar callers al servicio único y eliminar cascadas duplicadas",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": ["TASK-005"],
+      "status": "done",
+      "files": [
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/orchestrator/sub-agent.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.isolation.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "title": "Cablear pricing en vivo de OpenRouter al registro de costo LLM",
+      "user_stories": ["HU-01-01"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/llm/model-pricing.service.ts",
+        "apps/api/src/llm/model-pricing.service.spec.ts",
+        "apps/api/src/llm/llm-usage.service.ts",
+        "apps/api/src/llm/llm-usage.service.spec.ts",
+        "apps/api/src/llm/llm.module.ts",
+        "apps/api/src/openrouter/openrouter-models-api.service.ts",
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817120000_add_llm_usage_pricing_source/migration.sql"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "title": "Cablear scheduleEvaluation al persistir AgentDecision",
+      "user_stories": ["HU-01-02"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Evaluar decisiones contra precio real de mercado",
+      "user_stories": ["HU-01-02"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-008"],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/evaluation/evaluation.processor.ts",
+        "apps/api/src/agents/evaluation/evaluation.module.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.ts",
+        "apps/api/src/agents/evaluation/evaluation.service.spec.ts",
+        "apps/api/src/market/market.service.ts",
+        "apps/api/src/market/market.service.get-price-at.spec.ts",
+        "apps/api/src/__mocks__/generated-prisma.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260817130000_add_not_evaluable_and_evaluation_unique/migration.sql"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Poda de agent tools, registry y context-planner",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 2.5,
+      "story_points": 3,
+      "depends_on": ["TASK-001", "TASK-002", "TASK-003"],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/tools/agent-tool-registry.ts",
+        "apps/api/src/agents/tools/agent-tool-registry.spec.ts",
+        "apps/api/src/agents/tools/agent-tool.interface.ts",
+        "apps/api/src/agents/tools/agent-tools.module.ts",
+        "apps/api/src/agents/tools/context-planner.service.ts",
+        "apps/api/src/agents/tools/context-planner.spec.ts",
+        "apps/api/src/agents/tools/decision-memory.tool.ts",
+        "apps/api/src/agents/tools/market-edge.tool.ts",
+        "apps/api/src/agents/tools/portfolio-context.tool.ts",
+        "apps/api/src/agents/tools/risk-budget.tool.ts",
+        "apps/api/src/agents/tools/token-budget.tool.ts",
+        "apps/api/src/agents/tools/trade-simulation.tool.ts",
+        "apps/api/src/agents/tools/trade-simulation.tool.spec.ts",
+        "apps/api/src/app/app.module.ts"
+      ]
+    },
+    {
+      "id": "TASK-011",
+      "title": "Poda de model-router, llm-analyzer y método muerto",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/model-router.service.ts",
+        "apps/api/src/agents/model-router.spec.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "libs/analysis/src/lib/llm/llm-analyzer.ts",
+        "libs/analysis/src/lib/llm/llm-types.ts",
+        "libs/analysis/src/lib/llm/llm.spec.ts",
+        "libs/analysis/src/lib/llm/index.ts"
+      ]
+    },
+    {
+      "id": "TASK-012",
+      "title": "Colapsar indirección AgentId y verificación final de cierre",
+      "user_stories": ["HU-01-05"],
+      "estimation_hours": 3.5,
+      "story_points": 5,
+      "depends_on": ["TASK-004", "TASK-006", "TASK-007", "TASK-009", "TASK-010", "TASK-011"],
+      "status": "done",
+      "files": [
+        "apps/api/src/agents/agent-identity.ts",
+        "apps/api/src/orchestrator/sub-agent.service.ts",
+        "apps/api/src/agents/agent-prompt.service.ts",
+        "apps/api/src/admin/agents/admin-agents.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.ts",
+        "apps/api/src/agents/agent-config-resolver.service.spec.ts",
+        "apps/api/src/agents/agent-config.service.ts",
+        "apps/api/src/orchestrator/orchestrator.service.ts"
+      ]
+    }
+  ]
+}

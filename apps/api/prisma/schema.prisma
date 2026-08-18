@@ -103,6 +103,13 @@ enum LLMSource {
   ANALYSIS
 }
 
+enum PricingSource {
+  LIVE_OPENROUTER
+  STALE_CACHE
+  STATIC_TABLE
+  UNPRICED
+}
+
 enum ChatRole {
   USER
   ASSISTANT
@@ -123,15 +130,6 @@ enum RiskProfile {
 
 // ── Spec 42 — Agent Profit Optimizer ─────────────────────────────────────────
 
-enum AgentToolName {
-  PORTFOLIO_CONTEXT
-  MARKET_EDGE
-  TRADE_SIMULATION
-  RISK_BUDGET
-  DECISION_MEMORY
-  TOKEN_BUDGET
-}
-
 enum AgentOutcomeStatus {
   PENDING
   WIN
@@ -139,9 +137,32 @@ enum AgentOutcomeStatus {
   NEUTRAL
   MISSED_OPPORTUNITY
   AVOIDED_LOSS
+  NOT_EVALUABLE
 }
 
 // ── Spec 40 — Market Data Sources ────────────────────────────────────────────
+
+enum PositionProtectionStatus {
+  NONE
+  PENDING
+  PROTECTED
+  UNPROTECTED
+  RELEASED
+}
+
+enum PositionExitReason {
+  LLM_SIGNAL
+  LOSS_CUT
+  STOP_LOSS
+  TAKE_PROFIT
+  TRAILING_STOP
+  TIME_EXIT
+  PARTIAL_TP
+  EXCHANGE_STOP
+  EXCHANGE_TAKE_PROFIT
+  PROTECTION_FAILURE
+  MANUAL
+}
 
 enum DataSourceCategory {
   TECHNICAL       // altFINS
@@ -184,9 +205,8 @@ model User {
   agentConfigs      AgentConfig[]
   dataSourceCredentials DataSourceCredential[]
   budgetPolicy      AgentBudgetPolicy?
-  modelPolicies     AgentModelPolicy[]
-  toolInvocations   AgentToolInvocation[]
   decisionEvaluations AgentDecisionEvaluation[]
+  riskPolicy        UserRiskPolicy?
 
   @@map("users")
 }
@@ -261,6 +281,25 @@ model TradingConfig {
   isRunning              Boolean       @default(false)
   /// Risk profile that influences LLM model selection and prompts
   riskProfile            RiskProfile   @default(MODERATE)
+  lossCutEnabled                  Boolean @default(false)
+  lossCutConfidenceThreshold      Float   @default(0.85)
+  lossCutMinLossPct               Float   @default(0.005)
+  lossCutMinEdgeRatio             Float   @default(2)
+  smartSizingEnabled              Boolean @default(false)
+  reduceSizeFactor                Float   @default(0.5)
+  nativeProtectionEnabled         Boolean @default(false)
+  closeOnProtectionFailure        Boolean @default(false)
+  stopLimitOffsetPct              Float   @default(0.002)
+  trailingStopEnabled             Boolean @default(false)
+  trailingStopPct                 Float   @default(0.02)
+  trailingActivationPct           Float   @default(0.01)
+  partialTpEnabled                Boolean @default(false)
+  partialTpTriggerPct             Float   @default(0.02)
+  partialTpSellPct                Float   @default(0.5)
+  moveStopToBreakevenAfterPartial Boolean @default(true)
+  maxPositionHoldMinutes          Int?
+  deterministicGateEnabled        Boolean @default(false)
+  gatePriceChangePct              Float   @default(0.005)
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -285,6 +324,21 @@ model Position {
   status     PositionStatus @default(OPEN)
   pnl        Float?
   fees       Float          @default(0)
+  protectionStatus       PositionProtectionStatus @default(NONE)
+  protectionOrderListId  String?
+  protectionStopOrderId  String?
+  protectionLimitOrderId String?
+  protectionPlacedAt     DateTime?
+  protectionFailureCount Int                      @default(0)
+  protectionLastError    String?
+  stopPrice              Float?
+  takeProfitPrice        Float?
+  highWaterPrice         Float?
+  trailingActive         Boolean                  @default(false)
+  initialQuantity        Float?
+  partialExitCount       Int                      @default(0)
+  realizedPnl            Float                    @default(0)
+  exitReason             PositionExitReason?
 
   user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   config TradingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
@@ -292,6 +346,7 @@ model Position {
 
   @@index([userId, status])
   @@index([userId, asset, status])
+  @@index([userId, status, protectionStatus])
   @@map("positions")
 }
 
@@ -306,13 +361,35 @@ model Trade {
   executedAt     DateTime    @default(now())
   mode           TradingMode
   binanceOrderId String?
+  decisionId     String?
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position Position       @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  decision AgentDecision? @relation(fields: [decisionId], references: [id], onDelete: SetNull)
 
   @@index([userId, executedAt])
   @@index([userId, mode])
+  @@index([decisionId])
   @@map("trades")
+}
+
+model UserRiskPolicy {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  enabled               Boolean   @default(false)
+  maxAssetExposureUsd   Float?
+  maxAssetExposurePct   Float?
+  maxDailyLossUsd       Float?
+  maxDrawdownPct        Float?
+  pauseAgentsOnDrawdown Boolean   @default(true)
+  pausedAt              DateTime?
+  pausedReason          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_risk_policies")
 }
 
 model AgentDecision {
@@ -332,14 +409,17 @@ model AgentDecision {
   /// Orchestration metadata: { orchestrated: boolean, subAgentResults: SubAgentResult[] }
   metadata      Json?
   llmCostUsd          Float?
+  llmCallCount        Int           @default(0)
   dataCostUsd         Float?
   expectedNetValueUsd Float?
   modelRoutingReason  String?
   createdAt     DateTime      @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades Trade[]
 
   @@index([userId, createdAt])
+  @@index([createdAt])
   @@map("agent_decisions")
 }
 
@@ -543,19 +623,20 @@ model AgentDocument {
 }
 
 model LlmUsageLog {
-  id           String      @id @default(cuid())
-  userId       String
-  provider     LLMProvider
-  model        String
-  inputTokens  Int
-  outputTokens Int
-  costUsd      Float
-  source       LLMSource
-  agentId      AgentId?
-  decisionId   String?
-  actualModel  String?
-  requestId    String?
-  createdAt    DateTime    @default(now())
+  id            String         @id @default(cuid())
+  userId        String
+  provider      LLMProvider
+  model         String
+  inputTokens   Int
+  outputTokens  Int
+  costUsd       Float
+  pricingSource PricingSource?
+  source        LLMSource
+  agentId       AgentId?
+  decisionId    String?
+  actualModel   String?
+  requestId     String?
+  createdAt     DateTime       @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -674,53 +755,6 @@ model AgentBudgetPolicy {
   @@map("agent_budget_policies")
 }
 
-model AgentModelPolicy {
-  id              String       @id @default(cuid())
-  userId          String?
-  agentId         AgentId
-  mode            TradingMode?
-  riskProfile     RiskProfile?
-  provider        LLMProvider
-  model           String
-  maxInputTokens  Int          @default(8000)
-  maxOutputTokens Int          @default(768)
-  temperature     Float        @default(0.2)
-  isPremium       Boolean      @default(false)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, agentId])
-  @@index([agentId, mode, riskProfile])
-  @@map("agent_model_policies")
-}
-
-model AgentToolInvocation {
-  id             String        @id @default(cuid())
-  userId         String
-  decisionId     String?
-  agentId        AgentId
-  toolName       AgentToolName
-  inputHash      String
-  outputHash     String?
-  status         String
-  latencyMs      Int
-  freshnessMs    Int?
-  inputTokens    Int           @default(0)
-  outputTokens   Int           @default(0)
-  costUsd        Float         @default(0)
-  metadata       Json?
-  createdAt      DateTime      @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([decisionId])
-  @@index([agentId, toolName])
-  @@map("agent_tool_invocations")
-}
-
 model AgentDecisionEvaluation {
   id                   String             @id @default(cuid())
   decisionId           String
@@ -740,6 +774,7 @@ model AgentDecisionEvaluation {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([decisionId, horizonMinutes])
   @@index([userId, decisionId])
   @@index([status, createdAt])
   @@map("agent_decision_evaluations")

@@ -1,5 +1,4 @@
 import { parseLLMResponse, buildAnalysisPrompt } from './llm-types';
-import { LLMAnalyzer } from './llm-analyzer';
 import { createLLMProvider } from './llm-factory';
 import {
   LLMProvider,
@@ -7,7 +6,6 @@ import {
   QuoteCurrency,
   TradingMode,
 } from '@crypto-trader/shared';
-import type { LLMProviderClient } from './llm-types';
 import type { LLMAnalysisInput } from '@crypto-trader/shared';
 
 describe('parseLLMResponse', () => {
@@ -152,135 +150,6 @@ describe('buildAnalysisPrompt', () => {
     expect(user).toContain('BTC/USDT');
     expect(user).toContain('RSI');
     expect(user).toContain('MACD');
-  });
-});
-
-describe('LLMAnalyzer', () => {
-  const validResponseText = JSON.stringify({
-    decision: 'BUY',
-    confidence: 0.8,
-    reasoning: 'Bullish momentum',
-    suggestedWaitMinutes: 10,
-  });
-
-  const validResponse = {
-    text: validResponseText,
-    usage: { inputTokens: 100, outputTokens: 50 },
-  };
-
-  const mockInput: LLMAnalysisInput = {
-    asset: Asset.BTC,
-    pair: QuoteCurrency.USDT,
-    indicatorSnapshot: {
-      rsi: { value: 55, signal: 'NEUTRAL' as const },
-      macd: { macd: 10, signal: 8, histogram: 2, crossover: 'NONE' as const },
-      bollingerBands: {
-        upper: 70000,
-        middle: 65000,
-        lower: 60000,
-        bandwidth: 10000,
-        position: 'INSIDE' as const,
-      },
-      emaCross: {
-        ema9: 65000,
-        ema21: 65000,
-        ema50: 64000,
-        ema200: 60000,
-        trend: 'NEUTRAL' as const,
-      },
-      volume: {
-        current: 100,
-        average: 80,
-        ratio: 1.25,
-        signal: 'NORMAL' as const,
-      },
-      supportResistance: { support: [], resistance: [] },
-      timestamp: Date.now(),
-    },
-    recentCandles: [],
-    newsItems: [],
-    recentTrades: [],
-    userConfig: {
-      id: 'cfg',
-      userId: 'u',
-      asset: Asset.BTC,
-      pair: QuoteCurrency.USDT,
-      buyThreshold: 70,
-      sellThreshold: 70,
-      stopLossPct: 0.03,
-      takeProfitPct: 0.05,
-      maxTradePct: 0.05,
-      maxConcurrentPositions: 2,
-      minIntervalMinutes: 5,
-      mode: TradingMode.SANDBOX,
-      isRunning: true,
-    },
-  };
-
-  it('should return parsed decision from LLM', async () => {
-    const provider: LLMProviderClient = {
-      name: 'mock',
-      complete: vi.fn().mockResolvedValue(validResponse),
-    };
-    const analyzer = new LLMAnalyzer(provider);
-
-    const result = await analyzer.analyze(mockInput);
-
-    expect(result.decision.decision).toBe('BUY');
-    expect(result.decision.confidence).toBe(0.8);
-    expect(result.usage.inputTokens).toBe(100);
-    expect(result.usage.outputTokens).toBe(50);
-    expect(provider.complete).toHaveBeenCalledOnce();
-  });
-
-  it('should retry on parse failure', async () => {
-    const provider: LLMProviderClient = {
-      name: 'mock',
-      complete: vi
-        .fn()
-        .mockResolvedValueOnce({
-          text: 'not json',
-          usage: { inputTokens: 10, outputTokens: 5 },
-        })
-        .mockResolvedValueOnce(validResponse),
-    };
-    const analyzer = new LLMAnalyzer(provider, { maxRetries: 2 });
-
-    const result = await analyzer.analyze(mockInput);
-
-    expect(result.decision.decision).toBe('BUY');
-    expect(result.usage.inputTokens).toBe(110);
-    expect(provider.complete).toHaveBeenCalledTimes(2);
-  });
-
-  it('should throw after max retries exceeded', async () => {
-    const provider: LLMProviderClient = {
-      name: 'mock',
-      complete: vi
-        .fn()
-        .mockResolvedValue({
-          text: 'bad json every time',
-          usage: { inputTokens: 10, outputTokens: 5 },
-        }),
-    };
-    const analyzer = new LLMAnalyzer(provider, { maxRetries: 1 });
-
-    await expect(analyzer.analyze(mockInput)).rejects.toThrow(
-      /failed after 2 attempts/,
-    );
-  });
-
-  it('should not retry on API errors', async () => {
-    const provider: LLMProviderClient = {
-      name: 'mock',
-      complete: vi.fn().mockRejectedValue(new Error('API rate limited')),
-    };
-    const analyzer = new LLMAnalyzer(provider, { maxRetries: 3 });
-
-    await expect(analyzer.analyze(mockInput)).rejects.toThrow(
-      'API rate limited',
-    );
-    expect(provider.complete).toHaveBeenCalledOnce();
   });
 });
 

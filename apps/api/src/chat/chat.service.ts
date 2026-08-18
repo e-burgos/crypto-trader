@@ -18,6 +18,7 @@ import {
 } from '../../generated/prisma/enums';
 import { CreateSessionDto, SendMessageDto } from './dto/chat.dto';
 import { ExecuteToolDto } from './dto/execute-tool.dto';
+import { ModelSlotId } from '../agents/agent-identity';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
 import { SubAgentService } from '../orchestrator/sub-agent.service';
 import { RagService } from '../orchestrator/rag.service';
@@ -466,7 +467,7 @@ export class ChatService {
     if (this.agentConfigResolver) {
       try {
         const resolved = await this.agentConfigResolver.resolveConfig(
-          agentIdForLLM,
+          agentIdForLLM as ModelSlotId,
           userId,
         );
         effectiveProvider = resolved.provider;

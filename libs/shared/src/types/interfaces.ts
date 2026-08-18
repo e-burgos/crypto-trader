@@ -268,6 +268,16 @@ export interface OrderResult {
   executedAt: Date;
 }
 
+export type ExchangeOrderState = 'ACTIVE' | 'FILLED' | 'CANCELLED' | 'MISSING';
+
+export interface ExchangeOrderStatus {
+  state: ExchangeOrderState;
+  filledLeg: 'STOP' | 'TAKE_PROFIT' | null;
+  executedPrice: number | null;
+  executedQuantity: number | null;
+  orderId: string | null;
+}
+
 // ── WebSocket Events ─────────────────────────────────────
 export interface WsTradeExecuted {
   trade: TradeRecord;

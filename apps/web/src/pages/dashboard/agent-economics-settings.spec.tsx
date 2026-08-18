@@ -48,7 +48,7 @@ describe('AgentEconomicsSettingsPage', () => {
   });
 
   it('shows spinner while loading', () => {
-    vi.mocked(api.get).mockReturnValue(new Promise(() => {}));
+    vi.mocked(api.get).mockReturnValue(new Promise(() => undefined));
     renderWithProviders(<AgentEconomicsSettingsPage />);
 
     expect(screen.getByText('Agent Economics')).toBeInTheDocument();

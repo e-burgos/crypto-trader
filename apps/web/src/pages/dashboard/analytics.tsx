@@ -20,7 +20,7 @@ import {
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
-import { MetricCard } from '../../components/analytics';
+import { MetricCard, AgentCostPanel } from '../../components/analytics';
 
 export function AnalyticsPage() {
   const { t } = useTranslation();
@@ -201,6 +201,9 @@ export function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Agent LLM Cost */}
+      <AgentCostPanel />
     </div>
   );
 }

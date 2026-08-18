@@ -28,5 +28,942 @@
         }
       ]
     }
+  },
+  "apps/api": {
+    "tables": {
+      "llm_usage_logs": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "updated",
+        "created_in_cycle": 1,
+        "updated_in_cycle": 1,
+        "migration_file": "apps/api/prisma/migrations/20260817120000_add_llm_usage_pricing_source/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "provider": {
+            "type": "LLMProvider",
+            "constraints": ["NOT NULL"],
+            "notes": "enum: CLAUDE, OPENAI, GROQ, GEMINI, MISTRAL, TOGETHER, OPENROUTER"
+          },
+          "model": {
+            "type": "String",
+            "constraints": ["NOT NULL"],
+            "notes": "modelo pedido"
+          },
+          "input_tokens": {
+            "type": "Int",
+            "constraints": ["NOT NULL"]
+          },
+          "output_tokens": {
+            "type": "Int",
+            "constraints": ["NOT NULL"]
+          },
+          "cost_usd": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-01: para OPENROUTER se calcula con el pricing en vivo del catálogo, ya no queda en 0"
+          },
+          "source": {
+            "type": "LLMSource",
+            "constraints": ["NOT NULL"],
+            "notes": "TRADING | CHAT"
+          },
+          "agent_id": {
+            "type": "AgentId",
+            "constraints": ["NULL"],
+            "notes": "slot de modelo que originó la llamada; incluye routing y synthesis"
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": ["NULL"]
+          },
+          "actual_model": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "modelo realmente servido por OpenRouter cuando hubo fallback; es contra este que se tarifa"
+          },
+          "request_id": {
+            "type": "String",
+            "constraints": ["NULL"]
+          },
+          "pricing_source": {
+            "type": "PricingSource",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-01: LIVE_OPENROUTER | STALE_CACHE | STATIC_TABLE | UNPRICED. null = fila anterior al ciclo. Hace distinguible un costo 0 real (modelo :free) de un costo no tarifado"
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_llm_usage_logs",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "idx_llm_usage_logs_user_created",
+            "type": "INDEX",
+            "columns": ["user_id", "created_at"]
+          },
+          {
+            "name": "idx_llm_usage_logs_user_provider",
+            "type": "INDEX",
+            "columns": ["user_id", "provider"]
+          },
+          {
+            "name": "idx_llm_usage_logs_agent_created",
+            "type": "INDEX",
+            "columns": ["agent_id", "created_at"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-17",
+            "migration": "20260817120000_add_llm_usage_pricing_source",
+            "change": "tabla pre-existente registrada en el arnés; se agrega la columna nullable pricing_source (enum PricingSource) para trazar el origen de la tarifa aplicada"
+          }
+        ]
+      },
+      "agent_decision_evaluations": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "updated",
+        "created_in_cycle": 1,
+        "updated_in_cycle": 1,
+        "migration_file": "apps/api/prisma/migrations/20260817130000_add_not_evaluable_and_evaluation_unique/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": ["NOT NULL"],
+            "notes": "AgentDecision evaluada; sin FK declarada en Prisma (estado pre-existente)"
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "horizon_minutes": {
+            "type": "Int",
+            "constraints": ["NOT NULL"],
+            "notes": "15 | 60 | 240 | 1440"
+          },
+          "status": {
+            "type": "AgentOutcomeStatus @default(PENDING)",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-01 agrega NOT_EVALUABLE: horizonte vencido sin precio de mercado disponible (CE-01)"
+          },
+          "price_at_decision": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "de AgentDecision.indicators"
+          },
+          "price_at_evaluation": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "cycle-01: precio real de mercado al horizonte via MarketService.getPriceAt; null cuando la decision queda NOT_EVALUABLE"
+          },
+          "realized_pnl_usd": {
+            "type": "Float",
+            "constraints": ["NULL"]
+          },
+          "hypothetical_pnl_usd": {
+            "type": "Float",
+            "constraints": ["NULL"]
+          },
+          "missed_opportunity_usd": {
+            "type": "Float",
+            "constraints": ["NULL"]
+          },
+          "max_adverse_move_pct": {
+            "type": "Float",
+            "constraints": ["NULL"]
+          },
+          "max_favorable_move_pct": {
+            "type": "Float",
+            "constraints": ["NULL"]
+          },
+          "market_regime": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "HIGH_VOLATILITY | TRENDING_UP | TRENDING_DOWN | RANGING"
+          },
+          "evaluated_at": {
+            "type": "DateTime",
+            "constraints": ["NULL"]
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_agent_decision_evaluations",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "uk_agent_decision_evaluations_decision_horizon",
+            "type": "UNIQUE",
+            "columns": ["decision_id", "horizon_minutes"]
+          },
+          {
+            "name": "idx_agent_decision_evaluations_user_decision",
+            "type": "INDEX",
+            "columns": ["user_id", "decision_id"]
+          },
+          {
+            "name": "idx_agent_decision_evaluations_status_created",
+            "type": "INDEX",
+            "columns": ["status", "created_at"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-17",
+            "migration": "20260817130000_add_not_evaluable_and_evaluation_unique",
+            "change": "tabla pre-existente registrada en el arnés; se agrega el valor NOT_EVALUABLE al enum AgentOutcomeStatus y el UNIQUE (decision_id, horizon_minutes) que hace idempotente el cableado de scheduleEvaluation. La tabla esta vacia en todos los entornos: el unique no requiere deduplicacion"
+          }
+        ]
+      },
+      "trading_configs": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "updated",
+        "created_in_cycle": 2,
+        "updated_in_cycle": 3,
+        "migration_file": "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "name": {
+            "type": "String @default(\"\")",
+            "constraints": ["NOT NULL"]
+          },
+          "asset": {
+            "type": "Asset",
+            "constraints": ["NOT NULL"],
+            "notes": "BTC | ETH"
+          },
+          "pair": {
+            "type": "QuoteCurrency",
+            "constraints": ["NOT NULL"],
+            "notes": "USDT | USDC"
+          },
+          "buy_threshold": {
+            "type": "Float @default(70)",
+            "constraints": ["NOT NULL"]
+          },
+          "sell_threshold": {
+            "type": "Float @default(70)",
+            "constraints": ["NOT NULL"]
+          },
+          "stop_loss_pct": {
+            "type": "Float @default(0.03)",
+            "constraints": ["NOT NULL"]
+          },
+          "take_profit_pct": {
+            "type": "Float @default(0.05)",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-02: queda desactivado mientras trailing_stop_enabled sea true (el trailing lo reemplaza)"
+          },
+          "min_profit_pct": {
+            "type": "Float @default(0.003)",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-02: deja de ser veto absoluto del SELL y pasa a ser el piso del camino de toma de ganancia"
+          },
+          "max_trade_pct": {
+            "type": "Float @default(0.05)",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-02: pasa a ser TECHO del sizing, nunca superable"
+          },
+          "max_concurrent_positions": {
+            "type": "Int @default(2)",
+            "constraints": ["NOT NULL"]
+          },
+          "min_interval_minutes": {
+            "type": "Int @default(5)",
+            "constraints": ["NOT NULL"]
+          },
+          "interval_mode": {
+            "type": "IntervalMode @default(AGENT)",
+            "constraints": ["NOT NULL"]
+          },
+          "order_price_offset_pct": {
+            "type": "Float @default(0)",
+            "constraints": ["NOT NULL"]
+          },
+          "mode": {
+            "type": "TradingMode @default(SANDBOX)",
+            "constraints": ["NOT NULL"]
+          },
+          "is_running": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-02: el gate de riesgo agregado puede ponerlo en false para todas las configs del usuario al cruzar el drawdown"
+          },
+          "risk_profile": {
+            "type": "RiskProfile @default(MODERATE)",
+            "constraints": ["NOT NULL"]
+          },
+          "loss_cut_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: interruptor del corte de perdida por senal. false = veto actual intacto"
+          },
+          "loss_cut_confidence_threshold": {
+            "type": "Float @default(0.85)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: confianza minima (0..1) del agente para vender en perdida"
+          },
+          "loss_cut_min_loss_pct": {
+            "type": "Float @default(0.005)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: perdida minima para considerar el corte; evita churn por ruido"
+          },
+          "loss_cut_min_edge_ratio": {
+            "type": "Float @default(2)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: multiplo de la friccion de salida (simulateTrade con stopLossPct 0) que la perdida evitada debe superar"
+          },
+          "smart_sizing_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: habilita la modulacion del tamano por AEGIS/FORGE. false = balance x maxTradePct fijo"
+          },
+          "reduce_size_factor": {
+            "type": "Float @default(0.5)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: factor aplicado cuando el verdict de AEGIS es REDUCE"
+          },
+          "native_protection_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: coloca OCO real al abrir posicion. Solo LIVE/TESTNET; se ignora en SANDBOX"
+          },
+          "close_on_protection_failure": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: opt-in agresivo, cierra a mercado si la proteccion no se pudo colocar tras 3 reintentos"
+          },
+          "stop_limit_offset_pct": {
+            "type": "Float @default(0.002)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: distancia entre stopPrice y el price limite de la pierna STOP_LOSS_LIMIT"
+          },
+          "trailing_stop_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02"
+          },
+          "trailing_stop_pct": {
+            "type": "Float @default(0.02)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: distancia del stop bajo el maximo visto"
+          },
+          "trailing_activation_pct": {
+            "type": "Float @default(0.01)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: ganancia no realizada minima para empezar a trailear"
+          },
+          "partial_tp_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02"
+          },
+          "partial_tp_trigger_pct": {
+            "type": "Float @default(0.02)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02"
+          },
+          "partial_tp_sell_pct": {
+            "type": "Float @default(0.5)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: fraccion de la posicion vendida en el parcial"
+          },
+          "move_stop_to_breakeven_after_partial": {
+            "type": "Boolean @default(true)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: solo se evalua dentro de la rama partial_tp_enabled, que nace apagada"
+          },
+          "max_position_hold_minutes": {
+            "type": "Int",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: null = salida por tiempo apagada"
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          },
+          "updated_at": {
+            "type": "DateTime @updatedAt",
+            "constraints": ["NOT NULL"]
+          },
+          "deterministic_gate_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-03: interruptor del gate determinista pre-LLM. Nace apagado (RN-04): una instalacion existente que despliegue este ciclo sin tocar su config llama al LLM en todo ciclo, igual que antes. Es per-config porque la activacion es explicita del dueno del bot"
+          },
+          "gate_price_change_pct": {
+            "type": "Float @default(0.005)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-03: umbral de cambio significativo de precio de la condicion 3 del gate (default 0.5%). Unico umbral del gate que es per-config; los otros cuatro (banda RSI 40-60, delta RSI 5, edad de snapshot 5 min, edad de decision previa 90 min) son constantes de libs/analysis. DTO: @Min(0.0005) @Max(0.05) en Create y Update o el request entero responde 400"
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_trading_configs",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 2,
+            "date": "2026-08-17",
+            "migration": "20260817150000_add_trading_config_risk_tools",
+            "change": "tabla pre-existente registrada en el arnes; se agregan 15 columnas (politica de corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo). Todos los defaults reproducen el comportamiento actual: ninguna instalacion existente cambia de conducta sin configurar"
+          },
+          {
+            "cycle": 3,
+            "date": "2026-08-17",
+            "migration": "20260817160000_add_cost_gate_fields",
+            "change": "cycle-03: 2 columnas para el gate determinista pre-LLM (deterministic_gate_enabled, gate_price_change_pct). El interruptor nace apagado; el default de umbral reproduce el comportamiento actual porque sin el interruptor nunca se evalua"
+          }
+        ]
+      },
+      "positions": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "migrated",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817151000_add_position_protection_state/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "config_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "FK trading_configs(id) ON DELETE CASCADE"
+            ]
+          },
+          "asset": {
+            "type": "Asset",
+            "constraints": ["NOT NULL"]
+          },
+          "pair": {
+            "type": "QuoteCurrency",
+            "constraints": ["NOT NULL"]
+          },
+          "mode": {
+            "type": "TradingMode",
+            "constraints": ["NOT NULL"]
+          },
+          "entry_price": {
+            "type": "Float",
+            "constraints": ["NOT NULL"]
+          },
+          "quantity": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-02: pasa a significar cantidad ABIERTA remanente; una venta parcial la decrementa"
+          },
+          "entry_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          },
+          "exit_price": {
+            "type": "Float",
+            "constraints": ["NULL"]
+          },
+          "exit_at": {
+            "type": "DateTime",
+            "constraints": ["NULL"]
+          },
+          "status": {
+            "type": "PositionStatus @default(OPEN)",
+            "constraints": ["NOT NULL"]
+          },
+          "pnl": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "cycle-02: al cierre total = realized_pnl (parciales) + pnl del remanente"
+          },
+          "fees": {
+            "type": "Float @default(0)",
+            "constraints": ["NOT NULL"]
+          },
+          "protection_status": {
+            "type": "PositionProtectionStatus @default(NONE)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: enum nuevo NONE|PENDING|PROTECTED|UNPROTECTED|RELEASED. UNPROTECTED es el estado explicito del caso critico (compra ejecutada + proteccion rechazada)"
+          },
+          "protection_order_list_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: orderListId de la OCO de Binance"
+          },
+          "protection_stop_order_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: pierna STOP_LOSS_LIMIT"
+          },
+          "protection_limit_order_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: pierna LIMIT_MAKER"
+          },
+          "protection_placed_at": {
+            "type": "DateTime",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02"
+          },
+          "protection_failure_count": {
+            "type": "Int @default(0)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: numero de intento; entra en listClientOrderId prot-{positionId}-{attempt}"
+          },
+          "protection_last_error": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: code:msg de Binance recortado a 180 chars"
+          },
+          "stop_price": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: stop efectivo vigente; lo mueven el trailing y el breakeven post-parcial, y nunca retrocede"
+          },
+          "take_profit_price": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02"
+          },
+          "high_water_price": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: maximo visto desde la entrada (trailing)"
+          },
+          "trailing_active": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02"
+          },
+          "initial_quantity": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: cantidad original. null en filas historicas; los calculos leen initial_quantity ?? quantity"
+          },
+          "partial_exit_count": {
+            "type": "Int @default(0)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: escalones de TP parcial ya ejecutados"
+          },
+          "realized_pnl": {
+            "type": "Float @default(0)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-02: P&L acumulado de salidas parciales"
+          },
+          "exit_reason": {
+            "type": "PositionExitReason",
+            "constraints": ["NULL"],
+            "notes": "NUEVO cycle-02: enum nuevo con 11 valores; auditoria del cierre (LOSS_CUT, TRAILING_STOP, TIME_EXIT, EXCHANGE_STOP, PROTECTION_FAILURE, ...)"
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_positions",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "idx_positions_user_status",
+            "type": "INDEX",
+            "columns": ["user_id", "status"]
+          },
+          {
+            "name": "idx_positions_user_asset_status",
+            "type": "INDEX",
+            "columns": ["user_id", "asset", "status"]
+          },
+          {
+            "name": "idx_positions_user_status_protection",
+            "type": "INDEX",
+            "columns": ["user_id", "status", "protection_status"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 2,
+            "date": "2026-08-17",
+            "migration": "20260817151000_add_position_protection_state",
+            "change": "tabla pre-existente registrada en el arnes; 15 columnas nuevas + 2 enums (PositionProtectionStatus, PositionExitReason) que persisten el estado de la proteccion nativa y la maquina de estados de trailing / TP parcial / salida por tiempo, evaluada en checkOpenPositions cada ciclo"
+          }
+        ]
+      },
+      "trades": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "migrated",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817152000_add_trade_decision_fk/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "position_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK positions(id) ON DELETE CASCADE"]
+          },
+          "type": {
+            "type": "TradeType",
+            "constraints": ["NOT NULL"]
+          },
+          "price": {
+            "type": "Float",
+            "constraints": ["NOT NULL"]
+          },
+          "quantity": {
+            "type": "Float",
+            "constraints": ["NOT NULL"]
+          },
+          "fee": {
+            "type": "Float",
+            "constraints": ["NOT NULL"]
+          },
+          "executed_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          },
+          "mode": {
+            "type": "TradingMode",
+            "constraints": ["NOT NULL"]
+          },
+          "binance_order_id": {
+            "type": "String",
+            "constraints": ["NULL"]
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": [
+              "NULL",
+              "FK agent_decisions(id) ON DELETE SET NULL"
+            ],
+            "notes": "NUEVO cycle-02: AgentDecision que justifico la operacion. Nullable y sin backfill de filas historicas (CA-027). SET NULL y no CASCADE: borrar decisiones jamas puede borrar el historial de operaciones. Queda null en los caminos sin decision (reconciliacion, cierre manual)"
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_trades",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "idx_trades_user_executed",
+            "type": "INDEX",
+            "columns": ["user_id", "executed_at"]
+          },
+          {
+            "name": "idx_trades_user_mode",
+            "type": "INDEX",
+            "columns": ["user_id", "mode"]
+          },
+          {
+            "name": "idx_trades_decision",
+            "type": "INDEX",
+            "columns": ["decision_id"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 2,
+            "date": "2026-08-17",
+            "migration": "20260817152000_add_trade_decision_fk",
+            "change": "tabla pre-existente registrada en el arnes; FK nullable decision_id -> agent_decisions(id) ON DELETE SET NULL, con indice. La migracion no contiene ningun UPDATE de backfill"
+          }
+        ]
+      },
+      "user_risk_policies": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "migrated",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817153000_add_user_risk_policies/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "UNIQUE",
+              "FK users(id) ON DELETE CASCADE"
+            ],
+            "notes": "1:1 con User"
+          },
+          "enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "interruptor maestro; sin fila o en false el gate resuelve allowed sin consultar nada mas"
+          },
+          "max_asset_exposure_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "techo de exposicion nocional por activo sumada entre TODAS las TradingConfig del usuario"
+          },
+          "max_asset_exposure_pct": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "idem en fraccion del equity (wallets + exposicion); se evaluan ambos y gana el mas estricto"
+          },
+          "max_daily_loss_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "perdida realizada maxima del dia calendario UTC en toda la cuenta"
+          },
+          "max_drawdown_pct": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "drawdown del dia sobre el equity de inicio de dia que dispara la pausa"
+          },
+          "pause_agents_on_drawdown": {
+            "type": "Boolean @default(true)",
+            "constraints": ["NOT NULL"],
+            "notes": "al cruzar el drawdown pone is_running=false en todas las configs del usuario. Solo se lee si enabled=true y max_drawdown_pct != null"
+          },
+          "paused_at": {
+            "type": "DateTime",
+            "constraints": ["NULL"]
+          },
+          "paused_reason": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "DRAWDOWN | DAILY_LOSS"
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          },
+          "updated_at": {
+            "type": "DateTime @updatedAt",
+            "constraints": ["NOT NULL"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_user_risk_policies",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "uk_user_risk_policies_user",
+            "type": "UNIQUE",
+            "columns": ["user_id"]
+          }
+        ],
+        "changelog": []
+      },
+      "agent_tool_invocations": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "deprecated",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817154000_drop_orphan_agent_tables/migration.sql",
+        "columns": {},
+        "indexes": [],
+        "changelog": [
+          {
+            "cycle": 2,
+            "date": "2026-08-17",
+            "migration": "20260817154000_drop_orphan_agent_tables",
+            "change": "tabla ELIMINADA en cycle-02 junto con el enum AgentToolName. Era la telemetria del sistema de tools podado en el cycle-01: sin escritor ni lector desde entonces. Reverse SQL completo en architect.md cycle-02 section 11.3"
+          }
+        ]
+      },
+      "agent_model_policies": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "deprecated",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260817154000_drop_orphan_agent_tables/migration.sql",
+        "columns": {},
+        "indexes": [],
+        "changelog": [
+          {
+            "cycle": 2,
+            "date": "2026-08-17",
+            "migration": "20260817154000_drop_orphan_agent_tables",
+            "change": "tabla ELIMINADA en cycle-02. Su unico consumidor (model-router.service.ts) se borro en el cycle-01; la resolucion de modelo pasa entera por AgentConfigResolverService (puerta unica). Reverse SQL completo en architect.md cycle-02 section 11.3"
+          }
+        ]
+      },
+      "agent_decisions": {
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "status": "updated",
+        "created_in_cycle": 3,
+        "updated_in_cycle": 3,
+        "migration_file": "apps/api/prisma/migrations/20260817160000_add_cost_gate_fields/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "config_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "config de trading que origino la decision; null en decisiones historicas previas al campo"
+          },
+          "config_name": {
+            "type": "String",
+            "constraints": ["NULL"]
+          },
+          "mode": {
+            "type": "TradingMode",
+            "constraints": ["NULL"],
+            "notes": "SANDBOX | TESTNET | LIVE"
+          },
+          "asset": {
+            "type": "Asset",
+            "constraints": ["NOT NULL"],
+            "notes": "BTC | ETH"
+          },
+          "pair": {
+            "type": "QuoteCurrency",
+            "constraints": ["NOT NULL"],
+            "notes": "USDT | USDC"
+          },
+          "decision": {
+            "type": "Decision",
+            "constraints": ["NOT NULL"],
+            "notes": "BUY | SELL | HOLD"
+          },
+          "confidence": {
+            "type": "Float",
+            "constraints": ["NOT NULL"]
+          },
+          "reasoning": {
+            "type": "String",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-03: en un HOLD del gate determinista enumera las cinco condiciones con sus valores reales y termina en 'Sin llamada a LLM.' (RN-03)"
+          },
+          "indicators": {
+            "type": "Json",
+            "constraints": ["NOT NULL"],
+            "notes": "IndicatorSnapshot del ciclo; se persiste igual en un HOLD del gate que en una decision LLM"
+          },
+          "news_headlines": {
+            "type": "Json",
+            "constraints": ["NOT NULL"]
+          },
+          "wait_minutes": {
+            "type": "Int",
+            "constraints": ["NOT NULL"],
+            "notes": "cycle-03: un HOLD del gate usa siempre config.min_interval_minutes; el gate nunca alarga la cadencia porque eso retrasaria la deteccion de una senal real"
+          },
+          "metadata": {
+            "type": "Json",
+            "constraints": ["NULL"],
+            "notes": "cycle-03 (aditivo, sin migracion): metadata.gate = { applied, conditions, snapshot } donde snapshot es lo que el ciclo siguiente lee como estado previo del gate; se escribe TAMBIEN en las decisiones resueltas por LLM. metadata.cost = { llmCallCount, pricedCallCount, unpricedCallCount, complete }"
+          },
+          "llm_cost_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "cycle-03: deja de estar sin escritor. 0 = HOLD del gate (costo cero real). > 0 = costo real sumado por LlmCostAccumulator con la tarifa vigente al momento de la llamada. null = ninguna llamada del ciclo fue tarifable (cascada de ModelPricingService agotada) — desconocido, nunca cero encubierto (CE-07)"
+          },
+          "llm_call_count": {
+            "type": "Int @default(0)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO cycle-03: llamadas LLM reales del ciclo. 0 = decision del gate determinista. Es columna y no campo de metadata porque llm_cost_usd = 0 no distingue al gate de un modelo gratuito, y porque CA-058 exige agregarlo en SQL"
+          },
+          "data_cost_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "pre-existente, sin escritor en el flujo real"
+          },
+          "expected_net_value_usd": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "pre-existente, sin escritor en el flujo real"
+          },
+          "model_routing_reason": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "pre-existente, sin escritor tras la poda del model-router en cycle-01"
+          },
+          "created_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_agent_decisions",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "idx_agent_decisions_user_created",
+            "type": "INDEX",
+            "columns": ["user_id", "created_at"]
+          },
+          {
+            "name": "idx_agent_decisions_created",
+            "type": "INDEX",
+            "columns": ["created_at"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 3,
+            "date": "2026-08-17",
+            "migration": "20260817160000_add_cost_gate_fields",
+            "change": "tabla pre-existente registrada en el arnes; columna nueva llm_call_count + indice por created_at para el agregado de plataforma sin user_id (EP-010). llm_cost_usd pasa a tener escritor real por primera vez y metadata absorbe el snapshot del gate sin migracion"
+          }
+        ]
+      }
+    }
   }
 }

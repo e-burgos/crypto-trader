@@ -1,4 +1,9 @@
-import { BinanceRestClient } from './binance-rest.client';
+import {
+  BinanceRestClient,
+  OrderValidationError,
+  getBinanceErrorCode,
+  isRetryableBinanceErrorCode,
+} from './binance-rest.client';
 import axios from 'axios';
 
 vi.mock('axios', () => {
@@ -89,6 +94,35 @@ describe('BinanceRestClient', () => {
         'Network error',
       );
     });
+
+    it('should include startTime/endTime when range is passed', async () => {
+      getMockClient().get.mockResolvedValue({ data: [] });
+
+      await client.getKlines('BTCUSDT', '1m', 3, {
+        startTime: 1000,
+        endTime: 2000,
+      });
+
+      expect(getMockClient().get).toHaveBeenCalledWith('/api/v3/klines', {
+        params: {
+          symbol: 'BTCUSDT',
+          interval: '1m',
+          limit: 3,
+          startTime: 1000,
+          endTime: 2000,
+        },
+      });
+    });
+
+    it('should omit startTime/endTime when range is not passed', async () => {
+      getMockClient().get.mockResolvedValue({ data: [] });
+
+      await client.getKlines('BTCUSDT', '1m', 3);
+
+      expect(getMockClient().get).toHaveBeenCalledWith('/api/v3/klines', {
+        params: { symbol: 'BTCUSDT', interval: '1m', limit: 3 },
+      });
+    });
   });
 
   describe('getTickerPrice', () => {
@@ -141,6 +175,712 @@ describe('BinanceRestClient', () => {
       await expect(noKeyClient.getBalances()).rejects.toThrow(
         'API key and secret are required',
       );
+    });
+  });
+
+  describe('endpoint weights', () => {
+    async function weightFor(url: string, method: string): Promise<number> {
+      new BinanceRestClient();
+      const interceptor =
+        getMockClient().interceptors.request.use.mock.calls.at(-1)[0];
+      const cfg = await interceptor({ url, method });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (cfg as any).__weight;
+    }
+
+    const cases: Array<[string, string, number]> = [
+      ['/api/v3/account', 'GET', 20],
+      ['/api/v3/exchangeInfo', 'GET', 20],
+      ['/api/v3/klines', 'GET', 2],
+      ['/api/v3/ticker/24hr', 'GET', 2],
+      ['/api/v3/ticker/price', 'GET', 2],
+      ['/api/v3/openOrders', 'GET', 6],
+      ['/api/v3/orderList/oco', 'POST', 1],
+      ['/api/v3/orderList', 'GET', 4],
+      ['/api/v3/orderList', 'DELETE', 1],
+      ['/api/v3/order', 'GET', 4],
+      ['/api/v3/order', 'POST', 1],
+      ['/api/v3/order', 'DELETE', 1],
+    ];
+
+    for (const [url, method, expected] of cases) {
+      it(`assigns weight ${expected} to ${method} ${url}`, async () => {
+        await expect(weightFor(url, method)).resolves.toBe(expected);
+      });
+    }
+  });
+});
+
+describe('BinanceRestClient — native orders (cycle-02)', () => {
+  let client: BinanceRestClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    client = new BinanceRestClient({
+      apiKey: 'test-key',
+      apiSecret: 'test-secret',
+    });
+  });
+
+  function exchangeInfoFixture(
+    symbol: string,
+    opts: {
+      lotSize?: { minQty: string; maxQty: string; stepSize: string };
+      priceFilter?: { minPrice: string; maxPrice: string; tickSize: string };
+      notional?: {
+        minNotional: string;
+        filterType?: 'NOTIONAL' | 'MIN_NOTIONAL';
+        applyToMarket?: string;
+      };
+      omitFilters?: boolean;
+    } = {},
+  ) {
+    const filters: Array<Record<string, string>> = [];
+    if (!opts.omitFilters) {
+      filters.push({
+        filterType: 'LOT_SIZE',
+        minQty: opts.lotSize?.minQty ?? '0.00001000',
+        maxQty: opts.lotSize?.maxQty ?? '9000.00000000',
+        stepSize: opts.lotSize?.stepSize ?? '0.00001000',
+      });
+      filters.push({
+        filterType: 'PRICE_FILTER',
+        minPrice: opts.priceFilter?.minPrice ?? '0.01000000',
+        maxPrice: opts.priceFilter?.maxPrice ?? '1000000.00000000',
+        tickSize: opts.priceFilter?.tickSize ?? '0.01000000',
+      });
+      filters.push({
+        filterType: opts.notional?.filterType ?? 'NOTIONAL',
+        minNotional: opts.notional?.minNotional ?? '10.00000000',
+        applyToMarket: opts.notional?.applyToMarket ?? 'true',
+      });
+    }
+    return { symbols: [{ symbol, filters }] };
+  }
+
+  function mockExchangeInfo(
+    symbol: string,
+    opts?: Parameters<typeof exchangeInfoFixture>[1],
+  ) {
+    getMockClient().get.mockResolvedValueOnce({
+      data: exchangeInfoFixture(symbol, opts),
+    });
+  }
+
+  describe('getSymbolFilters', () => {
+    it('parses LOT_SIZE, PRICE_FILTER and NOTIONAL', async () => {
+      mockExchangeInfo('GSFUSDT1', {
+        lotSize: { minQty: '0.001', maxQty: '900', stepSize: '0.001' },
+        priceFilter: { minPrice: '1', maxPrice: '999999', tickSize: '0.1' },
+        notional: { minNotional: '15', filterType: 'NOTIONAL' },
+      });
+
+      const filters = await client.getSymbolFilters('GSFUSDT1');
+
+      expect(filters).toEqual({
+        lotSize: { minQty: 0.001, maxQty: 900, stepSize: 0.001 },
+        price: { minPrice: 1, maxPrice: 999999, tickSize: 0.1 },
+        notional: { minNotional: 15, applyToMarket: true },
+      });
+    });
+
+    it('accepts the MIN_NOTIONAL filter name', async () => {
+      mockExchangeInfo('GSFUSDT2', {
+        notional: { minNotional: '5', filterType: 'MIN_NOTIONAL' },
+      });
+
+      const filters = await client.getSymbolFilters('GSFUSDT2');
+      expect(filters.notional.minNotional).toBe(5);
+    });
+
+    it('caches filters across calls for the same symbol', async () => {
+      mockExchangeInfo('GSFUSDT3');
+
+      await client.getSymbolFilters('GSFUSDT3');
+      await client.getSymbolFilters('GSFUSDT3');
+
+      expect(getMockClient().get).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to permissive defaults when the symbol has no filters', async () => {
+      mockExchangeInfo('GSFUSDT4', { omitFilters: true });
+
+      const filters = await client.getSymbolFilters('GSFUSDT4');
+
+      expect(filters).toEqual({
+        lotSize: { minQty: 0, maxQty: 9e9, stepSize: 1e-8 },
+        price: { minPrice: 0, maxPrice: 0, tickSize: 1e-8 },
+        notional: { minNotional: 0, applyToMarket: false },
+      });
+    });
+  });
+
+  describe('placeLimitOrder', () => {
+    it('sends the exact LIMIT payload and parses the response', async () => {
+      mockExchangeInfo('LIMUSDT1');
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 111,
+          symbol: 'LIMUSDT1',
+          side: 'BUY',
+          type: 'LIMIT',
+          status: 'NEW',
+          price: '65000.00',
+          origQty: '0.10000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      const order = await client.placeLimitOrder(
+        'LIMUSDT1',
+        'BUY',
+        0.1,
+        65000,
+      );
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('POST');
+      expect(call.url).toBe('/api/v3/order');
+      expect(call.params).toEqual(
+        expect.objectContaining({
+          symbol: 'LIMUSDT1',
+          side: 'BUY',
+          type: 'LIMIT',
+          timeInForce: 'GTC',
+          quantity: '0.10000',
+          price: '65000.00',
+        }),
+      );
+      expect(call.params.newClientOrderId).toBeUndefined();
+      expect(call.params.signature).toMatch(/^[0-9a-f]{64}$/);
+
+      expect(order.orderId).toBe('111');
+      expect(order.price).toBe(65000);
+      expect(order.quantity).toBe(0.1);
+    });
+
+    it('includes newClientOrderId and a custom timeInForce when provided', async () => {
+      mockExchangeInfo('LIMUSDT6');
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 112,
+          symbol: 'LIMUSDT6',
+          side: 'SELL',
+          status: 'NEW',
+          price: '65000.00',
+          origQty: '0.10000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeLimitOrder('LIMUSDT6', 'SELL', 0.1, 65000, {
+        timeInForce: 'IOC',
+        clientOrderId: 'my-client-id',
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.timeInForce).toBe('IOC');
+      expect(call.params.newClientOrderId).toBe('my-client-id');
+    });
+
+    it('floors quantity and price to the symbol step/tick before sending', async () => {
+      mockExchangeInfo('LIMUSDT5', {
+        lotSize: { minQty: '0.001', maxQty: '900', stepSize: '0.001' },
+        priceFilter: { minPrice: '0.1', maxPrice: '999999', tickSize: '0.1' },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 113,
+          symbol: 'LIMUSDT5',
+          side: 'BUY',
+          status: 'NEW',
+          price: '99.8',
+          origQty: '1.234',
+          executedQty: '0.000',
+          cummulativeQuoteQty: '0.000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeLimitOrder('LIMUSDT5', 'BUY', 1.23456, 99.87);
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.quantity).toBe('1.234');
+      expect(call.params.price).toBe('99.8');
+    });
+
+    it('rejects locally on LOT_SIZE without calling the exchange', async () => {
+      mockExchangeInfo('LIMUSDT2', {
+        lotSize: { minQty: '1', maxQty: '900', stepSize: '0.001' },
+      });
+
+      await expect(
+        client.placeLimitOrder('LIMUSDT2', 'BUY', 0.5, 65000),
+      ).rejects.toMatchObject({ code: 'LOT_SIZE' });
+      await expect(
+        client.placeLimitOrder('LIMUSDT2', 'BUY', 0.5, 65000),
+      ).rejects.toBeInstanceOf(OrderValidationError);
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on PRICE_FILTER without calling the exchange', async () => {
+      mockExchangeInfo('LIMUSDT3', {
+        priceFilter: { minPrice: '100', maxPrice: '999999', tickSize: '0.1' },
+      });
+
+      await expect(
+        client.placeLimitOrder('LIMUSDT3', 'BUY', 1, 50),
+      ).rejects.toMatchObject({ code: 'PRICE_FILTER' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on MIN_NOTIONAL without calling the exchange', async () => {
+      mockExchangeInfo('LIMUSDT4', {
+        notional: { minNotional: '1000000', filterType: 'NOTIONAL' },
+      });
+
+      await expect(
+        client.placeLimitOrder('LIMUSDT4', 'BUY', 1, 100),
+      ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('placeStopLossLimitOrder', () => {
+    it('sends the exact STOP_LOSS_LIMIT payload', async () => {
+      mockExchangeInfo('SLLUSDT1');
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 200,
+          symbol: 'SLLUSDT1',
+          side: 'SELL',
+          status: 'NEW',
+          price: '63000.00',
+          origQty: '0.20000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeStopLossLimitOrder(
+        'SLLUSDT1',
+        'SELL',
+        0.2,
+        63100,
+        63000,
+      );
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.url).toBe('/api/v3/order');
+      expect(call.params).toEqual(
+        expect.objectContaining({
+          symbol: 'SLLUSDT1',
+          side: 'SELL',
+          type: 'STOP_LOSS_LIMIT',
+          timeInForce: 'GTC',
+          quantity: '0.20000',
+          price: '63000.00',
+          stopPrice: '63100.00',
+        }),
+      );
+    });
+
+    it('rejects locally on MIN_NOTIONAL evaluated on the limit price', async () => {
+      mockExchangeInfo('SLLUSDT2', {
+        notional: { minNotional: '1000000', filterType: 'NOTIONAL' },
+      });
+
+      await expect(
+        client.placeStopLossLimitOrder('SLLUSDT2', 'SELL', 1, 100, 99),
+      ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('placeOcoSellOrder', () => {
+    it('sends the exact OCO payload and parses both legs from orderReports', async () => {
+      mockExchangeInfo('OCOUSDT1', {
+        priceFilter: { minPrice: '1', maxPrice: '999999', tickSize: '0.01' },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderListId: 555,
+          listClientOrderId: 'list-abc',
+          symbol: 'OCOUSDT1',
+          transactionTime: 1700000000000,
+          orders: [
+            { symbol: 'OCOUSDT1', orderId: 601, clientOrderId: 'c1' },
+            { symbol: 'OCOUSDT1', orderId: 602, clientOrderId: 'c2' },
+          ],
+          orderReports: [
+            {
+              symbol: 'OCOUSDT1',
+              orderId: 601,
+              clientOrderId: 'c1',
+              type: 'STOP_LOSS_LIMIT',
+            },
+            {
+              symbol: 'OCOUSDT1',
+              orderId: 602,
+              clientOrderId: 'c2',
+              type: 'LIMIT_MAKER',
+            },
+          ],
+        },
+      });
+
+      const result = await client.placeOcoSellOrder('OCOUSDT1', {
+        quantity: 0.5,
+        takeProfitPrice: 71000.123,
+        stopPrice: 69000.007,
+        stopLimitPrice: 68990.004,
+        referencePrice: 70000,
+        listClientOrderId: 'list-abc',
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('POST');
+      expect(call.url).toBe('/api/v3/orderList/oco');
+      expect(call.params).toEqual(
+        expect.objectContaining({
+          symbol: 'OCOUSDT1',
+          side: 'SELL',
+          quantity: '0.50000',
+          aboveType: 'LIMIT_MAKER',
+          abovePrice: '71000.13',
+          belowType: 'STOP_LOSS_LIMIT',
+          belowStopPrice: '69000.00',
+          belowPrice: '68990.00',
+          belowTimeInForce: 'GTC',
+          newOrderRespType: 'FULL',
+          listClientOrderId: 'list-abc',
+        }),
+      );
+
+      expect(result).toEqual({
+        orderListId: '555',
+        listClientOrderId: 'list-abc',
+        stopOrderId: '601',
+        limitOrderId: '602',
+        symbol: 'OCOUSDT1',
+        quantity: 0.5,
+        placedAt: new Date(1700000000000),
+      });
+    });
+
+    it('succeeds without a referencePrice (cross-market check skipped)', async () => {
+      mockExchangeInfo('OCOUSDT4');
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderListId: 556,
+          listClientOrderId: 'list-def',
+          symbol: 'OCOUSDT4',
+          transactionTime: 1700000000000,
+          orders: [
+            { symbol: 'OCOUSDT4', orderId: 611, clientOrderId: 'c1' },
+            { symbol: 'OCOUSDT4', orderId: 612, clientOrderId: 'c2' },
+          ],
+        },
+      });
+
+      await expect(
+        client.placeOcoSellOrder('OCOUSDT4', {
+          quantity: 0.1,
+          takeProfitPrice: 71000,
+          stopPrice: 69000,
+          stopLimitPrice: 68990,
+        }),
+      ).resolves.toMatchObject({ orderListId: '556' });
+    });
+
+    it('rejects PRICE_CROSSES_MARKET when the reference price does not sit between the legs', async () => {
+      mockExchangeInfo('OCOUSDT2');
+
+      await expect(
+        client.placeOcoSellOrder('OCOUSDT2', {
+          quantity: 0.1,
+          takeProfitPrice: 71000,
+          stopPrice: 69000,
+          stopLimitPrice: 68990,
+          referencePrice: 72000,
+        }),
+      ).rejects.toMatchObject({ code: 'PRICE_CROSSES_MARKET' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects MIN_NOTIONAL when the stop leg is below the minimum', async () => {
+      mockExchangeInfo('OCOUSDT3', {
+        notional: { minNotional: '75', filterType: 'NOTIONAL' },
+      });
+
+      await expect(
+        client.placeOcoSellOrder('OCOUSDT3', {
+          quantity: 0.001,
+          takeProfitPrice: 80000,
+          stopPrice: 70000,
+          stopLimitPrice: 69999,
+        }),
+      ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getOrderStatus', () => {
+    it('reports FILLED with the executed price/quantity and leg', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 700,
+          symbol: 'STATUSUSDT',
+          status: 'FILLED',
+          type: 'STOP_LOSS_LIMIT',
+          price: '69000.00',
+          executedQty: '0.5',
+          cummulativeQuoteQty: '34500.25',
+        },
+      });
+
+      const status = await client.getOrderStatus('STATUSUSDT', '700');
+
+      expect(status).toEqual({
+        state: 'FILLED',
+        filledLeg: 'STOP',
+        executedPrice: 69000.5,
+        executedQuantity: 0.5,
+        orderId: '700',
+      });
+    });
+
+    it('reports ACTIVE for NEW orders', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 701,
+          symbol: 'STATUSUSDT',
+          status: 'NEW',
+          executedQty: '0',
+          cummulativeQuoteQty: '0',
+        },
+      });
+
+      const status = await client.getOrderStatus('STATUSUSDT', '701');
+      expect(status.state).toBe('ACTIVE');
+      expect(status.executedPrice).toBeNull();
+    });
+
+    it('reports CANCELLED for CANCELED orders', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: { orderId: 702, symbol: 'STATUSUSDT', status: 'CANCELED' },
+      });
+
+      const status = await client.getOrderStatus('STATUSUSDT', '702');
+      expect(status.state).toBe('CANCELLED');
+    });
+
+    it('reports MISSING when Binance returns -2013', async () => {
+      getMockClient().request.mockRejectedValueOnce({
+        response: { data: { code: -2013, msg: 'Order does not exist.' } },
+      });
+
+      const status = await client.getOrderStatus('STATUSUSDT', '703');
+      expect(status).toEqual({
+        state: 'MISSING',
+        filledLeg: null,
+        executedPrice: null,
+        executedQuantity: null,
+        orderId: null,
+      });
+    });
+
+    it('re-throws non-missing errors', async () => {
+      const error = { response: { data: { code: -1013, msg: 'Filter' } } };
+      getMockClient().request.mockRejectedValueOnce(error);
+
+      await expect(
+        client.getOrderStatus('STATUSUSDT', '704'),
+      ).rejects.toBe(error);
+    });
+  });
+
+  describe('getOcoStatus', () => {
+    it('reports ACTIVE for an EXECUTING list without querying individual legs', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: { orderListId: 900, listOrderStatus: 'EXECUTING', orders: [] },
+      });
+
+      const status = await client.getOcoStatus('OCOSTATUS', '900');
+      expect(status.state).toBe('ACTIVE');
+      expect(getMockClient().request).toHaveBeenCalledTimes(1);
+    });
+
+    it('resolves the filled leg when the first order is FILLED', async () => {
+      getMockClient()
+        .request.mockResolvedValueOnce({
+          data: {
+            orderListId: 901,
+            listOrderStatus: 'ALL_DONE',
+            orders: [
+              { symbol: 'OCOSTATUS', orderId: 911, clientOrderId: 'a' },
+              { symbol: 'OCOSTATUS', orderId: 912, clientOrderId: 'b' },
+            ],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 911,
+            symbol: 'OCOSTATUS',
+            status: 'FILLED',
+            type: 'STOP_LOSS_LIMIT',
+            executedQty: '1',
+            cummulativeQuoteQty: '69000',
+          },
+        });
+
+      const status = await client.getOcoStatus('OCOSTATUS', '901');
+
+      expect(status.state).toBe('FILLED');
+      expect(status.filledLeg).toBe('STOP');
+      expect(getMockClient().request).toHaveBeenCalledTimes(2);
+    });
+
+    it('falls through to the second leg when the first is not filled', async () => {
+      getMockClient()
+        .request.mockResolvedValueOnce({
+          data: {
+            orderListId: 902,
+            listOrderStatus: 'ALL_DONE',
+            orders: [
+              { symbol: 'OCOSTATUS', orderId: 921, clientOrderId: 'a' },
+              { symbol: 'OCOSTATUS', orderId: 922, clientOrderId: 'b' },
+            ],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 921,
+            symbol: 'OCOSTATUS',
+            status: 'EXPIRED',
+            type: 'STOP_LOSS_LIMIT',
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 922,
+            symbol: 'OCOSTATUS',
+            status: 'FILLED',
+            type: 'LIMIT_MAKER',
+            executedQty: '1',
+            cummulativeQuoteQty: '71000',
+          },
+        });
+
+      const status = await client.getOcoStatus('OCOSTATUS', '902');
+
+      expect(status.state).toBe('FILLED');
+      expect(status.filledLeg).toBe('TAKE_PROFIT');
+      expect(getMockClient().request).toHaveBeenCalledTimes(3);
+    });
+
+    it('reports CANCELLED for a REJECT list', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: { orderListId: 903, listOrderStatus: 'REJECT', orders: [] },
+      });
+
+      const status = await client.getOcoStatus('OCOSTATUS', '903');
+      expect(status.state).toBe('CANCELLED');
+    });
+
+    it('reports MISSING when Binance returns -2013', async () => {
+      getMockClient().request.mockRejectedValueOnce({
+        response: { data: { code: -2013 } },
+      });
+
+      const status = await client.getOcoStatus('OCOSTATUS', '904');
+      expect(status.state).toBe('MISSING');
+    });
+  });
+
+  describe('cancelOrder / cancelOcoOrderList', () => {
+    it('sends a DELETE to /api/v3/order with symbol and orderId', async () => {
+      getMockClient().request.mockResolvedValueOnce({ data: {} });
+
+      await client.cancelOrder('CANCUSDT', '123');
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('DELETE');
+      expect(call.url).toBe('/api/v3/order');
+      expect(call.params).toEqual(
+        expect.objectContaining({ symbol: 'CANCUSDT', orderId: '123' }),
+      );
+    });
+
+    it('sends a DELETE to /api/v3/orderList with symbol and orderListId', async () => {
+      getMockClient().request.mockResolvedValueOnce({ data: {} });
+
+      await client.cancelOcoOrderList('CANCUSDT', '456');
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('DELETE');
+      expect(call.url).toBe('/api/v3/orderList');
+      expect(call.params).toEqual(
+        expect.objectContaining({ symbol: 'CANCUSDT', orderListId: '456' }),
+      );
+    });
+  });
+
+  describe('getOpenOrders', () => {
+    it('maps orders and normalizes orderListId -1 to null', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: [
+          { orderId: 1, clientOrderId: 'prot-a', orderListId: 77 },
+          { orderId: 2, clientOrderId: 'prot-b', orderListId: -1 },
+        ],
+      });
+
+      const orders = await client.getOpenOrders('OPENUSDT');
+
+      expect(orders).toEqual([
+        { orderId: '1', clientOrderId: 'prot-a', orderListId: '77' },
+        { orderId: '2', clientOrderId: 'prot-b', orderListId: null },
+      ]);
+    });
+  });
+});
+
+describe('Binance error code classification', () => {
+  describe('getBinanceErrorCode', () => {
+    it('extracts the numeric code from an axios-shaped error', () => {
+      const error = { response: { data: { code: -1021 } } };
+      expect(getBinanceErrorCode(error)).toBe(-1021);
+    });
+
+    it('returns null when the error has no code', () => {
+      expect(getBinanceErrorCode(new Error('boom'))).toBeNull();
+      expect(getBinanceErrorCode(undefined)).toBeNull();
+      expect(getBinanceErrorCode({ response: { data: {} } })).toBeNull();
+    });
+  });
+
+  describe('isRetryableBinanceErrorCode', () => {
+    it.each([-1021, -1001, -1000, -1003])(
+      'treats %i as retryable',
+      (code) => {
+        expect(isRetryableBinanceErrorCode(code)).toBe(true);
+      },
+    );
+
+    it.each([-1013, -2010, -2011, -2013])(
+      'treats %i as non-retryable',
+      (code) => {
+        expect(isRetryableBinanceErrorCode(code)).toBe(false);
+      },
+    );
+
+    it('treats null as non-retryable', () => {
+      expect(isRetryableBinanceErrorCode(null)).toBe(false);
     });
   });
 });

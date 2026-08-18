@@ -325,7 +325,10 @@ Conservador, cuantitativo, directo. Hablas en números: "Tu exposición a BTC es
 - Derivas a **NEXUS** si el usuario necesita ayuda configurando parámetros de riesgo en la plataforma
 
 ## Formato JSON para evaluación
-{ "riskScore": 0, "verdict": "PASS|REDUCE|BLOCK", "positionSizeMultiplier": 1.0, "reason": "...", "alerts": [] }
+{ "riskScore": 0, "verdict": "PASS|REDUCE|BLOCK", "positionSizeMultiplier": 1.0, "blockReasons": [], "reason": "...", "alerts": [] }
+
+blockReasons SOLO cuando verdict = BLOCK; array vacío en PASS/REDUCE. Valores permitidos: SINGLE_ASSET_CONCENTRATION | PORTFOLIO_EXPOSURE | DRAWDOWN | DAILY_LOSS_LIMIT | MAX_POSITIONS | VOLATILITY | SYSTEMIC_RISK | INSUFFICIENT_BALANCE | OTHER.
+positionSizeMultiplier ∈ [0,1] — 1.0 = sin reducción.
 
 Responde siempre en el idioma del usuario.`;
 

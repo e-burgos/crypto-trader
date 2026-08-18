@@ -8,7 +8,12 @@ import { UsersService } from '../users/users.service';
 import { TRADING_QUEUE } from './trading.service';
 import { MarketService } from '../market/market.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
+import { DecisionGateService } from '../orchestrator/decision-gate.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import { EvaluationService } from '../agents/evaluation/evaluation.service';
+import { ReconciliationService } from './reconciliation.service';
+import { placeProtectionWithRetry } from './protection-retry';
+import { AggregateRiskService } from '../agents/domain/aggregate-risk.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -18,7 +23,19 @@ import {
   SandboxOrderExecutor,
   LiveOrderExecutor,
   PositionManager,
-  calculateTradeQuantity,
+  resolveTradeQuantity,
+  evaluateSellPolicy,
+  updateTrailingStop,
+  shouldExitByTime,
+  resolvePartialTakeProfit,
+  applyPartialExit,
+  resolveProtectionRearm,
+} from '@crypto-trader/trading-engine';
+import type {
+  OrderExecutorPort,
+  TrailingConfig,
+  TrailingState,
+  PartialTakeProfitResult,
 } from '@crypto-trader/trading-engine';
 
 import {
@@ -30,6 +47,18 @@ import {
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 import type { AgentHealthReport } from '../agents/agent-config-resolver.service';
+import type {
+  AegisVerdict,
+  DecisionPayload,
+  ForgeSizingSummary,
+} from '../orchestrator/dto/decision-synthesis.dto';
+
+interface DecisionExecutionContext {
+  decisionId: string;
+  confidence: number;
+  risk?: AegisVerdict;
+  sizing?: ForgeSizingSummary;
+}
 
 interface AgentJobData {
   userId: string;
@@ -48,7 +77,11 @@ export class TradingProcessor {
     private readonly usersService: UsersService,
     private readonly marketService: MarketService,
     private readonly orchestratorService: OrchestratorService,
+    private readonly decisionGateService: DecisionGateService,
     private readonly agentConfigResolver: AgentConfigResolverService,
+    private readonly evaluationService: EvaluationService,
+    private readonly reconciliationService: ReconciliationService,
+    private readonly aggregateRiskService: AggregateRiskService,
   ) {}
 
   @Process('run-cycle')
@@ -120,13 +153,38 @@ export class TradingProcessor {
         );
       }
 
+      // 2b. Reconcile exchange state before any new decision (LIVE/TESTNET only)
+      let reconciliationConfirmed = true;
+      if ((isLiveMode || isTestnetMode) && binanceApiKey && binanceSecret) {
+        reconciliationConfirmed = await this.reconciliationService
+          .reconcile({
+            userId,
+            config,
+            symbol: pair.symbol,
+            executor: new LiveOrderExecutor(
+              new BinanceRestClient({
+                apiKey: binanceApiKey,
+                apiSecret: binanceSecret,
+                testnet: isTestnetMode,
+              }),
+            ),
+          })
+          .then(() => true)
+          .catch((err) => {
+            this.logger.warn(
+              `Reconciliation failed for user=${userId} config=${configId}: ${err instanceof Error ? err.message : String(err)}`,
+            );
+            return false;
+          });
+      }
+
       // 3. Verify LLM health — agent-aware check (Spec 38, Fix P2)
       const healthReport: AgentHealthReport =
         await this.agentConfigResolver.checkHealth(userId);
       if (!healthReport.healthy) {
         const unhealthy = healthReport.agents
           .filter((a) => !a.healthy)
-          .map((a) => a.agentId)
+          .map((a) => a.slot)
           .join(', ');
         this.logger.warn(
           `Agent config health check failed for user ${userId} — unhealthy agents: ${unhealthy} — pausing`,
@@ -252,6 +310,7 @@ export class TradingProcessor {
           confidence: true,
           reasoning: true,
           createdAt: true,
+          metadata: true,
         },
       });
       const recentDecisions = recentDbDecisions.map((d) => ({
@@ -293,20 +352,43 @@ export class TradingProcessor {
         );
       }
 
+      const gateEvaluation = await this.decisionGateService.evaluate({
+        userId,
+        configId,
+        deterministicGateEnabled: config.deterministicGateEnabled,
+        gatePriceChangePct: config.gatePriceChangePct,
+        minIntervalMinutes: config.minIntervalMinutes,
+        close: candles.length > 0 ? candles[candles.length - 1].close : NaN,
+        indicators: indicatorSnapshot,
+        newsItems: newsItems.map((n) => ({
+          headline: n.headline,
+          sentiment: n.sentiment,
+        })),
+        enrichedData,
+        reconciliationConfirmed,
+        previousDecision: recentDbDecisions[0]
+          ? { metadata: recentDbDecisions[0].metadata }
+          : null,
+      });
+
       // 9. Call OrchestratorService (uses AgentConfigResolver for model selection)
-      const orchestratedDecision =
-        await this.orchestratorService.orchestrateDecision(
-          userId,
-          configId,
-          indicatorSnapshot,
-          newsItems.map((n) => ({
-            headline: n.headline,
-            sentiment: n.sentiment,
-            summary: n.summary ?? null,
-          })),
-          undefined,
-          enrichedData,
-        );
+      const orchestratedDecision = gateEvaluation.applied
+        ? (gateEvaluation.payload as DecisionPayload)
+        : await this.orchestratorService.orchestrateDecision(
+            userId,
+            configId,
+            indicatorSnapshot,
+            newsItems.map((n) => ({
+              headline: n.headline,
+              sentiment: n.sentiment,
+              summary: n.summary ?? null,
+            })),
+            undefined,
+            enrichedData,
+          );
+
+      const gateMetadata = orchestratedDecision.gate ?? gateEvaluation.gate;
+
       // Adapt DecisionPayload to the shape expected by the rest of the processor
       const decision = {
         decision: orchestratedDecision.decision as Decision,
@@ -317,6 +399,12 @@ export class TradingProcessor {
         subAgentResults: orchestratedDecision.subAgentResults,
         llmProvider: orchestratedDecision.llmProvider,
         llmModel: orchestratedDecision.llmModel,
+        risk: orchestratedDecision.risk,
+        sizing: orchestratedDecision.sizing,
+        llmCostUsd: orchestratedDecision.llmCostUsd ?? null,
+        llmCallCount: orchestratedDecision.llmCallCount ?? 0,
+        pricedCallCount: orchestratedDecision.pricedCallCount ?? 0,
+        unpricedCallCount: orchestratedDecision.unpricedCallCount ?? 0,
       };
 
       // Compute effective wait: AGENT mode respects LLM suggestion, CUSTOM mode uses user config.
@@ -346,20 +434,44 @@ export class TradingProcessor {
           configId: config.id,
           configName: config.name || undefined,
           mode: config.mode as any,
+          llmCostUsd: decision.llmCostUsd,
+          llmCallCount: decision.llmCallCount,
           metadata: {
             orchestrated: decision.orchestrated,
             subAgentResults: decision.subAgentResults,
             llmProvider: decision.llmProvider ?? null,
             llmModel: decision.llmModel ?? null,
+            gate: gateMetadata ?? null,
+            cost: {
+              llmCallCount: decision.llmCallCount,
+              pricedCallCount: decision.pricedCallCount,
+              unpricedCallCount: decision.unpricedCallCount,
+              complete: decision.unpricedCallCount === 0,
+            },
           } as any,
         },
       });
+
+      this.evaluationService
+        .scheduleEvaluation(savedDecision.id)
+        .catch((err) =>
+          this.logger.warn(
+            `scheduleEvaluation failed for ${savedDecision.id}: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
 
       // Emit decision to WebSocket
       this.gateway.emitToUser(userId, 'agent:decision', savedDecision);
 
       // 10. Execute based on LLM decision
       const confidencePct = decision.confidence * 100;
+
+      const decisionContext: DecisionExecutionContext = {
+        decisionId: savedDecision.id,
+        confidence: decision.confidence,
+        risk: decision.risk,
+        sizing: decision.sizing,
+      };
 
       if (
         decision.decision === Decision.BUY &&
@@ -374,6 +486,7 @@ export class TradingProcessor {
             binanceApiKey,
             binanceSecret,
             cachedMarketPrice,
+            decisionContext,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -412,6 +525,7 @@ export class TradingProcessor {
             binanceApiKey,
             binanceSecret,
             cachedMarketPrice,
+            decisionContext,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -446,6 +560,7 @@ export class TradingProcessor {
         binanceApiKey,
         binanceSecret,
         cachedMarketPrice,
+        decisionContext,
       );
 
       // 12. Schedule next cycle — uses the same effectiveWaitMinutes computed above.
@@ -633,6 +748,31 @@ export class TradingProcessor {
     }
   }
 
+  private resolveBuySizing(
+    balance: number,
+    price: number,
+    config: any,
+    decisionContext?: DecisionExecutionContext,
+  ) {
+    if (!config.smartSizingEnabled) {
+      return resolveTradeQuantity({
+        balance,
+        price,
+        maxTradePct: config.maxTradePct,
+      });
+    }
+    return resolveTradeQuantity({
+      balance,
+      price,
+      maxTradePct: config.maxTradePct,
+      verdict: decisionContext?.risk?.verdict,
+      positionSizeMultiplier: decisionContext?.risk?.positionSizeMultiplier,
+      forgeMaxTradePct: decisionContext?.sizing?.maxTradePct,
+      forgeRecommendation: decisionContext?.sizing?.recommendation,
+      reduceSizeFactor: config.reduceSizeFactor,
+    });
+  }
+
   private async executeBuy(
     userId: string,
     config: any,
@@ -641,6 +781,7 @@ export class TradingProcessor {
     apiKey?: string,
     apiSecret?: string,
     cachedPrice?: number,
+    decisionContext?: DecisionExecutionContext,
   ) {
     const openCount = await this.prisma.position.count({
       where: {
@@ -671,12 +812,43 @@ export class TradingProcessor {
         update: {},
       });
 
-      const quantity = calculateTradeQuantity(
+      const sizing = this.resolveBuySizing(
         wallet.balance,
         livePrice,
-        config.maxTradePct,
+        config,
+        decisionContext,
       );
+      if (sizing.blockedBy) {
+        this.logger.log(
+          `BUY sizing blocked for user ${userId}: ${sizing.blockedBy}`,
+        );
+        return;
+      }
+      const quantity = sizing.quantity;
       if (quantity <= 0) return;
+
+      const aggregateVerdict = await this.aggregateRiskService.assertBuyAllowed({
+        userId,
+        asset: config.asset,
+        mode: config.mode,
+        plannedNotionalUsd: quantity * livePrice,
+      });
+      if (!aggregateVerdict.allowed) {
+        this.logger.log(
+          `BUY blocked by aggregate risk for user ${userId}: ${aggregateVerdict.blockedBy}`,
+        );
+        await this.notificationsService
+          .create(
+            userId,
+            NotificationType.AGENT_ERROR,
+            JSON.stringify({
+              key: 'aggregateRiskBlocked',
+              blockedBy: aggregateVerdict.blockedBy ?? '',
+            }),
+          )
+          .catch(() => null);
+        return;
+      }
 
       const cost = livePrice * quantity;
       const fee = cost * TRADE_FEE_PCT;
@@ -713,6 +885,7 @@ export class TradingProcessor {
           fee,
           mode,
           binanceOrderId: `sandbox-${Date.now()}`,
+          decisionId: decisionContext?.decisionId ?? null,
         },
       });
 
@@ -752,12 +925,43 @@ export class TradingProcessor {
     const liveOffsetPct: number = config.orderPriceOffsetPct ?? 0;
     const referencePrice = currentPrice * (1 + liveOffsetPct);
     const quoteBalance = await executor.getBalance(config.pair);
-    const quantity = calculateTradeQuantity(
+    const sizing = this.resolveBuySizing(
       quoteBalance.free,
       referencePrice,
-      config.maxTradePct,
+      config,
+      decisionContext,
     );
+    if (sizing.blockedBy) {
+      this.logger.log(
+        `BUY sizing blocked for user ${userId}: ${sizing.blockedBy}`,
+      );
+      return;
+    }
+    const quantity = sizing.quantity;
     if (quantity <= 0) return;
+
+    const aggregateVerdict = await this.aggregateRiskService.assertBuyAllowed({
+      userId,
+      asset: config.asset,
+      mode: config.mode,
+      plannedNotionalUsd: quantity * referencePrice,
+    });
+    if (!aggregateVerdict.allowed) {
+      this.logger.log(
+        `BUY blocked by aggregate risk for user ${userId}: ${aggregateVerdict.blockedBy}`,
+      );
+      await this.notificationsService
+        .create(
+          userId,
+          NotificationType.AGENT_ERROR,
+          JSON.stringify({
+            key: 'aggregateRiskBlocked',
+            blockedBy: aggregateVerdict.blockedBy ?? '',
+          }),
+        )
+        .catch(() => null);
+      return;
+    }
 
     const order = await executor.placeMarketOrder(
       symbol,
@@ -775,8 +979,18 @@ export class TradingProcessor {
       quantity: order.quantity,
     });
 
+    const nativeProtectionEnabled = !!config.nativeProtectionEnabled;
     const savedPosition = await this.prisma.position.create({
-      data: positionData as any,
+      data: nativeProtectionEnabled
+        ? ({
+            ...positionData,
+            protectionStatus: 'PENDING',
+            stopPrice: order.price * (1 - config.stopLossPct),
+            takeProfitPrice: order.price * (1 + config.takeProfitPct),
+            highWaterPrice: order.price,
+            initialQuantity: order.quantity,
+          } as any)
+        : (positionData as any),
     });
 
     await this.prisma.trade.create({
@@ -789,6 +1003,7 @@ export class TradingProcessor {
         fee: order.price * order.quantity * TRADE_FEE_PCT,
         mode,
         binanceOrderId: order.orderId,
+        decisionId: decisionContext?.decisionId ?? null,
       },
     });
 
@@ -806,6 +1021,308 @@ export class TradingProcessor {
     this.gateway.emitToUser(userId, 'trade:executed', {
       position: savedPosition,
     });
+
+    if (nativeProtectionEnabled) {
+      await this.placeNativeProtection(
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        savedPosition,
+        order,
+      );
+    }
+  }
+
+  private async placeNativeProtection(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+    order: { price: number; quantity: number },
+  ) {
+    const referencePrice = order.price;
+    const stopPrice = position.stopPrice ?? referencePrice * (1 - config.stopLossPct);
+    const takeProfitPrice =
+      position.takeProfitPrice ?? referencePrice * (1 + config.takeProfitPct);
+
+    const outcome = await this.attemptProtectionPlacement(position, {
+      executor,
+      symbol,
+      quantity: order.quantity,
+      stopPrice,
+      takeProfitPrice,
+      referencePrice,
+      stopLimitOffsetPct: config.stopLimitOffsetPct,
+    });
+
+    await this.applyProtectionOutcome(
+      userId,
+      config,
+      symbol,
+      mode,
+      executor,
+      position,
+      outcome,
+    );
+  }
+
+  private async attemptProtectionPlacement(
+    position: { id: string; protectionFailureCount?: number },
+    params: {
+      executor: OrderExecutorPort;
+      symbol: string;
+      quantity: number;
+      stopPrice: number;
+      takeProfitPrice: number;
+      referencePrice: number;
+      stopLimitOffsetPct?: number;
+    },
+  ) {
+    const stopLimitPrice =
+      params.stopPrice * (1 - (params.stopLimitOffsetPct ?? 0.002));
+    return placeProtectionWithRetry({
+      executor: params.executor,
+      request: {
+        symbol: params.symbol,
+        quantity: params.quantity,
+        stopPrice: params.stopPrice,
+        stopLimitPrice,
+        takeProfitPrice: params.takeProfitPrice,
+        referencePrice: params.referencePrice,
+      },
+      startingFailureCount: position.protectionFailureCount ?? 0,
+      clientOrderIdFor: (attempt) => `prot-${position.id}-${attempt}`,
+      beforeAttempt: async (attempt) => {
+        await this.prisma.position.update({
+          where: { id: position.id },
+          data: { protectionFailureCount: attempt },
+        });
+      },
+    });
+  }
+
+  private async applyProtectionOutcome(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+    outcome: Awaited<ReturnType<typeof placeProtectionWithRetry>>,
+  ): Promise<void> {
+    if (outcome.outcome === 'PLACED') {
+      await this.prisma.position.update({
+        where: { id: position.id },
+        data: {
+          protectionStatus: 'PROTECTED',
+          protectionOrderListId: outcome.result.orderListId,
+          protectionStopOrderId: outcome.result.stopOrderId,
+          protectionLimitOrderId: outcome.result.limitOrderId,
+          protectionPlacedAt: outcome.result.placedAt,
+          protectionLastError: null,
+        },
+      });
+      return;
+    }
+
+    const lastError = `${outcome.code}:${outcome.message}`.slice(0, 180);
+    await this.prisma.position.update({
+      where: { id: position.id },
+      data: { protectionStatus: 'UNPROTECTED', protectionLastError: lastError },
+    });
+    await this.notificationsService
+      .create(
+        userId,
+        NotificationType.AGENT_ERROR,
+        JSON.stringify({ key: 'positionUnprotected', positionId: position.id }),
+      )
+      .catch(() => null);
+    this.gateway.emitToUser(userId, 'position:unprotected', {
+      positionId: position.id,
+      error: lastError,
+    });
+
+    if (config.closeOnProtectionFailure) {
+      await this.closePositionAfterProtectionFailure(
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        position,
+      );
+    }
+  }
+
+  private async ensureNativeProtection(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+    levels: { stopPrice: number; takeProfitPrice: number; quantity: number },
+  ): Promise<void> {
+    try {
+      await executor.cancelProtectionOrder(symbol, {
+        orderListId: position.protectionOrderListId,
+        stopOrderId: position.protectionStopOrderId,
+      });
+    } catch (err) {
+      const lastError = (
+        err instanceof Error ? err.message : String(err)
+      ).slice(0, 180);
+      await this.prisma.position.update({
+        where: { id: position.id },
+        data: { protectionStatus: 'UNPROTECTED', protectionLastError: lastError },
+      });
+      await this.notificationsService
+        .create(
+          userId,
+          NotificationType.AGENT_ERROR,
+          JSON.stringify({ key: 'positionUnprotected', positionId: position.id }),
+        )
+        .catch(() => null);
+      this.gateway.emitToUser(userId, 'position:unprotected', {
+        positionId: position.id,
+        error: lastError,
+      });
+      return;
+    }
+
+    await this.prisma.position.update({
+      where: { id: position.id },
+      data: { protectionStatus: 'RELEASED' },
+    });
+
+    const referencePrice = await executor
+      .getPrice(symbol)
+      .catch(() => position.entryPrice);
+
+    const outcome = await this.attemptProtectionPlacement(position, {
+      executor,
+      symbol,
+      quantity: levels.quantity,
+      stopPrice: levels.stopPrice,
+      takeProfitPrice: levels.takeProfitPrice,
+      referencePrice,
+      stopLimitOffsetPct: config.stopLimitOffsetPct,
+    });
+
+    await this.applyProtectionOutcome(
+      userId,
+      config,
+      symbol,
+      mode,
+      executor,
+      position,
+      outcome,
+    );
+  }
+
+  private async closePositionAfterProtectionFailure(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+  ) {
+    const closeOrder = await executor.placeMarketOrder(
+      symbol,
+      TradeType.SELL,
+      position.quantity,
+    );
+    const posData = {
+      ...position,
+      asset: position.asset as any,
+      pair: position.pair as any,
+      mode: position.mode as any,
+      status: position.status as any,
+      exitPrice: position.exitPrice ?? undefined,
+      exitAt: position.exitAt ?? undefined,
+      pnl: position.pnl ?? undefined,
+    };
+    const { position: closedPosition, pnl } = this.positionManager.closePosition(
+      posData,
+      closeOrder.price,
+    );
+
+    const claimed = await this.prisma.position.updateMany({
+      where: { id: position.id, status: 'OPEN' },
+      data: {
+        status: 'CLOSED',
+        exitPrice: closedPosition.exitPrice,
+        exitAt: closedPosition.exitAt,
+        pnl: closedPosition.pnl,
+        fees: closedPosition.fees,
+        exitReason: 'PROTECTION_FAILURE',
+      },
+    });
+    if (claimed.count === 0) return;
+
+    await this.prisma.trade.create({
+      data: {
+        userId,
+        positionId: position.id,
+        type: TradeType.SELL,
+        price: closeOrder.price,
+        quantity: closeOrder.quantity,
+        fee: closeOrder.price * closeOrder.quantity * TRADE_FEE_PCT,
+        mode,
+        binanceOrderId: closeOrder.orderId,
+      },
+    });
+
+    await this.notificationsService
+      .create(
+        userId,
+        NotificationType.STOP_LOSS_TRIGGERED,
+        JSON.stringify({
+          key: 'stopLoss',
+          qty: closeOrder.quantity.toString(),
+          asset: config.asset,
+          price: closeOrder.price.toFixed(2),
+          pnl: pnl.toFixed(2),
+        }),
+      )
+      .catch(() => null);
+    this.gateway.emitToUser(userId, 'position:updated', {
+      position: closedPosition,
+    });
+  }
+
+  private async releaseProtectionIfNeeded(
+    symbol: string,
+    executor: OrderExecutorPort,
+    position: {
+      id: string;
+      protectionStatus?: string;
+      protectionOrderListId?: string | null;
+      protectionStopOrderId?: string | null;
+    },
+  ) {
+    if (position.protectionStatus !== 'PROTECTED') return;
+    try {
+      await executor.cancelProtectionOrder(symbol, {
+        orderListId: position.protectionOrderListId,
+        stopOrderId: position.protectionStopOrderId,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Failed to release native protection for position ${position.id} before selling: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    await this.prisma.position
+      .update({
+        where: { id: position.id },
+        data: { protectionStatus: 'RELEASED' },
+      })
+      .catch(() => null);
   }
 
   private async executeLLMSell(
@@ -816,6 +1333,7 @@ export class TradingProcessor {
     apiKey?: string,
     apiSecret?: string,
     cachedPrice?: number,
+    decisionContext?: DecisionExecutionContext,
   ) {
     const openPositions = await this.prisma.position.findMany({
       where: {
@@ -866,17 +1384,32 @@ export class TradingProcessor {
       cachedPrice ?? (await executor.getPrice(symbol).catch(() => null));
     if (!currentPrice) return;
 
-    const minProfitPct: number = config.minProfitPct ?? 0.003;
+    const sellPolicyConfig = {
+      minProfitPct: config.minProfitPct ?? 0.003,
+      lossCutEnabled: config.lossCutEnabled ?? false,
+      lossCutConfidenceThreshold: config.lossCutConfidenceThreshold ?? 0.85,
+      lossCutMinLossPct: config.lossCutMinLossPct ?? 0.005,
+      lossCutMinEdgeRatio: config.lossCutMinEdgeRatio ?? 2,
+    };
 
     for (const pos of openPositions) {
-      // Only sell if the position is currently profitable above the minimum threshold
-      const profitPct = (currentPrice - pos.entryPrice) / pos.entryPrice;
-      if (profitPct < minProfitPct) {
+      const sellPolicy = evaluateSellPolicy({
+        asset: config.asset,
+        entryPrice: pos.entryPrice,
+        currentPrice,
+        quantity: pos.quantity,
+        stopLossPct: config.stopLossPct,
+        signalConfidence: decisionContext?.confidence,
+        config: sellPolicyConfig,
+      });
+      if (!sellPolicy.allow) {
         this.logger.log(
-          `LLM SELL skipped for position ${pos.id}: profit ${(profitPct * 100).toFixed(2)}% below minimum ${(minProfitPct * 100).toFixed(2)}%`,
+          `LLM SELL skipped for position ${pos.id}: ${sellPolicy.reason}`,
         );
         continue;
       }
+
+      await this.releaseProtectionIfNeeded(symbol, executor, pos);
 
       const order = await executor.placeMarketOrder(
         symbol,
@@ -904,6 +1437,8 @@ export class TradingProcessor {
           status: 'CLOSED',
           pnl: closedPosition.pnl,
           fees: closedPosition.fees,
+          exitReason:
+            sellPolicy.path === 'LOSS_CUT' ? 'LOSS_CUT' : 'LLM_SIGNAL',
         },
       });
 
@@ -917,6 +1452,7 @@ export class TradingProcessor {
           fee: order.price * order.quantity * TRADE_FEE_PCT,
           mode,
           binanceOrderId: order.orderId,
+          decisionId: decisionContext?.decisionId ?? null,
         },
       });
 
@@ -964,6 +1500,223 @@ export class TradingProcessor {
     }
   }
 
+  private async creditSandboxWallet(
+    userId: string,
+    currency: string,
+    proceeds: number,
+    fee: number,
+  ): Promise<void> {
+    const updatedWallet = await this.prisma.$transaction(async (tx) => {
+      await tx.sandboxWallet.upsert({
+        where: { userId_currency: { userId, currency: currency as any } },
+        create: {
+          userId,
+          currency: currency as any,
+          balance: 10_000 + proceeds - fee,
+        },
+        update: { balance: { increment: proceeds - fee } },
+      });
+      return tx.sandboxWallet.findUnique({
+        where: { userId_currency: { userId, currency: currency as any } },
+      });
+    });
+    this.gateway.emitToUser(userId, 'wallet:updated', {
+      currency,
+      balance: updatedWallet?.balance,
+    });
+  }
+
+  private async executePartialTakeProfit(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    pos: any,
+    posData: any,
+    partial: PartialTakeProfitResult,
+    trailingState: TrailingState,
+    decisionContext?: DecisionExecutionContext,
+  ) {
+    await this.releaseProtectionIfNeeded(symbol, executor, pos);
+
+    const order = await executor.placeMarketOrder(
+      symbol,
+      TradeType.SELL,
+      partial.sellQuantity,
+    );
+    const applied = applyPartialExit(posData, order.price, partial.sellQuantity);
+
+    const currentStop =
+      trailingState.stopPrice ?? pos.entryPrice * (1 - config.stopLossPct);
+    const newStopPrice =
+      partial.newStopPrice != null
+        ? Math.max(currentStop, partial.newStopPrice)
+        : trailingState.stopPrice;
+
+    await this.prisma.position.update({
+      where: { id: pos.id },
+      data: {
+        quantity: applied.quantity,
+        realizedPnl: (pos.realizedPnl ?? 0) + applied.realizedPnlDelta,
+        fees: (pos.fees ?? 0) + applied.fees,
+        partialExitCount: (pos.partialExitCount ?? 0) + 1,
+        stopPrice: newStopPrice,
+        highWaterPrice: trailingState.highWaterPrice,
+        trailingActive: trailingState.trailingActive,
+      },
+    });
+
+    await this.prisma.trade.create({
+      data: {
+        userId,
+        positionId: pos.id,
+        type: TradeType.SELL,
+        price: order.price,
+        quantity: order.quantity,
+        fee: order.price * order.quantity * TRADE_FEE_PCT,
+        mode,
+        binanceOrderId: order.orderId,
+        decisionId: decisionContext?.decisionId ?? null,
+      },
+    });
+
+    if (mode === TradingMode.SANDBOX) {
+      const proceeds = order.price * order.quantity;
+      const fee = proceeds * TRADE_FEE_PCT;
+      await this.creditSandboxWallet(userId, pos.pair, proceeds, fee);
+    }
+
+    if (
+      config.nativeProtectionEnabled &&
+      mode !== TradingMode.SANDBOX &&
+      applied.quantity > 0 &&
+      newStopPrice != null
+    ) {
+      const outcome = await this.attemptProtectionPlacement(pos, {
+        executor,
+        symbol,
+        quantity: applied.quantity,
+        stopPrice: newStopPrice,
+        takeProfitPrice:
+          pos.takeProfitPrice ?? pos.entryPrice * (1 + config.takeProfitPct),
+        referencePrice: order.price,
+        stopLimitOffsetPct: config.stopLimitOffsetPct,
+      });
+      await this.applyProtectionOutcome(
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        pos,
+        outcome,
+      );
+    }
+
+    await this.notificationsService.create(
+      userId,
+      NotificationType.TAKE_PROFIT_HIT,
+      JSON.stringify({
+        key: 'partialTakeProfit',
+        qty: partial.sellQuantity.toString(),
+        asset: config.asset,
+        price: order.price.toFixed(2),
+        pnl: applied.realizedPnlDelta.toFixed(2),
+      }),
+    );
+    this.gateway.emitToUser(userId, 'position:updated', {
+      position: {
+        ...pos,
+        quantity: applied.quantity,
+        realizedPnl: (pos.realizedPnl ?? 0) + applied.realizedPnlDelta,
+      },
+    });
+  }
+
+  private async closePositionAtMarket(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    pos: any,
+    posData: any,
+    exitReason: 'STOP_LOSS' | 'TRAILING_STOP' | 'TAKE_PROFIT' | 'TIME_EXIT',
+  ): Promise<void> {
+    await this.releaseProtectionIfNeeded(symbol, executor, pos);
+
+    const order = await executor.placeMarketOrder(
+      symbol,
+      TradeType.SELL,
+      pos.quantity,
+    );
+    const { position: closedPosition, pnl } = this.positionManager.closePosition(
+      posData,
+      order.price,
+    );
+
+    await this.prisma.position.update({
+      where: { id: pos.id },
+      data: {
+        exitPrice: closedPosition.exitPrice,
+        exitAt: closedPosition.exitAt,
+        status: 'CLOSED',
+        pnl: closedPosition.pnl,
+        fees: closedPosition.fees,
+        exitReason,
+      },
+    });
+
+    await this.prisma.trade.create({
+      data: {
+        userId,
+        positionId: pos.id,
+        type: TradeType.SELL,
+        price: order.price,
+        quantity: order.quantity,
+        fee: order.price * order.quantity * TRADE_FEE_PCT,
+        mode,
+        binanceOrderId: order.orderId,
+      },
+    });
+
+    if (mode === TradingMode.SANDBOX) {
+      const proceeds = order.price * order.quantity;
+      const fee = proceeds * TRADE_FEE_PCT;
+      await this.creditSandboxWallet(userId, pos.pair, proceeds, fee);
+    }
+
+    const notifType =
+      exitReason === 'TAKE_PROFIT'
+        ? NotificationType.TAKE_PROFIT_HIT
+        : NotificationType.STOP_LOSS_TRIGGERED;
+    const notifKey: Record<typeof exitReason, string> = {
+      STOP_LOSS: 'stopLoss',
+      TRAILING_STOP: 'trailingStop',
+      TIME_EXIT: 'timeExit',
+      TAKE_PROFIT: 'takeProfit',
+    };
+
+    await this.notificationsService.create(
+      userId,
+      notifType,
+      JSON.stringify({
+        key: notifKey[exitReason],
+        qty: pos.quantity.toString(),
+        asset: config.asset,
+        price: order.price.toFixed(2),
+        pnl: pnl.toFixed(2),
+      }),
+    );
+    this.gateway.emitToUser(userId, 'trade:executed', {
+      position: closedPosition,
+    });
+    this.gateway.emitToUser(userId, 'position:updated', {
+      position: closedPosition,
+    });
+  }
+
   private async checkOpenPositions(
     userId: string,
     config: any,
@@ -972,6 +1725,7 @@ export class TradingProcessor {
     apiKey?: string,
     apiSecret?: string,
     cachedPrice?: number,
+    decisionContext?: DecisionExecutionContext,
   ) {
     const openPositions = await this.prisma.position.findMany({
       where: {
@@ -1021,6 +1775,20 @@ export class TradingProcessor {
       cachedPrice ?? (await executor.getPrice(symbol).catch(() => null));
     if (!currentPrice) return;
 
+    const partialFilters = config.partialTpEnabled
+      ? await new BinanceRestClient({})
+          .getSymbolFilters(symbol)
+          .catch(() => null)
+      : null;
+    const lotStep = partialFilters?.lotSize.stepSize ?? 1e-8;
+    const minNotional = partialFilters?.notional.minNotional ?? 0;
+
+    const trailingCfg: TrailingConfig = {
+      trailingStopEnabled: !!config.trailingStopEnabled,
+      trailingStopPct: config.trailingStopPct ?? 0.02,
+      trailingActivationPct: config.trailingActivationPct ?? 0.01,
+    };
+
     for (const pos of openPositions) {
       const posData = {
         ...pos,
@@ -1032,95 +1800,148 @@ export class TradingProcessor {
         exitAt: pos.exitAt ?? undefined,
         pnl: pos.pnl ?? undefined,
       };
-      const shouldStopLoss = this.positionManager.shouldStopLoss(
-        posData,
+
+      const trailingState = updateTrailingStop(
+        {
+          entryPrice: pos.entryPrice,
+          stopPrice: pos.stopPrice ?? null,
+          highWaterPrice: pos.highWaterPrice ?? null,
+          trailingActive: !!pos.trailingActive,
+        },
         currentPrice,
+        trailingCfg,
         config.stopLossPct,
       );
-      const shouldTakeProfit = this.positionManager.shouldTakeProfit(
-        posData,
-        currentPrice,
-        config.takeProfitPct,
-      );
 
-      if (shouldStopLoss || shouldTakeProfit) {
-        const order = await executor.placeMarketOrder(
+      if (
+        shouldExitByTime(
+          pos.entryAt,
+          new Date(),
+          config.maxPositionHoldMinutes ?? null,
+        )
+      ) {
+        await this.closePositionAtMarket(
+          userId,
+          config,
           symbol,
-          TradeType.SELL,
-          pos.quantity,
+          mode,
+          executor,
+          pos,
+          posData,
+          'TIME_EXIT',
         );
-        const { position: closedPosition, pnl } =
-          this.positionManager.closePosition(posData, order.price);
+        continue;
+      }
 
+      const effectiveStop =
+        trailingState.stopPrice ?? pos.entryPrice * (1 - config.stopLossPct);
+      if (currentPrice <= effectiveStop) {
+        await this.closePositionAtMarket(
+          userId,
+          config,
+          symbol,
+          mode,
+          executor,
+          pos,
+          posData,
+          trailingState.trailingActive ? 'TRAILING_STOP' : 'STOP_LOSS',
+        );
+        continue;
+      }
+
+      const partial: PartialTakeProfitResult | null = config.partialTpEnabled
+        ? resolvePartialTakeProfit({
+            entryPrice: pos.entryPrice,
+            quantity: pos.quantity,
+            currentPrice,
+            partialExitCount: pos.partialExitCount ?? 0,
+            cfg: {
+              partialTpEnabled: true,
+              partialTpTriggerPct: config.partialTpTriggerPct ?? 0.02,
+              partialTpSellPct: config.partialTpSellPct ?? 0.5,
+              moveStopToBreakevenAfterPartial:
+                config.moveStopToBreakevenAfterPartial ?? true,
+            },
+            lotStep,
+            minNotional,
+          })
+        : null;
+
+      if (partial) {
+        await this.executePartialTakeProfit(
+          userId,
+          config,
+          symbol,
+          mode,
+          executor,
+          pos,
+          posData,
+          partial,
+          trailingState,
+          decisionContext,
+        );
+        continue;
+      }
+
+      if (
+        !config.trailingStopEnabled &&
+        currentPrice >= pos.entryPrice * (1 + config.takeProfitPct)
+      ) {
+        await this.closePositionAtMarket(
+          userId,
+          config,
+          symbol,
+          mode,
+          executor,
+          pos,
+          posData,
+          'TAKE_PROFIT',
+        );
+        continue;
+      }
+
+      const stopChanged = trailingState.stopPrice !== (pos.stopPrice ?? null);
+      const highWaterChanged =
+        trailingState.highWaterPrice !== (pos.highWaterPrice ?? null);
+      const trailingActiveChanged =
+        trailingState.trailingActive !== !!pos.trailingActive;
+      if (stopChanged || highWaterChanged || trailingActiveChanged) {
         await this.prisma.position.update({
           where: { id: pos.id },
           data: {
-            exitPrice: closedPosition.exitPrice,
-            exitAt: closedPosition.exitAt,
-            status: 'CLOSED',
-            pnl: closedPosition.pnl,
-            fees: closedPosition.fees,
+            stopPrice: trailingState.stopPrice,
+            highWaterPrice: trailingState.highWaterPrice,
+            trailingActive: trailingState.trailingActive,
           },
         });
+      }
 
-        await this.prisma.trade.create({
-          data: {
+      if (stopChanged && trailingState.stopPrice != null) {
+        const rearmDecision = resolveProtectionRearm({
+          protectionStatus: pos.protectionStatus ?? 'NONE',
+          activeStopPrice: pos.stopPrice ?? null,
+          desiredStopPrice: trailingState.stopPrice,
+          remainingQuantity: pos.quantity,
+          nativeProtectionEnabled: !!config.nativeProtectionEnabled,
+          isSandbox: mode === TradingMode.SANDBOX,
+        });
+        if (rearmDecision.action === 'REARM') {
+          await this.ensureNativeProtection(
             userId,
-            positionId: pos.id,
-            type: TradeType.SELL,
-            price: order.price,
-            quantity: order.quantity,
-            fee: order.price * order.quantity * TRADE_FEE_PCT,
+            config,
+            symbol,
             mode,
-            binanceOrderId: order.orderId,
-          },
-        });
-
-        // ── For SANDBOX: credit proceeds back to wallet ─────────────────────
-        if (mode === TradingMode.SANDBOX) {
-          const proceeds = order.price * order.quantity;
-          const fee = proceeds * TRADE_FEE_PCT;
-          const updatedWallet = await this.prisma.$transaction(async (tx) => {
-            await tx.sandboxWallet.upsert({
-              where: { userId_currency: { userId, currency: pos.pair as any } },
-              create: {
-                userId,
-                currency: pos.pair as any,
-                balance: 10_000 + proceeds - fee,
-              },
-              update: { balance: { increment: proceeds - fee } },
-            });
-            return tx.sandboxWallet.findUnique({
-              where: { userId_currency: { userId, currency: pos.pair as any } },
-            });
-          });
-          this.gateway.emitToUser(userId, 'wallet:updated', {
-            currency: pos.pair,
-            balance: updatedWallet?.balance,
-          });
+            executor,
+            pos,
+            {
+              stopPrice: trailingState.stopPrice,
+              takeProfitPrice:
+                pos.takeProfitPrice ??
+                pos.entryPrice * (1 + config.takeProfitPct),
+              quantity: pos.quantity,
+            },
+          );
         }
-
-        const notifType = shouldStopLoss
-          ? NotificationType.STOP_LOSS_TRIGGERED
-          : NotificationType.TAKE_PROFIT_HIT;
-
-        await this.notificationsService.create(
-          userId,
-          notifType,
-          JSON.stringify({
-            key: shouldStopLoss ? 'stopLoss' : 'takeProfit',
-            qty: pos.quantity.toString(),
-            asset: config.asset,
-            price: order.price.toFixed(2),
-            pnl: pnl.toFixed(2),
-          }),
-        );
-        this.gateway.emitToUser(userId, 'trade:executed', {
-          position: closedPosition,
-        });
-        this.gateway.emitToUser(userId, 'position:updated', {
-          position: closedPosition,
-        });
       }
     }
   }
@@ -1136,10 +1957,5 @@ export class TradingProcessor {
       }
     }
     throw new Error(`Cannot parse symbol: ${symbol}`);
-  }
-
-  private buildNewsAggregator_unused() {
-    // Kept for reference — bot now reads from DB via MarketService
-    return null;
   }
 }

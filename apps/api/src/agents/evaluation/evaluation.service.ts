@@ -1,9 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AgentOutcomeStatus } from '../../../generated/prisma/enums';
 
 export const EVALUATION_QUEUE = 'agent-evaluation';
+const EVALUATION_SWEEP_JOB_ID = 'evaluation-sweep';
+const EVALUATION_SWEEP_CRON = '*/15 * * * *';
+const EVALUATION_CLEANUP_JOB_ID = 'evaluation-cleanup';
+const EVALUATION_CLEANUP_CRON = '30 3 * * *';
 
 export interface ScorecardFilters {
   agentId?: string;
@@ -18,7 +23,7 @@ export interface ScorecardFilters {
 }
 
 @Injectable()
-export class EvaluationService {
+export class EvaluationService implements OnModuleInit {
   private readonly logger = new Logger(EvaluationService.name);
 
   constructor(
@@ -26,13 +31,40 @@ export class EvaluationService {
     @InjectQueue(EVALUATION_QUEUE) private readonly evaluationQueue: Queue,
   ) {}
 
+  async onModuleInit() {
+    await this.registerRepeatable(
+      'schedule-evaluations',
+      EVALUATION_SWEEP_CRON,
+      EVALUATION_SWEEP_JOB_ID,
+    );
+    await this.registerRepeatable(
+      'cleanup',
+      EVALUATION_CLEANUP_CRON,
+      EVALUATION_CLEANUP_JOB_ID,
+    );
+  }
+
+  private async registerRepeatable(
+    jobName: string,
+    cron: string,
+    jobId: string,
+  ) {
+    await this.evaluationQueue.removeRepeatable(jobName, { cron, jobId });
+    await this.evaluationQueue.add(jobName, {}, { repeat: { cron }, jobId });
+    this.logger.log(`Registered repeatable job ${jobName} (${jobId})`);
+  }
+
   async scheduleEvaluation(decisionId: string) {
     const horizons = [15, 60, 240, 1440];
     for (const horizonMinutes of horizons) {
       await this.evaluationQueue.add(
         'evaluate',
         { decisionId, horizonMinutes },
-        { delay: horizonMinutes * 60 * 1000, removeOnComplete: true },
+        {
+          delay: horizonMinutes * 60 * 1000,
+          jobId: `eval:${decisionId}:${horizonMinutes}`,
+          removeOnComplete: true,
+        },
       );
     }
     this.logger.log(`Scheduled 4 evaluations for decision=${decisionId}`);
@@ -40,6 +72,8 @@ export class EvaluationService {
 
   async getScorecard(filters: ScorecardFilters) {
     const where = this.buildEvalWhere(filters);
+    const { pendingCount, notEvaluableCount } =
+      await this.countPendingAndNotEvaluable(filters);
 
     const evaluations = await this.prisma.agentDecisionEvaluation.findMany({
       where,
@@ -101,6 +135,8 @@ export class EvaluationService {
       avgPnlUsd,
       avgCostUsd,
       netValueUsd,
+      pendingCount,
+      notEvaluableCount,
       byMarketRegime: Object.entries(byRegime).map(([regime, data]) => ({
         regime,
         count: data.count,
@@ -111,6 +147,8 @@ export class EvaluationService {
 
   async getSummary(filters: ScorecardFilters) {
     const where = this.buildEvalWhere(filters);
+    const { pendingCount, notEvaluableCount } =
+      await this.countPendingAndNotEvaluable(filters);
 
     const evaluations = await this.prisma.agentDecisionEvaluation.findMany({
       where,
@@ -158,6 +196,8 @@ export class EvaluationService {
       avgPnlPerDecision,
       totalCostUsd,
       roi,
+      pendingCount,
+      notEvaluableCount,
     };
   }
 
@@ -166,7 +206,6 @@ export class EvaluationService {
     const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // PENDING evaluations older than 48h → set to NEUTRAL
     const pendingUpdated = await this.prisma.agentDecisionEvaluation.updateMany(
       {
         where: {
@@ -174,13 +213,12 @@ export class EvaluationService {
           createdAt: { lt: fortyEightHoursAgo },
         },
         data: {
-          status: 'NEUTRAL',
+          status: 'NOT_EVALUABLE',
           evaluatedAt: now,
         },
       },
     );
 
-    // NEUTRAL evaluations with horizonMinutes < 60 older than 7 days → delete
     const neutralDeleted = await this.prisma.agentDecisionEvaluation.deleteMany(
       {
         where: {
@@ -192,16 +230,29 @@ export class EvaluationService {
     );
 
     this.logger.log(
-      `Cleanup: ${pendingUpdated.count} PENDING→NEUTRAL, ${neutralDeleted.count} old NEUTRAL deleted`,
+      `Cleanup: ${pendingUpdated.count} PENDING→NOT_EVALUABLE, ${neutralDeleted.count} old NEUTRAL deleted`,
     );
 
     return {
-      pendingToNeutral: pendingUpdated.count,
+      pendingToNotEvaluable: pendingUpdated.count,
       neutralDeleted: neutralDeleted.count,
     };
   }
 
-  private buildEvalWhere(filters: ScorecardFilters) {
+  private async countPendingAndNotEvaluable(filters: ScorecardFilters) {
+    const where = this.buildBaseWhere(filters);
+    const [pendingCount, notEvaluableCount] = await Promise.all([
+      this.prisma.agentDecisionEvaluation.count({
+        where: { ...where, status: 'PENDING' },
+      }),
+      this.prisma.agentDecisionEvaluation.count({
+        where: { ...where, status: 'NOT_EVALUABLE' },
+      }),
+    ]);
+    return { pendingCount, notEvaluableCount };
+  }
+
+  private buildBaseWhere(filters: ScorecardFilters) {
     const where: Record<string, unknown> = {};
 
     if (filters.marketRegime) where.marketRegime = filters.marketRegime;
@@ -214,9 +265,19 @@ export class EvaluationService {
       if (filters.to)
         (where.createdAt as Record<string, unknown>).lte = new Date(filters.to);
     }
-    // Filter by status != PENDING to only include evaluated ones
-    where.status = { not: 'PENDING' };
 
     return where;
+  }
+
+  private buildEvalWhere(filters: ScorecardFilters) {
+    return {
+      ...this.buildBaseWhere(filters),
+      status: {
+        notIn: [
+          AgentOutcomeStatus.PENDING,
+          AgentOutcomeStatus.NOT_EVALUABLE,
+        ] as AgentOutcomeStatus[],
+      },
+    };
   }
 }

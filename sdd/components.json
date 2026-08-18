@@ -30,5 +30,69 @@
         }
       ]
     }
+  },
+  "apps/web": {
+    "components": [
+      {
+        "id": "COMP-001",
+        "name": "SettingsAgentsPage",
+        "type": "page",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "path": "src/pages/dashboard/settings/agents.tsx",
+        "status": "implemented",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Página de configuración de agentes (proveedor/modelo por slot, presets recomendados, health warning). Migrada en cycle-03 al wire slot/ResolutionSource de libs/shared (deploy-blocker): lee config.slot en vez de config.agentId y resuelve el badge de origen con resolveSourceBadge().",
+        "consumes": [],
+        "created_at": "2026-08-18",
+        "changelog": []
+      },
+      {
+        "id": "COMP-002",
+        "name": "useAgentConfig",
+        "type": "hook",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "path": "src/hooks/use-agent-config.ts",
+        "status": "implemented",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Hooks TanStack Query para la configuración de agentes por usuario (useAgentConfigs, useAgentHealth, useUpdateAgentConfig, useResetAgentConfig, useApplyRecommendedPreset) y sus contrapartes admin. Migrado en cycle-03 a los tipos de wire compartidos ResolvedAgentModelWire/AgentHealthReportWire de libs/shared; los mutation hooks de usuario reciben slot en vez de agentId.",
+        "consumes": [],
+        "created_at": "2026-08-18",
+        "changelog": []
+      },
+      {
+        "id": "COMP-003",
+        "name": "useAgentCosts",
+        "type": "hook",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "path": "src/hooks/use-agent-costs.ts",
+        "status": "implemented",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Hook TanStack Query para EP-009 GET /analytics/agent-costs: costo LLM real por bot y por día calendario UTC (period/mode/configId), distinguiendo decisiones resueltas por LLM de las resueltas por el gate determinista y las decisiones sin tarifa disponible.",
+        "consumes": ["EP-009"],
+        "created_at": "2026-08-18",
+        "changelog": []
+      },
+      {
+        "id": "COMP-004",
+        "name": "AgentCostPanel",
+        "type": "component",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "path": "src/components/analytics/agent-cost-panel.tsx",
+        "status": "implemented",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Panel de costo LLM por bot/día en la página de analytics: selector de período (7d/30d/90d), totales del período (costo, decisiones LLM vs gate), nota de decisiones sin tarifa disponible, gráfico de barras apiladas por bot y tabla por bot. Muestra el estado sin datos y el de error.",
+        "consumes": ["EP-009"],
+        "created_at": "2026-08-18",
+        "changelog": []
+      }
+    ]
   }
 }

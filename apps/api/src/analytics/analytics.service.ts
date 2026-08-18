@@ -1,10 +1,106 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TradingMode } from '../../generated/prisma/enums';
 
 function modeFilter(mode?: TradingMode) {
   if (!mode) return {};
   return { mode };
+}
+
+export type AgentCostPeriod = '7d' | '30d' | '90d';
+
+const AGENT_COST_PERIOD_DAYS: Record<AgentCostPeriod, number> = {
+  '7d': 7,
+  '30d': 30,
+  '90d': 90,
+};
+
+export function parseAgentCostPeriod(period?: string): AgentCostPeriod {
+  if (period === undefined) return '30d';
+  if (period === '7d' || period === '30d' || period === '90d') return period;
+  throw new BadRequestException('period debe ser 7d, 30d o 90d');
+}
+
+function resolveAgentCostRange(
+  period: AgentCostPeriod,
+  now: Date,
+): { from: Date; to: Date } {
+  const days = AGENT_COST_PERIOD_DAYS[period];
+  const todayStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+  const to = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const from = new Date(todayStart.getTime() - days * 24 * 60 * 60 * 1000);
+  return { from, to };
+}
+
+export interface AgentCostBucket {
+  costUsd: number;
+  decisions: number;
+  llmDecisions: number;
+  gateDecisions: number;
+  unpricedDecisions: number;
+}
+
+export interface AgentCostBotBucket extends AgentCostBucket {
+  configId: string | null;
+  configName: string | null;
+  asset: string;
+  pair: string;
+  mode: string;
+}
+
+export interface AgentCostUserBucket extends AgentCostBucket {
+  userId: string;
+}
+
+export interface AgentCostDailyBucket extends AgentCostBucket {
+  date: string;
+  byBot: Array<{ configId: string | null; costUsd: number }>;
+}
+
+export interface AgentCostBreakdown extends AgentCostBucket {
+  period: AgentCostPeriod;
+  from: string;
+  to: string;
+  byBot: AgentCostBotBucket[];
+  byUser: AgentCostUserBucket[];
+  dailySeries: AgentCostDailyBucket[];
+}
+
+export interface AgentCostBreakdownParams {
+  /** null = toda la plataforma (solo desde el controller admin) */
+  userId: string | null;
+  period: AgentCostPeriod;
+  mode?: TradingMode;
+  configId?: string;
+}
+
+function emptyAgentCostBucket(): AgentCostBucket {
+  return {
+    costUsd: 0,
+    decisions: 0,
+    llmDecisions: 0,
+    gateDecisions: 0,
+    unpricedDecisions: 0,
+  };
+}
+
+function accumulateAgentCost(
+  bucket: AgentCostBucket,
+  decision: { llmCostUsd: number | null; llmCallCount: number },
+): void {
+  bucket.decisions += 1;
+  if (decision.llmCallCount > 0) {
+    bucket.llmDecisions += 1;
+  } else {
+    bucket.gateDecisions += 1;
+  }
+  if (decision.llmCostUsd === null) {
+    bucket.unpricedDecisions += 1;
+  } else {
+    bucket.costUsd += decision.llmCostUsd;
+  }
 }
 
 @Injectable()
@@ -551,5 +647,107 @@ export class AnalyticsService {
           ? Math.round((data.wins / data.trades) * 10000) / 100
           : 0,
     }));
+  }
+
+  async getAgentCostBreakdown(
+    params: AgentCostBreakdownParams,
+  ): Promise<AgentCostBreakdown> {
+    const { from, to } = resolveAgentCostRange(params.period, new Date());
+
+    const decisions = await this.prisma.agentDecision.findMany({
+      where: {
+        ...(params.userId ? { userId: params.userId } : {}),
+        ...modeFilter(params.mode),
+        ...(params.configId ? { configId: params.configId } : {}),
+        createdAt: { gte: from, lte: to },
+      },
+      select: {
+        userId: true,
+        configId: true,
+        configName: true,
+        asset: true,
+        pair: true,
+        mode: true,
+        llmCostUsd: true,
+        llmCallCount: true,
+        createdAt: true,
+      },
+    });
+
+    const total = emptyAgentCostBucket();
+    const byBotMap = new Map<string, AgentCostBotBucket>();
+    const byUserMap = new Map<string, AgentCostUserBucket>();
+    const dailyMap = new Map<
+      string,
+      { bucket: AgentCostBucket; byBot: Map<string, number> }
+    >();
+
+    for (const decision of decisions) {
+      accumulateAgentCost(total, decision);
+
+      const botKey =
+        decision.configId ??
+        `unassigned:${decision.asset}:${decision.pair}:${decision.mode ?? 'UNKNOWN'}`;
+      if (!byBotMap.has(botKey)) {
+        byBotMap.set(botKey, {
+          ...emptyAgentCostBucket(),
+          configId: decision.configId,
+          configName: decision.configName,
+          asset: decision.asset,
+          pair: decision.pair,
+          mode: decision.mode ?? 'UNKNOWN',
+        });
+      }
+      accumulateAgentCost(byBotMap.get(botKey) as AgentCostBucket, decision);
+
+      if (!byUserMap.has(decision.userId)) {
+        byUserMap.set(decision.userId, {
+          ...emptyAgentCostBucket(),
+          userId: decision.userId,
+        });
+      }
+      accumulateAgentCost(
+        byUserMap.get(decision.userId) as AgentCostBucket,
+        decision,
+      );
+
+      const dateKey = decision.createdAt.toISOString().slice(0, 10);
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          bucket: emptyAgentCostBucket(),
+          byBot: new Map(),
+        });
+      }
+      const day = dailyMap.get(dateKey) as {
+        bucket: AgentCostBucket;
+        byBot: Map<string, number>;
+      };
+      accumulateAgentCost(day.bucket, decision);
+      day.byBot.set(
+        botKey,
+        (day.byBot.get(botKey) ?? 0) + (decision.llmCostUsd ?? 0),
+      );
+    }
+
+    const dailySeries: AgentCostDailyBucket[] = Array.from(dailyMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, { bucket, byBot }]) => ({
+        date,
+        ...bucket,
+        byBot: Array.from(byBot.entries()).map(([botKey, costUsd]) => ({
+          configId: botKey.startsWith('unassigned:') ? null : botKey,
+          costUsd,
+        })),
+      }));
+
+    return {
+      period: params.period,
+      from: from.toISOString(),
+      to: to.toISOString(),
+      ...total,
+      byBot: Array.from(byBotMap.values()),
+      byUser: Array.from(byUserMap.values()),
+      dailySeries,
+    };
   }
 }

@@ -7,7 +7,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { TradingMode } from '../../generated/prisma/enums';
-import { AnalyticsService } from './analytics.service';
+import { AnalyticsService, parseAgentCostPeriod } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -125,5 +125,51 @@ export class AnalyticsController {
     @Query('mode') mode?: TradingMode,
   ) {
     return this.analyticsService.getAssetBreakdown(user.userId, mode);
+  }
+
+  @Get('agent-costs')
+  @ApiOperation({
+    summary:
+      'Costo LLM real del usuario por bot y por dia calendario UTC (fuente: AgentDecision.llmCostUsd)',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['7d', '30d', '90d'],
+    description: 'Ventana de agregacion (default 30d)',
+  })
+  @ApiQuery({
+    name: 'mode',
+    required: false,
+    enum: ['SANDBOX', 'TESTNET', 'LIVE'],
+  })
+  @ApiQuery({ name: 'configId', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Desglose de costo LLM por bot' })
+  @ApiResponse({ status: 400, description: 'period fuera de 7d | 30d | 90d' })
+  async getAgentCosts(
+    @CurrentUser() user: RequestUser,
+    @Query('period') period?: string,
+    @Query('mode') mode?: TradingMode,
+    @Query('configId') configId?: string,
+  ) {
+    const breakdown = await this.analyticsService.getAgentCostBreakdown({
+      userId: user.userId,
+      period: parseAgentCostPeriod(period),
+      mode,
+      configId,
+    });
+
+    return {
+      period: breakdown.period,
+      from: breakdown.from,
+      to: breakdown.to,
+      costUsd: breakdown.costUsd,
+      decisions: breakdown.decisions,
+      llmDecisions: breakdown.llmDecisions,
+      gateDecisions: breakdown.gateDecisions,
+      unpricedDecisions: breakdown.unpricedDecisions,
+      byBot: breakdown.byBot,
+      dailySeries: breakdown.dailySeries,
+    };
   }
 }

@@ -2,5 +2,49 @@
   "$schema": "./schemas/tasks-index.schema.json",
   "_comment": "Lightweight index over per-cycle task files. Canonical task data lives in each sdd/specs/{spec-id}/cycles/cycle-XX/tasks.json. Do not edit task detail here. Regenerate with: pnpm sdd:rebuild-tasks-index",
   "sdd_version": "4.0",
-  "specs": {}
+  "specs": {
+    "spec-e-burgos-001-agents-simplification": {
+      "cycles": {
+        "cycle-01": {
+          "file": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-01/tasks.json",
+          "module": "trading-agents-core",
+          "apps": [
+            "apps/api",
+            "libs/analysis",
+            "libs/openrouter"
+          ],
+          "status": "completed",
+          "tasks_total": 12,
+          "tasks_done": 12
+        },
+        "cycle-02": {
+          "file": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-02/tasks.json",
+          "module": "trading-agents-core",
+          "apps": [
+            "apps/api",
+            "libs/data-fetcher",
+            "libs/trading-engine"
+          ],
+          "status": "completed",
+          "tasks_total": 16,
+          "tasks_done": 16
+        },
+        "cycle-03": {
+          "file": "sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-03/tasks.json",
+          "module": "trading-agents-core",
+          "apps": [
+            "apps/api",
+            "apps/web",
+            "libs/analysis",
+            "libs/openrouter",
+            "libs/trading-engine",
+            "libs/shared"
+          ],
+          "status": "completed",
+          "tasks_total": 14,
+          "tasks_done": 14
+        }
+      }
+    }
+  }
 }

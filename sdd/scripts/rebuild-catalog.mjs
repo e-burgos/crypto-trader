@@ -24,11 +24,12 @@ export function buildCatalog() {
     skills: readdirSync(skillsDir)
       .filter((entry) => statSync(join(skillsDir, entry)).isDirectory())
       .sort()
-      .flatMap((dir) =>
-        readdirSync(join(skillsDir, dir)).includes('skill.md')
-          ? [{ dir, file: 'skill.md' }]
-          : [],
-      ),
+      .flatMap((dir) => {
+        const file = readdirSync(join(skillsDir, dir)).find(
+          (entry) => entry === 'skill.md' || entry === 'SKILL.md',
+        );
+        return file ? [{ dir, file }] : [];
+      }),
     prompts: readdirSync(join(SDD_ROOT, 'prompts'))
       .filter((f) => f.endsWith('.prompt.md'))
       .sort()

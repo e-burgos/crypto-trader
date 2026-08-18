@@ -3,6 +3,8 @@
  * Bugs #2, #3, #4, #6, #7: Position scoping, atomic wallet, context isolation
  */
 
+import { TradingProcessor } from './trading.processor';
+
 describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () => {
   // ── Bug #2: executeLLMSell must filter by configId + pair ──────────────
 
@@ -107,21 +109,49 @@ describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () =
       expect(sellBody).toMatch(/tx\.sandboxWallet\.findUnique/);
     });
 
-    it('should use $transaction for sandbox wallet operations in checkOpenPositions', () => {
-      const fs = require('fs');
-      const source = fs.readFileSync(
-        require('path').join(__dirname, 'trading.processor.ts'),
-        'utf8',
+    it('credits the sandbox wallet atomically via $transaction (creditSandboxWallet, used by checkOpenPositions exits)', async () => {
+      const gatewayMock = { emitToUser: jest.fn() };
+      const txSandboxWallet = {
+        upsert: jest.fn().mockResolvedValue({}),
+        findUnique: jest.fn().mockResolvedValue({ balance: 10_100 }),
+      };
+      const prisma = {
+        $transaction: jest.fn(async (fn: any) =>
+          fn({ sandboxWallet: txSandboxWallet }),
+        ),
+      };
+      const processor = new TradingProcessor(
+        prisma as any,
+        gatewayMock as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
       );
 
-      const checkStart = source.indexOf('private async checkOpenPositions');
-      const checkEnd = source.indexOf('private parseSymbolForSandbox');
-      const checkBody = source.slice(checkStart, checkEnd);
+      await (processor as any).creditSandboxWallet('user-1', 'USDT', 100, 1);
 
-      // Must use $transaction for sandbox wallet operations
-      expect(checkBody).toMatch(/\$transaction/);
-      expect(checkBody).toMatch(/tx\.sandboxWallet\.upsert/);
-      expect(checkBody).toMatch(/tx\.sandboxWallet\.findUnique/);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(txSandboxWallet.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_currency: { userId: 'user-1', currency: 'USDT' } },
+        }),
+      );
+      expect(txSandboxWallet.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId_currency: { userId: 'user-1', currency: 'USDT' } },
+        }),
+      );
+      expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
+        'user-1',
+        'wallet:updated',
+        expect.objectContaining({ currency: 'USDT', balance: 10_100 }),
+      );
     });
   });
 

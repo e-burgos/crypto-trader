@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LLMProvider, LLMSource } from '../../generated/prisma/enums';
 import { MODEL_PRICING } from './model-pricing';
+import { ModelPricingService, PricingSourceValue } from './model-pricing.service';
 
 export interface LLMUsageLogParams {
   userId: string;
@@ -13,6 +14,14 @@ export interface LLMUsageLogParams {
   decisionId?: string;
   actualModel?: string;
   requestId?: string;
+}
+
+export interface LLMUsageOutcome {
+  /** null ⇔ pricingSource === 'UNPRICED' — never a disguised zero (CE-07) */
+  costUsd: number | null;
+  pricingSource: PricingSourceValue;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export interface LLMUsageStats {
@@ -29,6 +38,7 @@ export interface LLMUsageStats {
     outputTokens: number;
     costUsd: number;
     callCount: number;
+    unpricedCallCount: number;
     byModel: Array<{
       model: string;
       label: string;
@@ -52,23 +62,27 @@ const PROVIDER_DISPLAY: Record<string, string> = {
   GROQ: 'Groq',
   GEMINI: 'Google Gemini',
   MISTRAL: 'Mistral AI',
+  OPENROUTER: 'OpenRouter',
+  TOGETHER: 'Together AI',
 };
 
 @Injectable()
 export class LLMUsageService {
   private readonly logger = new Logger(LLMUsageService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly modelPricing: ModelPricingService,
+  ) {}
 
-  async log(params: LLMUsageLogParams): Promise<void> {
-    const pricing = MODEL_PRICING[params.model];
-    const costUsd = pricing
-      ? (params.usage.inputTokens * pricing.input +
-          params.usage.outputTokens * pricing.output) /
-        1_000_000
-      : 0;
-
+  async log(params: LLMUsageLogParams): Promise<LLMUsageOutcome> {
     try {
+      const pricing = await this.modelPricing.resolve(
+        params.provider,
+        params.actualModel ?? params.model,
+      );
+      const costUsd = this.modelPricing.computeCostUsd(pricing, params.usage);
+
       await this.prisma.llmUsageLog.create({
         data: {
           userId: params.userId,
@@ -77,6 +91,7 @@ export class LLMUsageService {
           inputTokens: params.usage.inputTokens,
           outputTokens: params.usage.outputTokens,
           costUsd,
+          pricingSource: pricing.source,
           source: params.source,
           agentId: (params.agentId as any) ?? undefined,
           decisionId: params.decisionId ?? undefined,
@@ -84,10 +99,23 @@ export class LLMUsageService {
           requestId: params.requestId ?? undefined,
         },
       });
+
+      return {
+        costUsd: pricing.source === 'UNPRICED' ? null : costUsd,
+        pricingSource: pricing.source,
+        inputTokens: params.usage.inputTokens,
+        outputTokens: params.usage.outputTokens,
+      };
     } catch (err) {
       this.logger.warn(
         `Failed to log LLM usage: ${err instanceof Error ? err.message : String(err)}`,
       );
+      return {
+        costUsd: null,
+        pricingSource: 'UNPRICED',
+        inputTokens: params.usage.inputTokens,
+        outputTokens: params.usage.outputTokens,
+      };
     }
   }
 
@@ -128,6 +156,7 @@ export class LLMUsageService {
         outputTokens: number;
         costUsd: number;
         callCount: number;
+        unpricedCallCount: number;
         models: Map<
           string,
           {
@@ -162,6 +191,7 @@ export class LLMUsageService {
           outputTokens: 0,
           costUsd: 0,
           callCount: 0,
+          unpricedCallCount: 0,
           models: new Map(),
         });
       }
@@ -170,6 +200,9 @@ export class LLMUsageService {
       prov.outputTokens += log.outputTokens;
       prov.costUsd += log.costUsd;
       prov.callCount += 1;
+      if (!log.pricingSource || log.pricingSource === 'UNPRICED') {
+        prov.unpricedCallCount += 1;
+      }
 
       if (!prov.models.has(log.model)) {
         prov.models.set(log.model, {
@@ -204,6 +237,7 @@ export class LLMUsageService {
         outputTokens: data.outputTokens,
         costUsd: data.costUsd,
         callCount: data.callCount,
+        unpricedCallCount: data.unpricedCallCount,
         byModel: Array.from(data.models.entries()).map(([model, mData]) => ({
           model,
           label: MODEL_PRICING[model]?.label ?? model,

@@ -1,5 +1,10 @@
 import axios from 'axios';
-import { LLMProviderClient, LLMResponse } from './llm-types';
+import { LLMCallOptions, LLMProviderClient, LLMResponse } from './llm-types';
+import {
+  postWithCacheControlRetry,
+  resolvePromptCacheCapability,
+  shouldMarkPromptForCache,
+} from './prompt-cache';
 
 export interface OpenRouterProviderConfig {
   apiKey: string;
@@ -25,34 +30,58 @@ export class OpenRouterProvider implements LLMProviderClient {
   async complete(
     systemPrompt: string,
     userPrompt: string,
+    options?: LLMCallOptions,
   ): Promise<LLMResponse> {
-    const body: Record<string, unknown> = {
-      model: this.model,
-      max_tokens: this.maxTokens,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+    const maxTokens = options?.maxTokens ?? this.maxTokens;
+    const capability = resolvePromptCacheCapability(this.name, this.model);
+    const shouldMark = shouldMarkPromptForCache(capability, systemPrompt);
+
+    const buildBody = (withCacheControl: boolean): Record<string, unknown> => {
+      const body: Record<string, unknown> = {
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [
+          {
+            role: 'system',
+            content: withCacheControl
+              ? [
+                  {
+                    type: 'text',
+                    text: systemPrompt,
+                    cache_control: { type: 'ephemeral' },
+                  },
+                ]
+              : systemPrompt,
+          },
+          { role: 'user', content: userPrompt },
+        ],
+      };
+
+      // Enable fallback routing when fallback models are configured
+      if (this.fallbackModels.length > 0) {
+        body['route'] = 'fallback';
+        body['models'] = [this.model, ...this.fallbackModels];
+      }
+
+      return body;
     };
 
-    // Enable fallback routing when fallback models are configured
-    if (this.fallbackModels.length > 0) {
-      body['route'] = 'fallback';
-      body['models'] = [this.model, ...this.fallbackModels];
-    }
-
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      body,
-      {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://cryptotrader.app',
-          'X-Title': 'CryptoTrader',
-        },
-        timeout: 60000,
-      },
+    const response = await postWithCacheControlRetry(
+      (withCacheControl) =>
+        axios.post(
+          'https://openrouter.ai/api/v1/chat/completions',
+          buildBody(withCacheControl),
+          {
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://cryptotrader.app',
+              'X-Title': 'CryptoTrader',
+            },
+            timeout: 60000,
+          },
+        ),
+      shouldMark,
     );
     const data = response.data;
 
@@ -78,6 +107,7 @@ export class OpenRouterProvider implements LLMProviderClient {
       },
       headers: response.headers as Record<string, string>,
       actualModel: data.model ?? undefined,
+      truncated: data.choices?.[0]?.finish_reason === 'length',
     };
   }
 }

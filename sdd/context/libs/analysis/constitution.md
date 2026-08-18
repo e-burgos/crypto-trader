@@ -1,6 +1,6 @@
 # Constitución — libs/analysis
 
-> Versión 1.0 | Última actualización: cycle-0 (inicial)
+> Versión 1.1 | Última actualización: cycle-01 | Fecha: 2026-08-17
 
 ## 1. Propósito
 
@@ -14,6 +14,9 @@
 ## 3. Estructura y patrones
 
 - Depende de: `libs/shared`, `libs/data-fetcher`. Consumida por `apps/api` y (solo tipos) por `apps/web`.
+- Superficie pública para LLM: los 7 providers (`Claude`, `OpenAI`, `Groq`, `Gemini`, `Mistral`, `Together`, `OpenRouter`), la fábrica `createLLMProvider`, los tipos `LLMProviderClient`/`LLMUsage`/`LLMResponse`/`LLMAnalysisResult` y los helpers `buildAnalysisPrompt`/`parseLLMResponse`.
+- **La lib provee providers y parsing, no política de reintento.** `LLMAnalyzer` (capa de orquestación con reintentos + temperatura sobre un provider) fue eliminada en cycle-01 por no tener consumidores: si vuelve a hacer falta esa capa, el lugar correcto es el llamador.
+- Consumidor único de la fábrica desde `apps/api`: `AgentConfigResolverService.resolveClient()`.
 
 ## 4. Convenciones propias
 

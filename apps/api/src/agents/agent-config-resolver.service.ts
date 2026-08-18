@@ -1,22 +1,38 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgentConfigService } from './agent-config.service';
 import { AgentId, LLMProvider } from '../../generated/prisma/enums';
 import { PRESET_FREE } from './agent-presets';
+import { decrypt } from '../users/utils/encryption.util';
+import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import {
+  createLLMProvider,
+  LLMProviderClient,
+  OpenRouterProvider,
+} from '@crypto-trader/analysis';
+import type { LLMProvider as AnalysisLLMProvider } from '@crypto-trader/shared';
+import { MODEL_SLOT_IDS, ModelSlotId, toAgentId } from './agent-identity';
 
-export interface ResolvedAgentConfig {
-  agentId: AgentId;
+export type ResolutionSource = 'override' | 'user' | 'admin' | 'preset' | 'credential';
+
+export interface ResolvedAgentModel {
+  slot: ModelSlotId;
   provider: LLMProvider;
   model: string;
-  source: 'user' | 'admin' | 'fallback';
+  source: ResolutionSource;
+}
+
+export interface ResolvedAgentClient extends ResolvedAgentModel {
+  client: LLMProviderClient;
 }
 
 export interface AgentHealthItem {
-  agentId: AgentId;
+  slot: ModelSlotId;
   healthy: boolean;
   provider: LLMProvider;
   model: string;
-  source: 'user' | 'admin' | 'fallback';
+  source: ResolutionSource;
   hasKey: boolean;
 }
 
@@ -25,8 +41,14 @@ export interface AgentHealthReport {
   agents: AgentHealthItem[];
 }
 
-// Hardcoded fallback = PRESET_FREE (OpenRouter free models, chosen by agent role).
-// Updated April 2026 — see agent-presets.ts for the full rationale per agent.
+export class NoLLMCredentialError extends BadRequestException {
+  constructor(userId: string) {
+    super(
+      `No active LLM credentials for user ${userId}. Configure them in Settings.`,
+    );
+  }
+}
+
 const AGENT_FALLBACK_CONFIGS = PRESET_FREE as Record<
   AgentId,
   { provider: LLMProvider; model: string }
@@ -37,17 +59,15 @@ export class AgentConfigResolverService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agentConfigService: AgentConfigService,
+    private readonly platformLLMProviderService: PlatformLLMProviderService,
   ) {}
 
-  /**
-   * Resolve the effective config for a single agent.
-   * Priority: user override > admin default > hardcoded fallback.
-   */
   async resolveConfig(
-    agentId: AgentId,
+    slot: ModelSlotId,
     userId: string,
-  ): Promise<ResolvedAgentConfig> {
-    // 1. User override
+  ): Promise<ResolvedAgentModel> {
+    const agentId = toAgentId(slot);
+
     const userOverride = await this.agentConfigService.getUserAgentConfig(
       userId,
       agentId,
@@ -56,7 +76,7 @@ export class AgentConfigResolverService {
       const hasKey = await this.hasActiveKey(userId, userOverride.provider);
       if (hasKey) {
         return {
-          agentId,
+          slot,
           provider: userOverride.provider,
           model: userOverride.model,
           source: 'user',
@@ -64,44 +84,32 @@ export class AgentConfigResolverService {
       }
     }
 
-    // 2. Admin default
     const adminDefault =
       await this.agentConfigService.getAdminAgentConfig(agentId);
     if (adminDefault) {
       return {
-        agentId,
+        slot,
         provider: adminDefault.provider,
         model: adminDefault.model,
         source: 'admin',
       };
     }
 
-    // 3. Hardcoded fallback
     const fallback = AGENT_FALLBACK_CONFIGS[agentId];
     return {
-      agentId,
+      slot,
       provider: fallback.provider,
       model: fallback.model,
-      source: 'fallback',
+      source: 'preset',
     };
   }
 
-  /**
-   * Resolve configs for all configurable agents (excluding abstract 'orchestrator').
-   */
-  async resolveAllConfigs(userId: string): Promise<ResolvedAgentConfig[]> {
-    const configurableAgents = Object.values(AgentId).filter(
-      (id) => id !== AgentId.orchestrator,
-    );
+  async resolveAllConfigs(userId: string): Promise<ResolvedAgentModel[]> {
     return Promise.all(
-      configurableAgents.map((agentId) => this.resolveConfig(agentId, userId)),
+      MODEL_SLOT_IDS.map((slot) => this.resolveConfig(slot, userId)),
     );
   }
 
-  /**
-   * Health check: verify user has active keys for all resolved providers.
-   * Optionally simulate removing a provider.
-   */
   async checkHealth(
     userId: string,
     simulateRemoveProvider?: LLMProvider,
@@ -114,8 +122,8 @@ export class AgentConfigResolverService {
           hasKey = false;
         }
         return {
-          agentId: cfg.agentId,
-          healthy: hasKey, // true solo si hay key activa — admin/fallback no garantizan disponibilidad
+          slot: cfg.slot,
+          healthy: hasKey,
           provider: cfg.provider,
           model: cfg.model,
           source: cfg.source,
@@ -138,5 +146,99 @@ export class AgentConfigResolverService {
       where: { userId, provider, isActive: true },
     });
     return count > 0;
+  }
+
+  async resolveClient(
+    userId: string,
+    slot: ModelSlotId,
+    override?: { provider: LLMProvider; model: string },
+  ): Promise<ResolvedAgentClient> {
+    if (override) {
+      const cred = await this.findActiveCredential(userId, override.provider);
+      if (cred) {
+        await this.platformLLMProviderService.assertProviderActive(
+          override.provider,
+        );
+        return {
+          slot,
+          provider: override.provider,
+          model: override.model,
+          source: 'override',
+          client: this.buildClient(
+            override.provider,
+            decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
+            override.model,
+            cred.fallbackModels,
+          ),
+        };
+      }
+    }
+
+    const resolved = await this.resolveConfig(slot, userId);
+    const resolvedCred = await this.findActiveCredential(
+      userId,
+      resolved.provider,
+    );
+    if (resolvedCred) {
+      await this.platformLLMProviderService.assertProviderActive(
+        resolved.provider,
+      );
+      return {
+        slot,
+        provider: resolved.provider,
+        model: resolved.model,
+        source: resolved.source,
+        client: this.buildClient(
+          resolved.provider,
+          decrypt(resolvedCred.apiKeyEncrypted, resolvedCred.apiKeyIv),
+          resolved.model,
+          resolvedCred.fallbackModels,
+        ),
+      };
+    }
+
+    const firstCred = await this.prisma.lLMCredential.findFirst({
+      where: { userId, isActive: true },
+    });
+    if (firstCred) {
+      await this.platformLLMProviderService.assertProviderActive(
+        firstCred.provider,
+      );
+      return {
+        slot,
+        provider: firstCred.provider,
+        model: firstCred.selectedModel,
+        source: 'credential',
+        client: this.buildClient(
+          firstCred.provider,
+          decrypt(firstCred.apiKeyEncrypted, firstCred.apiKeyIv),
+          firstCred.selectedModel,
+          firstCred.fallbackModels,
+        ),
+      };
+    }
+
+    throw new NoLLMCredentialError(userId);
+  }
+
+  private async findActiveCredential(userId: string, provider: LLMProvider) {
+    return this.prisma.lLMCredential.findFirst({
+      where: { userId, provider, isActive: true },
+    });
+  }
+
+  private buildClient(
+    provider: LLMProvider,
+    apiKey: string,
+    model: string,
+    fallbackModels: string[],
+  ): LLMProviderClient {
+    return provider === LLMProvider.OPENROUTER
+      ? new OpenRouterProvider({ apiKey, model, fallbackModels })
+      : createLLMProvider(
+          provider as unknown as AnalysisLLMProvider,
+          apiKey,
+          model,
+        );
   }
 }

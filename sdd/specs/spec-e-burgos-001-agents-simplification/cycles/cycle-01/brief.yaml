@@ -1,0 +1,154 @@
+# sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-01/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 1
+module: trading-agents-core
+phase: prune-and-cost-observability
+date: 2026-08-17
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Dejar el núcleo de agentes con una sola ruta viva y medible: eliminar los subsistemas
+  registrados en DI pero nunca invocados, unificar la resolución de provider/modelo y la
+  fuente de verdad de los system prompts, y hacer que el costo LLM real de OpenRouter llegue
+  al dashboard — sin cambiar el comportamiento de trading (eso es el cycle-02).
+
+scope:
+  - >-
+    Eliminar el subsistema de agent tools: apps/api/src/agents/tools/ (6 tools +
+    agent-tool-registry.ts) y context-planner.service.ts, incluido su registro en el módulo DI.
+    decision-memory.tool.ts:55 referencia un campo `model` inexistente en AgentDecision — se
+    va con la poda, no se arregla.
+  - >-
+    Antes de borrar el registry, rescatar la lógica valiosa de RiskBudgetTool /
+    TradeSimulationTool / PortfolioContextTool como servicios de dominio puros (sin
+    dependencia del contrato de tool ni del LLM), listos para que el cycle-02 los cablee al
+    camino real de ejecución. Rescatar es requisito previo al borrado, no un paso opcional.
+  - >-
+    Eliminar apps/api/src/agents/model-router.service.ts (327 líneas, sin callers, catálogo
+    OpenAI/Claude/Gemini incompatible con el sistema activo OpenRouter-only) y su registro DI.
+  - >-
+    Eliminar libs/analysis/src/lib/llm/llm-analyzer.ts (sin consumidores fuera de su lib) y
+    limpiar sus exports en el barrel de libs/analysis.
+  - >-
+    Eliminar el método muerto buildNewsAggregator_unused() en
+    apps/api/src/trading/trading.processor.ts:1141.
+  - >-
+    DECISIÓN DEL CICLO — pipeline de evaluación (apps/api/src/agents/evaluation/): cablearlo.
+    Llamar scheduleEvaluation() al persistir AgentDecision (hoy nunca se llama desde
+    trading.processor.ts:329-356), dar disparador al job schedule-evaluations, y reemplazar la
+    evaluación placeholder que compara contra el último trade (evaluation.processor.ts:50-54)
+    por evaluación contra precio real de mercado al horizonte definido. Justificación: es la
+    única telemetría de calidad de decisión del sistema, /agents/scorecard hoy devuelve ceros,
+    y el costo de cablearlo es mucho menor que el de reescribirlo más adelante. El architect
+    debe validar la decisión y, si la refuta con evidencia, documentar la eliminación completa
+    como alternativa — lo que NO puede es dejarlo en el limbo actual.
+  - >-
+    Unificar la resolución de provider/modelo en un único servicio, eliminando la duplicación
+    entre agent-config-resolver.service.ts:46-87 y sub-agent.service.ts:641-747 (getProvider,
+    3 ramas casi idénticas de la misma cascada user -> admin -> fallback).
+  - >-
+    Una sola fuente de verdad para system prompts: la tabla AgentDefinition (seed en
+    apps/api/prisma/seed/agents.ts). Eliminar el hardcode AGENT_SYSTEM_PROMPTS de
+    sub-agent.service.ts:41-336 y el fallback de resolveSystemPrompt
+    (sub-agent.service.ts:503-516), garantizando que el seed cubra los 6 agentes antes de borrar.
+  - >-
+    Costo real: conectar el pricing en vivo de OpenRouter
+    (libs/openrouter/src/lib/openrouter-models.service.ts) a LLMUsageService.log()
+    (apps/api/src/llm/llm-usage.service.ts:63-92), que hoy resuelve contra
+    apps/api/src/llm/model-pricing.ts sin entradas OpenRouter (ver comentario líneas 242-244);
+    agregar OPENROUTER y TOGETHER a PROVIDER_DISPLAY (llm-usage.service.ts:49-55).
+  - >-
+    Colapsar o aislar la indirección orchestrator/routing/synthesis: el enum AgentId tiene 8
+    valores para 6 agentes reales, mapeados en resolveConfigAgentId
+    (sub-agent.service.ts:620-632). Reducir a un modelo de "KRYPTO con dos velocidades" o, si
+    el costo de migración del enum en BD lo desaconseja, dejar la indirección documentada y
+    concentrada en un único punto del código.
+
+out_of_scope:
+  - Cualquier cambio de comportamiento de trading — sizing, política de SELL, verdict REDUCE, SL/TP, trailing stop, ventas parciales, límites agregados (cycle-02)
+  - FK Trade.decisionId -> AgentDecision y reemplazo del override por regex del BLOCK de AEGIS (cycle-02)
+  - Órdenes LIMIT/STOP_LOSS_LIMIT/OCO en BinanceRestClient (cycle-02)
+  - Gate determinista pre-LLM, caché por (asset, pair, timeframe), prompt caching de proveedor, max_tokens por tarea (cycle-03)
+  - BinanceWsClient — exportado pero no importado; se evalúa junto con la abstracción de exchange en spec-e-burgos-002, no se poda aquí
+  - Abstracción de exchange y futuros (spec-e-burgos-002); chat con function calling real y RAG (spec-e-burgos-003)
+
+dependencies_required:
+  - Ninguna — primera spec del arnés y primer ciclo de la spec
+
+agent_contexts:
+  functional:
+    goal: >-
+      Traducir la poda y la observabilidad de costo a historias de usuario verificables desde
+      la perspectiva del operador de la plataforma (dueño del bot y admin): ver el costo real
+      por proveedor en el dashboard, ver un scorecard de calidad de decisión que deje de
+      devolver ceros, y administrar los system prompts en un solo lugar. Definir criterios de
+      aceptación medibles para cada una, incluidos los del criterio de aceptación de la spec.
+    business_context: >-
+      La plataforma opera bots de trading cripto con 6 agentes-personaje (KRYPTO, NEXUS,
+      FORGE, SIGMA, CIPHER, AEGIS) que analizan el mercado vía LLM y deciden operar. El
+      objetivo de negocio es obtener ganancias de forma segura y con justificación de análisis
+      previo. Hoy el dueño del bot paga entre $1,40 y $5 por día por bot en llamadas LLM y el
+      dashboard de costos le reporta $0 para casi todo ese tráfico, porque el camino por
+      defecto (OpenRouter) no tiene tarifas cargadas. Tampoco puede saber si las decisiones
+      del agente fueron correctas — el scorecard existe pero siempre devuelve ceros. Este
+      ciclo es de fundación: no cambia qué compra ni cuándo vende el bot, hace que lo que ya
+      ocurre sea medible y que el código que lo sostiene sea la mitad.
+    relevant_spec_sections:
+      - "1. Contexto y diagnóstico — hallazgos A (código muerto) y C (costo LLM sin medición)"
+      - "3. Alcance por ciclo — Cycle-01, puntos 1 a 5 y su criterio de aceptación"
+
+  planner:
+    goal: >-
+      Ordenar el ciclo en tasks con la secuencia de riesgo correcta: primero rescatar la
+      lógica de RiskBudgetTool/TradeSimulationTool/PortfolioContextTool como servicios de
+      dominio y verificar la cobertura del seed de AgentDefinition, DESPUÉS borrar (poda de
+      tools + registry + context-planner, model-router, llm-analyzer,
+      buildNewsAggregator_unused, hardcode de prompts). Separar las tasks de unificación
+      (provider/modelo, prompts, pricing OpenRouter, indirección del enum) de las de borrado,
+      con `pnpm nx run-many -t test lint` verde como criterio de done por task. Estimar horas
+      y story points de cada task.
+    note: "Recibe el output del Funcional y del Arquitecto — no necesita la spec completa"
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-01/planner.md
+
+  architect:
+    goal: >-
+      Definir el contrato de los servicios de dominio rescatados (risk budget, trade
+      simulation, portfolio context) de modo que el cycle-02 pueda invocarlos desde el camino
+      real de ejecución; definir el servicio único de resolución provider/modelo y su cascada;
+      definir cómo el pricing en vivo de OpenRouter llega a LLMUsageService.log (fuente,
+      caché, fallback cuando el catálogo no responde) y qué pasa con MODEL_PRICING estático;
+      validar o refutar con evidencia la decisión de cablear el pipeline de evaluación y
+      especificar el momento exacto de la llamada a scheduleEvaluation, el horizonte de
+      evaluación y la fuente del precio real de mercado; decidir el destino del enum AgentId
+      (colapsar vs aislar) considerando el costo de migrar los valores ya persistidos en BD.
+    existing_tables: ["AgentDecision", "AgentDefinition", "AgentConfig", "LLMCredential", "PlatformLLMProvider", "TradingConfig", "Trade", "Position"]
+    existing_endpoints: ["/agents/scorecard", "/analytics (costos LLM)"]
+    note: >-
+      sdd/schema.json y sdd/api.json están vacíos para este repo (proyecto pre-existente
+      adoptado por el arnés) — el arquitecto registra solo lo que este ciclo toca, tomando el
+      estado real de apps/api/prisma/schema.prisma como referencia.
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-01/architect.md
+
+  implementor_back:
+    goal: >-
+      Ejecutar las tasks de rescate, poda, unificación y cableado de pricing/evaluación, una
+      task a la vez, dejando `pnpm nx run-many -t test lint` verde y diff neto de líneas
+      negativo en apps/api/src/agents + orchestrator.
+    app: apps/api
+    app_context: sdd/context/apps/api/context_prompt.md
+    additional_contexts:
+      - sdd/context/libs/analysis/context_prompt.md
+      - sdd/context/libs/openrouter/context_prompt.md
+    note: "Recibe una task a la vez del Planner. Cero comentarios en el código (regla global del repo)."
+
+  reviewer:
+    goal: >-
+      Validar todo el output del ciclo contra el criterio de aceptación de la spec: cero
+      referencias a los subsistemas eliminados, `pnpm nx run-many -t test lint` verde, el
+      dashboard de costos mostrando costo > $0 para tráfico OpenRouter, y diff neto de líneas
+      negativo en apps/api/src/agents + orchestrator. Verificar que la decisión sobre el
+      pipeline de evaluación quedó tomada y documentada (no en el limbo) y que la lógica
+      rescatada de las tools existe como servicio de dominio antes de dar el ciclo por cerrado.
+    output_file: sdd/specs/spec-e-burgos-001-agents-simplification/cycles/cycle-01/cycle.json

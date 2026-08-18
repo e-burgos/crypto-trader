@@ -3,8 +3,7 @@
   "project": "crypto-trader",
   "description": "Fullstack crypto trading platform",
   "version": "0.1.0",
-  "completed_modules": [],
-  "in_progress_modules": [
+  "completed_modules": [
     {
       "module": "trading-agents-core",
       "spec": "spec-e-burgos-001-agents-simplification",
@@ -17,10 +16,12 @@
         "libs/shared",
         "libs/openrouter"
       ],
-      "cycles_completed": 2,
-      "description": "Simplificación del núcleo de agentes (poda de subsistemas muertos), venta inteligente con gestión activa de riesgo y reducción del costo LLM por decisión"
+      "cycles_completed": 3,
+      "description": "Simplificacion del nucleo de agentes (poda de subsistemas muertos y observabilidad de costo), venta inteligente con gestion activa de riesgo y ordenes de proteccion nativas, y reduccion del costo LLM por decision (gate determinista pre-LLM, cache compartido de senal, max_tokens por tarea y costo real por decision visible por bot/dia)",
+      "completed_at": "2026-08-18"
     }
   ],
+  "in_progress_modules": [],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

@@ -311,7 +311,7 @@ describe('OrchestratorService', () => {
       expect(result.decision).toBe('HOLD');
       expect(result.orchestrated).toBe(true);
       expect(result.reasoning).toContain('AEGIS BLOCK');
-      // TASK-007: the cost accumulator settles even on the early BLOCK return path
+      // the cost accumulator settles even on the early BLOCK return path
       expect(result.llmCallCount).toBe(0);
       expect(result.llmCostUsd).toBeNull();
       // Synthesis call should NOT be made after BLOCK

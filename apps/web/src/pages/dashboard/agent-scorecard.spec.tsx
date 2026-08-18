@@ -53,7 +53,7 @@ describe('AgentScorecardPage', () => {
   });
 
   it('renders page header', () => {
-    vi.mocked(api.get).mockReturnValue(new Promise(() => {}));
+    vi.mocked(api.get).mockReturnValue(new Promise(() => undefined));
     renderWithProviders(<AgentScorecardPage />);
 
     expect(screen.getByText('Agent Scorecard')).toBeInTheDocument();

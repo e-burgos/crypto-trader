@@ -17,6 +17,10 @@ import {
 import { Button, Dialog, Select, type SelectOption } from '@crypto-trader/ui';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect, useMemo } from 'react';
+import type {
+  AgentSlotWireId,
+  ResolvedAgentModelWire,
+} from '@crypto-trader/shared';
 import {
   useAgentConfigs,
   useAgentHealth,
@@ -24,7 +28,6 @@ import {
   useResetAgentConfig,
   useApplyRecommendedPreset,
   useAutoResolveFallback,
-  ResolvedAgentConfig,
   AgentPresetName,
   type RecommendedModelMap,
 } from '../../../hooks/use-agent-config';
@@ -37,6 +40,17 @@ import { useOpenRouterModels } from '../../../hooks/use-openrouter-models';
 import { DynamicModelSelect } from '../../../containers/settings/dynamic-model-select';
 import { OpenRouterModelSelect } from '../../../containers/settings/openrouter-model-select';
 import { cn } from '../../../lib/utils';
+import {
+  resolveSourceBadge,
+  type AgentSourceTone,
+} from './agent-source-badge';
+
+const SOURCE_BADGE_TONE_CLASS: Record<AgentSourceTone, string> = {
+  override: 'bg-primary/10 text-primary',
+  admin: 'bg-blue-500/10 text-blue-500',
+  default: 'bg-muted text-muted-foreground',
+  unknown: 'bg-red-500/10 text-red-400',
+};
 
 interface AgentMetaInfo {
   codename: string;
@@ -201,16 +215,16 @@ function AgentConfigCard({
   t,
   availableModelIds,
 }: {
-  config: ResolvedAgentConfig;
+  config: ResolvedAgentModelWire;
   activeProviders: string[];
-  onSave: (agentId: string, provider: string, model: string) => void;
-  onReset: (agentId: string) => void;
+  onSave: (slot: AgentSlotWireId, provider: string, model: string) => void;
+  onReset: (slot: AgentSlotWireId) => void;
   isSaving: boolean;
   t: (key: string) => string;
   availableModelIds: Set<string> | null;
 }) {
-  const meta = AGENT_META[config.agentId] ?? {
-    codename: config.agentId,
+  const meta = AGENT_META[config.slot] ?? {
+    codename: config.slot,
     color: 'text-muted-foreground',
   };
   const [provider, setProvider] = useState(config.provider);
@@ -230,7 +244,8 @@ function AgentConfigCard({
 
   const isDirty = provider !== config.provider || model !== config.model;
   const canSave = isDirty && model.trim() !== '';
-  const isOverridden = config.source === 'user';
+  const sourceBadge = resolveSourceBadge(config.source);
+  const isOverridden = sourceBadge.tone === 'override';
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3 h-full">
@@ -241,20 +256,16 @@ function AgentConfigCard({
             {meta.codename}
           </span>
           <span className="text-xs text-muted-foreground">
-            ({config.agentId})
+            ({config.slot})
           </span>
         </div>
         <span
-          className={cn('text-xs px-2 py-0.5 rounded-full', {
-            'bg-primary/10 text-primary': config.source === 'user',
-            'bg-muted text-muted-foreground': config.source !== 'user',
-          })}
+          className={cn(
+            'text-xs px-2 py-0.5 rounded-full',
+            SOURCE_BADGE_TONE_CLASS[sourceBadge.tone],
+          )}
         >
-          {config.source === 'user'
-            ? t('settings.agents.usingOverride')
-            : config.source === 'admin'
-              ? t('settings.agents.usingAdmin')
-              : t('settings.agents.usingDefault')}
+          {t(sourceBadge.labelKey)}
         </span>
       </div>
 
@@ -344,7 +355,7 @@ function AgentConfigCard({
           variant="default"
           size="sm"
           disabled={!canSave || isSaving}
-          onClick={() => onSave(config.agentId, provider, model)}
+          onClick={() => onSave(config.slot, provider, model)}
         >
           {isSaving ? (
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -357,7 +368,7 @@ function AgentConfigCard({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onReset(config.agentId)}
+            onClick={() => onReset(config.slot)}
           >
             <RotateCcw className="h-3 w-3" />
             <span className="ml-1">{t('settings.agents.resetToDefault')}</span>
@@ -423,12 +434,16 @@ export function SettingsAgentsPage() {
     .filter((k) => k.isActive)
     .map((k) => k.provider);
 
-  const handleSave = (agentId: string, provider: string, model: string) => {
-    updateMutation.mutate({ agentId, provider, model });
+  const handleSave = (
+    slot: AgentSlotWireId,
+    provider: string,
+    model: string,
+  ) => {
+    updateMutation.mutate({ slot, provider, model });
   };
 
-  const handleReset = (agentId: string) => {
-    resetMutation.mutate({ agentId });
+  const handleReset = (slot: AgentSlotWireId) => {
+    resetMutation.mutate({ slot });
   };
 
   const handleApplyPreset = (preset: AgentPresetName, name: string) => {
@@ -438,9 +453,9 @@ export function SettingsAgentsPage() {
   // Build recommended model map from AGENT_META for preset application
   const recommendedModels = useMemo<RecommendedModelMap>(() => {
     const map: RecommendedModelMap = {};
-    for (const [agentId, meta] of Object.entries(AGENT_META)) {
+    for (const [slot, meta] of Object.entries(AGENT_META)) {
       if ('freeModel' in meta) {
-        map[agentId] = {
+        map[slot] = {
           free: meta.freeModel,
           balanced: meta.balancedModel,
           optimized: meta.optimizedModel,
@@ -515,34 +530,33 @@ export function SettingsAgentsPage() {
 
   // Split configs into groups (must be before early return — Rules of Hooks)
   const kryptoConfigs = (configs ?? []).filter(
-    (c) => c.agentId === 'routing' || c.agentId === 'synthesis',
+    (c) => c.slot === 'routing' || c.slot === 'synthesis',
   );
   const standardConfigs = (configs ?? []).filter(
-    (c) =>
-      !['routing', 'synthesis', 'risk', 'orchestrator'].includes(c.agentId),
+    (c) => !['routing', 'synthesis', 'risk'].includes(c.slot),
   );
-  const aegisConfig = (configs ?? []).find((c) => c.agentId === 'risk');
+  const aegisConfig = (configs ?? []).find((c) => c.slot === 'risk');
 
   // All agents in display order for the vertical nav
   const allAgentConfigs = useMemo(() => {
-    const list: ResolvedAgentConfig[] = [];
+    const list: ResolvedAgentModelWire[] = [];
     list.push(...kryptoConfigs);
     list.push(...standardConfigs);
     if (aegisConfig) list.push(aegisConfig);
     return list;
   }, [kryptoConfigs, standardConfigs, aegisConfig]);
 
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
 
   // Set initial selected agent once loaded
   useEffect(() => {
-    if (allAgentConfigs.length > 0 && !selectedAgentId) {
-      setSelectedAgentId(allAgentConfigs[0].agentId);
+    if (allAgentConfigs.length > 0 && !selectedSlot) {
+      setSelectedSlot(allAgentConfigs[0].slot);
     }
-  }, [allAgentConfigs, selectedAgentId]);
+  }, [allAgentConfigs, selectedSlot]);
 
   const selectedConfig = allAgentConfigs.find(
-    (c) => c.agentId === selectedAgentId,
+    (c) => c.slot === selectedSlot,
   );
 
   if (isLoading) {
@@ -746,20 +760,20 @@ export function SettingsAgentsPage() {
         {/* Mobile: dropdown selector */}
         <div className="block md:hidden">
           <Select
-            value={selectedAgentId}
-            onChange={setSelectedAgentId}
+            value={selectedSlot}
+            onChange={setSelectedSlot}
             options={allAgentConfigs.map((cfg) => {
-              const m = AGENT_META[cfg.agentId] ?? {
-                codename: cfg.agentId,
+              const m = AGENT_META[cfg.slot] ?? {
+                codename: cfg.slot,
                 color: '',
               };
               const needsAttention =
                 cfg.provider && inactiveProviders.has(cfg.provider);
               return {
-                value: cfg.agentId,
+                value: cfg.slot,
                 label: needsAttention
-                  ? `⚠️ ${m.codename} (${cfg.agentId})`
-                  : `${m.codename} (${cfg.agentId})`,
+                  ? `⚠️ ${m.codename} (${cfg.slot})`
+                  : `${m.codename} (${cfg.slot})`,
               };
             })}
           />
@@ -769,18 +783,18 @@ export function SettingsAgentsPage() {
           {/* Desktop: vertical nav */}
           <div className="hidden md:flex flex-col gap-1 w-48 shrink-0 rounded-xl border border-border bg-card p-2">
             {allAgentConfigs.map((cfg) => {
-              const m = AGENT_META[cfg.agentId] ?? {
-                codename: cfg.agentId,
+              const m = AGENT_META[cfg.slot] ?? {
+                codename: cfg.slot,
                 color: 'text-muted-foreground',
               };
-              const isActive = cfg.agentId === selectedAgentId;
+              const isActive = cfg.slot === selectedSlot;
               const needsAttention =
                 cfg.provider && inactiveProviders.has(cfg.provider);
               return (
                 <button
-                  key={cfg.agentId}
+                  key={cfg.slot}
                   type="button"
-                  onClick={() => setSelectedAgentId(cfg.agentId)}
+                  onClick={() => setSelectedSlot(cfg.slot)}
                   className={cn(
                     'flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-150',
                     isActive
@@ -797,7 +811,7 @@ export function SettingsAgentsPage() {
                   )}
                   <span className={cn('font-bold', m.color)}>{m.codename}</span>
                   <span className="text-[10px] text-muted-foreground truncate">
-                    {cfg.agentId}
+                    {cfg.slot}
                   </span>
                   {needsAttention && (
                     <span className="ml-auto text-[9px] text-amber-500 font-semibold shrink-0">
@@ -816,7 +830,7 @@ export function SettingsAgentsPage() {
           <div className="flex-1 min-w-0">
             {selectedConfig && (
               <AgentConfigCard
-                key={selectedConfig.agentId}
+                key={selectedConfig.slot}
                 config={selectedConfig}
                 activeProviders={activeProviders}
                 onSave={handleSave}

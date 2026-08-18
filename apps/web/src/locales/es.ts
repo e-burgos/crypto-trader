@@ -897,6 +897,7 @@ const es = {
       usingOverride: 'Personalizado',
       usingAdmin: 'Default Admin',
       usingDefault: 'Default Sistema',
+      usingUnknown: 'Origen Desconocido',
       resetToDefault: 'Restablecer',
       saved: 'Configuración de agente guardada',
       resetSuccess: 'Configuración restaurada al default',

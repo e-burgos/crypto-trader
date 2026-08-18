@@ -1,31 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type {
+  AgentSlotWireId,
+  AgentHealthReportWire,
+  ResolvedAgentModelWire,
+} from '@crypto-trader/shared';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
-export interface ResolvedAgentConfig {
-  agentId: string;
-  provider: string;
-  model: string;
-  source: 'user' | 'admin' | 'fallback';
-}
-
-export interface AgentHealthItem {
-  agentId: string;
-  healthy: boolean;
-  provider: string;
-  model: string;
-  source: 'user' | 'admin' | 'fallback';
-  hasKey: boolean;
-}
-
-export interface AgentHealthReport {
-  healthy: boolean;
-  agents: AgentHealthItem[];
-}
-
 export function useAgentConfigs() {
-  return useQuery<ResolvedAgentConfig[]>({
+  return useQuery<ResolvedAgentModelWire[]>({
     queryKey: ['agents', 'config'],
     queryFn: () => api.get('/users/me/agents/config'),
     staleTime: 60_000,
@@ -36,7 +20,7 @@ export function useAgentHealth(simulateRemoveProvider?: string) {
   const params = simulateRemoveProvider
     ? `?simulate=remove&provider=${simulateRemoveProvider}`
     : '';
-  return useQuery<AgentHealthReport>({
+  return useQuery<AgentHealthReportWire>({
     queryKey: ['agents', 'health', simulateRemoveProvider],
     queryFn: () => api.get(`/users/me/agents/health${params}`),
     staleTime: 60_000,
@@ -49,14 +33,14 @@ export function useUpdateAgentConfig() {
 
   return useMutation({
     mutationFn: ({
-      agentId,
+      slot,
       provider,
       model,
     }: {
-      agentId: string;
+      slot: AgentSlotWireId;
       provider: string;
       model: string;
-    }) => api.put(`/users/me/agents/${agentId}/config`, { provider, model }),
+    }) => api.put(`/users/me/agents/${slot}/config`, { provider, model }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.success(t('settings.agents.saved'));
@@ -72,8 +56,8 @@ export function useResetAgentConfig() {
   const { t } = useTranslation();
 
   return useMutation({
-    mutationFn: ({ agentId }: { agentId: string }) =>
-      api.delete(`/users/me/agents/${agentId}/config`),
+    mutationFn: ({ slot }: { slot: AgentSlotWireId }) =>
+      api.delete(`/users/me/agents/${slot}/config`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       toast.success(t('settings.agents.resetSuccess'));
@@ -188,14 +172,14 @@ export function useUpdateAdminAgentConfig() {
 
   return useMutation({
     mutationFn: ({
-      agentId,
+      agentId: slot,
       provider,
       model,
     }: {
       agentId: string;
       provider: string;
       model: string;
-    }) => api.put(`/admin/agent-configs/${agentId}`, { provider, model }),
+    }) => api.put(`/admin/agent-configs/${slot}`, { provider, model }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] });
       toast.success(t('settings.agents.saved'));
@@ -230,8 +214,8 @@ export function useApplyRecommendedPreset() {
       models: RecommendedModelMap;
       availableModelIds: Set<string> | null;
     }) => {
-      const entries = Object.entries(models).map(([agentId, tiers]) => ({
-        agentId,
+      const entries = Object.entries(models).map(([slot, tiers]) => ({
+        slot,
         model: tiers[tier],
       }));
 
@@ -242,7 +226,7 @@ export function useApplyRecommendedPreset() {
       if (allValidated) {
         await Promise.all(
           entries.map((e) =>
-            api.put(`/users/me/agents/${e.agentId}/config`, {
+            api.put(`/users/me/agents/${e.slot}/config`, {
               provider: 'OPENROUTER',
               model: e.model,
             }),
@@ -295,8 +279,8 @@ export function useApplyRecommendedAdminPreset() {
       models: RecommendedModelMap;
       availableModelIds: Set<string> | null;
     }) => {
-      const entries = Object.entries(models).map(([agentId, tiers]) => ({
-        agentId,
+      const entries = Object.entries(models).map(([slot, tiers]) => ({
+        slot,
         model: tiers[tier],
       }));
 
@@ -307,7 +291,7 @@ export function useApplyRecommendedAdminPreset() {
       if (allValidated) {
         await Promise.all(
           entries.map((e) =>
-            api.put(`/admin/agent-configs/${e.agentId}`, {
+            api.put(`/admin/agent-configs/${e.slot}`, {
               provider: 'OPENROUTER',
               model: e.model,
             }),

@@ -24,8 +24,21 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/shared/src/types/agent-wire.ts",
+        "libs/shared/src/types/index.ts",
+        "apps/api/src/agents/agent-wire.assert.ts",
+        "apps/web/src/hooks/use-agent-config.ts",
+        "apps/web/src/hooks/use-agent-config.spec.tsx",
+        "apps/web/src/pages/dashboard/settings/agents.tsx",
+        "apps/web/src/pages/dashboard/settings/agents.spec.tsx",
+        "apps/web/src/pages/dashboard/settings/agent-source-badge.ts",
+        "apps/web/src/pages/dashboard/settings/agent-source-badge.spec.ts",
+        "apps/web/src/pages/dashboard/settings/agents-wire.fixture.ts",
+        "apps/web/src/locales/en.ts",
+        "apps/web/src/locales/es.ts"
+      ]
     },
     {
       "id": "TASK-002",

@@ -890,6 +890,7 @@ const en = {
       usingOverride: 'Custom',
       usingAdmin: 'Admin Default',
       usingDefault: 'System Default',
+      usingUnknown: 'Unknown Source',
       resetToDefault: 'Reset',
       saved: 'Agent configuration saved',
       resetSuccess: 'Configuration reset to default',

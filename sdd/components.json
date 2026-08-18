@@ -62,6 +62,36 @@
         "consumes": [],
         "created_at": "2026-08-18",
         "changelog": []
+      },
+      {
+        "id": "COMP-003",
+        "name": "useAgentCosts",
+        "type": "hook",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "path": "src/hooks/use-agent-costs.ts",
+        "status": "implemented",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Hook TanStack Query para EP-009 GET /analytics/agent-costs: costo LLM real por bot y por día calendario UTC (period/mode/configId), distinguiendo decisiones resueltas por LLM de las resueltas por el gate determinista y las decisiones sin tarifa disponible.",
+        "consumes": ["EP-009"],
+        "created_at": "2026-08-18",
+        "changelog": []
+      },
+      {
+        "id": "COMP-004",
+        "name": "AgentCostPanel",
+        "type": "component",
+        "module": "trading-agents-core",
+        "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
+        "path": "src/components/analytics/agent-cost-panel.tsx",
+        "status": "implemented",
+        "created_in_cycle": 3,
+        "updated_in_cycle": null,
+        "description": "Panel de costo LLM por bot/día en la página de analytics: selector de período (7d/30d/90d), totales del período (costo, decisiones LLM vs gate), nota de decisiones sin tarifa disponible, gráfico de barras apiladas por bot y tabla por bot. Muestra el estado sin datos y el de error.",
+        "consumes": ["EP-009"],
+        "created_at": "2026-08-18",
+        "changelog": []
       }
     ]
   }

@@ -258,8 +258,17 @@
       "depends_on": [
         "TASK-008"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/hooks/use-agent-costs.ts",
+        "apps/web/src/hooks/use-agent-costs.spec.tsx",
+        "apps/web/src/components/analytics/agent-cost-panel.tsx",
+        "apps/web/src/components/analytics/agent-cost-panel.spec.tsx",
+        "apps/web/src/components/analytics/index.ts",
+        "apps/web/src/pages/dashboard/analytics.tsx",
+        "apps/web/src/locales/es.ts",
+        "apps/web/src/locales/en.ts"
+      ]
     },
     {
       "id": "TASK-011",

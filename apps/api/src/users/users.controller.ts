@@ -423,7 +423,6 @@ export class UsersController {
   ): Promise<{ sources: TraderDataSourceInfo[] }> {
     const configs = await this.registry.getAllConfigs();
 
-    // Get trader's own credentials
     const ownCredentials = await this.prisma.dataSourceCredential.findMany({
       where: { userId: user.userId, isActive: true },
       select: { dataSourceId: true },
@@ -463,7 +462,6 @@ export class UsersController {
     @Body() body: { apiKey: string },
     @CurrentUser() user: RequestUser,
   ) {
-    // Validate source exists and is active
     const config = await this.prisma.dataSourceConfig.findFirst({
       where: { id, isActive: true },
     });
@@ -471,10 +469,8 @@ export class UsersController {
       throw new NotFoundException('Data source not found or inactive');
     }
 
-    // Encrypt the API key
     const { encrypted, iv } = encrypt(body.apiKey);
 
-    // Upsert credential (traders always set shared: false)
     await this.prisma.dataSourceCredential.upsert({
       where: {
         userId_dataSourceId: {

@@ -19,20 +19,17 @@
       "cycles_completed": 3,
       "description": "Simplificacion del nucleo de agentes (poda de subsistemas muertos y observabilidad de costo), venta inteligente con gestion activa de riesgo y ordenes de proteccion nativas, y reduccion del costo LLM por decision (gate determinista pre-LLM, cache compartido de senal, max_tokens por tarea y costo real por decision visible por bot/dia)",
       "completed_at": "2026-08-18"
-    }
-  ],
-  "in_progress_modules": [
+    },
     {
       "module": "market-data-credentials",
       "spec": "spec-e-burgos-004-data-source-credentials",
-      "apps": [
-        "apps/api",
-        "apps/web",
-        "libs/shared"
-      ],
-      "description": "Resolucion hibrida de credenciales de data sources: cascada unica propia -> admin compartida -> fuente omitida, aislamiento de cache/rate-limit/circuito por dueno de credencial, y self-service del trader"
+      "apps": ["apps/api", "apps/web", "libs/shared"],
+      "description": "Resolucion hibrida de credenciales de data sources: cascada unica propia -> admin compartida -> fuente omitida, aislamiento de cache/rate-limit/circuito por dueno de credencial, y self-service del trader",
+      "cycles_completed": 1,
+      "completed_at": "2026-08-19"
     }
   ],
+  "in_progress_modules": [],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

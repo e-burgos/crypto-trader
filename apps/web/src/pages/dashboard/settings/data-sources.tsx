@@ -13,16 +13,10 @@ import {
 } from '../../../hooks/use-trader-data-sources';
 import { TraderDataSourceCard } from '../../../components/settings/trader-data-source-card';
 import { TraderApiKeyModal } from '../../../components/settings/trader-api-key-modal';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  NEWS: 'News',
-  PRICE: 'Price Data',
-  ONCHAIN: 'On-Chain',
-  SOCIAL: 'Social',
-  ALTERNATIVE: 'Alternative',
-};
-
-const CATEGORY_ORDER = ['PRICE', 'NEWS', 'ONCHAIN', 'SOCIAL', 'ALTERNATIVE'];
+import {
+  categoryLabel,
+  orderedCategories,
+} from '../../../components/settings/data-source-categories';
 
 export function SettingsDataSourcesPage() {
   const { data, isLoading } = useTraderDataSources();
@@ -103,11 +97,11 @@ export function SettingsDataSourcesPage() {
       </div>
 
       {/* Sources grouped by category */}
-      {CATEGORY_ORDER.filter((cat) => grouped[cat]?.length).map((cat) => (
+      {orderedCategories(Object.keys(grouped)).map((cat) => (
         <div key={cat} className="space-y-3">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              {CATEGORY_LABELS[cat] ?? cat}
+              {categoryLabel(cat)}
             </h2>
             <Badge variant="neutral" label={String(grouped[cat].length)} />
           </div>

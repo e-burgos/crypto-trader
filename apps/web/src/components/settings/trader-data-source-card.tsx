@@ -3,6 +3,7 @@ import type { BadgeVariant } from '@crypto-trader/ui';
 import { Key, Trash2, DollarSign } from 'lucide-react';
 import type { TraderDataSourceInfo } from '../../hooks/use-trader-data-sources';
 import { useDeleteTraderCredential } from '../../hooks/use-trader-data-sources';
+import { categoryLabel } from './data-source-categories';
 
 interface TraderDataSourceCardProps {
   source: TraderDataSourceInfo;
@@ -47,10 +48,10 @@ export function TraderDataSourceCard({
       <div className="flex items-start justify-between gap-3">
         {/* Left: info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm truncate">
-              {source.displayName}
-            </span>
+          <div className="font-medium text-sm mb-1.5 break-words">
+            {source.displayName}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant={healthCfg.variant} label={healthCfg.label} />
             <Badge
               variant={credentialBadge.variant}
@@ -66,7 +67,7 @@ export function TraderDataSourceCard({
                 : `$${source.monthlyCostUsd}/mo`}
             </span>
             <span className="text-zinc-600">•</span>
-            <span className="capitalize">{source.category.toLowerCase()}</span>
+            <span>{categoryLabel(source.category)}</span>
           </div>
         </div>
 

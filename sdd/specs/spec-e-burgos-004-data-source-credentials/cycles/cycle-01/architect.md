@@ -12,13 +12,13 @@ que se llama.
 
 Este ciclo separa esas dos naturalezas:
 
-| Estructura | Clave después de este ciclo | Por qué |
-| --- | --- | --- |
-| `DataSourceCacheService` | `(name, ownerKey)` | El payload pertenece al tenant que lo pagó |
-| `RateLimiterService` | `(name, ownerKey)` | La cuota la impone el proveedor por cuenta |
-| `CircuitBreakerService` | `(name, ownerKey)` | Un 401 por key inválida de un tenant no debe cortar a los demás |
-| `reportSuccess` / `reportError` (salud en BD) | `name` — **sin cambio** | Es la salud del proveedor, no la del tenant |
-| `DataSourceMetricsService` | `name` — **sin cambio** | Métrica operativa agregada de la fuente |
+| Estructura                                    | Clave después de este ciclo | Por qué                                                         |
+| --------------------------------------------- | --------------------------- | --------------------------------------------------------------- |
+| `DataSourceCacheService`                      | `(name, ownerKey)`          | El payload pertenece al tenant que lo pagó                      |
+| `RateLimiterService`                          | `(name, ownerKey)`          | La cuota la impone el proveedor por cuenta                      |
+| `CircuitBreakerService`                       | `(name, ownerKey)`          | Un 401 por key inválida de un tenant no debe cortar a los demás |
+| `reportSuccess` / `reportError` (salud en BD) | `name` — **sin cambio**     | Es la salud del proveedor, no la del tenant                     |
+| `DataSourceMetricsService`                    | `name` — **sin cambio**     | Métrica operativa agregada de la fuente                         |
 
 `ownerKey` es el `userId` de la credencial resuelta. Para las seis fuentes que no exigen key se
 usa la constante `SHARED_PUBLIC_OWNER`: no hay cuota por cliente que separar y mantenerlas en un
@@ -130,21 +130,25 @@ Ambas tablas se registran por primera vez en `sdd/schema.json`: existen desde el
 
 ## 5. Contrato de API
 
-| ID | Método | Path | Nota |
-| --- | --- | --- | --- |
-| EP-011 | GET | `/users/me/data-sources` | Listado con estado de credencial por fuente |
-| EP-012 | PUT | `/users/me/data-sources/:id/credential` | Upsert de la key propia; fuerza `shared: false` |
-| EP-013 | DELETE | `/users/me/data-sources/:id/credential` | Idempotente |
-| EP-014 | PUT | `/admin/data-sources/:id/credential` | Pre-existente del flujo legacy; se registra y se extiende con `shared` |
+| ID     | Método | Path                                    | Nota                                                                   |
+| ------ | ------ | --------------------------------------- | ---------------------------------------------------------------------- |
+| EP-011 | GET    | `/users/me/data-sources`                | Listado con estado de credencial por fuente                            |
+| EP-012 | PUT    | `/users/me/data-sources/:id/credential` | Upsert de la key propia; fuerza `shared: false`                        |
+| EP-013 | DELETE | `/users/me/data-sources/:id/credential` | Idempotente                                                            |
+| EP-014 | PUT    | `/admin/data-sources/:id/credential`    | Pre-existente del flujo legacy; se registra y se extiende con `shared` |
 
 `TraderDataSourceInfo` vive en `libs/shared/src/types/market-data-sources.ts` y expone
 `hasOwnCredential` y `hasSharedCredential` como booleanos derivados en el servidor. La pantalla
 no infiere el estado: lo recibe. Nunca se expone el `userId` del dueño de la credencial
 compartida (CA-014).
 
-El campo `shared` del body de admin debe declararse en el DTO del endpoint: el `ValidationPipe`
-global corre con `forbidNonWhitelisted`, así que un campo no declarado hace fallar el request
-entero con 400.
+Sobre el `ValidationPipe` global (`main.ts:11`, con `whitelist` y `forbidNonWhitelisted`): no
+alcanza a este endpoint. `DataSourcesController` tipa sus bodies con object types inline en vez
+de clases DTO, y `ValidationPipe.toValidate` saltea la validación cuando el metatype es `Object`
+(`node_modules/@nestjs/common/pipes/validation.pipe.js:120`). Agregar `shared` al body no
+requiere DTO ni dispara 400. Queda registrado como deuda: mientras estos controllers no migren a
+clases DTO, sus bodies no se validan y el `forbidNonWhitelisted` global da una falsa sensación de
+cobertura.
 
 ## 6. Verificación sin credenciales reales
 
@@ -161,10 +165,10 @@ no de contenido de la respuesta:
 
 ## 7. Riesgos
 
-| Riesgo | Mitigación |
-| --- | --- |
-| La clave compuesta baja el hit-rate del caché | Solo afecta a las 2 fuentes con credencial; las 6 sin key comparten `SHARED_PUBLIC_OWNER` |
-| Un admin comparte una key sin querer | El default es `false` y el flag se setea explícitamente por request; ningún dato existente cambia al desplegar |
-| Elección no determinista entre varios admins compartiendo la misma fuente | Orden por `createdAt` en la consulta de credenciales compartidas |
-| El resolver se convierte en N+1 en el camino caliente | Dos consultas en lote por snapshot, nunca una por fuente |
-| Se reintroduce una cascada inline en un ciclo futuro | El spec del resolver es el único lugar con la lógica; el reviewer verifica que `market.service.ts` no consulte `dataSourceCredential` ni `newsApiCredential` directamente |
+| Riesgo                                                                    | Mitigación                                                                                                                                                                |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| La clave compuesta baja el hit-rate del caché                             | Solo afecta a las 2 fuentes con credencial; las 6 sin key comparten `SHARED_PUBLIC_OWNER`                                                                                 |
+| Un admin comparte una key sin querer                                      | El default es `false` y el flag se setea explícitamente por request; ningún dato existente cambia al desplegar                                                            |
+| Elección no determinista entre varios admins compartiendo la misma fuente | Orden por `createdAt` en la consulta de credenciales compartidas                                                                                                          |
+| El resolver se convierte en N+1 en el camino caliente                     | Dos consultas en lote por snapshot, nunca una por fuente                                                                                                                  |
+| Se reintroduce una cascada inline en un ciclo futuro                      | El spec del resolver es el único lugar con la lógica; el reviewer verifica que `market.service.ts` no consulte `dataSourceCredential` ni `newsApiCredential` directamente |

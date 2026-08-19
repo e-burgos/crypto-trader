@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MarketController } from './market.controller';
 import { MarketService } from './market.service';
 import { DataSourceRegistryService } from './data-source-registry.service';
+import { DataSourceCredentialResolver } from './data-source-credential-resolver.service';
 import { DataSourceProviderRegistrar } from './data-source-provider-registrar.service';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import { DataSourceCacheService } from './data-source-cache.service';
@@ -25,6 +26,7 @@ import { GatewayModule } from '../gateway/gateway.module';
   controllers: [MarketController],
   providers: [
     MarketService,
+    DataSourceCredentialResolver,
     CircuitBreakerService,
     DataSourceCacheService,
     RateLimiterService,
@@ -33,6 +35,10 @@ import { GatewayModule } from '../gateway/gateway.module';
     DataSourceProviderRegistrar,
     NewsAnalysisScheduler,
   ],
-  exports: [MarketService, DataSourceRegistryService],
+  exports: [
+    MarketService,
+    DataSourceRegistryService,
+    DataSourceCredentialResolver,
+  ],
 })
 export class MarketModule {}

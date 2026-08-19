@@ -103,17 +103,17 @@ en `sdd/components.json`, y escribir los fragmentos aditivos de contexto de `app
 
 ## Cobertura de criterios de aceptación
 
-| CA | Task |
-| --- | --- |
-| CA-001, CA-003 | TASK-003 |
-| CA-002 | TASK-004 |
-| CA-004, CA-005, CA-006 | TASK-002 |
-| CA-007 | TASK-002 + TASK-006 |
-| CA-008, CA-012, CA-013, CA-015, CA-017 | TASK-006 |
-| CA-009, CA-010, CA-011, CA-014 | TASK-007 |
-| CA-016 | TASK-001 |
-| CA-018 | TASK-002 + TASK-005 |
-| CA-019, CA-020, CA-021, CA-022 | TASK-005 |
+| CA                                     | Task                |
+| -------------------------------------- | ------------------- |
+| CA-001, CA-003                         | TASK-003            |
+| CA-002                                 | TASK-004            |
+| CA-004, CA-005, CA-006                 | TASK-002            |
+| CA-007                                 | TASK-002 + TASK-006 |
+| CA-008, CA-012, CA-013, CA-015, CA-017 | TASK-006            |
+| CA-009, CA-010, CA-011, CA-014         | TASK-007            |
+| CA-016                                 | TASK-001            |
+| CA-018                                 | TASK-002 + TASK-005 |
+| CA-019, CA-020, CA-021, CA-022         | TASK-005            |
 
 ## Riesgo transversal
 

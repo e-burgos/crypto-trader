@@ -19,12 +19,8 @@
       "created_in_cycle": "número de ciclo donde se definió por primera vez",
       "updated_in_cycle": "número del último ciclo que lo modificó (null si nunca se actualizó)",
       "description": "qué hace el endpoint",
-      "path_params": [
-        "param1"
-      ],
-      "required_headers": [
-        "Header-Name"
-      ],
+      "path_params": ["param1"],
+      "required_headers": ["Header-Name"],
       "request_body": {},
       "responses": {
         "200": "descripción"
@@ -51,9 +47,7 @@
         "updated_in_cycle": null,
         "description": "Scorecard de calidad de decisión por agente: win rate, P&L medio, costo medio y valor neto, agregados por régimen de mercado. Excluye del cómputo las evaluaciones PENDING y NOT_EVALUABLE y las expone como conteos aparte. Endpoint pre-existente en el código, registrado en el arnés SDD en este ciclo con el contrato post-cycle-01.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "query_params": {
           "agentId": "Filtra por agente (valor del enum AgentId)",
           "model": "Filtra por modelo LLM",
@@ -83,9 +77,7 @@
         "updated_in_cycle": null,
         "description": "Resumen agregado del scorecard: total evaluado, win/loss rate, P&L medio por decisión, costo total y ROI. Suma pendingCount y notEvaluableCount para distinguir lo aún no evaluable de lo neutro. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "query_params": {
           "agentId": "Filtra por agente (valor del enum AgentId)",
           "model": "Filtra por modelo LLM",
@@ -115,9 +107,7 @@
         "updated_in_cycle": null,
         "description": "Estadísticas de uso y costo LLM del usuario, por proveedor, por modelo y por día. Tras el cycle-01 el costo de tráfico OpenRouter se resuelve con el pricing en vivo del catálogo; label cubre OPENROUTER y TOGETHER y unpricedCallCount expone las llamadas que no se pudieron tarifar. Endpoint pre-existente, registrado en este ciclo con el contrato post-cycle-01.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "query_params": {
           "period": "Ventana de agregación: 7d | 30d | 90d | all (default 30d)"
         },
@@ -139,9 +129,7 @@
         "updated_in_cycle": null,
         "description": "Politica de riesgo agregado por usuario (exposicion por activo entre configs, perdida diaria maxima, drawdown que pausa agentes). Si el usuario no tiene fila en user_risk_policies devuelve los defaults inactivos.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "request_body": {},
         "responses": {
           "200": "{ enabled, maxAssetExposureUsd, maxAssetExposurePct, maxDailyLossUsd, maxDrawdownPct, pauseAgentsOnDrawdown, pausedAt, pausedReason }",
@@ -160,9 +148,7 @@
         "updated_in_cycle": null,
         "description": "Upsert de la politica de riesgo agregado del usuario (crea la fila la primera vez). Con enabled=false limpia pausedAt/pausedReason. Reactivar agentes pausados sigue siendo POST /trading/start.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "request_body": {
           "enabled": "boolean — interruptor maestro de los limites agregados",
           "maxAssetExposureUsd": "number|null >= 0 — techo de exposicion nocional por activo entre todas las configs del usuario",
@@ -189,9 +175,7 @@
         "updated_in_cycle": 3,
         "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. El cycle-03 suma 2 campos mas del gate determinista pre-LLM: deterministicGateEnabled, gatePriceChangePct. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "request_body": {
           "_base": "CreateTradingConfigDto (asset, pair, mode, buyThreshold, sellThreshold, stopLossPct, takeProfitPct, minProfitPct, maxTradePct, maxConcurrentPositions, minIntervalMinutes, intervalMode, orderPriceOffsetPct, riskProfile, name)",
           "lossCutEnabled": "boolean (default false)",
@@ -237,12 +221,8 @@
         "created_in_cycle": 2,
         "updated_in_cycle": 3,
         "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo. El cycle-03 suma los mismos 2 campos del gate determinista que EP-006.",
-        "path_params": [
-          "id"
-        ],
-        "required_headers": [
-          "Authorization"
-        ],
+        "path_params": ["id"],
+        "required_headers": ["Authorization"],
         "request_body": {
           "_base": "EP-006 request_body (todos los campos opcionales)"
         },
@@ -271,9 +251,7 @@
         "updated_in_cycle": 3,
         "description": "Posiciones del usuario paginadas. Endpoint pre-existente, registrado con la respuesta extendida del cycle-02: cada posicion suma el estado de proteccion nativa y de la maquina de trailing/parciales. Cambio aditivo: los clientes existentes ignoran los campos nuevos.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "query_params": {
           "page": "Pagina (default 1)",
           "limit": "Tamano de pagina (default 20)",
@@ -303,9 +281,7 @@
         "updated_in_cycle": null,
         "description": "Costo LLM real del usuario por bot y por dia calendario UTC, agregado desde AgentDecision.llmCostUsd (no desde llm_usage_logs: EP-003 tiene otra fuente, otro grano e incluye el chat). Distingue decisiones resueltas por LLM (llmCallCount > 0) de las resueltas por el gate determinista (llmCallCount = 0) para poder atribuir el ahorro a su causa, y expone aparte las decisiones cuya tarifa no se pudo resolver (llmCostUsd null) en vez de contarlas como cero. Comparte el metodo AnalyticsService.getAgentCostBreakdown con EP-010, sin calculo paralelo que pueda desincronizarse.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "query_params": {
           "period": "Ventana de agregacion: 7d | 30d | 90d (default 30d)",
           "mode": "SANDBOX | TESTNET | LIVE; omitir para todos los modos",
@@ -330,9 +306,7 @@
         "updated_in_cycle": null,
         "description": "Costo LLM agregado de toda la plataforma en un periodo, para el operador. Calculado sobre la misma fuente (AgentDecision.llmCostUsd) y el mismo metodo de servicio que EP-009 con userId null, de modo que la suma de los costos individuales por usuario es igual al agregado por construccion. Guardado por JwtAuthGuard + RolesGuard con @Roles('ADMIN'), mismo patron que el resto de admin/.",
         "path_params": [],
-        "required_headers": [
-          "Authorization"
-        ],
+        "required_headers": ["Authorization"],
         "query_params": {
           "period": "Ventana de agregacion: 7d | 30d | 90d (default 30d)",
           "mode": "SANDBOX | TESTNET | LIVE; omitir para todos los modos",
@@ -346,6 +320,96 @@
           "403": "Usuario autenticado sin rol ADMIN"
         },
         "changelog": []
+      },
+      {
+        "id": "EP-011",
+        "method": "GET",
+        "path": "/users/me/data-sources",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Lista las data sources activas de la plataforma con el estado de credencial del trader. hasOwnCredential indica credencial propia; hasSharedCredential indica que hay una credencial de admin marcada shared disponible para esa fuente. Nunca expone la API key ni la identidad del admin que comparte. Guardado por JwtAuthGuard.",
+        "path_params": [],
+        "required_headers": ["Authorization"],
+        "request_body": {},
+        "responses": {
+          "200": "{ sources: [{ id, name, displayName, category, isActive, requiresApiKey, monthlyCostUsd, health, hasOwnCredential, hasSharedCredential }] }",
+          "401": "JWT ausente o invalido"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-012",
+        "method": "PUT",
+        "path": "/users/me/data-sources/:id/credential",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Upsert de la API key propia del trader para una data source activa. La key se persiste cifrada y la fila se escribe siempre con shared false: un trader no puede compartir su credencial. Devuelve solo los ultimos 4 caracteres de la key enviada.",
+        "path_params": ["id"],
+        "required_headers": ["Authorization"],
+        "request_body": {
+          "apiKey": "API key en claro, cifrada antes de persistir"
+        },
+        "responses": {
+          "200": "{ success: true, maskedKey: '***1234' }",
+          "401": "JWT ausente o invalido",
+          "404": "Data source inexistente o inactiva"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-013",
+        "method": "DELETE",
+        "path": "/users/me/data-sources/:id/credential",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Elimina la credencial propia del trader para una data source. Idempotente: responde exito aunque no existiera. Tras el borrado el trader vuelve a resolver contra la credencial compartida del admin si existe.",
+        "path_params": ["id"],
+        "required_headers": ["Authorization"],
+        "request_body": {},
+        "responses": {
+          "200": "{ success: true }",
+          "401": "JWT ausente o invalido"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-014",
+        "method": "PUT",
+        "path": "/admin/data-sources/:id/credential",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "status": "updated",
+        "created_in_cycle": 1,
+        "updated_in_cycle": 1,
+        "description": "Upsert de la API key de admin para una data source, con el flag shared que la habilita como fallback para los traders sin credencial propia. Omitir shared la deja como no compartida. Endpoint pre-existente del flujo legacy (Spec 40), registrado y extendido en este ciclo. Guardado por JwtAuthGuard + RolesGuard con @Roles('ADMIN').",
+        "path_params": ["id"],
+        "required_headers": ["Authorization"],
+        "request_body": {
+          "apiKey": "API key en claro, cifrada antes de persistir",
+          "shared": "boolean opcional, default false: habilita la credencial como fallback compartido"
+        },
+        "responses": {
+          "200": "{ success: true, maskedKey: '***1234' }",
+          "401": "JWT ausente o invalido",
+          "403": "Usuario autenticado sin rol ADMIN",
+          "404": "Data source inexistente"
+        },
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-19",
+            "change": "agregado el flag shared al request body"
+          }
+        ]
       }
     ]
   }

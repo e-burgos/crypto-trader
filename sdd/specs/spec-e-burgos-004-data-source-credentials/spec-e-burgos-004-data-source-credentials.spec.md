@@ -31,7 +31,7 @@ relación calidad/costo que cycle-03 de `spec-e-burgos-001` acaba de optimizar.
 (`admin/data-sources.controller.ts`, guardado con `@Roles('ADMIN')`). Un trader no-admin no
 tiene endpoint ni UI: su fila nunca se crea. En la práctica el sistema es admin-only.
 Es la deuda que cycle-03 de `spec-e-burgos-001` dejó anotada en `out_of_scope` como
-*"spec de UI dedicada — hoy esos campos solo se configuran por API"*.
+_"spec de UI dedicada — hoy esos campos solo se configuran por API"_.
 
 **C. El caché y el rate limiter de data sources ignoran de quién es la credencial.**
 
@@ -94,7 +94,7 @@ a otro.
    —que es el comportamiento correcto, porque comparten la cuota real del proveedor.
 5. Self-service para el trader: `GET/PUT/DELETE /users/me/data-sources[/:id/credential]` y la
    página `/dashboard/settings/data-sources`, con badge por fuente
-   (*Your key* / *Admin shared* / *No key*) y sin devolver nunca la key en claro.
+   (_Your key_ / _Admin shared_ / _No key_) y sin devolver nunca la key en claro.
 
 ## 4. Fuera de alcance
 

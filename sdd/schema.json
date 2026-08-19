@@ -963,6 +963,134 @@
             "change": "tabla pre-existente registrada en el arnes; columna nueva llm_call_count + indice por created_at para el agregado de plataforma sin user_id (EP-010). llm_cost_usd pasa a tener escritor real por primera vez y metadata absorbe el snapshot del gate sin migracion"
           }
         ]
+      },
+      "data_source_credentials": {
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "status": "updated",
+        "created_in_cycle": 1,
+        "updated_in_cycle": 1,
+        "migration_file": "apps/api/prisma/migrations/20260819120000_add_shared_credential_flag/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "data_source_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "FK data_source_configs(id) ON DELETE CASCADE"
+            ]
+          },
+          "api_key_encrypted": {
+            "type": "String",
+            "constraints": ["NOT NULL"]
+          },
+          "api_key_iv": {
+            "type": "String",
+            "constraints": ["NOT NULL"]
+          },
+          "is_active": {
+            "type": "Boolean",
+            "constraints": ["NOT NULL", "DEFAULT true"]
+          },
+          "shared": {
+            "type": "Boolean",
+            "constraints": ["NOT NULL", "DEFAULT false"],
+            "notes": "cycle-01: habilita la credencial como fallback para traders sin credencial propia. Solo se lee si el usuario dueno tiene rol ADMIN; el endpoint del trader la escribe siempre en false"
+          },
+          "created_at": {
+            "type": "DateTime",
+            "constraints": ["NOT NULL", "DEFAULT now()"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_data_source_credentials",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "uk_data_source_credentials_user_source",
+            "type": "UNIQUE",
+            "columns": ["user_id", "data_source_id"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-19",
+            "change": "tabla del flujo legacy (Spec 40) registrada en SDD; agregada la columna shared"
+          }
+        ]
+      },
+      "news_api_credentials": {
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "status": "updated",
+        "created_in_cycle": 1,
+        "updated_in_cycle": 1,
+        "migration_file": "apps/api/prisma/migrations/20260819120000_add_shared_credential_flag/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"]
+          },
+          "provider": {
+            "type": "NewsApiProvider",
+            "constraints": ["NOT NULL"],
+            "notes": "enum: CRYPTOPANIC, NEWSDATA, FINNHUB"
+          },
+          "api_key_encrypted": {
+            "type": "String",
+            "constraints": ["NOT NULL"]
+          },
+          "api_key_iv": {
+            "type": "String",
+            "constraints": ["NOT NULL"]
+          },
+          "is_active": {
+            "type": "Boolean",
+            "constraints": ["NOT NULL", "DEFAULT true"]
+          },
+          "shared": {
+            "type": "Boolean",
+            "constraints": ["NOT NULL", "DEFAULT false"],
+            "notes": "cycle-01: misma semantica que en data_source_credentials"
+          },
+          "created_at": {
+            "type": "DateTime",
+            "constraints": ["NOT NULL", "DEFAULT now()"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_news_api_credentials",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "uk_news_api_credentials_user_provider",
+            "type": "UNIQUE",
+            "columns": ["user_id", "provider"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-19",
+            "change": "tabla del flujo legacy registrada en SDD; agregada la columna shared"
+          }
+        ]
       }
     }
   }

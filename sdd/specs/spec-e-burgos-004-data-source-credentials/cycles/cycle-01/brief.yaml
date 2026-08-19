@@ -39,7 +39,7 @@ constraints:
   - 'La migración debe tener timestamp posterior a 20260817160000_add_cost_gate_fields, la última aplicada en main'
   - 'Sin credenciales reales de coinalyze ni finnhub: todo se verifica contra mocks de la capa HTTP, con assert explícito de qué key llegó a fetchData'
   - 'Cero comentarios en el código de implementación (excepciones del CLAUDE.md); el sdd-reviewer lo verifica al cerrar'
-  - 'ValidationPipe global con forbidNonWhitelisted: el campo shared del body de admin debe declararse en el DTO o el request entero responde 400'
+  - 'DataSourcesController tipa sus bodies con object types inline, no con clases DTO: el ValidationPipe global no los valida (toValidate saltea metatype Object), asi que agregar shared no requiere DTO. Queda como deuda registrada, no como restriccion de este ciclo'
   - 'Default conservador: shared nace en false. Una instalación existente que despliegue este ciclo sin marcar nada resuelve credenciales igual que antes'
   - 'apps/web declara su propia interfaz del response: el typecheck no detecta desalineaciones de wire — el contrato de TraderDataSourceInfo se verifica con tests, no con tsc'
 

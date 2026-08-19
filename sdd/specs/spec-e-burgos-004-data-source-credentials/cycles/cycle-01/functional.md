@@ -36,15 +36,15 @@ esperar a que alguien me cargue credenciales una por una
 **Criterios de aceptación:**
 
 - [ ] CA-001: Con el admin teniendo una credencial de `coinalyze` marcada como compartida y el
-  trader sin credencial propia, el `EnrichedMarketSnapshot` del trader trae `derivatives` no nulo
-  y `coinalyze` aparece en `activeSources`, no en `failedSources`.
+      trader sin credencial propia, el `EnrichedMarketSnapshot` del trader trae `derivatives` no nulo
+      y `coinalyze` aparece en `activeSources`, no en `failedSources`.
 - [ ] CA-002: Con el admin teniendo una credencial de `finnhub` marcada como compartida y el
-  trader sin credencial propia, las fuentes de noticias del trader incluyen Finnhub.
+      trader sin credencial propia, las fuentes de noticias del trader incluyen Finnhub.
 - [ ] CA-003: Si ninguna credencial de esa fuente está marcada como compartida y el trader no
-  tiene la suya, la fuente se omite: aparece en `failedSources` y su campo llega `null`. Es el
-  comportamiento actual y no cambia.
+      tiene la suya, la fuente se omite: aparece en `failedSources` y su campo llega `null`. Es el
+      comportamiento actual y no cambia.
 - [ ] CA-004: Una credencial de otro **trader** —no de un admin— jamás se usa como fallback,
-  esté marcada como compartida o no.
+      esté marcada como compartida o no.
 
 ### HU-01-02: Usar mi propia API key y que tenga prioridad sobre la compartida
 
@@ -56,14 +56,14 @@ salga de mi propia cuota
 **Criterios de aceptación:**
 
 - [ ] CA-005: Con credencial propia y credencial compartida disponibles para la misma fuente, el
-  fetch se hace con la key propia del trader (test con assert explícito sobre la key que llega a
-  `fetchData`).
+      fetch se hace con la key propia del trader (test con assert explícito sobre la key que llega a
+      `fetchData`).
 - [ ] CA-006: Cargar una key propia no modifica, desactiva ni marca la credencial compartida del
-  admin.
+      admin.
 - [ ] CA-007: Al borrar su credencial propia, el trader vuelve automáticamente a la compartida si
-  existe, sin ninguna acción adicional.
+      existe, sin ninguna acción adicional.
 - [ ] CA-008: Una credencial guardada por un trader queda siempre como no compartida, aunque el
-  request incluya el campo pidiendo lo contrario.
+      request incluya el campo pidiendo lo contrario.
 
 ### HU-01-03: Ver el estado de mis fuentes de datos y gestionarlas yo mismo
 
@@ -76,17 +76,17 @@ API
 **Criterios de aceptación:**
 
 - [ ] CA-009: `/dashboard/settings/data-sources` lista las fuentes activas de la plataforma
-  agrupadas por categoría, con su estado de salud.
+      agrupadas por categoría, con su estado de salud.
 - [ ] CA-010: Cada fuente muestra exactamente uno de tres estados: **Your key** (credencial
-  propia), **Admin shared** (sin credencial propia, hay compartida disponible), **No key**
-  (ninguna de las dos y la fuente exige key).
+      propia), **Admin shared** (sin credencial propia, hay compartida disponible), **No key**
+      (ninguna de las dos y la fuente exige key).
 - [ ] CA-011: Las fuentes que no exigen API key se muestran como disponibles y no ofrecen la
-  acción de cargar key.
+      acción de cargar key.
 - [ ] CA-012: La API key nunca se devuelve al cliente. Tras guardarla, la respuesta y la pantalla
-  solo muestran los últimos 4 caracteres.
+      solo muestran los últimos 4 caracteres.
 - [ ] CA-013: Borrar una credencial que no existe responde éxito, sin error (idempotente).
 - [ ] CA-014: La pantalla nunca revela de quién es la credencial compartida ni ningún dato del
-  administrador.
+      administrador.
 
 ### HU-01-04: Decidir como administrador qué credenciales presto y cuáles no
 
@@ -97,14 +97,14 @@ API
 **Criterios de aceptación:**
 
 - [ ] CA-015: `PUT /admin/data-sources/:id/credential` acepta el campo que marca la credencial
-  como compartida y lo persiste.
+      como compartida y lo persiste.
 - [ ] CA-016: Omitir el campo deja la credencial como no compartida. Ninguna credencial existente
-  pasa a compartida por el solo hecho de desplegar este ciclo.
+      pasa a compartida por el solo hecho de desplegar este ciclo.
 - [ ] CA-017: Un usuario autenticado sin rol de administrador no puede marcar ninguna credencial
-  como compartida por ningún endpoint.
+      como compartida por ningún endpoint.
 - [ ] CA-018: Al dejar de compartir una credencial, los traders que dependían de ella vuelven a
-  ver la fuente como **No key** y sus siguientes snapshots la omiten. No queda ningún acceso
-  residual por caché.
+      ver la fuente como **No key** y sus siguientes snapshots la omiten. No queda ningún acceso
+      residual por caché.
 
 ### HU-01-05: Que el cupo y los datos de un trader no dependan de otro trader
 
@@ -124,14 +124,14 @@ sí comparten cupo y datos, porque comparten literalmente la cuota del proveedor
 **Criterios de aceptación:**
 
 - [ ] CA-019: Dos traders con credenciales propias distintas para la misma fuente consumen
-  buckets de rate limit separados: agotar el cupo de uno no bloquea al otro.
+      buckets de rate limit separados: agotar el cupo de uno no bloquea al otro.
 - [ ] CA-020: Dos traders con credenciales propias distintas para la misma fuente no comparten
-  entrada de caché. El payload traído con la key de uno nunca se le sirve al otro, tampoco en
-  los caminos de rate limit excedido, circuito abierto o error de fetch.
+      entrada de caché. El payload traído con la key de uno nunca se le sirve al otro, tampoco en
+      los caminos de rate limit excedido, circuito abierto o error de fetch.
 - [ ] CA-021: Dos traders que resuelven contra la misma credencial compartida del admin sí
-  comparten bucket y entrada de caché.
+      comparten bucket y entrada de caché.
 - [ ] CA-022: El circuit breaker de una credencial no abre el circuito de las demás credenciales
-  de la misma fuente.
+      de la misma fuente.
 
 ## Requisitos funcionales
 
@@ -181,10 +181,10 @@ estado mostrado se deriva del listado del servidor y no de una inferencia del cl
 
 ## Glosario del dominio
 
-| Término | Significado en esta spec |
-| --- | --- |
-| **Credencial propia** | Fila de credencial cuyo `userId` es el del trader que está operando |
-| **Credencial compartida** | Fila de credencial de un usuario con rol de administrador, marcada explícitamente como disponible para los demás |
-| **Dueño de credencial** | El `userId` de la credencial efectivamente usada para un fetch; es la unidad de aislamiento de cupo y caché |
-| **Fuente omitida** | Fuente que exige key, no tiene ninguna resoluble, y por eso no se llama: su campo llega `null` y su nombre entra en `failedSources` |
-| **Fuente sin key** | Una de las seis fuentes que no exigen credencial; siempre disponible para todos |
+| Término                   | Significado en esta spec                                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Credencial propia**     | Fila de credencial cuyo `userId` es el del trader que está operando                                                                 |
+| **Credencial compartida** | Fila de credencial de un usuario con rol de administrador, marcada explícitamente como disponible para los demás                    |
+| **Dueño de credencial**   | El `userId` de la credencial efectivamente usada para un fetch; es la unidad de aislamiento de cupo y caché                         |
+| **Fuente omitida**        | Fuente que exige key, no tiene ninguna resoluble, y por eso no se llama: su campo llega `null` y su nombre entra en `failedSources` |
+| **Fuente sin key**        | Una de las seis fuentes que no exigen credencial; siempre disponible para todos                                                     |

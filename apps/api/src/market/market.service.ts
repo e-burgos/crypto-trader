@@ -26,6 +26,10 @@ import { LLMUsageService } from '../llm/llm-usage.service';
 import { recordCall } from '../llm/provider-health.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { DataSourceRegistryService } from './data-source-registry.service';
+import {
+  DataSourceCredentialResolver,
+  SHARED_PUBLIC_OWNER,
+} from './data-source-credential-resolver.service';
 
 const VALID_ASSETS = ['BTC', 'ETH'];
 const VALID_INTERVALS = ['1m', '5m', '15m', '30m', '1h', '4h', '1d'];
@@ -131,6 +135,7 @@ export class MarketService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agentConfigResolver: AgentConfigResolverService,
+    private readonly credentialResolver: DataSourceCredentialResolver,
     @Optional() private readonly llmUsageService?: LLMUsageService,
     @Optional() private readonly dataSourceRegistry?: DataSourceRegistryService,
   ) {}
@@ -187,17 +192,19 @@ export class MarketService {
       (s) => all || enabledSources.includes(s.id),
     ).map((s) => s.factory());
 
-    const optionalSources = await Promise.all(
-      OPTIONAL_NEWS_SOURCES.map(async (s) => {
-        if (!all && !enabledSources.includes(s.id)) return null;
-        const cred = await this.prisma.newsApiCredential.findFirst({
-          where: { userId, provider: s.provider, isActive: true },
-        });
-        if (!cred) return null;
-        const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-        return s.factory(apiKey);
-      }),
+    const requestedOptional = OPTIONAL_NEWS_SOURCES.filter(
+      (s) => all || enabledSources.includes(s.id),
     );
+    const credentialsByProvider =
+      await this.credentialResolver.resolveForNewsProviders(
+        userId,
+        requestedOptional.map((s) => s.provider),
+      );
+
+    const optionalSources = requestedOptional.map((s) => {
+      const credential = credentialsByProvider.get(s.provider);
+      return credential ? s.factory(credential.apiKey) : null;
+    });
 
     return [...freeSources, ...optionalSources.filter(Boolean)] as ReturnType<
       (typeof FREE_NEWS_SOURCES)[number]['factory']
@@ -564,18 +571,21 @@ ${numbered}`;
       };
     });
 
+    const newsCredentials =
+      await this.credentialResolver.resolveForNewsProviders(
+        userId,
+        OPTIONAL_NEWS_SOURCES.map((s) => s.provider),
+      );
+
     const optionalStatuses = await Promise.all(
       OPTIONAL_NEWS_SOURCES.map(async (s) => {
-        const cred = await this.prisma.newsApiCredential.findFirst({
-          where: { userId, provider: s.provider, isActive: true },
-        });
-        const isConfigured = !!cred;
+        const credential = newsCredentials.get(s.provider);
+        const isConfigured = !!credential;
         let isReachable = false;
         let error: string | undefined;
-        if (cred) {
+        if (credential) {
           try {
-            const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
-            const items = await s.factory(apiKey).fetch(1);
+            const items = await s.factory(credential.apiKey).fetch(1);
             isReachable = items.length > 0;
           } catch (err) {
             error = err instanceof Error ? err.message : String(err);
@@ -714,71 +724,28 @@ ${numbered}`;
     const activeSources: string[] = [];
     const failedSources: string[] = [];
 
-    // Load credentials for all providers that have them (optional or required)
-    // Cascade: trader own key → admin shared key → skip
-    const credentialMap = new Map<string, string>();
-    if (activeConfigs.length > 0) {
-      const dataSourceIds = activeConfigs.map((c) => c.id);
-
-      // 1. Load trader's own credentials
-      const creds = await this.prisma.dataSourceCredential.findMany({
-        where: {
-          userId,
-          dataSourceId: { in: dataSourceIds },
-          isActive: true,
-        },
-      });
-      for (const cred of creds) {
-        const cfg = activeConfigs.find((c) => c.id === cred.dataSourceId);
-        if (cfg) {
-          credentialMap.set(
-            cfg.name,
-            decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-          );
-        }
-      }
-
-      // 2. Fallback: admin shared credentials for sources trader doesn't have
-      const missingSourceIds = dataSourceIds.filter((dsId) => {
-        const cfg = activeConfigs.find((c) => c.id === dsId);
-        return cfg && !credentialMap.has(cfg.name);
-      });
-
-      if (missingSourceIds.length > 0) {
-        const sharedCreds = await this.prisma.dataSourceCredential.findMany({
-          where: {
-            dataSourceId: { in: missingSourceIds },
-            isActive: true,
-            shared: true,
-          },
-        });
-        for (const cred of sharedCreds) {
-          const cfg = activeConfigs.find((c) => c.id === cred.dataSourceId);
-          if (cfg && !credentialMap.has(cfg.name)) {
-            credentialMap.set(
-              cfg.name,
-              decrypt(cred.apiKeyEncrypted, cred.apiKeyIv),
-            );
-          }
-        }
-      }
-    }
+    const credentialsBySourceId =
+      await this.credentialResolver.resolveForDataSources(
+        userId,
+        activeConfigs.map((cfg) => cfg.id),
+      );
 
     // Fetch all active providers in parallel (skip those that need a key but have none)
     const results = await Promise.allSettled(
       activeConfigs
         .filter((cfg) => {
-          if (cfg.requiresApiKey && !credentialMap.has(cfg.name)) {
+          if (cfg.requiresApiKey && !credentialsBySourceId.has(cfg.id)) {
             failedSources.push(cfg.name);
             return false;
           }
           return true;
         })
         .map(async (cfg) => {
-          const apiKey = credentialMap.get(cfg.name);
+          const credential = credentialsBySourceId.get(cfg.id);
           const payload = await this.dataSourceRegistry!.fetchFromProvider(
             cfg.name,
-            apiKey,
+            credential?.apiKey,
+            credential?.ownerUserId ?? SHARED_PUBLIC_OWNER,
           );
           return { name: cfg.name, payload };
         }),

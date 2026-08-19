@@ -49,11 +49,17 @@ const mockAgentConfigResolver = {
 describe('MarketService.analyzeSentiment — TTL check (Spec 38, B.5)', () => {
   let service: MarketService;
 
+  const mockCredentialResolver = {
+    resolveForDataSources: jest.fn().mockResolvedValue(new Map()),
+    resolveForNewsProviders: jest.fn().mockResolvedValue(new Map()),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     service = new MarketService(
       mockPrisma as any,
       mockAgentConfigResolver as any,
+      mockCredentialResolver as any,
     );
   });
 

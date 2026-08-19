@@ -15,6 +15,10 @@ resolver desde `buildEnrichedSnapshot`, `buildNewsSources` y `getNewsSourcesStat
   `'user' | 'admin-shared'`. Dos consultas en lote por llamada, nunca una por fuente. El fallback
   compartido filtra por `user: { role: 'ADMIN' }` en la lectura, no confía en quién escribió el
   flag, y ordena por `createdAt` para ser determinista con varios admins.
+- `listSharedDataSourceIds()` del mismo resolver alimenta `hasSharedCredential` de EP-011, para
+  que el listado del trader y la resolución del fetch apliquen la misma regla. Antes el
+  controller consultaba `shared: true` por su cuenta, sin filtro de rol, y podía anunciar
+  _Admin shared_ para una fuente que la resolución omitía.
 - `market/credential-tenant-key.ts` — clave compuesta `${source}::${owner}`.
 - `DataSourceRegistryService.fetchFromProvider` toma un tercer parámetro `ownerKey` (default
   `SHARED_PUBLIC_OWNER`) y llavea caché, rate limiter y circuit breaker por

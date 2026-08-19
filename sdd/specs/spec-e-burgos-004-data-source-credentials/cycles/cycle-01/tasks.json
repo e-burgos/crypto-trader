@@ -89,14 +89,15 @@
       "user_stories": ["HU-01-02", "HU-01-03", "HU-01-04"],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-001"],
+      "depends_on": ["TASK-001", "TASK-002"],
       "status": "done",
       "files": [
         "apps/api/src/users/users.controller.ts",
         "apps/api/src/users/users.module.ts",
         "apps/api/src/users/trader-data-sources.controller.spec.ts",
         "apps/api/src/admin/data-sources.controller.ts",
-        "libs/shared/src/types/market-data-sources.ts"
+        "libs/shared/src/types/market-data-sources.ts",
+        "apps/api/src/market/data-source-credential-resolver.service.ts"
       ]
     },
     {

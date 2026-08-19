@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { DataSourceRegistryService } from '../market/data-source-registry.service';
+import { DataSourceCredentialResolver } from '../market/data-source-credential-resolver.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LLMModelsService } from '../llm/llm-models.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
@@ -22,6 +23,10 @@ const mockPrisma = {
   dataSourceConfig: {
     findFirst: jest.fn(),
   },
+};
+
+const mockCredentialResolver = {
+  listSharedDataSourceIds: jest.fn(),
 };
 
 const mockUsersService = {};
@@ -57,6 +62,10 @@ describe('UsersController — Trader Data Sources (Phase B)', () => {
       providers: [
         { provide: UsersService, useValue: mockUsersService },
         { provide: DataSourceRegistryService, useValue: mockRegistry },
+        {
+          provide: DataSourceCredentialResolver,
+          useValue: mockCredentialResolver,
+        },
         { provide: PrismaService, useValue: mockPrisma },
         { provide: LLMModelsService, useValue: mockLLMModelsService },
         { provide: LLMUsageService, useValue: mockLLMUsageService },
@@ -77,10 +86,12 @@ describe('UsersController — Trader Data Sources (Phase B)', () => {
       ]);
       mockRegistry.computeHealthStatus.mockReturnValue('healthy');
 
-      // Trader has own credential for ds-1
-      mockPrisma.dataSourceCredential.findMany
-        .mockResolvedValueOnce([{ dataSourceId: 'ds-1' }]) // own credentials
-        .mockResolvedValueOnce([{ dataSourceId: 'ds-2' }]); // shared credentials
+      mockPrisma.dataSourceCredential.findMany.mockResolvedValue([
+        { dataSourceId: 'ds-1' },
+      ]);
+      mockCredentialResolver.listSharedDataSourceIds.mockResolvedValue(
+        new Set(['ds-2']),
+      );
 
       const result = await controller.getMyDataSources(traderUser as any);
 

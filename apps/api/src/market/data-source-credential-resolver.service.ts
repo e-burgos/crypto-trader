@@ -58,6 +58,14 @@ export class DataSourceCredentialResolver {
     return resolved;
   }
 
+  async listSharedDataSourceIds(): Promise<Set<string>> {
+    const shared = await this.prisma.dataSourceCredential.findMany({
+      where: { isActive: true, shared: true, user: { role: 'ADMIN' } },
+      select: { dataSourceId: true },
+    });
+    return new Set(shared.map((credential) => credential.dataSourceId));
+  }
+
   async resolveForNewsProviders(
     userId: string,
     providers: NewsApiProvider[],

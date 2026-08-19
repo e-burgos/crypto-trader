@@ -46,6 +46,7 @@ import { LLMProvider } from '../../generated/prisma/enums';
 import { suggestModels } from '../llm/model-ranking';
 import { PrismaService } from '../prisma/prisma.service';
 import { DataSourceRegistryService } from '../market/data-source-registry.service';
+import { DataSourceCredentialResolver } from '../market/data-source-credential-resolver.service';
 import { encrypt } from './utils/encryption.util';
 import type { TraderDataSourceInfo } from '@crypto-trader/shared';
 
@@ -61,6 +62,7 @@ export class UsersController {
     private readonly providerHealthService: ProviderHealthService,
     private readonly prisma: PrismaService,
     private readonly registry: DataSourceRegistryService,
+    private readonly credentialResolver: DataSourceCredentialResolver,
   ) {}
 
   // ── /users/me ────────────────────────────────────────────────────────────
@@ -428,14 +430,8 @@ export class UsersController {
     });
     const ownCredentialSet = new Set(ownCredentials.map((c) => c.dataSourceId));
 
-    // Get shared credentials (from any admin)
-    const sharedCredentials = await this.prisma.dataSourceCredential.findMany({
-      where: { shared: true, isActive: true },
-      select: { dataSourceId: true },
-    });
-    const sharedCredentialSet = new Set(
-      sharedCredentials.map((c) => c.dataSourceId),
-    );
+    const sharedCredentialSet =
+      await this.credentialResolver.listSharedDataSourceIds();
 
     const sources: TraderDataSourceInfo[] = configs
       .filter((cfg) => cfg.isActive)

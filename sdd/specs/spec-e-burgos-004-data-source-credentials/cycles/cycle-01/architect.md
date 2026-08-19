@@ -61,7 +61,15 @@ resolveForNewsProviders(
   userId: string,
   providers: NewsApiProvider[],
 ): Promise<Map<NewsApiProvider, ResolvedCredential>>;
+
+listSharedDataSourceIds(): Promise<Set<string>>;
 ```
+
+`listSharedDataSourceIds` existe para que el listado del trader (EP-011) derive
+`hasSharedCredential` de la **misma** regla que después decide el fetch. Sin él, el listado
+consultaría `shared: true` por su cuenta, sin el filtro de rol, y mostraría _Admin shared_ para
+fuentes que la resolución luego omite: la pantalla prometería un acceso que el snapshot no
+entrega.
 
 `CredentialOrigin` es deliberadamente el mismo vocabulario que `ResolutionSource` de
 `agents/agent-config-resolver.service.ts:17` (`'user' | 'admin' | ...`), sin reutilizar el tipo:

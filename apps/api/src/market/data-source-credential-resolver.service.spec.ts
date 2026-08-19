@@ -168,6 +168,22 @@ describe('DataSourceCredentialResolver', () => {
     });
   });
 
+  describe('listSharedDataSourceIds', () => {
+    it('CA-004: applies the same admin-only rule the resolution applies', async () => {
+      prisma.dataSourceCredential.findMany.mockResolvedValueOnce([
+        { dataSourceId: 'ds-1' },
+      ]);
+
+      const shared = await resolver.listSharedDataSourceIds();
+
+      expect(prisma.dataSourceCredential.findMany).toHaveBeenCalledWith({
+        where: { isActive: true, shared: true, user: { role: 'ADMIN' } },
+        select: { dataSourceId: true },
+      });
+      expect(shared).toEqual(new Set(['ds-1']));
+    });
+  });
+
   describe('resolveForNewsProviders', () => {
     it('CA-002: falls back to an admin shared credential for a news provider', async () => {
       prisma.newsApiCredential.findMany

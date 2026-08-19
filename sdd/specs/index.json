@@ -16,6 +16,22 @@
       "created_at": "2026-08-17",
       "completed_at": "2026-08-18",
       "depends_on": []
+    },
+    {
+      "id": "spec-e-burgos-004-data-source-credentials",
+      "author": "e-burgos",
+      "slug": "data-source-credentials",
+      "folder": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+      "file": "sdd/specs/spec-e-burgos-004-data-source-credentials/spec-e-burgos-004-data-source-credentials.spec.md",
+      "module": "market-data-credentials",
+      "app": "apps/api",
+      "status": "in-progress",
+      "title": "Resolución híbrida de credenciales de data sources",
+      "created_at": "2026-08-19",
+      "completed_at": null,
+      "depends_on": [
+        "spec-e-burgos-001-agents-simplification"
+      ]
     }
   ]
 }

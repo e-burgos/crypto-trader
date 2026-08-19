@@ -45,6 +45,22 @@
           "tasks_done": 14
         }
       }
+    },
+    "spec-e-burgos-004-data-source-credentials": {
+      "cycles": {
+        "cycle-01": {
+          "file": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/tasks.json",
+          "module": "market-data-credentials",
+          "apps": [
+            "apps/api",
+            "apps/web",
+            "libs/shared"
+          ],
+          "status": "in-progress",
+          "tasks_total": 8,
+          "tasks_done": 0
+        }
+      }
     }
   }
 }

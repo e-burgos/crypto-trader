@@ -1,0 +1,32 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 1,
+  "module": "market-data-credentials",
+  "spec": "spec-e-burgos-004-data-source-credentials",
+  "apps": ["apps/api", "apps/web", "libs/shared"],
+  "phase": "hybrid-credential-resolution-and-tenant-isolation",
+  "flow": "full",
+  "objectives": [
+    "Resolucion unica y tipada de credenciales: propia del trader -> compartida de admin -> fuente omitida",
+    "Aislar cache, rate limit y circuito por dueno de credencial",
+    "Extender la cascada al pipeline de noticias (NewsApiCredential)",
+    "Self-service del trader para gestionar sus propias API keys de data sources"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-08-19",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/tasks.json"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

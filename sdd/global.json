@@ -21,7 +21,18 @@
       "completed_at": "2026-08-18"
     }
   ],
-  "in_progress_modules": [],
+  "in_progress_modules": [
+    {
+      "module": "market-data-credentials",
+      "spec": "spec-e-burgos-004-data-source-credentials",
+      "apps": [
+        "apps/api",
+        "apps/web",
+        "libs/shared"
+      ],
+      "description": "Resolucion hibrida de credenciales de data sources: cascada unica propia -> admin compartida -> fuente omitida, aislamiento de cache/rate-limit/circuito por dueno de credencial, y self-service del trader"
+    }
+  ],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

@@ -1,0 +1,179 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-004-data-source-credentials",
+  "cycle": 1,
+  "module": "market-data-credentials",
+  "apps": [
+    "apps/api",
+    "apps/web",
+    "libs/shared"
+  ],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": {
+    "tasks_generated": true
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Columna shared en data_source_credentials y news_api_credentials",
+      "user_stories": [
+        "HU-01-04"
+      ],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": [],
+      "status": "pending",
+      "files": [
+        "apps/api/prisma/schema.prisma",
+        "apps/api/prisma/migrations/20260819120000_add_shared_credential_flag/migration.sql"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "DataSourceCredentialResolver: cascada unica y tipada propia -> admin compartida",
+      "user_stories": [
+        "HU-01-01",
+        "HU-01-02"
+      ],
+      "estimation_hours": 4,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/market/data-source-credential-resolver.service.ts",
+        "apps/api/src/market/data-source-credential-resolver.service.spec.ts",
+        "apps/api/src/market/market.module.ts"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "buildEnrichedSnapshot delega en el resolver y propaga el dueno de credencial",
+      "user_stories": [
+        "HU-01-01"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-002"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/market/market.service.ts",
+        "apps/api/src/market/market.service.credential-cascade.spec.ts",
+        "apps/api/src/market/market.service.credential-isolation.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "buildNewsSources delega en el resolver",
+      "user_stories": [
+        "HU-01-01"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [
+        "TASK-002"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/market/market.service.ts"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "Cache, rate limiter y circuit breaker llaveados por (fuente, dueno de credencial)",
+      "user_stories": [
+        "HU-01-05"
+      ],
+      "estimation_hours": 5,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-002"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/market/data-source-registry.service.ts",
+        "apps/api/src/market/data-source-cache.service.ts",
+        "apps/api/src/market/rate-limiter.service.ts",
+        "apps/api/src/market/circuit-breaker.service.ts",
+        "apps/api/src/market/data-source-tenant-isolation.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Endpoints de trader para data sources y flag shared en el endpoint de admin",
+      "user_stories": [
+        "HU-01-02",
+        "HU-01-03",
+        "HU-01-04"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/users/users.controller.ts",
+        "apps/api/src/users/users.module.ts",
+        "apps/api/src/users/trader-data-sources.controller.spec.ts",
+        "apps/api/src/admin/data-sources.controller.ts",
+        "libs/shared/src/types/market-data-sources.ts"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "title": "Pantalla /dashboard/settings/data-sources con estado por fuente",
+      "user_stories": [
+        "HU-01-03"
+      ],
+      "estimation_hours": 4,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-006"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/web/src/pages/dashboard/settings/data-sources.tsx",
+        "apps/web/src/components/settings/trader-data-source-card.tsx",
+        "apps/web/src/components/settings/trader-api-key-modal.tsx",
+        "apps/web/src/hooks/use-trader-data-sources.ts",
+        "apps/web/src/app/app.tsx",
+        "apps/web/src/containers/sidebar-container.tsx",
+        "apps/web/src/locales/en.ts",
+        "apps/web/src/locales/es.ts"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "title": "Registros SDD (schema, api, components) y fragmentos aditivos de contexto",
+      "user_stories": [
+        "HU-01-01",
+        "HU-01-02",
+        "HU-01-03",
+        "HU-01-04",
+        "HU-01-05"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [
+        "TASK-003",
+        "TASK-004",
+        "TASK-005",
+        "TASK-006",
+        "TASK-007"
+      ],
+      "status": "pending",
+      "files": [
+        "sdd/schema.json",
+        "sdd/api.json",
+        "sdd/components.json",
+        "sdd/context/apps/api/updates/2026-08-19-spec-e-burgos-004-cycle-01.md",
+        "sdd/context/apps/web/updates/2026-08-19-spec-e-burgos-004-cycle-01.md"
+      ]
+    }
+  ]
+}

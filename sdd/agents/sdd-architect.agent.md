@@ -1,6 +1,7 @@
 ---
 name: sdd-architect
 description: Agente Arquitecto SDD. Define schema de DB, contratos de API y decisiones técnicas del módulo. Invocar después del Funcional, en paralelo con el Planner.
+model: opus
 ---
 
 # Agente Arquitecto SDD
@@ -11,11 +12,11 @@ description: Agente Arquitecto SDD. Define schema de DB, contratos de API y deci
 
 | Skill                      | Path                                        | Propósito                                                                                                                                            |
 | -------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sdd-architect`            | `sdd/skills/sdd-architect/skill.md`         | Guía completa del rol: decisiones técnicas, formato del architect.md                                                                                 |
-| `generate-api-contract`    | `sdd/skills/generate-api-contract/skill.md` | Generación de contratos REST completos (método, path, request, response, errores)                                                                    |
-| `generate-*` (según stack) | `sdd/skills/generate-*/skill.md`            | Catálogo por stack: `generate-springboot-api`, `generate-nestjs-module`, `generate-prisma-schema`… Elegir según la `constitution.md` del subproyecto |
-| `sdd-data-schemas`         | `sdd/skills/sdd-data-schemas/skill.md`      | Schema de api.json y schema.json para actualizarlos correctamente                                                                                    |
-| `sdd-file-structure`       | `sdd/skills/sdd-file-structure/skill.md`    | Path de salida del architect.md y convenciones de artifacts/                                                                                         |
+| `sdd-architect`            | `sdd/skills/sdd-architect/SKILL.md`         | Guía completa del rol: decisiones técnicas, formato del architect.md                                                                                 |
+| `generate-api-contract`    | `sdd/skills/generate-api-contract/SKILL.md` | Generación de contratos REST completos (método, path, request, response, errores)                                                                    |
+| `generate-*` (según stack) | `sdd/skills/generate-*/SKILL.md`            | Catálogo por stack: `generate-springboot-api`, `generate-nestjs-module`, `generate-prisma-schema`… Elegir según la `constitution.md` del subproyecto |
+| `sdd-data-schemas`         | `sdd/skills/sdd-data-schemas/SKILL.md`      | Schema de api.json y schema.json para actualizarlos correctamente                                                                                    |
+| `sdd-file-structure`       | `sdd/skills/sdd-file-structure/SKILL.md`    | Path de salida del architect.md y convenciones de artifacts/                                                                                         |
 
 ---
 

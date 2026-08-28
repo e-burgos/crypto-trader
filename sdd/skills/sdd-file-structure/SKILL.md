@@ -86,35 +86,35 @@ sdd/
 │
 ├── skills/
 │   ├── sdd-file-structure/        ← ⬅ este archivo (lectura obligatoria)
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-orchestrator/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-functional/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-planner/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-architect/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-implementor-back/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-implementor-front/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-reviewer/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── generate-springboot-api/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── generate-react-component/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── generate-api-contract/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── generate-nestjs-module/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── generate-prisma-schema/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   ├── sdd-data-schemas/
-│   │   └── skill.md
+│   │   └── SKILL.md
 │   └── setup-graphify/
-│       └── skill.md
+│       └── SKILL.md
 │
 ├── prompts/
 │   ├── check-spec-before-implement.prompt.md
@@ -690,8 +690,8 @@ Manifest **generado** que enumera agents, skills, prompts y schemas para el viso
 | Resumen de tasks de todos los specs | `sdd/tasks.json` (índice generado)                  |
 | Schemas de los registros JSON       | `sdd/schemas/*.schema.json`                         |
 | Specs registradas                   | `sdd/specs/index.json`                              |
-| Crear API Spring Boot               | `sdd/skills/generate-springboot-api/skill.md`       |
-| Crear componente React              | `sdd/skills/generate-react-component/skill.md`      |
+| Crear API Spring Boot               | `sdd/skills/generate-springboot-api/SKILL.md`       |
+| Crear componente React              | `sdd/skills/generate-react-component/SKILL.md`      |
 | Ver visor SDD en vivo (sin build)   | `pnpm sdd:docs` → `sdd/docs/`                       |
 
 ---

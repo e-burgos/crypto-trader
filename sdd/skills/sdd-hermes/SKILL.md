@@ -20,21 +20,26 @@ description: Loop agéntico punta a punta - de una idea en lenguaje natural a pr
 2. **Checkpoints humanos.** Dos decisiones son siempre del usuario: el **stack**
    (fin de FASE 2) y cada **spec** antes de implementar (fin de FASE 4). El resto
    corre solo, salvo que el usuario pida modo asistido (checkpoint por fase).
-3. **Presupuesto explícito.** Cada fase declara modelo/esfuerzo ANTES de ejecutar
-   (regla ⚙️ del dual-harness). Hermes es un loop largo: sin esta disciplina el
-   costo explota.
+3. **Presupuesto explícito.** Cada fase declara su tier de modelo/esfuerzo ANTES de
+   ejecutar (regla ⚙️ del dual-harness — vale para Claude, Gemini/Antigravity y
+   Copilot por igual). Hermes es un loop largo: sin esta disciplina el costo explota.
 4. **Todo queda registrado en `sdd/`.** Si Hermes se interrumpe en cualquier punto,
    otro agente retoma desde los registros — el loop no tiene estado propio.
 
 ## Presupuesto por fase (regla ⚙️ aplicada al loop)
 
-| Fase                                      | Modelo    | Esfuerzo | Nota                                             |
-| ----------------------------------------- | --------- | -------- | ------------------------------------------------ |
-| 1. Descubrimiento                         | `sonnet`  | `medium` | Extraer, no razonar profundo                     |
-| 2. Decisión de stack                      | `opus`    | `high`   | Una sola vez, cross-cutting, caro equivocarse    |
-| 3. Configuración del workspace            | `haiku`   | `low`    | Mecánica: escribir config + correr CLI           |
-| 4. Redacción de specs                     | `opus`    | `high`   | La spec es el contrato de todo lo que sigue      |
-| 5. Loop de ciclos                         | según agente SDD | — | La tabla del dual-harness ⚙️ manda: implementores `sonnet`/`medium`, orquestador/arquitecto/reviewer `opus`/`high` |
+Los tiers son abstractos a propósito: la equivalencia concreta por proveedor
+(Claude `model`/`effort`, Gemini modelo/`thinking`, Copilot picker/agents) vive en
+**una sola fuente**: la tabla canónica ⚙️ del dual-harness (`AGENTS.md`/`CLAUDE.md`/
+`GEMINI.md` raíz). No duplicar esa tabla acá.
+
+| Fase                           | Tier             | Nota                                                                       |
+| ------------------------------ | ---------------- | -------------------------------------------------------------------------- |
+| 1. Descubrimiento              | **estándar**     | Extraer, no razonar profundo                                               |
+| 2. Decisión de stack           | **alto**         | Una sola vez, cross-cutting, caro equivocarse                              |
+| 3. Configuración del workspace | **económico**    | Mecánica: escribir config + correr CLI                                     |
+| 4. Redacción de specs          | **alto**         | La spec es el contrato de todo lo que sigue                                |
+| 5. Loop de ciclos              | según agente SDD | La tabla canónica ⚙️ manda: implementores **estándar**, orquestador/arquitecto/reviewer **alto** |
 
 ## FASE 1 — Descubrimiento (una ronda de preguntas, máximo)
 
@@ -157,24 +162,39 @@ mientras global.json tenga pending_modules o in_progress_modules:
 
 **Disciplina de tokens dentro del loop:** brief mínimo por agente (el orquestador ya
 lo garantiza); jamás releer specs completas si el brief alcanza; `lessons.md` al
-inicio de cada sesión; graphify si existe; los implementores como subagentes
-`sonnet`/`medium` con contexto acotado a su task.
+inicio de cada sesión; graphify si existe; los implementores en tier **estándar** con
+contexto acotado a su task — mecanismo según proveedor: subagentes con `model`/`effort`
+explícitos en Claude Code, subagentes de modelo económico/estándar en Gemini CLI,
+custom agents con `model:` pinneado en Copilot, y en Antigravity verificar el dropdown
+antes de cada fase (regla ⚙️).
 
-## Automatización del loop (opcional — Claude Code)
+**Telemetría del loop (obligatoria al cerrar cada ciclo):** el reviewer registra
+`cycle.json → metrics.usage` con `by_tier` en claves `proveedor/modelo` (`claude/opus`,
+`gemini/pro`, `copilot/claude-sonnet`; Antigravity bajo `gemini/*`) y todo fix generado
+dentro del loop registra su `usage` en `sdd/fixes.json`. Fuente del número: `/stats` en
+Gemini CLI, reporte de sesión en Claude Code — ambos comandos del cliente que el agente no
+puede ejecutar — y estimación declarada en Antigravity/Copilot, que no tienen contador.
+**Hermes no cierra un ciclo sin este registro.** Sin contador se estima con `approx: true`
+y `source: "declared-estimate"`; no existe la opción de omitir.
+
+## Automatización del loop (opcional — por proveedor)
 
 El loop es retomable por diseño: todo el estado vive en los registros SDD, así que
 cualquier sesión nueva puede continuarlo con `sdd/prompts/hermes-resume.prompt.md`
 (prompt standalone: carga lessons + global.json, diagnostica la posición y sigue).
-Sobre esa base, en Claude Code se puede automatizar:
+`setup:agents` ya lo expone en cada arnés; sobre esa base, cada proveedor tiene su
+mecanismo:
 
-- **Loop recurrente:** `/loop 15m` con el contenido de `hermes-resume.prompt.md` —
-  cada iteración retoma desde los registros; las condiciones de corte del prompt
-  evitan que insista contra un error repetido.
-- **Reanudación programada (Routines/cron):** una Routine que dispare el mismo prompt
-  en una sesión nueva (los registros son el checkpoint, no hace falta la sesión viva).
-- **Memoria al inicio de sesión (hook opcional):** en `.claude/settings.json` del
-  repo, un hook `SessionStart` que imprima la memoria destilada — se inyecta como
-  contexto sin gastar un turno:
+| Proveedor          | Retomar el loop                                        | Automatización disponible                                                                 |
+| ------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| **Claude Code**    | `/hermes-resume` (slash command)                       | `/loop 15m` con el prompt; Routines/cron en sesión nueva; hook `SessionStart` (abajo)      |
+| **Copilot**        | coding agent: asignar un issue con el prompt; CLI: `/hermes-resume` | hooks repo-level en `.github/hooks/` (p. ej. inyectar `lessons.md`); custom agents pinneados |
+| **Gemini CLI**     | `/hermes-resume` (comando TOML generado)               | hooks first-party del CLI; subagentes para las fases mecánicas                             |
+| **Antigravity**    | `/hermes-resume` (workflow de `.agent/workflows/`)     | workflows encadenables; el modelo por fase lo fija el usuario en el dropdown (regla ⚙️)    |
+
+- **Memoria al inicio de sesión (hook opcional, Claude Code):** en
+  `.claude/settings.json` del repo, un hook `SessionStart` que imprima la memoria
+  destilada — se inyecta como contexto sin gastar un turno:
 
   ```json
   {
@@ -190,9 +210,10 @@ Sobre esa base, en Claude Code se puede automatizar:
   }
   ```
 
-El kit no instala nada de esto solo: son decisiones del dev (consumen cupo del plan).
-En agentes sin automatización (Copilot, Cursor), el equivalente manual es pegar
-`hermes-resume.prompt.md` al abrir sesión.
+  El equivalente en Gemini CLI y Copilot CLI se configura con sus propios hooks
+  (mismo comando); el kit no instala ninguno solo: son decisiones del dev (consumen
+  cupo del plan). En arneses sin hooks, el equivalente manual es pegar
+  `hermes-resume.prompt.md` al abrir sesión.
 
 ## Archivos que modifica
 

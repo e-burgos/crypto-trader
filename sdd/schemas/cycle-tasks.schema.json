@@ -48,6 +48,16 @@
     }
   },
   "definitions": {
+    "usageSource": {
+      "type": "string",
+      "enum": [
+        "session-report",
+        "stats-command",
+        "api-usage",
+        "declared-estimate"
+      ],
+      "description": "Where the number came from. session-report: the harness session usage report (Claude Code). stats-command: /stats (Gemini CLI). api-usage: usage returned by the model API. declared-estimate: the agent declared an order-of-magnitude estimate because the harness exposes no counter (Copilot, Antigravity) — pair it with approx: true."
+    },
     "TaskEntry": {
       "type": "object",
       "required": [
@@ -85,12 +95,21 @@
           "type": "object",
           "required": ["tokens_in", "tokens_out"],
           "additionalProperties": false,
-          "description": "Optional telemetry: approximate tokens/time spent implementing this task, recorded by the implementor (or the reviewer at close). Feeds the viewer's Costs dashboard.",
+          "description": "Telemetry for this task, recorded by the implementor (or the reviewer at close). model_tier MUST be declared. With no counter available (Copilot, Antigravity) record a declared estimate with approx: true — never omit. Feeds the viewer's Costs dashboard.",
           "properties": {
             "tokens_in": { "type": "integer", "minimum": 0 },
             "tokens_out": { "type": "integer", "minimum": 0 },
             "duration_minutes": { "type": "number", "minimum": 0 },
-            "model_tier": { "enum": ["haiku", "sonnet", "opus", "fable"] }
+            "approx": {
+              "type": "boolean",
+              "description": "true when the numbers are a declared estimate rather than a counter reading. Absent is read as false (measured)."
+            },
+            "source": { "$ref": "#/definitions/usageSource" },
+            "model_tier": {
+              "type": "string",
+              "pattern": "^(haiku|sonnet|opus|fable|(claude|gemini|copilot)/[a-z0-9][a-z0-9.-]*)$",
+              "description": "Provider-namespaced model (claude/sonnet, gemini/flash, copilot/gpt-5-mini). Antigravity records under gemini/*. Bare legacy values (haiku|sonnet|opus|fable) are still accepted and read as claude/*."
+            }
           }
         }
       }

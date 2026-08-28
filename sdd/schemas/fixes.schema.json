@@ -18,6 +18,16 @@
     }
   },
   "definitions": {
+    "usageSource": {
+      "type": "string",
+      "enum": [
+        "session-report",
+        "stats-command",
+        "api-usage",
+        "declared-estimate"
+      ],
+      "description": "Where the number came from. session-report: the harness session usage report (Claude Code). stats-command: /stats (Gemini CLI). api-usage: usage returned by the model API. declared-estimate: the agent declared an order-of-magnitude estimate because the harness exposes no counter (Copilot, Antigravity) — pair it with approx: true."
+    },
     "FixEntry": {
       "type": "object",
       "required": [
@@ -100,6 +110,27 @@
             { "type": "string", "pattern": "^cycle-\\d{2}$" },
             { "type": "null" }
           ]
+        },
+        "usage": {
+          "type": "object",
+          "required": ["tokens_in", "tokens_out"],
+          "additionalProperties": false,
+          "description": "Telemetry for this fix, recorded by the developer at resolution (or the sdd-reviewer at validation). model_tier MUST be declared. An honest approximation is fine; a made-up number is not — with no counter available (Copilot, Antigravity) record a declared estimate with approx: true instead of omitting. Feeds the viewer's Costs dashboard.",
+          "properties": {
+            "tokens_in": { "type": "integer", "minimum": 0 },
+            "tokens_out": { "type": "integer", "minimum": 0 },
+            "duration_minutes": { "type": "number", "minimum": 0 },
+            "approx": {
+              "type": "boolean",
+              "description": "true when the numbers are a declared estimate rather than a counter reading. Absent is read as false (measured)."
+            },
+            "source": { "$ref": "#/definitions/usageSource" },
+            "model_tier": {
+              "type": "string",
+              "pattern": "^(haiku|sonnet|opus|fable|(claude|gemini|copilot)/[a-z0-9][a-z0-9.-]*)$",
+              "description": "Provider-namespaced model (claude/sonnet, gemini/flash, copilot/gpt-5-mini). Antigravity records under gemini/*. Bare legacy values are read as claude/*."
+            }
+          }
         },
         "process_note": { "type": "string" }
       }

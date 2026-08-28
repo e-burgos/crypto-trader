@@ -3,8 +3,8 @@
 Plantillas para reproducir la estructura de referencia del framework SDD en un repo nuevo.
 
 > Para **montar el workspace desde cero** (config raíz, pnpm, CI, arnés dual) la skill es
-> **[`init-nx-workspace`](../skills/init-nx-workspace/skill.md)** — usa `nx-workspace/` de acá.
-> Para **apps y libs nuevas** en un workspace ya montado, **[`scaffold-nx`](../skills/scaffold-nx/skill.md)**.
+> **[`init-nx-workspace`](../skills/init-nx-workspace/SKILL.md)** — usa `nx-workspace/` de acá.
+> Para **apps y libs nuevas** en un workspace ya montado, **[`scaffold-nx`](../skills/scaffold-nx/SKILL.md)**.
 
 Ambas comparten la regla general:
 
@@ -29,7 +29,7 @@ Para que un agente descubra generadores y schemas sin adivinar flags:
 claude mcp add nx-mcp -- pnpm dlx nx-mcp@latest /path/al/repo
 ```
 
-Detalle completo de comandos, overlays y checklist de cierre: [skills/scaffold-nx/skill.md](../skills/scaffold-nx/skill.md)
+Detalle completo de comandos, overlays y checklist de cierre: [skills/scaffold-nx/SKILL.md](../skills/scaffold-nx/SKILL.md)
 
 ## Política de versiones en `nx-workspace/package.json`
 

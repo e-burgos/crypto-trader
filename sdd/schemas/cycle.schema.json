@@ -86,6 +86,11 @@
           "properties": {
             "tasks_total": { "type": "integer", "minimum": 0 },
             "tasks_completed": { "type": "integer", "minimum": 0 },
+            "tasks_skipped": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Tasks closed as skipped (resolved / not applicable), not pending. Absent is read as 0. tasks_completed + tasks_skipped must equal tasks_total in a completed cycle."
+            },
             "story_points": { "type": "number", "minimum": 0 },
             "files_created": { "type": "array", "items": { "type": "string" } },
             "files_modified": {
@@ -97,23 +102,36 @@
               "type": "object",
               "required": ["tokens_in", "tokens_out"],
               "additionalProperties": false,
-              "description": "Optional aggregated telemetry: approximate tokens/time for the whole cycle, recorded by the reviewer at close. Feeds the viewer's Costs dashboard.",
+              "description": "Aggregated telemetry for the whole cycle, recorded by the reviewer at close (mandatory in the protocol; the field stays optional in the schema so cycles closed before v0.9.0 keep validating). Provider/model MUST be declared in by_tier. When the harness has no per-session counter (Copilot, Antigravity), record a declared estimate with approx: true and source: declared-estimate — never omit. Feeds the viewer's Costs dashboard.",
               "properties": {
                 "tokens_in": { "type": "integer", "minimum": 0 },
                 "tokens_out": { "type": "integer", "minimum": 0 },
                 "duration_minutes": { "type": "number", "minimum": 0 },
+                "approx": {
+                  "type": "boolean",
+                  "description": "true when the numbers are a declared estimate rather than a counter reading. The viewer marks these as \"estimado\". Absent is read as false (measured)."
+                },
+                "source": {
+                  "$ref": "#/definitions/usageSource"
+                },
                 "by_tier": {
                   "type": "object",
                   "additionalProperties": false,
-                  "propertyNames": { "enum": ["haiku", "sonnet", "opus", "fable"] },
+                  "description": "Keys are provider-namespaced models (claude/opus, gemini/pro, copilot/gpt-5-mini). Antigravity records under gemini/* — it runs Gemini models. Bare legacy keys (haiku|sonnet|opus|fable) are still accepted and read as claude/*.",
+                  "propertyNames": {
+                    "pattern": "^(haiku|sonnet|opus|fable|(claude|gemini|copilot)/[a-z0-9][a-z0-9.-]*)$"
+                  },
                   "patternProperties": {
-                    "^(haiku|sonnet|opus|fable)$": {
+                    "^(haiku|sonnet|opus|fable|(claude|gemini|copilot)/[a-z0-9][a-z0-9.-]*)$": {
                       "type": "object",
                       "required": ["tokens_in", "tokens_out"],
                       "additionalProperties": false,
+                      "description": "Per-model tokens. approx/source override the parent usage values for this model, so a cycle mixing a measured provider with an estimated one stays honest.",
                       "properties": {
                         "tokens_in": { "type": "integer", "minimum": 0 },
-                        "tokens_out": { "type": "integer", "minimum": 0 }
+                        "tokens_out": { "type": "integer", "minimum": 0 },
+                        "approx": { "type": "boolean" },
+                        "source": { "$ref": "#/definitions/usageSource" }
                       }
                     }
                   }
@@ -157,6 +175,18 @@
           }
         }
       ]
+    }
+  },
+  "definitions": {
+    "usageSource": {
+      "type": "string",
+      "enum": [
+        "session-report",
+        "stats-command",
+        "api-usage",
+        "declared-estimate"
+      ],
+      "description": "Where the number came from. session-report: the harness session usage report (Claude Code). stats-command: /stats (Gemini CLI). api-usage: usage returned by the model API. declared-estimate: the agent declared an order-of-magnitude estimate because the harness exposes no counter (Copilot, Antigravity) — pair it with approx: true."
     }
   }
 }

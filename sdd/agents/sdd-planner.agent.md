@@ -1,6 +1,7 @@
 ---
 name: sdd-planner
 description: Agente Planner SDD. Convierte historias de usuario en tasks técnicas ordenadas y estimadas para el sprint. Invocar después del Funcional.
+model: sonnet
 ---
 
 # Agente Planner SDD
@@ -11,9 +12,9 @@ description: Agente Planner SDD. Convierte historias de usuario en tasks técnic
 
 | Skill                | Path                                     | Propósito                                                                         |
 | -------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
-| `sdd-planner`        | `sdd/skills/sdd-planner/skill.md`        | Guía completa del rol: formato de tasks, story points, convención TASK-BE/TASK-FE |
-| `sdd-file-structure` | `sdd/skills/sdd-file-structure/skill.md` | Template y path de salida del planner.md                                          |
-| `sdd-data-schemas`   | `sdd/skills/sdd-data-schemas/skill.md`   | Schema del tasks.json per-cycle (`sdd/schemas/cycle-tasks.schema.json`)           |
+| `sdd-planner`        | `sdd/skills/sdd-planner/SKILL.md`        | Guía completa del rol: formato de tasks, story points, convención TASK-BE/TASK-FE |
+| `sdd-file-structure` | `sdd/skills/sdd-file-structure/SKILL.md` | Template y path de salida del planner.md                                          |
+| `sdd-data-schemas`   | `sdd/skills/sdd-data-schemas/SKILL.md`   | Schema del tasks.json per-cycle (`sdd/schemas/cycle-tasks.schema.json`)           |
 
 ---
 

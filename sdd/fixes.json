@@ -35,6 +35,40 @@
       "test_reference": "pnpm sdd:validate en verde con sdd/catalog.json regenerado (validate-sdd.mjs:359-374 compara el catálogo contra el filesystem)",
       "status": "validated",
       "cycle": "cycle-01"
+    },
+    {
+      "id": "FIX-e-burgos-002",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-002.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-08-28",
+      "resolved_at": "2026-08-28",
+      "validated_at": null,
+      "title": "El gate de CI que el arnes declara (sdd-validate.yml) no existe: ningun PR valida sdd/**",
+      "estimation_hours": 0.5,
+      "description": "El dual-harness (CLAUDE.md/AGENTS.md/GEMINI.md, seccion 'TIPADO ESTRICTO DE REGISTROS SDD') afirma que 'el mismo check corre en CI (.github/workflows/sdd-validate.yml, gate de todo PR que toque sdd/**)'. Ese workflow nunca existio en el repo: los unicos workflows son ci.yml, deploy-web.yml y e2e.yml, y ninguno invoca pnpm sdd:validate. La consecuencia es que un commit que deje los registros SDD en rojo (schema invalido, catalogo stale, indice de tasks desincronizado) se mergea sin que nada lo frene, mientras agentes y devs asumen lo contrario por lo que declara el arnes. El kit tampoco lo shippea: INSTALL.md lo lista como paso opcional a copiar del repo origen. Solucion: crear .github/workflows/sdd-validate.yml que corra pnpm sdd:validate en todo push a main y todo PR que toque sdd/**, siguiendo las convenciones de ci.yml (pnpm/action-setup@v4, setup-node@v4 con node 22 y cache pnpm).",
+      "justification": "Es un defecto de tooling del arnes, ajeno al alcance de cualquier spec de producto: no toca contrato de API, ni modulos de dominio, ni schema.json, y se resuelve con un solo archivo nuevo. Mismo precedente que FIX-e-burgos-001. No puede esperar un ciclo SDD porque es el gate que protege la integridad de los registros de todos los ciclos siguientes: cada dia sin el es otra ventana para mergear sdd/ en rojo, y el arnes ya promete que la ventana esta cerrada.",
+      "related_modules": [
+        "sdd-harness"
+      ],
+      "affected_files": [
+        ".github/workflows/sdd-validate.yml",
+        "sdd/fixes.json",
+        "sdd/fixes/fix-e-burgos-002.md"
+      ],
+      "test_reference": null,
+      "status": "implemented",
+      "cycle": null,
+      "usage": {
+        "tokens_in": 260000,
+        "tokens_out": 13000,
+        "duration_minutes": 12,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

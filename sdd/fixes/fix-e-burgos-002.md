@@ -43,8 +43,8 @@ y el arnés ya promete que esa ventana está cerrada.
 
 Nuevo workflow `.github/workflows/sdd-validate.yml` que corre `pnpm sdd:validate` en:
 
-- todo **pull request** que toque `sdd/**`, el `package.json` raíz o el propio workflow;
-- todo **push a `main`** con esos mismos paths (protege merges directos).
+- todo **pull request contra `main`**;
+- todo **push a `main`** (protege merges directos).
 
 Sigue las convenciones de `ci.yml`: `actions/checkout@v4`, `pnpm/action-setup@v4`,
 `actions/setup-node@v4` con Node 22 y `cache: pnpm`, y `concurrency` con
@@ -52,9 +52,17 @@ Sigue las convenciones de `ci.yml`: `actions/checkout@v4`, `pnpm/action-setup@v4
 necesita `ajv` y `ajv-formats`, así que saltear los postinstall (Prisma, Playwright,
 Nx) evita minutos de CI por un check que no compila nada.
 
-El filtro por `paths` deja el workflow en *neutral* para PRs que no tocan `sdd/**`; si se lo
-quiere como required check en la protección de rama, hay que usar la variante sin `paths`
-o un job de skip explícito.
+**Sin filtro por `paths` a propósito.** La variante con `paths: ['sdd/**']` deja el check en
+*neutral* —nunca reportado— en los PRs que no tocan `sdd/**`, y un required check que no
+reporta bloquea el merge para siempre esperando un status que no va a llegar. Como el job
+corre en ~1 minuto y es determinista, sale más barato ejecutarlo en todos los PRs contra
+`main` que mantener un job de skip espejo. Así el check reporta siempre y se puede exigir en
+la protección de rama de `main`.
+
+> Activar el required check es una acción de administración del repo, fuera del alcance de
+> este fix: Settings → Branches → regla de `main` → *Require status checks to pass* →
+> agregar **`Validate SDD registries`**. El workflow tiene que haber corrido al menos una vez
+> para aparecer en esa lista.
 
 ### Archivos modificados
 

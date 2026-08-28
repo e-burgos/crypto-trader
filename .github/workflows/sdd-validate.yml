@@ -2,16 +2,9 @@ name: SDD Validate
 
 on:
   pull_request:
-    paths:
-      - 'sdd/**'
-      - 'package.json'
-      - '.github/workflows/sdd-validate.yml'
+    branches: [main]
   push:
     branches: [main]
-    paths:
-      - 'sdd/**'
-      - 'package.json'
-      - '.github/workflows/sdd-validate.yml'
 
 concurrency:
   group: sdd-validate-${{ github.ref }}

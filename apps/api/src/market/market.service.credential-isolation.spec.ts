@@ -1,60 +1,55 @@
-/**
- * Regression tests for Phase A — Agent Profit Optimizer
- * Bug #1: buildEnrichedSnapshot credential isolation
- */
 import { Test, TestingModule } from '@nestjs/testing';
 import { MarketService } from './market.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DataSourceRegistryService } from './data-source-registry.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
+import {
+  DataSourceCredentialResolver,
+  SHARED_PUBLIC_OWNER,
+} from './data-source-credential-resolver.service';
 
-jest.mock('../users/utils/encryption.util', () => ({
-  decrypt: jest.fn(() => 'decrypted-key'),
-  encrypt: jest.fn(() => ({ encrypted: 'enc', iv: 'iv' })),
-}));
+const KEYED_SOURCE = {
+  id: 'ds-1',
+  name: 'coinalyze',
+  requiresApiKey: true,
+  isActive: true,
+};
 
-describe('MarketService — Credential Isolation (Bug #1 Regression)', () => {
+const FREE_SOURCE = {
+  id: 'ds-2',
+  name: 'alternative_me',
+  requiresApiKey: false,
+  isActive: true,
+};
+
+describe('MarketService — credential resolution is delegated', () => {
   let service: MarketService;
-  let prisma: any;
   let registry: any;
+  let credentialResolver: any;
 
   beforeEach(async () => {
     registry = {
-      getActiveConfigs: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            id: 'ds-1',
-            name: 'alternative_me',
-            requiresApiKey: true,
-            isActive: true,
-          },
-        ]),
+      getActiveConfigs: jest.fn().mockResolvedValue([KEYED_SOURCE]),
       fetchFromProvider: jest.fn().mockResolvedValue({
-        type: 'fear_greed',
-        data: {
-          value: 50,
-          classification: 'Neutral',
-          timestamp: '',
-          previousClose: 48,
-        },
+        type: 'derivatives',
+        data: { openInterest: 1, fundingRate: 0 },
       }),
     };
 
-    prisma = {
-      dataSourceCredential: {
-        findMany: jest.fn().mockResolvedValue([]),
-      },
+    credentialResolver = {
+      resolveForDataSources: jest.fn().mockResolvedValue(new Map()),
+      resolveForNewsProviders: jest.fn().mockResolvedValue(new Map()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MarketService,
-        { provide: PrismaService, useValue: prisma },
+        { provide: PrismaService, useValue: {} },
         { provide: DataSourceRegistryService, useValue: registry },
         { provide: LLMUsageService, useValue: {} },
         { provide: AgentConfigResolverService, useValue: {} },
+        { provide: DataSourceCredentialResolver, useValue: credentialResolver },
       ],
     }).compile();
 
@@ -67,35 +62,92 @@ describe('MarketService — Credential Isolation (Bug #1 Regression)', () => {
     });
   });
 
-  it('should pass userId to dataSourceCredential.findMany', async () => {
-    prisma.dataSourceCredential.findMany.mockResolvedValue([
-      {
-        dataSourceId: 'ds-1',
-        apiKeyEncrypted: 'enc',
-        apiKeyIv: 'iv',
-        isActive: true,
-      },
-    ]);
+  it('resolves credentials for the requesting user and for every active source', async () => {
+    registry.getActiveConfigs.mockResolvedValue([KEYED_SOURCE, FREE_SOURCE]);
 
     await service.buildEnrichedSnapshot('user-A', 'BTCUSDT');
 
-    expect(prisma.dataSourceCredential.findMany).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-A',
-        dataSourceId: { in: ['ds-1'] },
-        isActive: true,
-      },
-    });
+    expect(credentialResolver.resolveForDataSources).toHaveBeenCalledWith(
+      'user-A',
+      ['ds-1', 'ds-2'],
+    );
   });
 
-  it('should NOT return credentials from another user', async () => {
-    // Simulate: user-B has credentials, user-A does not
-    prisma.dataSourceCredential.findMany.mockResolvedValue([]);
+  it('does not query credential tables directly', async () => {
+    const prisma = (service as any).prisma;
+
+    await service.buildEnrichedSnapshot('user-A', 'BTCUSDT');
+
+    expect(prisma.dataSourceCredential).toBeUndefined();
+  });
+
+  it('CA-003: omits a source that requires a key when nothing resolves for it', async () => {
+    const result = await service.buildEnrichedSnapshot('user-A', 'BTCUSDT');
+
+    expect(result.failedSources).toContain('coinalyze');
+    expect(result.derivatives).toBeNull();
+    expect(registry.fetchFromProvider).not.toHaveBeenCalled();
+  });
+
+  it('CA-001: fetches with the resolved key and its owner when a shared credential applies', async () => {
+    credentialResolver.resolveForDataSources.mockResolvedValue(
+      new Map([
+        [
+          'ds-1',
+          {
+            apiKey: 'admin-key',
+            ownerUserId: 'admin-1',
+            origin: 'admin-shared',
+          },
+        ],
+      ]),
+    );
 
     const result = await service.buildEnrichedSnapshot('user-A', 'BTCUSDT');
 
-    // Source requires API key but user-A has none → should be in failedSources
-    expect(result.failedSources).toContain('alternative_me');
-    expect(result.fearGreed).toBeNull();
+    expect(registry.fetchFromProvider).toHaveBeenCalledWith(
+      'coinalyze',
+      'admin-key',
+      'admin-1',
+    );
+    expect(result.activeSources).toContain('coinalyze');
+    expect(result.derivatives).not.toBeNull();
+  });
+
+  it('CA-005: fetches with the trader own key and the trader as owner', async () => {
+    credentialResolver.resolveForDataSources.mockResolvedValue(
+      new Map([
+        ['ds-1', { apiKey: 'own-key', ownerUserId: 'user-A', origin: 'user' }],
+      ]),
+    );
+
+    await service.buildEnrichedSnapshot('user-A', 'BTCUSDT');
+
+    expect(registry.fetchFromProvider).toHaveBeenCalledWith(
+      'coinalyze',
+      'own-key',
+      'user-A',
+    );
+  });
+
+  it('uses the shared public owner for sources that need no credential', async () => {
+    registry.getActiveConfigs.mockResolvedValue([FREE_SOURCE]);
+    registry.fetchFromProvider.mockResolvedValue({
+      type: 'fear_greed',
+      data: {
+        value: 50,
+        classification: 'Neutral',
+        timestamp: '',
+        previousClose: 48,
+      },
+    });
+
+    await service.buildEnrichedSnapshot('user-A', 'BTCUSDT');
+
+    expect(registry.fetchFromProvider).toHaveBeenCalledWith(
+      'alternative_me',
+      undefined,
+      SHARED_PUBLIC_OWNER,
+    );
   });
 });

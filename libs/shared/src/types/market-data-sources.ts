@@ -139,6 +139,19 @@ export interface DataSourceStatus {
   hasUserCredential?: boolean;
 }
 
+export interface TraderDataSourceInfo {
+  id: string;
+  name: string;
+  displayName: string;
+  category: DataSourceCategoryType;
+  isActive: boolean;
+  requiresApiKey: boolean;
+  monthlyCostUsd: number;
+  health: 'healthy' | 'degraded' | 'down' | 'unknown';
+  hasOwnCredential: boolean;
+  hasSharedCredential: boolean;
+}
+
 export interface DataSourceHealthResult {
   name: string;
   available: boolean;

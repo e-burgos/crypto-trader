@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MarketService } from './market.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DataSourceRegistryService } from './data-source-registry.service';
+import { DataSourceCredentialResolver } from './data-source-credential-resolver.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 
@@ -13,6 +14,13 @@ describe('MarketService.getPriceAt', () => {
       providers: [
         MarketService,
         { provide: PrismaService, useValue: {} },
+        {
+          provide: DataSourceCredentialResolver,
+          useValue: {
+            resolveForDataSources: jest.fn().mockResolvedValue(new Map()),
+            resolveForNewsProviders: jest.fn().mockResolvedValue(new Map()),
+          },
+        },
         { provide: DataSourceRegistryService, useValue: {} },
         { provide: LLMUsageService, useValue: {} },
         { provide: AgentConfigResolverService, useValue: {} },

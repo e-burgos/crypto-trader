@@ -92,6 +92,66 @@
         "consumes": ["EP-009"],
         "created_at": "2026-08-18",
         "changelog": []
+      },
+      {
+        "id": "COMP-005",
+        "name": "SettingsDataSourcesPage",
+        "type": "page",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "path": "src/pages/dashboard/settings/data-sources.tsx",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Pagina de fuentes de datos del trader: lista las fuentes activas agrupadas por categoria, con salud y estado de acceso (Your key / Admin shared / No key), y las acciones de cargar y borrar la API key propia.",
+        "consumes": ["EP-011", "EP-012", "EP-013"],
+        "created_at": "2026-08-19",
+        "changelog": []
+      },
+      {
+        "id": "COMP-006",
+        "name": "TraderDataSourceCard",
+        "type": "component",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "path": "src/components/settings/trader-data-source-card.tsx",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Card de una data source con su categoria, estado de salud y badge de acceso. Ofrece la accion de cargar key solo cuando la fuente la requiere.",
+        "consumes": [],
+        "created_at": "2026-08-19",
+        "changelog": []
+      },
+      {
+        "id": "COMP-007",
+        "name": "TraderApiKeyModal",
+        "type": "component",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "path": "src/components/settings/trader-api-key-modal.tsx",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Modal para cargar o reemplazar la API key propia de una data source. No muestra nunca la key guardada, solo los ultimos 4 caracteres devueltos por el servidor.",
+        "consumes": ["EP-012", "EP-013"],
+        "created_at": "2026-08-19",
+        "changelog": []
+      },
+      {
+        "id": "COMP-008",
+        "name": "useTraderDataSources",
+        "type": "hook",
+        "module": "market-data-credentials",
+        "spec": "sdd/specs/spec-e-burgos-004-data-source-credentials",
+        "path": "src/hooks/use-trader-data-sources.ts",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Hook de datos de las data sources del trader: query del listado y mutaciones de upsert y borrado de credencial, con invalidacion del listado.",
+        "consumes": ["EP-011", "EP-012", "EP-013"],
+        "created_at": "2026-08-19",
+        "changelog": []
       }
     ]
   }

@@ -1,0 +1,114 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 1,
+  "module": "market-data-credentials",
+  "spec": "spec-e-burgos-004-data-source-credentials",
+  "apps": ["apps/api", "apps/web", "libs/shared"],
+  "phase": "hybrid-credential-resolution-and-tenant-isolation",
+  "flow": "full",
+  "objectives": [
+    "Resolucion unica y tipada de credenciales: propia del trader -> compartida de admin -> fuente omitida",
+    "Aislar cache, rate limit y circuito por dueno de credencial",
+    "Extender la cascada al pipeline de noticias (NewsApiCredential)",
+    "Self-service del trader para gestionar sus propias API keys de data sources"
+  ],
+  "status": "completed",
+  "started_at": "2026-08-19",
+  "completed_at": "2026-08-19",
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/tasks.json"
+  },
+  "artifacts": [],
+  "metrics": {
+    "tasks_total": 8,
+    "tasks_completed": 8,
+    "story_points": 22,
+    "files_created": [
+      "apps/api/prisma/migrations/20260819120000_add_shared_credential_flag/migration.sql",
+      "apps/api/src/market/credential-tenant-key.ts",
+      "apps/api/src/market/data-source-credential-resolver.service.spec.ts",
+      "apps/api/src/market/data-source-credential-resolver.service.ts",
+      "apps/api/src/market/data-source-tenant-isolation.spec.ts",
+      "apps/api/src/users/trader-data-sources.controller.spec.ts",
+      "apps/web/src/components/settings/trader-api-key-modal.tsx",
+      "apps/web/src/components/settings/trader-data-source-card.spec.tsx",
+      "apps/web/src/components/settings/trader-data-source-card.tsx",
+      "apps/web/src/hooks/use-trader-data-sources.ts",
+      "apps/web/src/pages/dashboard/settings/data-sources.tsx"
+    ],
+    "files_modified": [
+      "apps/api/prisma/schema.prisma",
+      "apps/api/src/admin/data-sources.controller.ts",
+      "apps/api/src/market/data-source-registry.service.ts",
+      "apps/api/src/market/market-sentiment-ttl.spec.ts",
+      "apps/api/src/market/market.module.ts",
+      "apps/api/src/market/market.service.credential-isolation.spec.ts",
+      "apps/api/src/market/market.service.get-price-at.spec.ts",
+      "apps/api/src/market/market.service.integration.spec.ts",
+      "apps/api/src/market/market.service.ts",
+      "apps/api/src/users/users.controller.ts",
+      "apps/api/src/users/users.module.ts",
+      "apps/web/src/app/app.tsx",
+      "apps/web/src/containers/sidebar-container.tsx",
+      "apps/web/src/locales/en.ts",
+      "apps/web/src/locales/es.ts",
+      "apps/web/src/pages/dashboard/settings/index.ts",
+      "libs/shared/src/types/market-data-sources.ts"
+    ],
+    "files_deleted": []
+  },
+  "tables_created": [],
+  "endpoints_implemented": ["EP-011", "EP-012", "EP-013", "EP-014"],
+  "components_created": ["COMP-005", "COMP-006", "COMP-007", "COMP-008"],
+  "issues_found": [
+    "El listado del trader (EP-011) consultaba shared: true por su cuenta, sin el filtro de rol ADMIN que aplica la resolucion: mostraba 'Admin shared' para fuentes que buildEnrichedSnapshot omitia. Corregido enrutandolo por listSharedDataSourceIds() del resolver",
+    "El architect afirmaba que el flag shared necesitaba declararse en un DTO por el forbidNonWhitelisted global. Falso para este controller: tipa sus bodies con object types inline y ValidationPipe.toValidate saltea el metatype Object. Corregido en architect.md y registrado como deuda de validacion en el contexto de apps/api",
+    "La cascada original confiaba en que solo un admin pudiera escribir shared: true. El resolver ahora filtra por user.role ADMIN en la lectura"
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-08-19",
+    "ca_results": {
+      "CA-001": "OK — market.service.credential-isolation.spec.ts y data-source-credential-resolver.service.spec.ts",
+      "CA-002": "OK — resolveForNewsProviders cubierto en el spec del resolver",
+      "CA-003": "OK — la fuente sin credencial resoluble entra en failedSources y no se llama al proveedor",
+      "CA-004": "OK — el fallback compartido filtra por user.role ADMIN, verificado en resolucion y en listSharedDataSourceIds",
+      "CA-005": "OK — la credencial propia gana y evita la segunda consulta",
+      "CA-006": "OK — el upsert del trader escribe solo su propia fila (unique userId+dataSourceId)",
+      "CA-007": "OK — al borrar la propia, la siguiente resolucion vuelve a la compartida; sin invalidacion explicita porque el cache se llavea por dueno",
+      "CA-008": "OK — setMyDataSourceCredential fuerza shared: false en create y update",
+      "CA-009": "OK — pagina implementada, agrupada por categoria",
+      "CA-010": "OK — trader-data-source-card.spec.tsx cubre los tres estados",
+      "CA-011": "OK — sin accion de key para fuentes que no la requieren",
+      "CA-012": "OK — la respuesta devuelve solo maskedKey",
+      "CA-013": "OK — deleteMany idempotente",
+      "CA-014": "OK — el listado no expone el userId del admin que comparte",
+      "CA-015": "OK — el body de admin acepta y persiste shared",
+      "CA-016": "OK — default false en ambas tablas; sin marcar nada, la resolucion es identica a la previa",
+      "CA-017": "OK — el endpoint de admin esta bajo @Roles('ADMIN') y el del trader fuerza shared: false",
+      "CA-018": "OK — data-source-tenant-isolation.spec.ts: sin resolver al dueno admin, la entrada cacheada bajo ese dueno es inalcanzable",
+      "CA-019": "OK — buckets separados por dueno",
+      "CA-020": "OK — sin cache cruzado entre duenos en los caminos de fallo",
+      "CA-021": "OK — mismo dueno comparte bucket y cache",
+      "CA-022": "OK — el circuito de un dueno no afecta al otro"
+    },
+    "tests": {
+      "sdd:validate": "OK — 16 files valid, cross-checks passed",
+      "nx test api": "OK — 62 suites, 518 tests",
+      "nx test web": "OK — 10 archivos, 50 tests",
+      "tsc apps/api": "OK — unico error es el preexistente de swagger.setup.ts, heredado de main",
+      "nx lint api,web,shared": "OK — 0 errors"
+    },
+    "notes": "Ciclo que reencuadra la Spec 43 del flujo legacy dentro del arnes sdd/. Las tres correcciones estructurales frente a la implementacion legacy son el resolver unico (invariante de cycle-01 de spec-e-burgos-001), el filtro de rol ADMIN en la lectura del fallback compartido, y el llaveo de cache/rate-limit/circuito por dueno de credencial. Sin ese ultimo punto la key propia no habria dado cupo propio y la feature no habria rendido lo que promete. Los getters de diagnostico reagregan por nombre de fuente, de modo que el endpoint de admin conserva su contrato. metrics.usage se omite: no hay medicion confiable separada del resto de la sesion, y un numero inventado es peor que la ausencia.",
+    "follow_ups": [
+      "Migrar DataSourcesController y los demas controllers con @Body() tipado inline a clases DTO: hoy el ValidationPipe global no los valida y forbidNonWhitelisted da una cobertura aparente que no existe",
+      "UI de admin para el flag shared — hoy solo por API",
+      "La pantalla de fuentes de noticias no distingue credencial propia de compartida, aunque el backend ya lo resuelve",
+      "El cache de data sources sigue siendo in-memory por proceso: con replicas el aislamiento se mantiene pero el hit-rate se fragmenta"
+    ]
+  }
+}

@@ -12,6 +12,8 @@ import { DataSourceCacheService } from './data-source-cache.service';
 import { RateLimiterService } from './rate-limiter.service';
 import { DataSourceMetricsService } from './data-source-metrics.service';
 import { AppGateway } from '../gateway/app.gateway';
+import { buildTenantKey, sourceNameOfTenantKey } from './credential-tenant-key';
+import { SHARED_PUBLIC_OWNER } from './data-source-credential-resolver.service';
 
 interface RegisteredProvider {
   provider: IDataSourceProvider;
@@ -149,6 +151,7 @@ export class DataSourceRegistryService {
   async fetchFromProvider(
     name: string,
     apiKey?: string,
+    ownerKey: string = SHARED_PUBLIC_OWNER,
   ): Promise<DataSourcePayload | null> {
     const config = await this.getConfigByName(name);
     if (!config || !config.isActive) return null;
@@ -159,19 +162,21 @@ export class DataSourceRegistryService {
       return null;
     }
 
+    const tenantKey = buildTenantKey(name, ownerKey);
+
     // Circuit breaker check
-    if (this.circuitBreaker && !this.circuitBreaker.canExecute(name)) {
+    if (this.circuitBreaker && !this.circuitBreaker.canExecute(tenantKey)) {
       this.logger.debug(`${name}: circuit OPEN, using cache fallback`);
-      return this.cache?.get(name) ?? null;
+      return this.cache?.get(tenantKey) ?? null;
     }
 
     // Rate limiter check
     if (
       this.rateLimiter &&
-      !this.rateLimiter.tryAcquire(name, config.rateLimitPerMin)
+      !this.rateLimiter.tryAcquire(tenantKey, config.rateLimitPerMin)
     ) {
       this.logger.debug(`${name}: rate limited, using cache fallback`);
-      return this.cache?.get(name) ?? null;
+      return this.cache?.get(tenantKey) ?? null;
     }
 
     const providerConfig: ProviderConfig = {
@@ -188,12 +193,12 @@ export class DataSourceRegistryService {
       );
       const latency = Date.now() - start;
       await this.reportSuccess(name, latency);
-      this.circuitBreaker?.recordSuccess(name);
+      this.circuitBreaker?.recordSuccess(tenantKey);
       this.metrics?.recordSuccess(name, latency);
 
       // Cache the successful response (TTL = 2x polling interval)
       if (payload) {
-        this.cache?.set(name, payload, config.pollingIntervalMs * 2);
+        this.cache?.set(tenantKey, payload, config.pollingIntervalMs * 2);
       }
 
       return payload;
@@ -201,14 +206,14 @@ export class DataSourceRegistryService {
       const latency = Date.now() - start;
       const message = err instanceof Error ? err.message : 'Unknown error';
       await this.reportError(name, message);
-      this.circuitBreaker?.recordFailure(name);
+      this.circuitBreaker?.recordFailure(tenantKey);
       this.metrics?.recordFailure(name, latency);
       this.logger.error(
         `${name}: fetch failed after ${latency}ms — ${message}`,
       );
 
       // Fallback to cached data if available
-      const cached = this.cache?.get(name);
+      const cached = this.cache?.get(tenantKey);
       if (cached) {
         this.logger.debug(`${name}: using cached data as fallback`);
         return cached;
@@ -269,18 +274,57 @@ export class DataSourceRegistryService {
   }
 
   getCircuitStates(): Record<string, { state: string; failures: number }> {
-    return this.circuitBreaker?.getAll() ?? {};
+    const bySource: Record<string, { state: string; failures: number }> = {};
+    for (const [tenantKey, entry] of Object.entries(
+      this.circuitBreaker?.getAll() ?? {},
+    )) {
+      const name = sourceNameOfTenantKey(tenantKey);
+      const current = bySource[name];
+      bySource[name] = {
+        state: worstCircuitState(current?.state, entry.state),
+        failures: Math.max(current?.failures ?? 0, entry.failures),
+      };
+    }
+    return bySource;
   }
 
   getCacheStats(): { entries: number; sources: string[] } {
-    return this.cache?.stats() ?? { entries: 0, sources: [] };
+    const stats = this.cache?.stats() ?? { entries: 0, sources: [] };
+    return {
+      entries: stats.entries,
+      sources: [...new Set(stats.sources.map(sourceNameOfTenantKey))],
+    };
   }
 
   getRateLimiterStats(): Record<string, { remaining: number; limit: number }> {
-    return this.rateLimiter?.getAll() ?? {};
+    const bySource: Record<string, { remaining: number; limit: number }> = {};
+    for (const [tenantKey, bucket] of Object.entries(
+      this.rateLimiter?.getAll() ?? {},
+    )) {
+      const name = sourceNameOfTenantKey(tenantKey);
+      const current = bySource[name];
+      bySource[name] = {
+        remaining: Math.min(current?.remaining ?? Infinity, bucket.remaining),
+        limit: bucket.limit,
+      };
+    }
+    return bySource;
   }
 
   getProviderMetrics() {
     return this.metrics?.getAllMetrics() ?? {};
   }
+}
+
+const CIRCUIT_SEVERITY: Record<string, number> = {
+  CLOSED: 0,
+  HALF_OPEN: 1,
+  OPEN: 2,
+};
+
+function worstCircuitState(current: string | undefined, next: string): string {
+  if (!current) return next;
+  return (CIRCUIT_SEVERITY[next] ?? 0) > (CIRCUIT_SEVERITY[current] ?? 0)
+    ? next
+    : current;
 }

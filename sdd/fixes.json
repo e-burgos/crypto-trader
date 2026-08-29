@@ -69,6 +69,68 @@
         "source": "declared-estimate",
         "model_tier": "claude/opus"
       }
+    },
+    {
+      "id": "FIX-e-burgos-004-001",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-004-data-source-credentials",
+      "fix_document": "sdd/specs/spec-e-burgos-004-data-source-credentials/fixes/fix-e-burgos-004-001.md",
+      "type": "BUGFIX",
+      "severity": "high",
+      "created_at": "2026-08-19",
+      "resolved_at": "2026-08-19",
+      "validated_at": "2026-08-19",
+      "title": "La pagina de data sources solo renderiza la categoria NEWS",
+      "estimation_hours": 1,
+      "description": "SettingsDataSourcesPage agrupaba con una lista hardcodeada CATEGORY_ORDER = [PRICE, NEWS, ONCHAIN, SOCIAL, ALTERNATIVE] que no coincide con el tipo canonico DataSourceCategoryType de libs/shared: la unica interseccion es NEWS, y el filter descartaba en silencio toda categoria fuera de la lista, ocultando 7 de las 8 fuentes mientras la barra de resumen seguia contando 8. Corregido derivando las etiquetas del tipo canonico (Record<DataSourceCategoryType, string>, de modo que el compilador exige una etiqueta por valor) y agregando las categorias desconocidas al final en vez de descartarlas. Incluye dos defectos de presentacion de la misma tarjeta: el nombre truncado a cero por compartir fila con los badges, y la categoria renderizada como Defi_onchain.",
+      "justification": "El cycle-01 ya esta cerrado y validado. Es un defecto de presentacion del frontend del mismo ciclo, sin cambios de contrato de API, de entidades ni de resolucion de credenciales: tres archivos de UI y sus tests. No justifica un ciclo SDD propio.",
+      "related_modules": [
+        "market-data-credentials"
+      ],
+      "affected_files": [
+        "apps/web/src/components/settings/data-source-categories.ts",
+        "apps/web/src/pages/dashboard/settings/data-sources.tsx",
+        "apps/web/src/components/settings/trader-data-source-card.tsx",
+        "apps/web/src/pages/dashboard/settings/data-sources.spec.tsx"
+      ],
+      "test_reference": "apps/web/src/pages/dashboard/settings/data-sources.spec.tsx — los dos tests nuevos fallan contra el codigo anterior (verificado) y pasan con el fix",
+      "status": "validated",
+      "cycle": "cycle-01"
+    },
+    {
+      "id": "FIX-e-burgos-003",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-003.md",
+      "type": "BUGFIX",
+      "severity": "high",
+      "created_at": "2026-08-29",
+      "resolved_at": "2026-08-29",
+      "validated_at": null,
+      "title": "BINANCE_KEY_ENCRYPTION_KEY de ci.yml tiene 35 caracteres y no 32: rompe todo test que cifre",
+      "estimation_hours": 0.5,
+      "description": "El job Lint & Test de .github/workflows/ci.yml exporta BINANCE_KEY_ENCRYPTION_KEY con el valor 'ci-encryption-key-exactly-32-chars!', que pese a su nombre tiene 35 caracteres. getKey() en apps/api/src/users/utils/encryption.util.ts exige exactamente KEY_LENGTH=32 y lanza 'BINANCE_KEY_ENCRYPTION_KEY must be exactly 32 characters'. El valor esta mal desde que se escribio el workflow, pero ningun test recorria el encrypt() real con el entorno de CI: los specs que tocan cifrado setean su propia clave (users.service.spec.ts usa 'dev-encryption-key-32-chars-long', 32 correctos). El primer test que llega a encrypt() sin setearla es trader-data-sources.controller.spec.ts, de spec-e-burgos-004, y destapo la trampa: CI en rojo con 1 failed / 517 passed mientras la corrida local del autor daba 62/62 verde, porque en local la clave sale del .env. Solucion: reemplazar el valor por 'ci-encryption-key-32-chars-long!', de 32 caracteres exactos.",
+      "justification": "Bloquea el merge del PR #58 (spec-e-burgos-004) con una falla que no pertenece a esa spec: el defecto esta en la configuracion de CI, no en el codigo del ciclo. Un archivo, una linea, sin contratos de API ni entidades nuevas: no justifica un ciclo SDD propio. Se aplica sobre la branch del PR en vez de un PR aparte contra main porque asi el PR queda verde de inmediato y el arreglo llega a main con el mismo merge, sin encadenar dependencias entre PRs.",
+      "related_modules": [
+        "ci",
+        "apps/api"
+      ],
+      "affected_files": [
+        ".github/workflows/ci.yml",
+        "sdd/fixes.json",
+        "sdd/fixes/fix-e-burgos-003.md"
+      ],
+      "test_reference": "apps/api/src/users/trader-data-sources.controller.spec.ts (UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should save encrypted key and return masked value)",
+      "status": "implemented",
+      "cycle": null,
+      "usage": {
+        "tokens_in": 190000,
+        "tokens_out": 9000,
+        "duration_minutes": 9,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

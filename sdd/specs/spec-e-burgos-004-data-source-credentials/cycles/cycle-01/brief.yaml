@@ -1,0 +1,91 @@
+# sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 1
+module: market-data-credentials
+phase: hybrid-credential-resolution-and-tenant-isolation
+date: 2026-08-19
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Que un trader obtenga el snapshot enriquecido completo sin depender de que un admin le cargue
+  credenciales una por una: credencial propia con prioridad, credencial compartida por el admin
+  como fallback, y fuente omitida solo si no hay ninguna. Con un único resolver tipado —sin
+  cascada inline—, con caché y rate limit aislados por dueño de credencial, y con la página de
+  self-service donde el trader gestiona sus keys.
+
+scope:
+  # --- Spec §3 Cycle-01 ---
+  - 'Campo shared en DataSourceCredential y en NewsApiCredential; solo @Roles(ADMIN) puede setearlo y el endpoint del trader lo fuerza a false'
+  - 'DataSourceCredentialResolver como servicio único con resultado tipado (owner, source: user | admin-shared, apiKey), consumido por buildEnrichedSnapshot y por buildNewsSources; cero cascada inline (invariante de cycle-01 de spec-e-burgos-001, que borró la duplicación AgentConfigResolverService vs SubAgentService.getProvider)'
+  - 'Prioridad idéntica en ambos caminos: credencial propia del trader → credencial de admin con shared:true → fuente omitida. La propia siempre gana; la compartida nunca sobreescribe'
+  - 'Llavear caché y rate limiter de DataSourceRegistryService por (nombre de fuente, dueño de la credencial): cierra la fuga cross-tenant de los caminos rate-limit / circuito abierto / error de fetch, y hace que la key propia rinda cupo propio. Los traders que caen en la key compartida siguen compartiendo bucket, que es el comportamiento correcto porque comparten la cuota real del proveedor'
+  - 'Self-service del trader: GET/PUT/DELETE /users/me/data-sources[/:id/credential] y página /dashboard/settings/data-sources con badge Your key / Admin shared / No key, sin devolver nunca la key en claro'
+
+out_of_scope:
+  - 'Rotación, expiración y auditoría de uso de credenciales'
+  - 'Cuotas por trader sobre la key compartida del admin — el rate limit real del proveedor es el único límite de este ciclo'
+  - 'BinanceCredential y LLMCredential: semántica de ejecución y de costo facturable, no de enriquecimiento de contexto. Compartir una key de exchange o de LLM es una decisión de producto distinta'
+  - 'UI de admin para el flag shared: en este ciclo se setea por API (PUT /admin/data-sources/:id/credential)'
+  - 'Los 17 campos de TradingConfig sin UI que cycle-03 de spec-e-burgos-001 dejó como deuda — siguen siendo una spec de UI propia'
+  - 'Cambiar el comportamiento por defecto: sin ninguna credencial marcada shared, el sistema resuelve exactamente igual que hoy'
+
+dependencies_required:
+  - 'spec-e-burgos-001-agents-simplification — completed'
+
+constraints:
+  - 'Sin BD corriendo: las migraciones se escriben como SQL aditivo a mano y se registran en sdd/schema.json (convención vigente de apps/api §4)'
+  - 'La migración debe tener timestamp posterior a 20260817160000_add_cost_gate_fields, la última aplicada en main'
+  - 'Sin credenciales reales de coinalyze ni finnhub: todo se verifica contra mocks de la capa HTTP, con assert explícito de qué key llegó a fetchData'
+  - 'Cero comentarios en el código de implementación (excepciones del CLAUDE.md); el sdd-reviewer lo verifica al cerrar'
+  - 'DataSourcesController tipa sus bodies con object types inline, no con clases DTO: el ValidationPipe global no los valida (toValidate saltea metatype Object), asi que agregar shared no requiere DTO. Queda como deuda registrada, no como restriccion de este ciclo'
+  - 'Default conservador: shared nace en false. Una instalación existente que despliegue este ciclo sin marcar nada resuelve credenciales igual que antes'
+  - 'apps/web declara su propia interfaz del response: el typecheck no detecta desalineaciones de wire — el contrato de TraderDataSourceInfo se verifica con tests, no con tsc'
+
+agent_contexts:
+  functional:
+    goal: |
+      Traducir la resolución híbrida a historias observables desde el rol de cada actor: qué ve y
+      qué puede hacer un trader sin credenciales, un trader con key propia, y un admin que decide
+      compartir. Debe definir (a) qué significa "la fuente está disponible para mí" en la UI sin
+      revelar de quién es la key; (b) el criterio de aceptación del aislamiento entre tenants, que
+      no es visible en pantalla y necesita expresarse como conducta observable del sistema; (c) qué
+      pasa cuando el admin deja de compartir una key que traders estaban usando.
+    business_context: |
+      De las 8 fuentes sembradas solo coinalyze (derivados) y finnhub (noticias) exigen API key, y
+      son las dos que aportan señal no derivable de Binance. Hoy un trader no-admin no tiene forma
+      de cargarlas: su snapshot llega con derivatives y news en null y el bot paga el mismo costo de
+      LLM por ciclo con menos contexto. Las dos keys son de free tier, así que el costo de habilitar
+      esto es cero para el usuario; el costo real es de cupo, y por eso el aislamiento por dueño de
+      credencial es parte del valor y no una optimización posterior.
+    relevant_spec_sections:
+      - '§3 Cycle-01 — los 5 puntos del alcance'
+      - '§1 Hallazgos A y B — la fuente se apaga sin alternativa; el trader no tiene forma de cargar su key'
+      - '§5 Criterio de cierre'
+    output_file: sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/functional.md
+
+  planner:
+    goal: |
+      Convertir el functional en tasks ordenadas, separando backend y frontend. El resolver es la
+      task raíz: el resto del backend depende de ella. El llaveo por dueño de credencial depende del
+      resolver porque necesita su resultado tipado para saber quién es el dueño. El frontend depende
+      solo del contrato de los endpoints del trader, no de su implementación.
+    note: 'Recibe el output del Funcional; no necesita la especificación completa'
+    output_file: sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/planner.md
+
+  architect:
+    goal: |
+      Definir: (1) la interfaz del DataSourceCredentialResolver y su resultado tipado, alineado con
+      el precedente de ResolutionSource de agent-config-resolver.service.ts, y cómo lo consumen
+      buildEnrichedSnapshot (por dataSourceId) y buildNewsSources (por provider) sin duplicar la
+      cascada; (2) la forma de la clave compuesta de caché y rate limiter, y qué pasa con las
+      entradas ya cacheadas al desplegar; (3) el SQL aditivo de las dos columnas shared y su
+      registro en sdd/schema.json; (4) el contrato de los tres endpoints del trader y de la
+      extensión del body de admin, registrados en sdd/api.json; (5) cómo se verifica el aislamiento
+      entre tenants con mocks, sin credenciales reales.
+    existing_tables:
+      - 'data_source_credentials (Spec 40 legacy — sin registrar aún en sdd/schema.json)'
+      - 'news_api_credentials (legacy — sin registrar aún en sdd/schema.json)'
+      - 'data_source_configs (Spec 40 legacy)'
+    output_file: sdd/specs/spec-e-burgos-004-data-source-credentials/cycles/cycle-01/architect.md

@@ -24,6 +24,7 @@ const es = {
     settingsLLMs: 'LLMs',
     settingsNews: 'Noticias',
     settingsAgents: 'Agentes IA',
+    settingsDataSources: 'Fuentes de Datos',
     notifications: 'Notificaciones',
     positions: 'Posiciones',
     news: 'Análisis de Noticias',

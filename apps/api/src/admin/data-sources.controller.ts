@@ -189,7 +189,7 @@ export class DataSourcesController {
   @ApiResponse({ status: 200, description: 'API key saved (encrypted)' })
   async setCredential(
     @Param('id') id: string,
-    @Body() body: { apiKey: string },
+    @Body() body: { apiKey: string; shared?: boolean },
     @CurrentUser() user: RequestUser,
   ) {
     // Validate source exists
@@ -211,10 +211,12 @@ export class DataSourcesController {
         dataSourceId: id,
         apiKeyEncrypted: encrypted,
         apiKeyIv: iv,
+        shared: body.shared ?? false,
       },
       update: {
         apiKeyEncrypted: encrypted,
         apiKeyIv: iv,
+        shared: body.shared ?? false,
       },
     });
 

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MarketService } from './market.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DataSourceRegistryService } from './data-source-registry.service';
+import { DataSourceCredentialResolver } from './data-source-credential-resolver.service';
 import { LLMUsageService } from '../llm/llm-usage.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import type { DataSourcePayload } from '@crypto-trader/providers';
@@ -69,6 +70,13 @@ describe('MarketService.buildEnrichedSnapshot (integration)', () => {
       providers: [
         MarketService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: DataSourceCredentialResolver,
+          useValue: {
+            resolveForDataSources: jest.fn().mockResolvedValue(new Map()),
+            resolveForNewsProviders: jest.fn().mockResolvedValue(new Map()),
+          },
+        },
         { provide: DataSourceRegistryService, useValue: registry },
         { provide: LLMUsageService, useValue: {} },
         { provide: AgentConfigResolverService, useValue: {} },

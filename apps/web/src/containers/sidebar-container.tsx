@@ -162,6 +162,13 @@ export function SidebarContainer() {
           href: '/dashboard/settings/agents',
           active: isActive('/dashboard/settings/agents'),
         },
+        {
+          id: 'settings-data-sources',
+          label: t('sidebar.settingsDataSources'),
+          icon: <Globe className="h-4 w-4" />,
+          href: '/dashboard/settings/data-sources',
+          active: isActive('/dashboard/settings/data-sources'),
+        },
       ],
     },
     {

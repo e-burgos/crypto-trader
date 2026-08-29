@@ -19,11 +19,14 @@
       "type": "object",
       "additionalProperties": false,
       "minProperties": 1,
-      "properties": {
-        "haiku": { "$ref": "#/definitions/TierPrice" },
-        "sonnet": { "$ref": "#/definitions/TierPrice" },
-        "opus": { "$ref": "#/definitions/TierPrice" },
-        "fable": { "$ref": "#/definitions/TierPrice" }
+      "description": "Keys are provider-namespaced models (claude/opus, gemini/pro, copilot/gpt-5-mini). Bare legacy keys (haiku|sonnet|opus|fable) are still accepted and read as claude/*. Prices are USD per 1M tokens; Copilot entries use the public per-model token rates behind GitHub AI Credits.",
+      "propertyNames": {
+        "pattern": "^(haiku|sonnet|opus|fable|(claude|gemini|copilot)/[a-z0-9][a-z0-9.-]*)$"
+      },
+      "patternProperties": {
+        "^(haiku|sonnet|opus|fable|(claude|gemini|copilot)/[a-z0-9][a-z0-9.-]*)$": {
+          "$ref": "#/definitions/TierPrice"
+        }
       }
     },
     "prices_updated_at": {

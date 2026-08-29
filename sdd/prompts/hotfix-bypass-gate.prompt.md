@@ -127,7 +127,7 @@ El ID sigue la convención: `FIX-[gh-user]-[spec-NNN]-[seq]` para fixes vinculad
 
 - **Fix vinculado a una spec:** crear `sdd/specs/{spec-id}/fixes/fix-[gh-user]-[spec-NNN]-[seq].md`
 - **Fix repo-level (sin spec):** crear `sdd/fixes/fix-[gh-user]-[seq].md`
-- Usar el template de la sección 9 de `sdd/skills/sdd-file-structure/skill.md`.
+- Usar el template de la sección 9 de `sdd/skills/sdd-file-structure/SKILL.md`.
 - El nombre del archivo usa kebab-case del ID: `FIX-jdoe-001` → `fix-jdoe-001.md`
 
 ### PASO 7 — Autorizar al implementador
@@ -146,6 +146,7 @@ Recordá actualizar:
   - affected_files en sdd/fixes.json (FIX-XXX)
   - status → "implemented" al terminar
   - test_reference si escribiste un test
+  - usage (tokens_in/tokens_out + model_tier "proveedor/modelo") con el consumo del fix
 ───────────────────────────────────────────
 ```
 
@@ -159,6 +160,15 @@ Después de implementar, el desarrollador actualiza en `sdd/fixes.json`:
 - `resolved_at`: fecha de implementación
 - `status`: `"implemented"`
 - `test_reference`: referencia al test (si aplica)
+- `usage`: consumo del fix — `tokens_in`/`tokens_out`, `duration_minutes` y `model_tier`
+  con clave `proveedor/modelo` (`claude/sonnet`, `gemini/flash`, `copilot/claude-sonnet`;
+  Antigravity bajo `gemini/*`). Alimenta la vista Costos del visor. **Declarar el modelo es
+  obligatorio, y se registra al resolver el fix** — el reviewer consolida el total del ciclo
+  sumando lo que fixes y tasks ya anotaron, no reconstruyéndolo al final. Fuente del número: `/stats` en Gemini CLI, reporte de sesión en Claude Code
+  — comandos del cliente que el agente no puede ejecutar — y estimación declarada en
+  Antigravity/Copilot, que no tienen contador. Sin contador se registra una estimación de
+  orden de magnitud con `approx: true` y `source: "declared-estimate"`: no se omite el campo.
+  Lo prohibido es inventar un número preciso y presentarlo como medido.
 
 ### CONTEXTO GATE del fix (mecanismo aditivo — obligatorio antes de dar el fix por cerrado)
 

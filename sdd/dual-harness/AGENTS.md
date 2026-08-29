@@ -98,45 +98,80 @@ la re-extracción semántica con la skill `graphify` y `--update`, que sí consu
 ## ⚙️ Selección de modelo y esfuerzo (OBLIGATORIO — optimización de tokens/contexto)
 
 > [!IMPORTANT]
-> **Antes de encarar CUALQUIER tarea nueva —sin importar con qué modelo estés corriendo
-> en ese momento— decidí explícitamente qué modelo y qué nivel de esfuerzo conviene,
-> para el trabajo propio y para CADA subagente/workflow que dispares.** El objetivo es
-> gastar el mínimo de tokens y contexto sin bajar la calidad del resultado. No arranques
-> a ejecutar sin haber hecho esta decisión.
+> **Antes de encarar CUALQUIER tarea nueva —sin importar con qué proveedor o modelo
+> estés corriendo en ese momento— decidí explícitamente qué tier de modelo y qué nivel
+> de esfuerzo/razonamiento conviene, para el trabajo propio y para CADA
+> subagente/workflow que dispares.** El objetivo es gastar el mínimo de tokens y
+> contexto sin bajar la calidad del resultado. No arranques a ejecutar sin haber hecho
+> esta decisión. Esta regla aplica con la misma fuerza a los tres proveedores del
+> arnés: **Claude (Claude Code), Gemini (Antigravity / Gemini CLI) y GitHub Copilot**.
 
-**Regla base:** elegí el modelo/esfuerzo más barato que aún cumple la tarea con calidad.
-Escalá de tier sólo cuando la tarea lo justifique (ambigüedad, razonamiento
-cross-cutting, riesgo de error alto). Ante la duda entre dos tiers, probá el más barato
-primero y escalá si el resultado no alcanza.
+**Regla base:** elegí el tier más barato que aún cumple la tarea con calidad. Escalá
+sólo cuando la tarea lo justifique (ambigüedad, razonamiento cross-cutting, riesgo de
+error alto). Ante la duda entre dos tiers, probá el más barato primero y escalá si el
+resultado no alcanza.
 
-**Modelos disponibles** (`model`): `haiku` · `sonnet` · `opus` · `fable`.
-**Esfuerzo** (`effort`): `low` · `medium` · `high` · `xhigh` · `max`.
+**Tabla canónica de tiers por proveedor** (única fuente de equivalencias — skills y
+agentes SDD referencian estos tiers abstractos, no modelos concretos):
 
-| Tipo de tarea                                                                                                        | Modelo sugerido | Esfuerzo       |
-| -------------------------------------------------------------------------------------------------------------------- | --------------- | -------------- |
-| Lectura de estado, formateo, edición mecánica/puntual, respuestas cortas, grep/glob dirigido                         | `haiku`         | `low`–`medium` |
-| Implementación estándar (una task acotada), tests, edición multi-archivo simple, la mayoría de subagentes ejecutores | `sonnet`        | `medium`       |
-| Arquitectura, decisiones cross-cutting, debugging complejo, orquestación SDD, revisión final del ciclo, síntesis     | `opus`          | `high`–`xhigh` |
-| Sólo el paso más difícil (verify adversarial, judge, diseño crítico)                                                 | según tarea     | `xhigh`–`max`  |
+| Tier          | Tipo de tarea                                                                                                    | Claude (`model`/`effort`) | Gemini (modelo/`thinking`)        | Copilot (picker/agents)             |
+| ------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------- | ----------------------------------- |
+| **económico** | Lectura de estado, formateo, edición mecánica, respuestas cortas, grep dirigido, fan-out de lectores             | `haiku` / `low`–`medium`  | Flash-Lite o Flash / `minimal`–`low` | modelo económico (ej. `gpt-5-mini`) |
+| **estándar**  | Implementación de una task acotada, tests, edición multi-archivo simple, la mayoría de subagentes ejecutores     | `sonnet` / `medium`       | Flash / `medium`                  | modelo estándar (ej. `claude-sonnet`) |
+| **alto**      | Arquitectura, decisiones cross-cutting, debugging complejo, orquestación SDD, revisión final del ciclo, síntesis | `opus` / `high`–`xhigh`   | Pro / `low`–`high`                | modelo alto (ej. `claude-opus`)     |
+| **máximo**    | Sólo el paso más difícil (verify adversarial, judge, diseño crítico)                                             | `fable` / `xhigh`–`max`   | Pro / `high`                      | el tier más alto habilitado         |
 
-**Cómo aplicarlo en la práctica:**
+**Enforcement por proveedor (cómo se cumple la regla en cada arnés):**
 
-- **Subagentes y workflows** (en Claude Code: `Agent` / `Workflow`): pasá `model` y
-  `effort` explícitos en cada llamada, acordes a la tabla. Un fan-out de
-  lectores/mecánicos va en `haiku`/`low`; el paso de verificación o síntesis en
-  `opus`/`high`. Nunca dispares todo un fleet en el tier más caro por defecto.
-- **Agentes del ciclo SDD:** implementores → `sonnet`/`medium`; orquestador, arquitecto
-  y reviewer → `opus`/`high` (razonamiento y visión global). Funcional/planner →
-  `sonnet`/`medium` salvo spec compleja.
+- **Claude Code (programático):** pasá `model` y `effort` explícitos en cada subagente
+  (`Agent`) y workflow (`Workflow`), acordes a la tabla. Un fan-out de
+  lectores/mecánicos va en económico; la verificación o síntesis en alto. Nunca
+  dispares todo un fleet en el tier más caro por defecto.
+- **GitHub Copilot (pinning + flags):** los agentes SDD (`.github/agents/*.agent.md`)
+  llevan `model:` pinneado según su rol. El kit lo shippea con alias Claude
+  (`opus`/`sonnet`); si tu equipo trabaja en Copilot, mapealo UNA vez al modelo del
+  MISMO tier disponible en tu org editando `sdd/agents/*.agent.md` (nunca el symlink)
+  — después no lo cambies ad-hoc. En Copilot CLI: `--model` / `/model` y
+  `--reasoning-effort` acordes al tier; en chat/coding agent, verificá el modelo del
+  picker antes de ejecutar.
+- **Antigravity (dropdown del usuario):** el agente no puede cambiar el modelo por su
+  cuenta. ANTES de ejecutar, compará el modelo activo del dropdown con el tier
+  requerido: si una tarea económica está por correr en Pro/`high`, o una de tier alto
+  en Flash, **avisá y pedí al usuario el cambio de modelo o de thinking level** — no
+  ejecutes en silencio con el tier equivocado.
+- **Gemini CLI:** elegí el modelo por sesión/flag acorde al tier; el fan-out de
+  lectores/mecánicos va en subagentes con modelo económico y la síntesis en Pro.
+- **Agentes del ciclo SDD (cualquier proveedor):** implementores → **estándar**;
+  orquestador, arquitecto y reviewer → **alto** (razonamiento y visión global);
+  funcional/planner → **estándar** salvo spec compleja.
 - **Trabajo propio (main loop):** si la tarea es trivial, bajá el esfuerzo; no quemes
   contexto releyendo lo ya establecido ni narrando opciones que no vas a seguir.
 - **Si el repo tiene grafo de graphify** (regla anterior, opcional), consultalo antes de
   pagar lecturas a ciegas: es parte de la misma optimización de tokens.
-- **Telemetría de uso (dashboard de Costos):** al cerrar cada ciclo, registrar el consumo
-  aproximado en `cycle.json` → `metrics.usage` (`tokens_in`/`tokens_out`, y por task si se
-  conoce). Alimenta la vista **Costos** del visor SDD, que compara el costo agéntico contra
-  la estimación tradicional de las tasks — las tarifas se editan en `sdd/pricing.json`.
-  Una aproximación honesta vale; un número inventado no: ante la duda, omitir el campo.
+
+**Telemetría de uso (dashboard de Costos — OBLIGATORIA en todos los arneses):** al cerrar
+cada ciclo, registrar el consumo en `cycle.json` → `metrics.usage` (`tokens_in`/`tokens_out`,
+y `by_tier` con claves `proveedor/modelo`: `claude/opus`, `gemini/pro`,
+`copilot/claude-sonnet`); por task en `tasks.json` → `usage.model_tier`; y todo fix cerrado
+por FIX GATE registra su `usage` en `sdd/fixes.json`. **Declarar proveedor y modelo no es
+opcional** — el modelo siempre se conoce, es el que estás usando.
+
+De dónde sale el número: `/stats` en Gemini CLI (`source: stats-command`); el reporte de uso
+de la sesión en Claude Code (`session-report`). Ambos son comandos del cliente: un agente no
+puede ejecutarlos, se los pide al dev.
+
+**Quien ejecuta registra; el reviewer consolida.** El consumo se anota al cerrar cada unidad de
+trabajo —task, fix— y el total del ciclo se **suma** de eso, no se reconstruye de memoria al
+final. El reviewer solo estima lo que ninguna unidad cubrió. En **Copilot y Antigravity no existe contador por
+sesión**: ahí va una estimación de orden de magnitud con `approx: true` y
+`source: "declared-estimate"`. Antigravity registra bajo `gemini/*` — corre modelos Gemini.
+
+**Sin contador se estima; no se omite.** El visor muestra las estimaciones marcadas como
+**estimado** en la columna Origen: no las esconde ni las hace pasar por medidas. Lo prohibido
+es inventar un número preciso y presentarlo como medido (`approx: false` sin contador detrás).
+Un ciclo cerrado sin `usage` es un cierre incompleto y `pnpm sdd:validate` lo avisa. Alimenta
+la vista **Costos** del visor SDD (comparativa contra la estimación tradicional de las tasks);
+las tarifas por proveedor se editan en `sdd/pricing.json`.
 
 ## ✍️ Código sin comentarios (OBLIGATORIO — el código se explica solo)
 
@@ -405,35 +440,6 @@ Cuando el problema **no puede esperar un ciclo SDD completo**, usar uno de estos
 <!-- Leave the start & end comments to automatically receive updates. -->
 
 ## General Guidelines for working with Nx
-
-- For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
-- When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly
-- Prefix nx commands with the workspace's package manager (e.g., `pnpm nx build`, `npm exec nx test`) - avoids using globally installed CLI
-- You have access to the Nx MCP server and its tools, use them to help the user
-- For Nx plugin best practices, check `node_modules/@nx/<plugin>/PLUGIN.md`. Not all plugins have this file - proceed without it if unavailable.
-- NEVER guess CLI flags - always check nx_docs or `--help` first when unsure
-
-## Scaffolding & Generators
-
-- For scaffolding tasks (creating apps, libs, project structure, setup), ALWAYS invoke the `nx-generate` skill FIRST before exploring or calling MCP tools
-
-## When to use nx_docs
-
-- USE for: advanced config options, unfamiliar flags, migration guides, plugin configuration, edge cases
-- DON'T USE for: basic generator syntax (`nx g @nx/react:app`), standard commands, things you already know
-- The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
-
-<!-- nx configuration end-->
-
-
----
-
-## Instrucciones previas del proyecto (absorbidas al instalar SDD)
-
-<!-- nx configuration start-->
-<!-- Leave the start & end comments to automatically receive updates. -->
-
-# General Guidelines for working with Nx
 
 - For navigating/exploring the workspace, invoke the `nx-workspace` skill first - it has patterns for querying projects, targets, and dependencies
 - When running tasks (for example build, lint, test, e2e, etc.), always prefer running the task through `nx` (i.e. `nx run`, `nx run-many`, `nx affected`) instead of using the underlying tooling directly

@@ -60,8 +60,8 @@ lockfile shows up — the workspace is not assembled. Ask an agent to use the
 `.nxignore`, pnpm-based CI and the dual harness, and ends with a verifiable command-by-command
 checklist.
 
-The dual harness (`AGENTS.md`/`CLAUDE.md`) instructs agents to check this **at the start of
-every session**, so they normally detect it on their own before their first action.
+The dual harness (`AGENTS.md`/`CLAUDE.md`/`GEMINI.md`) instructs agents to check this **at the
+start of every session**, so they normally detect it on their own before their first action.
 
 > Creating apps or libs is **not** part of that skill: that is `scaffold-nx`, and always inside
 > an SDD cycle.
@@ -70,22 +70,31 @@ every session**, so they normally detect it on their own before their first acti
 
 This script generates (or regenerates) every required symlink:
 
-| Symlink created            | Points to                                       |
-| -------------------------- | ----------------------------------------------- |
-| `.claude/agents`           | `sdd/agents/`                                   |
-| `.claude/skills`           | `sdd/skills/`                                   |
-| `.claude/prompts`          | `sdd/prompts/`                                  |
-| `.claude/commands`         | `sdd/prompts/` (Claude Code slash commands)     |
-| `.github/agents`           | `sdd/agents/`                                   |
-| `.github/skills/<skill>`   | `sdd/skills/<skill>/` (one by one)              |
-| `.github/prompts/<prompt>` | `sdd/prompts/<prompt>` (one by one)             |
-| `AGENTS.md` (root)         | `sdd/dual-harness/AGENTS.md`                    |
-| `CLAUDE.md` (root)         | `sdd/dual-harness/CLAUDE.md`                    |
+| Symlink created                  | Points to                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------------- |
+| `.claude/agents`                 | `sdd/agents/`                                                                    |
+| `.claude/skills`                 | `sdd/skills/`                                                                    |
+| `.claude/prompts`                | `sdd/prompts/`                                                                   |
+| `.claude/commands`               | `sdd/prompts/` (Claude Code slash commands)                                      |
+| `.github/agents`                 | `sdd/agents/`                                                                    |
+| `.github/skills/<skill>`         | `sdd/skills/<skill>/` (one by one)                                               |
+| `.github/prompts/<prompt>`       | `sdd/prompts/<prompt>` (one by one)                                              |
+| `.agents/rules/<rule>`           | `sdd/dual-harness/rules/<rule>` (one by one, Antigravity)                        |
+| `.agents/skills/<skill>`         | `sdd/skills/<skill>/` (one by one, Antigravity + Gemini CLI)                     |
+| `.agent/workflows/<prompt>.md`   | `sdd/prompts/<prompt>.prompt.md` (one by one, Antigravity `/<prompt>` workflows) |
+| `.gemini/commands/<prompt>.toml` | generated wrapper around `sdd/prompts/<prompt>.prompt.md` (Gemini CLI `/<prompt>` commands) |
+| `.gemini/settings.json`          | merged — adds `GEMINI.md`/`AGENTS.md` to `context.fileName`                      |
+| `AGENTS.md` (root)               | `sdd/dual-harness/AGENTS.md`                                                     |
+| `CLAUDE.md` (root)               | `sdd/dual-harness/CLAUDE.md`                                                     |
+| `GEMINI.md` (root)               | `sdd/dual-harness/GEMINI.md`                                                     |
 
 > It is safe to re-run `pnpm setup:agents` at any time — it regenerates everything without
 > breaking anything. **On Windows it is mandatory** after every clone: git leaves the symlinks
-> as text files and the script replaces them with junctions/hardlinks.
+> as text files and the script replaces them with junctions/hardlinks (a PowerShell mirror
+> covers the Gemini/Antigravity surfaces too).
 > `.github/copilot-instructions.md` is a real file (not a symlink) for GitHub's server-side readers.
+> `.gemini/commands/*.toml` are generated on every run (TOML has no include mechanism), and
+> `.gemini/settings.json` is merged rather than overwritten — both leave user files untouched.
 
 ### SDD viewer (optional, recommended)
 
@@ -521,9 +530,11 @@ And if point 4 is NO, something is wrong: only consolidation touches the bases (
   comments. Declarative names and short functions instead. No `// TODO` — that is a task or a
   fix. Exceptions (1 line, English): a constraint the code cannot express, or an annotation
   required by a framework/linter. The reviewer checks this on close.
-- **Choose model and effort before starting**: the cheapest tier that does the job. Implementors
-  `sonnet`/`medium`; orchestrator, architect and reviewer `opus`/`high`. Never a whole fan-out
-  on the most expensive tier.
+- **Choose model and effort before starting**: the cheapest of the four abstract tiers
+  (economical/standard/high/maximum) that does the job — the rule applies to all three
+  providers (Claude, Copilot, Gemini). Implementors → standard (`sonnet`/`medium` in Claude);
+  orchestrator, architect and reviewer → high (`opus`/`high` in Claude). Never a whole fan-out
+  on the most expensive tier. Canonical table: `sdd/dual-harness/{CLAUDE,AGENTS,GEMINI}.md` → ⚙️.
 - **graphify is optional** — if `graphify-out/graph.json` exists, query it before blind
   `grep`/`Read`; otherwise work normally. To enable it: `setup-graphify` skill.
 - **Workspace invariants** (guaranteed by the `init-nx-workspace` skill; breaking them fails
@@ -598,7 +609,7 @@ ls sdd/context/*/*/updates/*.md 2>/dev/null | wc -l
 ### 10.1 From an idea to product (`sdd-hermes` skill)
 
 The SDD cycle starts at a spec — Hermes starts **earlier**: at the idea. The whole protocol
-lives in `sdd/skills/sdd-hermes/skill.md`; the entry point is one command:
+lives in `sdd/skills/sdd-hermes/SKILL.md`; the entry point is one command:
 
 ```bash
 # Empty repo — register the idea and leave everything ready for the agent:
@@ -643,23 +654,62 @@ Two layers of versioned files, zero dependencies:
 With ≥5 entries, the orchestrator **distills** them into `lessons.md` (one line per lesson)
 and deletes what it distilled — `pnpm sdd:validate` warns when that is pending.
 
+All of it is readable in `pnpm sdd:docs` → the **Memory** view: distilled lessons on top,
+the episodic journal below as a timeline, newest first, with the pending-distillation notice
+and the 120-line cap notice when they apply. It is the only view that shows *why* the project
+does things the way it does.
+
 ### 10.3 Telemetry and the Costs dashboard
 
-On closing each cycle, the reviewer records the approximate consumption (an honest
-approximation is fine; an invented number is not):
+On closing each cycle, the reviewer records the consumption. **It is mandatory, and
+declaring provider/model is not optional**: the model is always known — it is the one that
+was running. `by_tier` keys are provider-namespaced (`provider/model` — bare legacy tiers
+like `sonnet`/`opus` are still accepted and read as `claude/*`; Antigravity records under
+`gemini/*` because it runs Gemini models):
 
 ```jsonc
 // cycle.json → metrics
 "usage": {
   "tokens_in": 980000, "tokens_out": 151000, "duration_minutes": 65,
-  "by_tier": { "sonnet": { "tokens_in": 830000, "tokens_out": 130000 },
-               "opus":   { "tokens_in": 150000, "tokens_out": 21000 } }
+  "by_tier": { "claude/sonnet": { "tokens_in": 830000, "tokens_out": 130000 },
+               "claude/opus":   { "tokens_in": 150000, "tokens_out": 21000 } }
 }
 ```
 
-With that, `pnpm sdd:docs` → **Costs** view: agentic cost (tokens × per-tier rate) compared
-against the traditional estimation (`estimation_hours` of the tasks × hourly rate), projected
-saving, tokens per cycle and the exact table. Rates are edited in `sdd/pricing.json`.
+**When there is no counter, estimate — do not omit.** `/stats` (Gemini CLI) and the session
+usage report (Claude Code) are client-side commands: the agent cannot run them, it asks the
+dev. **GitHub Copilot and Antigravity expose no per-session counter at all.** In every one of
+those cases the record is marked as a declared estimate:
+
+```jsonc
+"usage": {
+  "tokens_in": 480000, "tokens_out": 62000,
+  "approx": true, "source": "declared-estimate",
+  "by_tier": { "copilot/claude-sonnet": {
+    "tokens_in": 480000, "tokens_out": 62000,
+    "approx": true, "source": "declared-estimate" } }
+}
+```
+
+The viewer shows those rows as **estimated** in the *Source* column of "Usage by provider":
+the estimate is declared, not hidden and not passed off as measured. The only forbidden thing
+is inventing a precise number and presenting it as measured (`approx: false` with no counter
+behind it). `pnpm sdd:validate` warns — a warning, not an error — when a closed cycle has no
+`metrics.usage`, or has it without `by_tier`.
+
+**Whoever executes records; the reviewer consolidates.** Usage is written when each unit of work
+closes: every task carries its `usage` in `tasks.json` (written by the implementor) and every fix
+closed under the FIX GATE carries its own in `sdd/fixes.json` → `usage`, same shape, singular
+(`tokens_in`/`tokens_out`/`duration_minutes`/`model_tier`/`approx`/`source`). The cycle total is
+**summed** from those, grouped by provider/model; it is never reconstructed from memory at the
+end. The reviewer only estimates what no unit covered — the review itself, coordination,
+documents — and a sum mixing measured with estimated comes out `approx: true`.
+
+With that, `pnpm sdd:docs` → **Costs** view: agentic cost (tokens × per-provider/tier rate)
+compared against the traditional estimation (`estimation_hours` of the tasks × hourly rate),
+projected saving, tokens per cycle, per-provider aggregation, a fixes cost table and the exact
+table. Rates are edited in `sdd/pricing.json` — concrete Copilot/Gemini model names there are
+editable, not a stability guarantee.
 
 The viewer is also **reactive locally**: it polls a per-area fingerprint of the registries
 every 4 s — you close a cycle and the active view refreshes on its own, without reloading and

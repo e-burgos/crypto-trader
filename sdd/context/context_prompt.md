@@ -3,7 +3,7 @@
 > **Nombre y descripción del proyecto:** `sdd/global.json` → `project` / `description`.
 > Es la única fuente de verdad — este documento nunca los hardcodea, así `sdd/` se copia
 > a otro repo sin editarlo. `pnpm sdd:validate` falla si el nombre se filtra acá.
-> Este documento es el punto de entrada para cualquier agente (Claude Code o GitHub Copilot).
+> Este documento es el punto de entrada para cualquier agente (Claude Code, GitHub Copilot, Antigravity o Gemini CLI).
 > Leerlo completo antes de hacer cualquier tarea en este repositorio.
 > **PLANTILLA:** completar las secciones marcadas con `[...]` al inicializar el proyecto.
 
@@ -131,10 +131,10 @@ Este proyecto usa **SDD**. Toda funcionalidad pasa por un ciclo de agentes antes
 | Specs de módulos            | `sdd/specs/`                                        | Especificaciones técnicas de cada módulo                                    |
 | Documentos de ciclos        | `sdd/specs/{spec-id}/cycles/cycle-[XX]/`            | brief.yaml, functional.md, planner.md, architect.md, cycle.json, tasks.json |
 | Agentes y Skills            | `sdd/agents/` y `sdd/skills/`                       | Definiciones del comportamiento del arnés                                   |
-| **⛔ Estructura SDD**       | `sdd/skills/sdd-file-structure/skill.md`            | **Naming, templates y checklist — leer SIEMPRE**                            |
+| **⛔ Estructura SDD**       | `sdd/skills/sdd-file-structure/SKILL.md`            | **Naming, templates y checklist — leer SIEMPRE**                            |
 | **Prompt SPEC GATE**        | `sdd/prompts/check-spec-before-implement.prompt.md` | **Verificar antes de CUALQUIER implementación**                             |
 | **Prompt inicio ciclo**     | `sdd/prompts/start-sdd-cycle.prompt.md`             | Iniciar un ciclo SDD                                                        |
-| **Template nueva API Java** | `sdd/skills/generate-springboot-api/skill.md`       | **Leer antes de crear cualquier API Spring Boot**                           |
+| **Template nueva API Java** | `sdd/skills/generate-springboot-api/SKILL.md`       | **Leer antes de crear cualquier API Spring Boot**                           |
 
 ---
 
@@ -236,4 +236,4 @@ El orquestador ejecutará `sdd/prompts/hotfix-bypass-gate.prompt.md` que:
 
 - Registry de fixes: `sdd/fixes.json`
 - Prompt FIX GATE: `sdd/prompts/hotfix-bypass-gate.prompt.md`
-- Template fixes.md: `sdd/skills/sdd-file-structure/skill.md` → sección 9
+- Template fixes.md: `sdd/skills/sdd-file-structure/SKILL.md` → sección 9

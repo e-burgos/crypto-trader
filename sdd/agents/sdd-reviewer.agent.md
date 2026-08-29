@@ -1,6 +1,7 @@
 ---
 name: sdd-reviewer
 description: Agente Reviewer SDD. Valida la calidad de todo el output del ciclo antes de cerrarlo. Invocar al finalizar todas las tasks de implementación del ciclo.
+model: opus
 ---
 
 # Agente Reviewer SDD
@@ -11,9 +12,9 @@ description: Agente Reviewer SDD. Valida la calidad de todo el output del ciclo 
 
 | Skill                | Path                                     | Propósito                                                                                          |
 | -------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `sdd-reviewer`       | `sdd/skills/sdd-reviewer/skill.md`       | Guía completa del rol: criterios de aprobación, checklist de cierre, formato del reviewer_report   |
-| `sdd-data-schemas`   | `sdd/skills/sdd-data-schemas/skill.md`   | Schema de todos los JSONs de estado — fuente de máquina en `sdd/schemas/*.schema.json`             |
-| `sdd-file-structure` | `sdd/skills/sdd-file-structure/skill.md` | Estructura esperada del ciclo y convenciones de artifacts/ para validar que el ciclo está completo |
+| `sdd-reviewer`       | `sdd/skills/sdd-reviewer/SKILL.md`       | Guía completa del rol: criterios de aprobación, checklist de cierre, formato del reviewer_report   |
+| `sdd-data-schemas`   | `sdd/skills/sdd-data-schemas/SKILL.md`   | Schema de todos los JSONs de estado — fuente de máquina en `sdd/schemas/*.schema.json`             |
+| `sdd-file-structure` | `sdd/skills/sdd-file-structure/SKILL.md` | Estructura esperada del ciclo y convenciones de artifacts/ para validar que el ciclo está completo |
 
 ---
 
@@ -57,8 +58,14 @@ Sos el último paso antes de que el ciclo se marque como completado.
   3. Actualizar `sdd/schema.json` — **bajo el app-key correcto** (ej: `"example-api"`): verificar que las tablas del ciclo estén con `"status": "migrated"` o `"updated"` y `"updated_in_cycle"` seteado
   4. Actualizar `sdd/api.json` — **bajo el app-key correcto**: endpoints deben estar en `"status": "implemented"` o `"updated"`; si fueron implementados en este ciclo sin estar previamente en changelog, dejarlo vacío
   5. Actualizar `sdd/components.json` — **bajo el app-key correcto** (ej: `"apps/example-app"`): verificar que los componentes del ciclo estén con `"status": "implemented"` o `"updated"`
-  6. Actualizar `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` marcando todas las tasks del ciclo como `"status": "done"`,
-     regenerar el índice (`pnpm sdd:rebuild-tasks-index`) y validar todo (`pnpm sdd:validate` debe quedar en verde)
+  6. Actualizar `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` dejando **toda task resuelta**:
+     `"status": "done"` la que se implementó, `"status": "skipped"` la que quedó sin aplicar
+     (requisito caído, trabajo ya cubierto por otra task, alcance movido a otro ciclo). `skipped`
+     es un cierre válido, **no un pendiente**: anotá el motivo en `reviewer_report.notes` y llevá
+     la cuenta a `metrics.tasks_skipped`. El ciclo cierra cuando
+     `tasks_completed + tasks_skipped == tasks_total` — nunca marques `done` una task que no se
+     hizo para hacer pasar el gate. Después regenerar el índice (`pnpm sdd:rebuild-tasks-index`)
+     y validar todo (`pnpm sdd:validate` debe quedar en verde)
   7. Actualizar `sdd/specs/index.json`: si era el último ciclo de la spec → `status: "completed"` + `completed_at`
   8. Revisar `sdd/fixes.json`: fixes del ciclo con `status: "implemented"` → marcarlos `"validated"` o `"absorbed"`
   9. **ESCRIBIR el fragmento aditivo de contexto del subproyecto afectado** (ver sección “Actualización de contexto”)
@@ -67,6 +74,87 @@ Sos el último paso antes de que el ciclo se marque como completado.
       `sdd/memory/journal/YYYY-MM-DD-[spec-id]-cycle-[XX].md` (qué pasó / lección / costo evitable).
       Sin lección real no se escribe nada — el filtro anti-ruido es parte del gate. `lessons.md`
       NUNCA se edita al cierre: lo destila el orquestador al iniciar el próximo ciclo
+  11. **TELEMETRÍA GATE** (ver sección abajo): registrar `metrics.usage` en `cycle.json` con
+      proveedor/modelo declarado. Un ciclo no se cierra sin este registro
+
+---
+
+## ⛔ TELEMETRÍA GATE — bloquea el cierre
+
+> El dashboard de **Costos** del visor SDD compara la estimación tradicional contra el costo
+> real del modo agéntico. Un ciclo sin telemetría no aparece ahí: el ahorro que el equipo usa
+> para justificar la metodología queda sin evidencia.
+
+**Declarar proveedor y modelo es OBLIGATORIO en todo cierre.** No existe la opción de omitir
+por no tener un contador exacto: si no hay contador, se registra una **estimación declarada**.
+
+En `cycle.json` → `metrics.usage`:
+
+```json
+"usage": {
+  "tokens_in": 480000,
+  "tokens_out": 62000,
+  "duration_minutes": 190,
+  "approx": true,
+  "source": "declared-estimate",
+  "by_tier": {
+    "copilot/claude-sonnet": {
+      "tokens_in": 480000,
+      "tokens_out": 62000,
+      "approx": true,
+      "source": "declared-estimate"
+    }
+  }
+}
+```
+
+- `by_tier` usa claves `proveedor/modelo` — **es el campo que no se puede omitir**. El modelo
+  siempre se conoce: es el que estuviste usando.
+- `approx: true` marca el registro como estimación declarada; el visor lo muestra como
+  **estimado**, no lo esconde ni lo hace pasar por medido.
+- Si el ciclo mezcló proveedores (implementación en uno, review en otro), cada entrada de
+  `by_tier` lleva su propio `approx`/`source`.
+
+### De dónde sale el número, por arnés
+
+| Arnés            | Fuente                                              | `source`             | `approx` |
+| ---------------- | --------------------------------------------------- | -------------------- | -------- |
+| **Claude Code**  | reporte de uso de la sesión (pedírselo al dev)      | `session-report`     | `false`  |
+| **Gemini CLI**   | `/stats` — lo corre el dev, vos no podés invocarlo  | `stats-command`      | `false`  |
+| **GitHub Copilot** | no expone contador → estimación declarada          | `declared-estimate`  | `true`   |
+| **Antigravity**  | no expone contador → estimación declarada           | `declared-estimate`  | `true`   |
+
+> Antigravity corre modelos Gemini: registra bajo `gemini/*`, no bajo una clave propia.
+
+**`/stats` y el reporte de sesión son comandos del cliente: no los podés ejecutar.** Si querés
+el número medido, pedíselo al dev en el mensaje de cierre. Si no lo tenés a mano, **no bloquees
+el cierre por eso**: registrá la estimación con `approx: true` y seguí.
+
+### Cómo estimar cuando no hay contador
+
+Orden de magnitud, no precisión falsa. Contá lo que hiciste en el ciclo (archivos leídos y
+escritos, iteraciones de review, tamaño de los documentos) y declaralo. Una estimación honesta
+de 500K tokens vale; un `0` o un campo ausente no. Lo que está prohibido es **inventar un
+número preciso y presentarlo como medido** (`approx` en `false` sin contador detrás).
+
+### Quien ejecuta registra; vos consolidás
+
+La telemetría **no se reconstruye al final**: se registra al cerrar cada unidad de trabajo y
+vos la sumás. Cuando llegás al cierre, la mayor parte del número ya está escrita.
+
+| Unidad | Dónde                                  | Quién lo escribe        | Cuándo                  |
+| ------ | -------------------------------------- | ----------------------- | ----------------------- |
+| task   | `tasks.json` → `usage` (+`model_tier`) | el implementador        | al cerrar la task       |
+| fix    | `sdd/fixes.json` → `usage`             | quien resuelve el fix   | al resolverlo           |
+| ciclo  | `cycle.json` → `metrics.usage`         | **vos, consolidando**   | al cerrar el ciclo      |
+
+**Consolidar = sumar lo ya registrado**, agrupando por `proveedor/modelo` en `by_tier`. Si una
+entrada de `by_tier` mezcla algo medido con algo estimado, la suma queda `approx: true`: un
+total es tan honesto como su parte más floja.
+
+Tu trabajo de estimación se limita a **lo que ninguna task ni fix cubrió** — tu propia revisión,
+la coordinación, lo que se fue en documentos. Si llegás al cierre y no hay nada registrado, algo
+falló aguas arriba: anotalo en `reviewer_report.notes` además de estimar el total.
 
 ---
 

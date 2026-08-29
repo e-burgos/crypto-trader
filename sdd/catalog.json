@@ -25,6 +25,9 @@
     },
     {
       "file": "sdd-reviewer.agent.md"
+    },
+    {
+      "file": "sdd-steward.agent.md"
     }
   ],
   "skills": [
@@ -97,6 +100,10 @@
       "file": "SKILL.md"
     },
     {
+      "dir": "sdd-steward",
+      "file": "SKILL.md"
+    },
+    {
       "dir": "setup-graphify",
       "file": "SKILL.md"
     }
@@ -113,6 +120,9 @@
     },
     {
       "file": "review-cycle.prompt.md"
+    },
+    {
+      "file": "sdd-steward.prompt.md"
     },
     {
       "file": "start-sdd-cycle.prompt.md"
@@ -148,6 +158,23 @@
     },
     {
       "file": "tasks-index.schema.json"
+    }
+  ],
+  "memory": [
+    {
+      "file": "2026-08-28-fix-e-burgos-002.md"
+    },
+    {
+      "file": "2026-08-19-spec-e-burgos-004-cycle-01.md"
+    },
+    {
+      "file": "2026-08-18-spec-e-burgos-001-cycle-03.md"
+    },
+    {
+      "file": "2026-08-17-spec-e-burgos-001-cycle-02.md"
+    },
+    {
+      "file": "2026-08-17-spec-e-burgos-001-cycle-01.md"
     }
   ]
 }

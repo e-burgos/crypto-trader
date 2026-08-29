@@ -4,6 +4,7 @@ import {
   writeFileSync,
   readFileSync,
   existsSync,
+  realpathSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,7 @@ const CATALOG_PATH = join(SDD_ROOT, 'catalog.json');
 
 export function buildCatalog() {
   const skillsDir = join(SDD_ROOT, 'skills');
+  const journalDir = join(SDD_ROOT, 'memory', 'journal');
   return {
     $schema: './schemas/catalog.schema.json',
     _description:
@@ -24,12 +26,11 @@ export function buildCatalog() {
     skills: readdirSync(skillsDir)
       .filter((entry) => statSync(join(skillsDir, entry)).isDirectory())
       .sort()
-      .flatMap((dir) => {
-        const file = readdirSync(join(skillsDir, dir)).find(
-          (entry) => entry === 'skill.md' || entry === 'SKILL.md',
-        );
-        return file ? [{ dir, file }] : [];
-      }),
+      .flatMap((dir) =>
+        readdirSync(join(skillsDir, dir)).includes('SKILL.md')
+          ? [{ dir, file: 'SKILL.md' }]
+          : [],
+      ),
     prompts: readdirSync(join(SDD_ROOT, 'prompts'))
       .filter((f) => f.endsWith('.prompt.md'))
       .sort()
@@ -38,11 +39,30 @@ export function buildCatalog() {
       .filter((f) => f.endsWith('.schema.json') && f !== 'catalog.schema.json')
       .sort()
       .map((file) => ({ file })),
+    // El journal se nombra YYYY-MM-DD-...: orden descendente = más reciente primero.
+    memory: existsSync(journalDir)
+      ? readdirSync(journalDir)
+          .filter((f) => f.endsWith('.md'))
+          .sort()
+          .reverse()
+          .map((file) => ({ file }))
+      : [],
   };
 }
 
+// import.meta.url ya viene resuelto; process.argv[1] no. En macOS el tmpdir es
+// /var -> /private/var, así que sin realpath el script se ejecutaba como import y
+// no escribía nada, en silencio.
+const realPath = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+};
 const isMain =
-  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+  process.argv[1] &&
+  realPath(fileURLToPath(import.meta.url)) === realPath(process.argv[1]);
 if (isMain) {
   const catalog = buildCatalog();
   const serialized = JSON.stringify(catalog, null, 2) + '\n';
@@ -53,6 +73,7 @@ if (isMain) {
   console.log(
     `[rebuild-catalog] ${serialized === previous ? 'unchanged' : 'wrote'} sdd/catalog.json — ` +
       `${catalog.agents.length} agents, ${catalog.skills.length} skills, ` +
-      `${catalog.prompts.length} prompts, ${catalog.schemas.length} schemas`,
+      `${catalog.prompts.length} prompts, ${catalog.schemas.length} schemas, ` +
+      `${catalog.memory.length} journal entries`,
   );
 }

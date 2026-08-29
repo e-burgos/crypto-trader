@@ -54,7 +54,7 @@ vía MCP o `pnpm nx g <generador> --help`.
 ## 2. Workspace nuevo desde cero → otra skill
 
 Montar el workspace **no** es parte de esta skill. Usar
-[`init-nx-workspace`](../init-nx-workspace/skill.md), que cubre `create-nx-workspace` con pnpm, los
+[`init-nx-workspace`](../init-nx-workspace/SKILL.md), que cubre `create-nx-workspace` con pnpm, los
 globs `apps/* libs/* tools/*`, `.npmrc`, `.nxignore`, el CI y el arnés dual, y cierra con un
 checklist verificable.
 
@@ -91,7 +91,7 @@ Nx no tiene generador para Spring Boot — acá el template es la fuente primari
 2. Renombrar: carpeta, `project.json` (`name`, `cwd`), `pom.xml` (`artifactId`, `name`,
    `start-class`), package `com.example.exampleapi` → `com.example.[nombre]`
 3. Asignar puerto local siguiendo la tabla de puertos de `sdd/context/constitution.md`
-4. Seguir `sdd/skills/generate-springboot-api/skill.md` para el detalle de pom, seguridad,
+4. Seguir `sdd/skills/generate-springboot-api/SKILL.md` para el detalle de pom, seguridad,
    JaCoCo y estructura hexagonal
 
 El `project.json` del template integra Maven a Nx vía `nx:run-commands`

@@ -21,8 +21,20 @@ Si el reviewer aprueba — realizar EN ESTE ORDEN:
    - Mover [módulo] de in_progress_modules a completed_modules (apps[], cycles_completed, completed_at)
 2. Actualizar cycle.json a status "completed" con reviewer_report
 3. Confirmar que sdd/schema.json y sdd/api.json están actualizados
-4. Marcar tasks del ciclo como "done" en sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json
+4. Dejar toda task del ciclo resuelta en sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json:
+   "done" la implementada, "skipped" la que no aplica (motivo en reviewer_report.notes y
+   cuenta en metrics.tasks_skipped). skipped es un cierre válido, no un pendiente: nunca
+   marcar "done" algo que no se hizo. Cierra cuando tasks_completed + tasks_skipped == tasks_total
    + regenerar índice (pnpm sdd:rebuild-tasks-index)
+4c. ⛔ TELEMETRÍA GATE — OBLIGATORIO: registrar cycle.json → metrics.usage con
+   tokens_in/tokens_out y by_tier con claves proveedor/modelo (claude/opus, gemini/pro,
+   copilot/claude-sonnet; Antigravity va bajo gemini/*). Declarar proveedor y modelo no es
+   opcional: el modelo siempre se conoce.
+   → con contador (reporte de sesión en Claude Code, /stats en Gemini CLI — pedíselos al dev,
+     el agente no puede ejecutarlos): approx false + source correspondiente
+   → sin contador (Copilot, Antigravity): estimación de orden de magnitud con
+     approx: true y source: "declared-estimate". NUNCA omitir el campo
+   → además: usage por task en tasks.json y usage en cada fix validado/absorbido este ciclo
 4b. ⛔ VALIDATION GATE (post-cierre): pnpm sdd:validate DEBE quedar en verde
    → registrar el resultado en reviewer_report.tests["sdd:validate"]
    → el mismo check corre en CI (sdd-validate.yml): un cierre en rojo rompe el PR

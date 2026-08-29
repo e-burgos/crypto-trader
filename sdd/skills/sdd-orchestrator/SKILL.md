@@ -37,7 +37,7 @@ Continuar con el flujo SDD normal (SPEC GATE → ciclos → agentes).
 
 ## Qué hace (flujo SDD normal)
 
-0. **Lee `sdd/skills/sdd-file-structure/skill.md`** — convenciones de naming, templates y checklist obligatorio
+0. **Lee `sdd/skills/sdd-file-structure/SKILL.md`** — convenciones de naming, templates y checklist obligatorio
 1. Lee `sdd/global.json` para verificar el estado actual
 2. Verifica dependencias
 3. **Revisa `sdd/context/[apps|libs|tools]/[nombre]/updates/` del subproyecto involucrado**
@@ -98,7 +98,7 @@ Mismo patrón y mismo actor único que la consolidación de contexto, aplicado a
 
 ## Estructura de cycle-[XX]/cycle.json al iniciar
 
-Usar el template canónico de `sdd/skills/sdd-file-structure/skill.md` §3.2
+Usar el template canónico de `sdd/skills/sdd-file-structure/SKILL.md` §3.2
 (valida contra `sdd/schemas/cycle.schema.json`). Campos clave al inicio:
 `status: "in-progress"`, `started_at`, `completed_at: null`, `apps: []` (siempre array),
 `metrics: null`, `reviewer_report: null`.

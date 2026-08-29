@@ -16,7 +16,7 @@ What it does, governed by the hashes in `sdd/kit.json`:
 | **Your data** — `global.json`, specs, cycles, fixes, contexts, `memory/journal/` | **Never touched** |
 | Kit files **unmodified** locally (skills, agents, prompts, schemas, scripts, viewer) | Replaced by the new version |
 | Kit files **new** in this version | Added on their own |
-| Kit files **you edited** (typically `dual-harness/AGENTS.md`/`CLAUDE.md`) | Your version stays intact; the new one lands next to it as `*.new` so you merge by hand what you care about |
+| Kit files **you edited** (typically `dual-harness/AGENTS.md`/`CLAUDE.md`/`GEMINI.md`) | Your version stays intact; the new one lands next to it as `*.new` so you merge by hand what you care about |
 
 At the end it regenerates the catalog, refreshes the symlinks and runs `sdd:validate`. If
 the update lists `*.new` conflicts, merge them (or ask your agent to) and delete the `.new`
@@ -39,7 +39,7 @@ contexts from any project. Every registry is empty and validates against its sch
    ```
 
    If the target repo starts from scratch (no Nx workspace), create the workspace first
-   following `sdd/skills/scaffold-nx/skill.md` and the reference files in
+   following `sdd/skills/scaffold-nx/SKILL.md` and the reference files in
    `sdd/templates/nx-workspace/` (`create-nx-workspace` + aligned root config).
 
 2. **Register the scripts in the target repo's root `package.json`:**
@@ -56,8 +56,8 @@ contexts from any project. Every registry is empty and validates against its sch
    }
    ```
 
-3. **Generate the harness symlinks** (`.claude/`, `.github/`, root `CLAUDE.md`/`AGENTS.md`
-   pointing at `sdd/dual-harness/`):
+3. **Generate the harness symlinks** (`.claude/`, `.github/`, `.agents/`, `.agent/`,
+   `.gemini/`, root `CLAUDE.md`/`AGENTS.md`/`GEMINI.md` pointing at `sdd/dual-harness/`):
 
    ```bash
    pnpm setup:agents
@@ -87,16 +87,16 @@ contexts from any project. Every registry is empty and validates against its sch
 
 | Folder / file      | Contents                                                                                        |
 | ------------------ | ----------------------------------------------------------------------------------------------- |
-| `agents/`          | The 7 agents of the SDD cycle                                                                   |
-| `skills/`          | 18 skills (SDD cycle + sdd-hermes + code generators + scaffold-nx + setup-graphify)             |
+| `agents/`          | The 7 agents of the SDD cycle + `sdd-steward` (kit concierge)                                                                   |
+| `skills/`          | 19 skills (SDD cycle + sdd-hermes + sdd-steward + code generators + scaffold-nx + setup-graphify)             |
 | `templates/`       | Reproducible scaffolding: nx-workspace, java-api, react-app, ts-lib — see `templates/README.md` |
 | `prompts/`         | Gate prompts (SPEC GATE, FIX GATE, cycle open/close, hermes-resume)                             |
 | `memory/`          | Project memory: distilled `lessons.md` + episodic `journal/` (MEMORIA GATE)                     |
-| `pricing.json`     | Editable rates for the viewer's Costs dashboard                                                 |
+| `pricing.json`     | Editable per-provider rates for the viewer's Costs dashboard (`claude/*`, `gemini/*`, `copilot/*`) |
 | `schemas/`         | Strict JSON Schemas for every registry                                                          |
-| `scripts/`         | validate, rebuild-tasks-index, rebuild-catalog, setup-agents                                    |
-| `docs/`            | Portable documentation viewer (vanilla JS, zero deps)                                           |
-| `dual-harness/`    | CLAUDE.md / AGENTS.md to link at the repo root                                                  |
+| `scripts/`         | validate, rebuild-tasks-index, rebuild-catalog, setup-agents (bash + PowerShell)                |
+| `docs/`            | Portable, bilingual documentation viewer (vanilla JS, zero deps)                                |
+| `dual-harness/`    | CLAUDE.md / AGENTS.md / GEMINI.md to link at the repo root, plus `rules/` for Antigravity        |
 | `context/`         | Constitution and context prompt templates (global + example)                                    |
 | `specs/`, `fixes/` | Empty, ready for the first specs and fixes                                                      |
 | `*.json`           | Empty, valid state registries (`sdd:validate` OK)                                               |

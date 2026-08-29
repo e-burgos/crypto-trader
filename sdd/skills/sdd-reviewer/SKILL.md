@@ -1,6 +1,6 @@
 ---
 name: sdd-reviewer
-description: SDD Reviewer Agent Skill. Validates the quality of all cycle output. Invoke after all implementation tasks for the cycle are complete.
+description: Skill del Agente Reviewer SDD. Valida la calidad de todo el output del ciclo y ejecuta los gates de cierre. Invocar cuando todas las tasks de implementación del ciclo estén completas.
 ---
 
 # Skill: sdd-reviewer
@@ -12,18 +12,19 @@ description: SDD Reviewer Agent Skill. Validates the quality of all cycle output
 - [ ] `sdd/api.json` — endpoints under correct app-key, status `implemented` or `updated`
 - [ ] `sdd/components.json` — components under correct app-key, `created_in_cycle` set
 - [ ] `sdd/schema.json` — tables under correct app-key, `migration_file` updated
-- [ ] `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` with cycle tasks marked `done` + index regenerated (`pnpm sdd:rebuild-tasks-index`) + `pnpm sdd:validate` green
+- [ ] `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` with every cycle task resolved — `done` when implemented, `skipped` when it no longer applies (dropped requirement, work absorbed by another task, scope moved to another cycle). `skipped` is a valid close, NOT a pending item: record the reason in `reviewer_report.notes` and the count in `metrics.tasks_skipped`, so `tasks_completed + tasks_skipped == tasks_total`. Never mark `done` a task that was not done just to pass the gate. Then index regenerated (`pnpm sdd:rebuild-tasks-index`) + `pnpm sdd:validate` green
 - [ ] Code has NO narrative comments, commented-out code, task/spec/cycle references or `// TODO` (dual-harness rule ✍️; that context belongs in `planner.md`/`architect.md`, not in code; allowed only: issue-linked workaround, business rule referencing its spec, framework annotations / linter-required Javadoc) → otherwise request changes
 - [ ] Additive context fragment written at `sdd/context/[apps|libs|tools]/[name]/updates/YYYY-MM-DD-[spec-id]-cycle-[XX].md` — base `constitution.md`/`context_prompt.md` NOT edited during the cycle (dual-harness rule 🧩)
 - [ ] MEMORIA GATE (dual-harness rule 🧠): if the cycle produced a real lesson (failed assumption, costly discovery, avoidable token spend), a journal entry exists at `sdd/memory/journal/YYYY-MM-DD-[spec-id]-cycle-[XX].md`; `sdd/memory/lessons.md` NOT edited during the cycle. No lesson → no entry (noise filter)
-- [ ] Usage telemetry recorded (best-effort, feeds the Costs dashboard): `cycle.json` → `metrics.usage` with the cycle's approximate `tokens_in`/`tokens_out` (+ `duration_minutes`, `by_tier` if known); per-task `usage` in the cycle's `tasks.json` when the implementor reported it. Approximations are fine; omit only when there is no signal at all
+- [ ] ⛔ TELEMETRÍA GATE — usage telemetry recorded (MANDATORY, feeds the Costs dashboard). `cycle.json` → `metrics.usage` with `tokens_in`/`tokens_out`, `duration_minutes` and **`by_tier` keyed as `provider/model`** (`claude/opus`, `gemini/pro`, `copilot/claude-sonnet`; Antigravity records under `gemini/*`). Declaring provider and model is never optional — the model is always known, it is the one you were running on. **Whoever executes records; you consolidate.** Telemetry is not reconstructed at the end: the implementor writes `usage` on each task in the cycle's `tasks.json` when closing it, whoever resolves a fix writes `usage` in `sdd/fixes.json`, and at close you **sum what is already recorded**, grouped by `provider/model` into `by_tier`. Your own estimating is limited to what no task or fix covered — the review itself, coordination, the documents. A `by_tier` entry that mixes a measured part with an estimated one sums to `approx: true`: a total is only as honest as its weakest part. If nothing is recorded when you get to the close, something failed upstream — note it in `reviewer_report.notes` on top of estimating the total.
+      **When there is no counter, estimate — do not omit.** `/stats` (Gemini CLI) and the session usage report (Claude Code) are client-side: you cannot run them, ask the dev. Copilot and Antigravity expose no counter at all. In every one of those cases record an order-of-magnitude estimate with `"approx": true` and `"source": "declared-estimate"`; the viewer shows it as **estimado** rather than hiding it. What is forbidden is a precise invented number presented as measured (`approx: false` with no counter behind it). A cycle with a known model and no telemetry is an incomplete close
 
 ## Files modified on approval
 
 - `sdd/global.json` — moves module from `in_progress_modules` to `completed_modules` (with `apps[]`, `cycles_completed`, `completed_at`)
 - `sdd/specs/index.json` — spec entry → `status: "completed"` + `completed_at` (if this was the spec's last cycle)
 - `sdd/specs/{spec-id}/cycles/cycle-[XX]/cycle.json` — updates `status` to `"completed"` and fills `reviewer_report`
-- `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` — all tasks `"done"`; then `pnpm sdd:rebuild-tasks-index`
+- `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` — every task resolved (`"done"` or `"skipped"`) + per-task `usage`; then `pnpm sdd:rebuild-tasks-index`
 - `sdd/api.json` — verify/correct `updated_in_cycle` and `changelog` for all touched endpoints
 - `sdd/schema.json` — verify/correct `updated_in_cycle` and `changelog` for all touched tables
 - `sdd/components.json` — verify/correct entries for all components created or modified

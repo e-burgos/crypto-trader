@@ -374,12 +374,22 @@ pending_modules → in_progress_modules → completed_modules
   "story_points": 3,
   "depends_on": ["TASK-[NNN]"],
   "status": "pending | in-progress | done | skipped",
-  "files": ["apps/[app]/src/ruta/Archivo.java"]
+  "files": ["apps/[app]/src/ruta/Archivo.java"],
+  "usage": {
+    "tokens_in": 42000,
+    "tokens_out": 8000,
+    "duration_minutes": 25,
+    "model_tier": "copilot/claude-sonnet",
+    "approx": true,
+    "source": "declared-estimate"
+  }
 }
 ```
 
-> ⛔ **TODOS los campos de TaskEntry son obligatorios** (`additionalProperties: false` en el schema).
-> Una task sin `estimation_hours` o `story_points` no pasa `pnpm sdd:validate`.
+> ⛔ **TODOS los campos de TaskEntry son obligatorios excepto `usage`** (`additionalProperties: false`
+> en el schema). Una task sin `estimation_hours` o `story_points` no pasa `pnpm sdd:validate`.
+> `usage` es opcional en el schema para que los registros escritos antes de v0.9.0 sigan validando,
+> pero **el protocolo lo exige**: ver §8.1.
 
 ### Reglas de TaskEntry
 
@@ -391,8 +401,9 @@ pending_modules → in_progress_modules → completed_modules
 | `estimation_hours` | **Obligatorio.** Número decimal de horas estimadas (ej: `1`, `1.5`, `3`). Generado por sdd-planner en `planner.md`. | **sdd-planner**    |
 | `story_points`     | **Obligatorio.** Entero Fibonacci (1, 2, 3, 5, 8, 13). Escala orientativa: 0.5-1h→1SP, 2h→2SP, 3h→3SP, 4h→5SP.      | **sdd-planner**    |
 | `depends_on`       | `[]` si no tiene dependencias. Solo IDs del mismo archivo.                                                          | sdd-planner        |
-| `status`           | `pending` al crear; actualizar a `in-progress`/`done` durante la implementación                                     | sdd-implementor-\* |
+| `status`           | `pending` al crear; `in-progress`/`done` durante la implementación. `skipped` = **resuelta / no aplica** (requisito caído, trabajo absorbido por otra task, alcance movido): es un cierre válido, no un pendiente. | sdd-implementor-\* |
 | `files`            | Lista todos los archivos creados o modificados. Completar al terminar la task.                                      | sdd-implementor-\* |
+| `usage`            | Telemetría de la task: tokens + `model_tier` (`proveedor/modelo`). Sin contador → estimación con `approx: true`. Ver §8.1. | sdd-implementor-\* |
 | Marcar como done   | Cambiar `status: "done"`, completar `files[]` y correr `pnpm sdd:rebuild-tasks-index`                               | sdd-implementor-\* |
 
 ### Escala de Story Points recomendada
@@ -526,11 +537,27 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
   "artifacts": ["sdd/specs/{spec-id}/cycles/cycle-[XX]/artifacts/diagrama.png"],
   "metrics": {
     "tasks_total": 8,
-    "tasks_completed": 8,
+    "tasks_completed": 7,
+    "tasks_skipped": 1,
     "story_points": 13,
     "files_created": ["apps/.../Archivo.java"],
     "files_modified": ["apps/.../OtroArchivo.java"],
-    "files_deleted": []
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 480000,
+      "tokens_out": 62000,
+      "duration_minutes": 190,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "copilot/claude-sonnet": {
+          "tokens_in": 480000,
+          "tokens_out": 62000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
   },
   "tables_created": ["nombre_tabla"],
   "endpoints_implemented": ["EP-001"],
@@ -559,6 +586,57 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
 - `tables_created` → nombres de tabla (coinciden con keys en `sdd/schema.json`)
 - `endpoints_implemented` → IDs de EP (coinciden con `id` en `sdd/api.json`)
 - `components_created` → IDs de COMP (coinciden con `id` en `sdd/components.json`)
+- `tasks_skipped` → tasks cerradas como `skipped` (resueltas / no aplican). Ausente se lee como `0`.
+  En un ciclo `completed`, `tasks_completed + tasks_skipped` debe igualar `tasks_total`
+
+---
+
+## 8.1 Telemetría de uso (`usage`) — OBLIGATORIA al cerrar
+
+> Alimenta el dashboard de **Costos** del visor SDD, que compara la estimación tradicional
+> (horas × tarifa) contra el costo real del modo agéntico. Sin telemetría, el ahorro que
+> justifica la metodología no tiene evidencia.
+
+El bloque `usage` vive en tres lugares, con la misma forma:
+
+| Dónde                              | Campo                        | Quién lo escribe                  | Cuándo             |
+| ---------------------------------- | ---------------------------- | --------------------------------- | ------------------ |
+| `tasks.json` (por task)            | `usage` (+`model_tier`)      | sdd-implementor-\*                | al cerrar la task  |
+| `sdd/fixes.json` (por fix)         | `usage` (+`model_tier`)      | quien resuelve el fix             | al resolverlo      |
+| `cycle.json`                       | `metrics.usage` (+`by_tier`) | sdd-reviewer, **consolidando**    | al cerrar el ciclo |
+
+> **Quien ejecuta registra; el reviewer consolida.** El total del ciclo no se reconstruye al
+> final: se suma de lo que tasks y fixes ya escribieron, agrupado por `proveedor/modelo`. El
+> reviewer solo estima lo que ninguna unidad cubrió (su propia revisión, coordinación,
+> documentos). Una suma que mezcla medido con estimado queda `approx: true`.
+
+### Campos
+
+| Campo             | Regla                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- |
+| `tokens_in/out`   | **Obligatorios** dentro de `usage`. Enteros ≥ 0.                                                            |
+| `duration_minutes`| Opcional.                                                                                                    |
+| `by_tier` / `model_tier` | **Proveedor y modelo son obligatorios.** Claves `proveedor/modelo`: `claude/opus`, `gemini/pro`, `copilot/claude-sonnet`. Antigravity registra bajo `gemini/*` (corre modelos Gemini). Claves legacy sueltas (`haiku`, `sonnet`, `opus`, `fable`) se leen como `claude/*`. |
+| `approx`          | `true` = estimación declarada; `false`/ausente = leído de un contador. El visor muestra **estimado** en la columna Origen. |
+| `source`          | `session-report` (Claude Code) · `stats-command` (`/stats` de Gemini CLI) · `api-usage` · `declared-estimate` (Copilot, Antigravity). |
+
+### La regla que reemplaza al "ante la duda, omitir"
+
+**Nunca se omite la telemetría por no tener un contador exacto.** El modelo siempre se conoce
+—es el que estás usando— y el orden de magnitud del consumo también. Los arneses sin contador
+por sesión (**GitHub Copilot**, **Antigravity**) registran una estimación declarada:
+
+```json
+"usage": { "tokens_in": 480000, "tokens_out": 62000, "approx": true, "source": "declared-estimate", "by_tier": { ... } }
+```
+
+`/stats` (Gemini CLI) y el reporte de uso de la sesión (Claude Code) son comandos del cliente:
+un agente **no puede ejecutarlos**. Pedíselos al dev si querés el número medido; si no están a
+mano, registrá la estimación y seguí — un ciclo cerrado sin `usage` es un cierre incompleto.
+
+Lo único prohibido es **inventar un número preciso y presentarlo como medido**: `approx: false`
+sin contador detrás. `pnpm sdd:validate` avisa (warning, no error) cuando un ciclo `completed`
+no tiene `metrics.usage` o lo tiene sin `by_tier`.
 
 ---
 
@@ -570,11 +648,15 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
 | `api.json` (endpoints)  | `defined`, `implemented`, `updated`, `deprecated`                | defined → implemented → updated\*                           |
 | `schema.json` (tablas)  | `defined`, `migrated`, `updated`, `deprecated`                   | defined → migrated → updated\*                              |
 | `components.json`       | `defined`, `implemented`, `updated`, `deprecated`                | defined → implemented → updated\*                           |
-| tasks per-cycle (tasks) | `pending`, `in-progress`, `done`, `skipped`                      | pending → in-progress → done                                |
+| tasks per-cycle (tasks) | `pending`, `in-progress`, `done`, `skipped`                      | pending → in-progress → done \| skipped\*\*                   |
 | `fixes.json` (fixes)    | `pending`, `in-progress`, `implemented`, `validated`, `absorbed` | pending → in-progress → implemented → validated \| absorbed |
 | `cycle.json`            | `in-progress`, `completed`                                       | in-progress → completed                                     |
 
 > \* `updated` se puede repetir múltiples veces (con nuevo `updated_in_cycle` y entrada en `changelog`).
+>
+> \*\* `done` y `skipped` son ambos **terminales**: una task `skipped` está resuelta (no aplica),
+> no pendiente. El ciclo cierra cuando `tasks_completed + tasks_skipped == tasks_total`, y el visor
+> la cuenta como resuelta en el progreso.
 
 ---
 

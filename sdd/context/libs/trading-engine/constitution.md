@@ -1,6 +1,6 @@
 # Constitución — libs/trading-engine
 
-> Versión 1.2 | Última actualización: cycle-02 | Fecha: 2026-08-17
+> Versión 1.3 | Última actualización: cycle-03 | Fecha: 2026-08-18
 
 ## 1. Propósito
 
@@ -19,7 +19,7 @@
 - `SandboxOrderExecutor` simula la protección en un `Map` en memoria y **el executor se construye nuevo en cada ciclo del processor**: la simulación existe para testear el contrato del port sin red, no para dar protección persistente en papel.
 - `src/lib/sizing.ts` — `resolveTradeQuantity`: `ceilingQuantity` sale de `calculateTradeQuantity` (sin tocar) y `factor = min(aegis × verdict, forge)` con `clamp(·,0,1)` en **cada** factor ⇒ el techo `balance × maxTradePct` es inviolable **por construcción**, no por casos de test. Ante contradicción AEGIS vs FORGE gana el más conservador (`min`, nunca promedio ni producto).
 - `src/lib/sell-policy.ts` — `evaluateSellPolicy`: toma de ganancia (idéntica al comportamiento previo) y corte de pérdida por señal, **fail-closed en cadena** (cualquier dato faltante o fuera de rango ⇒ `NONE`). Usa el **edge ratio** sobre `simulateTrade` con `stopLossPct: 0` —el costo de salirse ahora— y no el `riskRewardRatio`, que tiende a infinito al acercarse el precio al stop y recomendaría sostener justo cuando el corte importa.
-- `src/lib/position-manager.ts` — funciones puras junto a la clase existente (`PositionManager` no se modificó): `updateTrailingStop` (cierra con `stopPrice = max(baseStop, candidate)`, lo que garantiza que el stop **nunca retrocede**), `shouldExitByTime`, `resolvePartialTakeProfit` (devuelve `null` si la porción vendida **o el remanente** quedan bajo `minNotional`; su `newStopPrice` es el breakeven **neto de las dos comisiones**, `entry × (1 + 2×TRADE_FEE_PCT)`) y `applyPartialExit` (no cierra la posición: baja `quantity`, acumula `realizedPnlDelta` y suma el fee).
+- `src/lib/position-manager.ts` — funciones puras junto a la clase existente (`PositionManager` no se modificó): `updateTrailingStop` (cierra con `stopPrice = max(baseStop, candidate)`, lo que garantiza que el stop **nunca retrocede**), `shouldExitByTime`, `resolvePartialTakeProfit` (devuelve `null` si la porción vendida **o el remanente** quedan bajo `minNotional`; su `newStopPrice` es el breakeven **neto de las dos comisiones**, `entry × (1 + 2×TRADE_FEE_PCT)`), `applyPartialExit` (no cierra la posición: baja `quantity`, acumula `realizedPnlDelta` y suma el fee) y `resolveProtectionRearm(input): ProtectionRearmDecision` — decide `REARM` vs `NONE` con razón tipada (`DISABLED`, `SANDBOX`, `NOT_PROTECTED`, `NO_STOP`, `BELOW_THRESHOLD`); umbral `PROTECTION_REARM_MIN_STOP_DELTA_PCT` = 0.1 % sobre el stop vigente, rechaza valores no finitos o ≤ 0. **La lib solo decide** — cancelar y recolocar contra el exchange es orquestación de `apps/api` (`TradingProcessor.ensureNativeProtection`), que debe tratar la cancelación fallida como posición **desprotegida** y no recolocar con la OCO vieja todavía viva.
 - `src/lib/risk/` — simulación pura, exportada por el barrel:
 
   ```ts

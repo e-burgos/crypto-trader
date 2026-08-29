@@ -1,6 +1,7 @@
 # Constitución — libs/shared
 
-> Versión 1.1 | Última actualización: cycle-02 | Fecha: 2026-08-17
+> Versión 1.2 | Última actualización: cycle-01 | Fecha: 2026-08-19
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19)
 
 ## 1. Propósito
 
@@ -16,6 +17,10 @@
 - Sin dependencias internas — es la base del grafo; todas las demás libs/apps pueden importarla.
 - **Vocabulario común de órdenes de exchange** en `src/types/interfaces.ts`: `ExchangeOrderState` (`'ACTIVE' | 'FILLED' | 'CANCELLED' | 'MISSING'`) y `ExchangeOrderStatus` (`state`, `filledLeg: 'STOP' | 'TAKE_PROFIT' | null`, `executedPrice`, `executedQuantity`, `orderId`). Viven acá y no en `libs/data-fetcher` —donde está el cliente de Binance— porque `libs/trading-engine` los necesita para su `OrderExecutorPort` y no existe (ni debe existir) una dependencia de `trading-engine` sobre `data-fetcher`. **Cualquier tipo que necesiten esas dos libs va acá por la misma razón.**
 - `TradeRecord` incluye `decisionId?: string | null` — trazabilidad de la operación ejecutada hacia la `AgentDecision` que la justificó. Opcional y nullable: los caminos sin decisión asociada (cierre manual, cierre ejecutado por el exchange) persisten `null` sin fallar.
+- `src/types/agent-wire.ts` — **única** fuente del contrato del wire de agentes: `AGENT_SLOT_WIRE_IDS`/`AgentSlotWireId`, `ResolutionSource` (`override | user | admin | preset | credential`), `ResolvedAgentModelWire`, `AgentHealthItemWire`, `AgentHealthReportWire`. Existe porque un consumidor (`apps/web`) declaraba su propia interfaz del response y el typecheck no detectó un renombre del backend hasta romper producción. Cualquier cambio del wire de agentes se hace **acá primero**; declarar la forma del response en el consumidor es el anti-patrón que este archivo previene. El wire de **admin** (`/admin/agent-configs`) sigue con vocabulario `agentId` propio, sin cubrir todavía.
+- `src/utils/fingerprint.ts` — función pura `fingerprint()` (content-addressed, estable ante reordenamiento), usada para las huellas de posiciones/noticias/macro que consume el gate determinista de `libs/analysis`.
+- `src/types/market-data-sources.ts` — `TraderDataSourceInfo` (EP-011): contrato del listado de fuentes de datos que ve un trader, con `hasOwnCredential`/`hasSharedCredential` ya derivados en el servidor (el frontend no infiere el estado de acceso ni recibe la key ni la identidad del admin que comparte).
+- `IndicatorSnapshot` (`src/types/interfaces.ts`) **no tiene `close`** — solo `Candle` lo tiene. Al consumirlo, pasar el precio de cierre explícito desde el último candle; no castear esperando un campo que en runtime nunca está poblado.
 
 ## 4. Convenciones propias
 

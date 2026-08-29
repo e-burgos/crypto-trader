@@ -1,0 +1,243 @@
+# sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 1
+module: reactive-execution-loop
+phase: event-driven-loop
+date: 2026-08-29
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Que el agente sea dirigido por precio y no por temporizador: que despierte cuando el mercado
+  hace algo material, que ejecute sus reflejos (stop duro, trailing, re-armado de protección,
+  take-profit parcial) sin pagar una llamada de LLM, bajo caps de frecuencia que ningún LLM
+  puede relajar, y declarando explícitamente cuándo el stream se degradó en lugar de leer el
+  silencio como quietud del mercado.
+
+scope:
+  - Consumidor de mercado en vivo sobre BinanceWsClient, con ciclo de vida propio en apps/api,
+    suscripción por símbolo compartida entre bots del mismo par y dueño único bajo N réplicas.
+  - Disparo del ciclo de decisión por evento material (movimiento contra la referencia de la
+    última decisión, quiebre de nivel, spike de volumen) O por el temporizador vigente, lo que
+    llegue primero. El temporizador pasa a ser el piso, nunca se elimina.
+  - Fast path determinístico evaluado por tick, que ejecuta un set ACOTADO Y ENUMERADO de
+    acciones sin LLM: stop duro, salida por trailing, re-armado de protección nativa y
+    take-profit parcial.
+  - Caps duros de frecuencia fuera del alcance del LLM: máximo de acciones por hora, tiempo
+    mínimo entre ejecuciones y límite de pérdida diaria que frena el bot. Se evalúan en el
+    mismo punto para el camino reactivo y para el del LLM.
+  - Detección de staleness del stream: heartbeat + edad del último tick por símbolo, con
+    fallback declarado a temporizador + REST.
+  - Todo el loop nace apagado: con el interruptor en off el comportamiento observable es
+    idéntico al actual.
+
+out_of_scope:
+  - Órdenes condicionales de ENTRADA descansando en el exchange (LIMIT_MAKER colocable,
+    OCO de entrada, trailingDelta) — van a cycle-02 de esta misma spec.
+  - Futuros USDⓈ-M, fapi, SHORT, apalancamiento (spec-e-burgos-007).
+  - Subcuenta por bot, IP allowlist, DataSourceCredentialResolver sobre el eje configId
+    (spec-e-burgos-006).
+  - Migración de TradingMode (libs/shared/src/types/enums.ts:13) — esta spec es SPOT puro.
+  - Binance Agent OS — descartado con evidencia en la spec, no re-investigar.
+  - UI de configuración de los campos nuevos (deuda de UI ya diferida por spec-001).
+
+dependencies_required:
+  - spec-e-burgos-001-agents-simplification (completed) — gate determinista, sell-policy,
+    position-manager, protección nativa y harness de costo LLM.
+
+agent_contexts:
+  functional:
+    goal: >
+      Convertir el objetivo en historias de usuario y reglas de negocio verificables sobre las
+      tres capas del ciclo (despertar por evento, fast path, caps + staleness). Definir con
+      precisión qué cuenta como "evento material", cuál es el set ACOTADO de acciones que el
+      fast path puede ejecutar por sí solo y cuál es la frontera exacta con la decisión
+      estratégica del LLM. Todo criterio de aceptación debe medir una PROPIEDAD verificable,
+      no un valor que dependa del mercado.
+    business_context: >
+      La plataforma le saca una foto al mercado cada 15-30 minutos y reacciona a la foto; entre
+      decisiones queda ciega e inerte. La inteligencia y su costo ya se optimizaron en
+      spec-001: el cuello de botella ahora es el tiempo. El aporte de este ciclo es LATENCIA A
+      COSTO CONSTANTE: el costo de LLM por bot/día no debe superar la línea base. (La redacción
+      inicial de este brief decía que el costo debía BAJAR; es incumplible porque el temporizador
+      no se elimina y el umbral del evento es el mismo gatePriceChangePct del gate, así que las
+      evaluaciones por ventana son exactamente una, encendido o apagado. Ver spec §2.)
+      Quitar el temporizador elimina el único limitador de frecuencia que el sistema tiene hoy:
+      los caps no son un extra, son la condición para que la capa reactiva sea segura.
+    relevant_spec_sections:
+      - "1. Contexto y diagnóstico — hallazgos A, A.bis, B, C, D, E, F, G"
+      - "2. Objetivo"
+      - "3. Alcance por ciclo — Cycle-01"
+      - "6. Criterios de aceptación CA-001 a CA-007"
+
+  planner:
+    goal: >
+      Convertir las historias del funcional en tasks técnicas ordenadas y estimadas, con
+      dependencias explícitas. Ordenar de modo que las piezas puras (libs) precedan a la
+      orquestación (apps/api), y que los caps de frecuencia estén implementados y testeados
+      ANTES de que cualquier camino reactivo pueda ejecutar una orden. Cada task debe ser una
+      unidad independiente que commitea al terminar.
+    output_file: sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/planner.md
+
+  architect:
+    goal: >
+      Resolver las cuatro decisiones que comprometen el diseño y dejarlas cerradas como
+      contrato para los implementores. Ver "decisiones_criticas" abajo.
+    existing_tables:
+      - trading_configs
+      - positions
+      - trades
+      - agent_decisions
+      - user_risk_policies
+    existing_endpoints:
+      - EP-006 POST /trading/config (updated)
+      - EP-007 PUT /trading/config/{id} (updated)
+      - EP-008 GET /trading/positions (implemented)
+    output_file: sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/architect.md
+
+  implementor_back:
+    goal: >
+      Implementar el consumidor de stream, el disparador de eventos, el fast path, los caps y
+      la detección de staleness, task por task, contra el contrato del architect.
+    app: apps/api
+    app_context: sdd/context/apps/api/context_prompt.md
+    libs:
+      - libs/data-fetcher
+      - libs/trading-engine
+      - libs/analysis
+      - libs/shared
+
+  reviewer:
+    goal: Validar todo el output del ciclo
+    output_file: sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/cycle.json
+
+# Hechos verificados contra el código antes de abrir el ciclo.
+# NO re-investigar: usar como punto de partida y corregir solo si se encuentra evidencia contraria.
+verified_facts:
+  execution_surface:
+    - "OrderExecutorPort (libs/trading-engine/src/lib/order-executor.ts:43-73) tiene 9 métodos:
+       placeMarketOrder, getBalance, getPrice, placeLimitOrder, placeStopLossLimitOrder,
+       placeProtectionOrder, getProtectionOrderStatus, cancelProtectionOrder, getOpenOrders."
+    - "LiveOrderExecutor (order-executor.ts:326-372) tipa su dependencia como objeto ESTRUCTURAL
+       inline; no importa BinanceRestClient. Un ejecutor nuevo entra sin tocar trading.processor.ts.
+       Aprovecharlo."
+    - "NO existe LIMIT_MAKER colocable (solo como pierna interna del OCO, binance-rest.client.ts:666),
+       NO existe trailingDelta en ninguna línea del repo, y placeOcoSellOrder tiene side:'SELL'
+       hardcodeado (línea 664). Por eso la capa de órdenes de entrada es cycle-02."
+  scheduling:
+    - "Es Bull CLÁSICO (bull 4.16.5 + @nestjs/bull 11), NO BullMQ. Queue 'trading-agent'."
+    - "El re-encolado (trading.processor.ts:566-586) es un job con delay que OMITE jobId a
+       propósito: reutilizarlo mientras el job activo corre haría que Bull devuelva el job
+       existente en vez de crear el delayed, deteniendo el agente en silencio."
+    - "Job.promote() existe en Bull y el repo NO lo usa en ningún lado. Operaciones de Bull
+       usadas hoy: add, getJob, getWaiting, getDelayed, getActive, remove."
+    - "decision-gate.service.ts:163 ya fija waitMinutes = config.minIntervalMinutes cuando el gate
+       resuelve sin LLM, con test que lo consagra: 'the gate never lengthens the cadence'.
+       Acortar la cadencia desde el código ya es patrón aceptado."
+  reactive_rail:
+    - "BinanceWsClient (libs/data-fetcher/src/lib/binance/binance-ws.client.ts, 166 líneas) tiene
+       subscribeTicker, subscribeKline, connect, disconnect; eventos connected/ticker/kline/
+       disconnected/reconnecting/error; autoReconnect default true, reconnectDelay 5000ms.
+       Exportado en el barrel. 7 tests en binance-ws.client.spec.ts."
+    - "Su ÚNICO importador en todo el repo es su propio spec. Cero consumo en producción."
+    - "El precio hoy sale por REST: getKlines('1h', 200) para el ciclo, y getTickerPrice /
+       executor.getPrice en los caminos de ejecución."
+  deterministic_layer:
+    - "evaluateDeterministicGate (libs/analysis/src/lib/gate/deterministic-gate.ts:57-120) es 100%
+       pura y síncrona: cero fetch/http/prisma/await. Recibe snapshots ya construidos."
+    - "evaluateSellPolicy (libs/trading-engine/src/lib/sell-policy.ts:48-131) es pura y emite SOLO
+       TAKE_PROFIT | LOSS_CUT | NONE. NO contiene stop duro, ni trailing, ni TP escalonado."
+    - "El stop duro, el trailing, la salida por tiempo, el TP parcial y el re-arme de protección
+       viven en libs/trading-engine/src/lib/position-manager.ts (updateTrailingStop,
+       shouldExitByTime, resolvePartialTakeProfit, applyPartialExit, resolveProtectionRearm),
+       también puras. El fast path las compone; no las reimplementa."
+    - "resolvePartialTakeProfit soporta UN SOLO escalón (partialExitCount > 0 => null). Varios
+       escalones de take-profit exigen cambiar esa guarda Y decidir la progresión del stop entre
+       escalones — decisión explícita del architect, no del implementor."
+  risk_and_state:
+    - "libs/trading-engine/src/lib/risk/ contiene UN SOLO archivo: trade-simulation.ts. NO existe
+       límite de acciones por hora, ni cooldown, ni freno por pérdida diaria en el motor."
+    - "El único límite de pérdida diaria es maxDailyLossUsd de UserRiskPolicy
+       (schema.prisma:377-394), evaluado por AggregateRiskService.assertBuyAllowed: por USUARIO,
+       solo en el camino de BUY y solo dentro del ciclo del LLM."
+    - "AgentDecision tiene índices [userId, createdAt] y [createdAt]; Trade tiene executedAt e
+       índice [userId, executedAt]. El dato crudo para contar acciones/hora y pérdida diaria ya
+       está persistido; falta la lógica."
+    - "NO hay estado en memoria por bot ni OnApplicationShutdown en el camino de trading. La DB es
+       la fuente de verdad de isRunning; los jobs de Bull son efímeros y los delayed sobreviven en
+       Redis."
+    - "TradingConfig ya tiene deterministicGateEnabled y gatePriceChangePct (default 0.005)."
+
+decisiones_criticas:
+  - id: D1
+    titulo: Dueño del stream y del fast path bajo N réplicas
+    pregunta: >
+      El repo ya convive con réplicas y lo tiene documentado dos veces (los repetibles de
+      evaluación usan jobId fijo + removeRepeatable "para que N réplicas no multipliquen el
+      sweep"; el caché de data sources es in-memory por proceso). Un consumidor de WS con
+      suscripciones y ventanas de conteo en memoria es infraestructura CON ESTADO, que es
+      justamente lo que este backend no tiene. Sin dueño explícito: N suscripciones por símbolo,
+      N evaluaciones del fast path sobre la misma posición y N órdenes. Definir el mecanismo de
+      dueño único (lock en Redis con TTL, o elección por símbolo, o lo que corresponda) y qué
+      pasa cuando el dueño muere. CA-007 depende de esta decisión.
+  - id: D2
+    titulo: Cómo un evento adelanta el ciclo sin duplicarlo
+    pregunta: >
+      Es Bull clásico y el delayed job se encola SIN jobId. Adelantar el ciclo sin neutralizar el
+      delayed pendiente produce dos ciclos concurrentes sobre la misma posición. Job.promote()
+      está disponible y sin usar. Definir la secuencia exacta (localizar el delayed del configId,
+      promover o remover-y-encolar, y con qué guarda de concurrencia), y por qué esa secuencia es
+      idempotente si el evento llega dos veces o si el job ya está activo. Respetar la razón
+      documentada por la que hoy se omite el jobId.
+  - id: D3
+    titulo: Dónde viven los caps y por qué no pueden ser eludidos
+    pregunta: >
+      Los caps deben estar FUERA del control del LLM y aplicarse por igual al camino reactivo y
+      al del LLM. Decidir: dónde se evalúan (una sola puerta, como assertBuyAllowed es la única
+      puerta del riesgo agregado), sobre qué estado se cuentan (no memoria de proceso — CA-007),
+      si requieren tabla nueva o alcanza con AgentDecision/Trade y sus índices existentes, y a
+      qué nivel se configuran (TradingConfig por bot vs UserRiskPolicy por usuario — hoy
+      maxDailyLossUsd está a nivel usuario y solo frena BUY). Si hace falta migración de Prisma,
+      justificarla explícitamente; toda columna nueva de comportamiento nace apagada y todo campo
+      nuevo de TradingConfig debe declararse en Create Y Update DTO o el request responde 400.
+  - id: D4
+    titulo: Umbral de evento material y presupuesto de LLM
+    pregunta: >
+      Definir qué constituye un evento material y con qué umbrales por defecto, de modo que
+      CA-003 se cumpla: el costo de LLM por bot/día NO debe superar la línea base. El umbral es
+      el que decide si el loop ahorra o quema dinero. Reusar el harness de costo determinista
+      que ya existe (apps/api/src/orchestrator/cost-harness/, 12 escenarios congelados corridos
+      línea base vs optimizado con assert POR ESCENARIO) en lugar de crear uno nuevo. Ningún
+      umbral lo elige el implementor: van con nombre y default en un archivo de umbrales, como
+      DEFAULT_GATE_THRESHOLDS.
+  - id: D5
+    titulo: Semántica de degradación del stream
+    pregunta: >
+      Definir el contrato de staleness: qué es un stream sano, cuál es la edad máxima tolerada
+      del último tick por símbolo, cómo se declara la degradación (evento WS al front,
+      notificación, campo consultable) y qué hace el bot mientras dura. Regla dura: el silencio
+      del stream NUNCA se interpreta como ausencia de movimiento (hallazgo F).
+
+# Reglas del arnés que este ciclo debe respetar (extracto — el detalle está en CLAUDE.md).
+harness_rules:
+  - "Código sin comentarios: la documentación vive en los documentos SDD, no en el código."
+  - "Prohibido testear sobre el texto fuente de un rango entre dos símbolos (readFileSync +
+     match entre dos métodos). Las invariantes se afirman sobre comportamiento observable."
+  - "Releer la interfaz real en libs/shared/src/types/interfaces.ts antes de implementar un
+     contrato que lea un campo de un tipo compartido: IndicatorSnapshot NO tiene close."
+  - "Al centralizar una regla en un servicio, enumerar TODOS sus lectores, no solo el camino
+     caliente."
+  - "Al renombrar un campo del wire, grepear apps/web además del backend."
+  - "Presencia en el contenedor de DI no es evidencia de ejecución: verificar callers con grep."
+  - "Reescribir como criterio ejecutable todo criterio de aceptación que mida un valor en vez de
+     una propiedad."
+  - "Registrar usage (tokens_in/tokens_out/model_tier) al cerrar cada task y cada fix."
+
+model_tiers:
+  functional: sonnet / medium
+  planner: sonnet / medium
+  architect: opus / high
+  implementor_back: sonnet / medium
+  reviewer: opus / high
+  exploradores: haiku o sonnet según criticidad

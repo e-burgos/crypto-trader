@@ -1,0 +1,43 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 1,
+  "module": "reactive-execution-loop",
+  "spec": "spec-e-burgos-005-reactive-execution-loop",
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/trading-engine",
+    "libs/analysis",
+    "libs/shared"
+  ],
+  "phase": "event-driven-loop",
+  "flow": "full",
+  "objectives": [
+    "Cablear BinanceWsClient como riel de mercado en vivo con dueño único bajo N réplicas",
+    "Disparar el ciclo de decisión por evento material o por temporizador, lo que llegue primero, sin duplicar ciclos",
+    "Ejecutar un set acotado de reflejos (stop duro, trailing, re-armado de protección, take-profit parcial) sin llamada de LLM",
+    "Imponer caps duros de frecuencia fuera del alcance del LLM: acciones por hora, cooldown entre ejecuciones y pérdida diaria",
+    "Detectar la degradación del stream y caer a temporizador + REST en lugar de leer el silencio como quietud del mercado",
+    "Mantener el comportamiento observable idéntico al actual con el loop apagado",
+    "Entregar el ciclo en dos entregas (decision del dev, 2026-08-29): entrega 1 = 95h/23 tasks con el test multi-replica adelantado (TASK-035); entrega 2 = 33h/9 tasks con el disparo por evento. Detalle en artifacts/delivery-split.md"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-08-29",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/tasks.json"
+  },
+  "artifacts": [
+    "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/artifacts/delivery-split.md"
+  ],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

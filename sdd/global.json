@@ -29,7 +29,21 @@
       "completed_at": "2026-08-19"
     }
   ],
-  "in_progress_modules": [],
+  "in_progress_modules": [
+    {
+      "module": "reactive-execution-loop",
+      "spec": "spec-e-burgos-005-reactive-execution-loop",
+      "apps": [
+        "apps/api",
+        "libs/data-fetcher",
+        "libs/trading-engine",
+        "libs/analysis",
+        "libs/shared"
+      ],
+      "description": "Loop de ejecucion dirigido por precio: despertar por evento material sobre stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST",
+      "cycles_completed": 0
+    }
+  ],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

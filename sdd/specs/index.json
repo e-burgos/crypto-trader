@@ -30,6 +30,20 @@
       "created_at": "2026-08-19",
       "completed_at": "2026-08-19",
       "depends_on": ["spec-e-burgos-001-agents-simplification"]
+    },
+    {
+      "id": "spec-e-burgos-005-reactive-execution-loop",
+      "author": "e-burgos",
+      "slug": "reactive-execution-loop",
+      "folder": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
+      "file": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/spec-e-burgos-005-reactive-execution-loop.spec.md",
+      "module": "reactive-execution-loop",
+      "app": "apps/api",
+      "status": "in-progress",
+      "title": "Loop de ejecución reactivo: despertar por evento, fast path determinístico y caps duros",
+      "created_at": "2026-08-29",
+      "completed_at": null,
+      "depends_on": ["spec-e-burgos-001-agents-simplification"]
     }
   ]
 }

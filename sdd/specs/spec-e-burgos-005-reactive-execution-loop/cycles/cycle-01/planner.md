@@ -605,3 +605,13 @@ Desvíos de TASK-017 (`stream-health.service.ts` + EP-015):
   `planner.md` no encuentra `degradedNotifyAfterMs` fuera de architect.md). Requeriría inyectar
   `NotificationsService` + resolver "usuarios afectados" por símbolo, fuera del alcance y de los
   archivos permitidos de esta task. Queda pendiente crear una task dedicada.
+
+## Pendiente de documentar en contexto
+
+- `FastPathService` (TASK-018) resuelve su `OrderExecutorPort` por tick con el mismo patrón de
+  `TradingProcessor.checkOpenPositions` (SANDBOX → `SandboxOrderExecutor` con precio/balance
+  seedeados; LIVE/TESTNET → decrypt de `BinanceCredential` + `LiveOrderExecutor`), no especificado
+  en el architect. Agrega tres cachés en proceso con TTL `symbolRefreshIntervalMs`: configs
+  reactivos activos, posiciones OPEN por `configId`, y credenciales Binance por
+  `userId:isTestnet`. El cache de posiciones se invalida explícitamente cuando
+  `ActionGateService.authorizeAndRun` devuelve `EXECUTED`.

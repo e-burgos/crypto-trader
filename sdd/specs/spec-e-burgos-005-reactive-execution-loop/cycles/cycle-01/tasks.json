@@ -444,12 +444,19 @@
         "TASK-034",
         "TASK-015"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/fast-path.service.ts",
         "apps/api/src/reactive/fast-path.service.spec.ts",
         "apps/api/src/reactive/reactive.module.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 165000,
+        "tokens_out": 13000,
+        "model_tier": "claude/sonnet",
+        "approx": false,
+        "source": "session-report"
+      }
     },
     {
       "id": "TASK-019",

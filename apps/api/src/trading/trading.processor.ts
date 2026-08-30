@@ -18,6 +18,11 @@ import {
   type DecisionExecutionContext,
 } from './position-action.service';
 import {
+  ActionGateService,
+  type ActionRequest,
+  type ActionResult,
+} from './action-gate.service';
+import {
   REACTIVE_COORDINATION,
   type ReactiveCoordinationPort,
 } from '../reactive/reactive-coordination.port';
@@ -41,6 +46,8 @@ import {
 import type {
   TrailingConfig,
   PartialTakeProfitResult,
+  BotActionKind,
+  OrderExecutorPort,
 } from '@crypto-trader/trading-engine';
 
 import {
@@ -59,12 +66,35 @@ interface AgentJobData {
   configId: string;
 }
 
+interface ActionGatePort {
+  authorizeAndRun<T>(
+    request: ActionRequest,
+    execute: () => Promise<T>,
+  ): Promise<ActionResult<T>>;
+}
+
+class PassthroughActionGate implements ActionGatePort {
+  async authorizeAndRun<T>(
+    _request: ActionRequest,
+    execute: () => Promise<T>,
+  ): Promise<ActionResult<T>> {
+    const value = await execute();
+    return {
+      outcome: 'EXECUTED',
+      blockedBy: null,
+      detail: 'ACTION_GATE_NOT_INJECTED',
+      value,
+    };
+  }
+}
+
 @Processor(TRADING_QUEUE)
 export class TradingProcessor {
   private readonly logger = new Logger(TradingProcessor.name);
   private readonly positionManager = new PositionManager();
   private readonly positionAction: PositionActionService;
   private readonly coordination: ReactiveCoordinationPort;
+  private readonly actionGate: ActionGatePort;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -82,11 +112,128 @@ export class TradingProcessor {
     @Optional()
     @Inject(REACTIVE_COORDINATION)
     coordination?: ReactiveCoordinationPort,
+    actionGate?: ActionGateService,
   ) {
     this.positionAction =
       positionAction ??
       new PositionActionService(prisma, gateway, notificationsService);
     this.coordination = coordination ?? new DisabledReactiveCoordination();
+    this.actionGate = actionGate ?? new PassthroughActionGate();
+  }
+
+  private buildActionRequest(params: {
+    userId: string;
+    config: any;
+    symbol: string;
+    mode: TradingMode;
+    kind: BotActionKind;
+    positionId: string | null;
+    decisionId: string | null;
+    expected: ActionRequest['expected'];
+    detail: string;
+  }): ActionRequest {
+    return {
+      userId: params.userId,
+      configId: params.config.id,
+      symbol: params.symbol,
+      mode: params.mode,
+      kind: params.kind,
+      source: 'LLM_CYCLE',
+      positionId: params.positionId,
+      decisionId: params.decisionId,
+      expected: params.expected,
+      detail: params.detail,
+    };
+  }
+
+  private async closePositionAtMarket(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+    positionData: any,
+    exitReason: 'STOP_LOSS' | 'TRAILING_STOP' | 'TAKE_PROFIT' | 'TIME_EXIT',
+  ): Promise<void> {
+    const request = this.buildActionRequest({
+      userId,
+      config,
+      symbol,
+      mode,
+      kind: 'SELL_FULL',
+      positionId: position.id,
+      decisionId: null,
+      expected: {
+        positionStatus: 'OPEN',
+        quantity: position.quantity,
+        partialExitCount: position.partialExitCount ?? 0,
+      },
+      detail: exitReason,
+    });
+
+    const result = await this.actionGate.authorizeAndRun(request, () =>
+      this.positionAction.closeAtMarket({
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        position,
+        positionData,
+        exitReason,
+      }),
+    );
+
+    if (result.outcome !== 'EXECUTED') {
+      this.logger.log(
+        `closeAtMarket(${exitReason}) ${result.outcome.toLowerCase()} for position ${position.id}: ${result.detail}`,
+      );
+    }
+  }
+
+  private async ensureNativeProtection(
+    userId: string,
+    config: any,
+    symbol: string,
+    mode: TradingMode,
+    executor: OrderExecutorPort,
+    position: any,
+    levels: { stopPrice: number; takeProfitPrice: number; quantity: number },
+  ): Promise<void> {
+    const request = this.buildActionRequest({
+      userId,
+      config,
+      symbol,
+      mode,
+      kind: 'PROTECTION_REARM',
+      positionId: position.id,
+      decisionId: null,
+      expected: {
+        positionStatus: 'OPEN',
+        quantity: position.quantity,
+        partialExitCount: position.partialExitCount ?? 0,
+      },
+      detail: 'PROTECTION_REARM',
+    });
+
+    const result = await this.actionGate.authorizeAndRun(request, () =>
+      this.positionAction.rearmProtection({
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        position,
+        levels,
+      }),
+    );
+
+    if (result.outcome !== 'EXECUTED') {
+      this.logger.log(
+        `Protection rearm ${result.outcome.toLowerCase()} for position ${position.id}: ${result.detail}`,
+      );
+    }
   }
 
   @Process('run-cycle')
@@ -841,57 +988,71 @@ export class TradingProcessor {
       const total = cost + fee;
       if (wallet.balance < total) return;
 
-      // Deduct from wallet
-      await this.prisma.sandboxWallet.update({
-        where: { userId_currency: { userId, currency: config.pair as any } },
-        data: { balance: wallet.balance - total },
-      });
-
-      const positionData = this.positionManager.openPosition({
+      const request = this.buildActionRequest({
         userId,
-        configId: config.id,
-        asset: config.asset,
-        pair: config.pair,
+        config,
+        symbol,
         mode,
-        entryPrice: livePrice,
-        quantity,
+        kind: 'BUY',
+        positionId: null,
+        decisionId: decisionContext?.decisionId ?? null,
+        expected: null,
+        detail: 'BUY',
       });
 
-      const savedPosition = await this.prisma.position.create({
-        data: positionData as any,
-      });
+      await this.actionGate.authorizeAndRun(request, async () => {
+        // Deduct from wallet
+        await this.prisma.sandboxWallet.update({
+          where: { userId_currency: { userId, currency: config.pair as any } },
+          data: { balance: wallet.balance - total },
+        });
 
-      await this.prisma.trade.create({
-        data: {
+        const positionData = this.positionManager.openPosition({
           userId,
-          positionId: savedPosition.id,
-          type: TradeType.BUY,
-          price: livePrice,
-          quantity,
-          fee,
-          mode,
-          binanceOrderId: `sandbox-${Date.now()}`,
-          decisionId: decisionContext?.decisionId ?? null,
-        },
-      });
-
-      await this.notificationsService.create(
-        userId,
-        NotificationType.TRADE_EXECUTED,
-        JSON.stringify({
-          key: 'tradeBuy',
-          qty: quantity.toString(),
+          configId: config.id,
           asset: config.asset,
-          price: livePrice.toFixed(2),
+          pair: config.pair,
           mode,
-        }),
-      );
-      this.gateway.emitToUser(userId, 'trade:executed', {
-        position: savedPosition,
-      });
-      this.gateway.emitToUser(userId, 'wallet:updated', {
-        currency: config.pair,
-        balance: wallet.balance - total,
+          entryPrice: livePrice,
+          quantity,
+        });
+
+        const savedPosition = await this.prisma.position.create({
+          data: positionData as any,
+        });
+
+        await this.prisma.trade.create({
+          data: {
+            userId,
+            positionId: savedPosition.id,
+            type: TradeType.BUY,
+            price: livePrice,
+            quantity,
+            fee,
+            mode,
+            binanceOrderId: `sandbox-${Date.now()}`,
+            decisionId: decisionContext?.decisionId ?? null,
+          },
+        });
+
+        await this.notificationsService.create(
+          userId,
+          NotificationType.TRADE_EXECUTED,
+          JSON.stringify({
+            key: 'tradeBuy',
+            qty: quantity.toString(),
+            asset: config.asset,
+            price: livePrice.toFixed(2),
+            mode,
+          }),
+        );
+        this.gateway.emitToUser(userId, 'trade:executed', {
+          position: savedPosition,
+        });
+        this.gateway.emitToUser(userId, 'wallet:updated', {
+          currency: config.pair,
+          balance: wallet.balance - total,
+        });
       });
       return;
     }
@@ -949,76 +1110,90 @@ export class TradingProcessor {
       return;
     }
 
-    const order = await executor.placeMarketOrder(
-      symbol,
-      TradeType.BUY,
-      quantity,
-    );
-
-    const positionData = this.positionManager.openPosition({
-      userId,
-      configId: config.id,
-      asset: config.asset,
-      pair: config.pair,
-      mode,
-      entryPrice: order.price,
-      quantity: order.quantity,
-    });
-
     const nativeProtectionEnabled = !!config.nativeProtectionEnabled;
-    const savedPosition = await this.prisma.position.create({
-      data: nativeProtectionEnabled
-        ? ({
-            ...positionData,
-            protectionStatus: 'PENDING',
-            stopPrice: order.price * (1 - config.stopLossPct),
-            takeProfitPrice: order.price * (1 + config.takeProfitPct),
-            highWaterPrice: order.price,
-            initialQuantity: order.quantity,
-          } as any)
-        : (positionData as any),
-    });
-
-    await this.prisma.trade.create({
-      data: {
-        userId,
-        positionId: savedPosition.id,
-        type: TradeType.BUY,
-        price: order.price,
-        quantity: order.quantity,
-        fee: order.price * order.quantity * TRADE_FEE_PCT,
-        mode,
-        binanceOrderId: order.orderId,
-        decisionId: decisionContext?.decisionId ?? null,
-      },
-    });
-
-    await this.notificationsService.create(
+    const request = this.buildActionRequest({
       userId,
-      NotificationType.TRADE_EXECUTED,
-      JSON.stringify({
-        key: 'tradeBuy',
-        qty: order.quantity.toString(),
-        asset: config.asset,
-        price: order.price.toFixed(2),
-        mode,
-      }),
-    );
-    this.gateway.emitToUser(userId, 'trade:executed', {
-      position: savedPosition,
+      config,
+      symbol,
+      mode,
+      kind: 'BUY',
+      positionId: null,
+      decisionId: decisionContext?.decisionId ?? null,
+      expected: null,
+      detail: 'BUY',
     });
 
-    if (nativeProtectionEnabled) {
-      await this.positionAction.placeInitialProtection({
-        userId,
-        config,
+    await this.actionGate.authorizeAndRun(request, async () => {
+      const order = await executor.placeMarketOrder(
         symbol,
+        TradeType.BUY,
+        quantity,
+      );
+
+      const positionData = this.positionManager.openPosition({
+        userId,
+        configId: config.id,
+        asset: config.asset,
+        pair: config.pair,
         mode,
-        executor,
-        position: savedPosition,
-        order,
+        entryPrice: order.price,
+        quantity: order.quantity,
       });
-    }
+
+      const savedPosition = await this.prisma.position.create({
+        data: nativeProtectionEnabled
+          ? ({
+              ...positionData,
+              protectionStatus: 'PENDING',
+              stopPrice: order.price * (1 - config.stopLossPct),
+              takeProfitPrice: order.price * (1 + config.takeProfitPct),
+              highWaterPrice: order.price,
+              initialQuantity: order.quantity,
+            } as any)
+          : (positionData as any),
+      });
+
+      await this.prisma.trade.create({
+        data: {
+          userId,
+          positionId: savedPosition.id,
+          type: TradeType.BUY,
+          price: order.price,
+          quantity: order.quantity,
+          fee: order.price * order.quantity * TRADE_FEE_PCT,
+          mode,
+          binanceOrderId: order.orderId,
+          decisionId: decisionContext?.decisionId ?? null,
+        },
+      });
+
+      await this.notificationsService.create(
+        userId,
+        NotificationType.TRADE_EXECUTED,
+        JSON.stringify({
+          key: 'tradeBuy',
+          qty: order.quantity.toString(),
+          asset: config.asset,
+          price: order.price.toFixed(2),
+          mode,
+        }),
+      );
+      this.gateway.emitToUser(userId, 'trade:executed', {
+        position: savedPosition,
+      });
+
+      if (nativeProtectionEnabled) {
+        await this.positionAction.placeInitialProtection({
+          userId,
+          config,
+          symbol,
+          mode,
+          executor,
+          position: savedPosition,
+          order,
+        });
+      }
+    });
   }
 
   private async executeLLMSell(
@@ -1105,93 +1280,111 @@ export class TradingProcessor {
         continue;
       }
 
-      await this.positionAction.releaseProtectionIfNeeded(symbol, executor, pos);
-
-      const order = await executor.placeMarketOrder(
-        symbol,
-        TradeType.SELL,
-        pos.quantity,
-      );
-      const posData = {
-        ...pos,
-        asset: pos.asset as any,
-        pair: pos.pair as any,
-        mode: pos.mode as any,
-        status: pos.status as any,
-        exitPrice: pos.exitPrice ?? undefined,
-        exitAt: pos.exitAt ?? undefined,
-        pnl: pos.pnl ?? undefined,
-      };
-      const { position: closedPosition, pnl } =
-        this.positionManager.closePosition(posData, order.price);
-
-      await this.prisma.position.update({
-        where: { id: pos.id },
-        data: {
-          exitPrice: closedPosition.exitPrice,
-          exitAt: closedPosition.exitAt,
-          status: 'CLOSED',
-          pnl: closedPosition.pnl,
-          fees: closedPosition.fees,
-          exitReason:
-            sellPolicy.path === 'LOSS_CUT' ? 'LOSS_CUT' : 'LLM_SIGNAL',
-        },
-      });
-
-      await this.prisma.trade.create({
-        data: {
-          userId,
-          positionId: pos.id,
-          type: TradeType.SELL,
-          price: order.price,
-          quantity: order.quantity,
-          fee: order.price * order.quantity * TRADE_FEE_PCT,
-          mode,
-          binanceOrderId: order.orderId,
-          decisionId: decisionContext?.decisionId ?? null,
-        },
-      });
-
-      if (mode === TradingMode.SANDBOX) {
-        const proceeds = order.price * order.quantity;
-        const fee = proceeds * TRADE_FEE_PCT;
-        const updatedWallet = await this.prisma.$transaction(async (tx) => {
-          await tx.sandboxWallet.upsert({
-            where: { userId_currency: { userId, currency: pos.pair as any } },
-            create: {
-              userId,
-              currency: pos.pair as any,
-              balance: 10_000 + proceeds - fee,
-            },
-            update: { balance: { increment: proceeds - fee } },
-          });
-          return tx.sandboxWallet.findUnique({
-            where: { userId_currency: { userId, currency: pos.pair as any } },
-          });
-        });
-        this.gateway.emitToUser(userId, 'wallet:updated', {
-          currency: pos.pair,
-          balance: updatedWallet?.balance,
-        });
-      }
-
-      await this.notificationsService.create(
+      const request = this.buildActionRequest({
         userId,
-        NotificationType.TRADE_EXECUTED,
-        JSON.stringify({
-          key: 'tradeSell',
-          qty: pos.quantity.toString(),
-          asset: config.asset,
-          price: order.price.toFixed(2),
-          pnl: pnl.toFixed(2),
-          mode,
-        }),
-      );
-      this.gateway.emitToUser(userId, 'trade:executed', {
-        position: closedPosition,
+        config,
+        symbol,
+        mode,
+        kind: 'SELL_FULL',
+        positionId: pos.id,
+        decisionId: decisionContext?.decisionId ?? null,
+        expected: {
+          positionStatus: 'OPEN',
+          quantity: pos.quantity,
+          partialExitCount: pos.partialExitCount ?? 0,
+        },
+        detail: sellPolicy.path === 'LOSS_CUT' ? 'LOSS_CUT' : 'LLM_SIGNAL',
       });
-      this.gateway.emitToUser(userId, 'position:updated', {
-        position: closedPosition,
+
+      await this.actionGate.authorizeAndRun(request, async () => {
+        await this.positionAction.releaseProtectionIfNeeded(symbol, executor, pos);
+
+        const order = await executor.placeMarketOrder(
+          symbol,
+          TradeType.SELL,
+          pos.quantity,
+        );
+        const posData = {
+          ...pos,
+          asset: pos.asset as any,
+          pair: pos.pair as any,
+          mode: pos.mode as any,
+          status: pos.status as any,
+          exitPrice: pos.exitPrice ?? undefined,
+          exitAt: pos.exitAt ?? undefined,
+          pnl: pos.pnl ?? undefined,
+        };
+        const { position: closedPosition, pnl } =
+          this.positionManager.closePosition(posData, order.price);
+
+        await this.prisma.position.update({
+          where: { id: pos.id },
+          data: {
+            exitPrice: closedPosition.exitPrice,
+            exitAt: closedPosition.exitAt,
+            status: 'CLOSED',
+            pnl: closedPosition.pnl,
+            fees: closedPosition.fees,
+            exitReason:
+              sellPolicy.path === 'LOSS_CUT' ? 'LOSS_CUT' : 'LLM_SIGNAL',
+          },
+        });
+
+        await this.prisma.trade.create({
+          data: {
+            userId,
+            positionId: pos.id,
+            type: TradeType.SELL,
+            price: order.price,
+            quantity: order.quantity,
+            fee: order.price * order.quantity * TRADE_FEE_PCT,
+            mode,
+            binanceOrderId: order.orderId,
+            decisionId: decisionContext?.decisionId ?? null,
+          },
+        });
+
+        if (mode === TradingMode.SANDBOX) {
+          const proceeds = order.price * order.quantity;
+          const fee = proceeds * TRADE_FEE_PCT;
+          const updatedWallet = await this.prisma.$transaction(async (tx) => {
+            await tx.sandboxWallet.upsert({
+              where: { userId_currency: { userId, currency: pos.pair as any } },
+              create: {
+                userId,
+                currency: pos.pair as any,
+                balance: 10_000 + proceeds - fee,
+              },
+              update: { balance: { increment: proceeds - fee } },
+            });
+            return tx.sandboxWallet.findUnique({
+              where: { userId_currency: { userId, currency: pos.pair as any } },
+            });
+          });
+          this.gateway.emitToUser(userId, 'wallet:updated', {
+            currency: pos.pair,
+            balance: updatedWallet?.balance,
+          });
+        }
+
+        await this.notificationsService.create(
+          userId,
+          NotificationType.TRADE_EXECUTED,
+          JSON.stringify({
+            key: 'tradeSell',
+            qty: pos.quantity.toString(),
+            asset: config.asset,
+            price: order.price.toFixed(2),
+            pnl: pnl.toFixed(2),
+            mode,
+          }),
+        );
+        this.gateway.emitToUser(userId, 'trade:executed', {
+          position: closedPosition,
+        });
+        this.gateway.emitToUser(userId, 'position:updated', {
+          position: closedPosition,
+        });
       });
     }
   }
@@ -1334,34 +1527,32 @@ export class TradingProcessor {
           config.maxPositionHoldMinutes ?? null,
         )
       ) {
-        await this.positionAction.closeAtMarket({
+        await this.closePositionAtMarket(
           userId,
           config,
           symbol,
           mode,
           executor,
-          position: pos,
-          positionData: posData,
-          exitReason: 'TIME_EXIT',
-        });
+          pos,
+          posData,
+          'TIME_EXIT',
+        );
         continue;
       }
 
       const effectiveStop =
         trailingState.stopPrice ?? pos.entryPrice * (1 - config.stopLossPct);
       if (currentPrice <= effectiveStop) {
-        await this.positionAction.closeAtMarket({
+        await this.closePositionAtMarket(
           userId,
           config,
           symbol,
           mode,
           executor,
-          position: pos,
-          positionData: posData,
-          exitReason: trailingState.trailingActive
-            ? 'TRAILING_STOP'
-            : 'STOP_LOSS',
-        });
+          pos,
+          posData,
+          trailingState.trailingActive ? 'TRAILING_STOP' : 'STOP_LOSS',
+        );
         continue;
       }
 
@@ -1384,18 +1575,35 @@ export class TradingProcessor {
         : null;
 
       if (partial) {
-        await this.positionAction.executePartialTakeProfit({
+        const partialRequest = this.buildActionRequest({
           userId,
           config,
           symbol,
           mode,
-          executor,
-          position: pos,
-          positionData: posData,
-          partial,
-          trailingState,
-          decisionContext,
+          kind: 'SELL_PARTIAL',
+          positionId: pos.id,
+          decisionId: decisionContext?.decisionId ?? null,
+          expected: {
+            positionStatus: 'OPEN',
+            quantity: pos.quantity,
+            partialExitCount: pos.partialExitCount ?? 0,
+          },
+          detail: 'PARTIAL_TAKE_PROFIT',
         });
+        await this.actionGate.authorizeAndRun(partialRequest, () =>
+          this.positionAction.executePartialTakeProfit({
+            userId,
+            config,
+            symbol,
+            mode,
+            executor,
+            position: pos,
+            positionData: posData,
+            partial,
+            trailingState,
+            decisionContext,
+          }),
+        );
         continue;
       }
 
@@ -1403,16 +1611,16 @@ export class TradingProcessor {
         !config.trailingStopEnabled &&
         currentPrice >= pos.entryPrice * (1 + config.takeProfitPct)
       ) {
-        await this.positionAction.closeAtMarket({
+        await this.closePositionAtMarket(
           userId,
           config,
           symbol,
           mode,
           executor,
-          position: pos,
-          positionData: posData,
-          exitReason: 'TAKE_PROFIT',
-        });
+          pos,
+          posData,
+          'TAKE_PROFIT',
+        );
         continue;
       }
 
@@ -1442,21 +1650,21 @@ export class TradingProcessor {
           isSandbox: mode === TradingMode.SANDBOX,
         });
         if (rearmDecision.action === 'REARM') {
-          await this.positionAction.rearmProtection({
+          await this.ensureNativeProtection(
             userId,
             config,
             symbol,
             mode,
             executor,
-            position: pos,
-            levels: {
+            pos,
+            {
               stopPrice: trailingState.stopPrice,
               takeProfitPrice:
                 pos.takeProfitPrice ??
                 pos.entryPrice * (1 + config.takeProfitPct),
               quantity: pos.quantity,
             },
-          });
+          );
         }
       }
     }

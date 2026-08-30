@@ -615,3 +615,37 @@ Desvíos de TASK-017 (`stream-health.service.ts` + EP-015):
   reactivos activos, posiciones OPEN por `configId`, y credenciales Binance por
   `userId:isTestnet`. El cache de posiciones se invalida explícitamente cuando
   `ActionGateService.authorizeAndRun` devuelve `EXECUTED`.
+- **TASK-019 agrega un `ActionGateService` opcional al constructor de `TradingProcessor`** (14º
+  parámetro, mismo patrón que `positionAction`/`coordination` de TASK-034), con fallback a un
+  `PassthroughActionGate` local (no exportado) cuando se omite: ejecuta `execute()` directo, sin
+  tocar Prisma. Es una desviación necesaria — `ActionGateService.authorizeAndRun` (TASK-012, fuera
+  del alcance de esta task) empieza siempre con
+  `prisma.tradingConfig.findUniqueOrThrow(...)`, y varios specs preexistentes de
+  `apps/api/src/trading` (`aggregate-risk`, `decision-traceability`, `native-protection`,
+  `exit-machine`, `protection-rearm`, `sell-policy`) construyen `TradingProcessor` con un mock de
+  `prisma` que no define `tradingConfig` en absoluto — instanciar el `ActionGateService` real ahí
+  haría que esa llamada lance `TypeError` y rompería la regla de "cero cambio de comportamiento
+  observable con el loop apagado". Como esos 11 specs nunca pasan el parámetro `actionGate`
+  (todos preceden a esta task), siguen recibiendo el fallback no-op y su comportamiento es
+  bit-a-bit el mismo que antes de esta task. En producción, `TradingModule` ya declara
+  `ActionGateService` como provider (TASK-012) y Nest lo inyecta real por tipo, igual que
+  `PositionActionService` — nunca queda sin resolver fuera de tests.
+- **Se extrajeron dos métodos privados nuevos en `TradingProcessor`**, `closePositionAtMarket`
+  (los 4 call-sites de `positionAction.closeAtMarket`: `TIME_EXIT`, `STOP_LOSS`, `TRAILING_STOP`,
+  `TAKE_PROFIT`) y `ensureNativeProtection` (el único call-site de `positionAction.rearmProtection`
+  en `checkOpenPositions`), cada uno envolviendo su llamada en un `authorizeAndRun` propio. Los
+  nombres siguen literalmente los de la fila de architect.md §3.5 aunque antes no existían como
+  métodos separados — reduce a un solo lugar por punto de ejecución la construcción del
+  `ActionRequest` y evita 4 copias del mismo wrapping para `closeAtMarket`.
+  `placeInitialProtection` (post-BUY) y `releaseProtectionIfNeeded` (dentro de `executeLLMSell`)
+  no se extrajeron: por §3.5 son parte indivisible de la acción que ya los engloba (`executeBuy` /
+  `executeLLMSell`), así que quedan dentro del mismo callback `execute()` de esa acción en vez de
+  abrir su propia llamada a la puerta.
+- **TASK-023 no requirió tocar `material-event.service.ts`.** La guarda de salud
+  (`health.state !== 'HEALTHY'` antes de leer la ventana) ya había quedado implementada en
+  TASK-020 como parte del paso 2 de la secuencia D2 (el architect la lista como guarda de
+  habilitación del propio adelanto, no como una pieza separada). El código ya trataba UNKNOWN
+  igual que DEGRADED por construcción (`!== 'HEALTHY'` cubre ambos). TASK-023 se cerró agregando
+  solo los tests que faltaban: UNKNOWN explícito, ausencia total de efectos secundarios
+  (`setJson`/`getJson`/cola) mientras dura la degradación, y recuperación automática al volver a
+  HEALTHY sin quedar "pegada". `files[]` de la task quedó con un solo archivo real modificado.

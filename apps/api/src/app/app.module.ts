@@ -17,6 +17,7 @@ import { AgentConfigModule } from '../agents/agent-config.module';
 import { AgentDomainModule } from '../agents/domain/agent-domain.module';
 import { EvaluationModule } from '../agents/evaluation/evaluation.module';
 import { OpenRouterModule } from '../openrouter/openrouter.module';
+import { ReactiveModule } from '../reactive/reactive.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { OpenRouterModule } from '../openrouter/openrouter.module';
     AgentDomainModule,
     EvaluationModule,
     OpenRouterModule,
+    ReactiveModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -916,11 +916,18 @@
         "TASK-018",
         "TASK-020"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/app/app.module.ts",
         "apps/api/src/reactive/reactive-module-wiring.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 90000,
+        "tokens_out": 10000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-038",
@@ -934,11 +941,19 @@
       "depends_on": [
         "TASK-017"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/stream-health.service.ts",
-        "apps/api/src/reactive/stream-health.service.spec.ts"
-      ]
+        "apps/api/src/reactive/stream-health.service.spec.ts",
+        "apps/api/src/reactive/reactive.module.ts"
+      ],
+      "usage": {
+        "tokens_in": 90000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     }
   ]
 }

@@ -649,3 +649,39 @@ Desvíos de TASK-017 (`stream-health.service.ts` + EP-015):
   solo los tests que faltaban: UNKNOWN explícito, ausencia total de efectos secundarios
   (`setJson`/`getJson`/cola) mientras dura la degradación, y recuperación automática al volver a
   HEALTHY sin quedar "pegada". `files[]` de la task quedó con un solo archivo real modificado.
+
+## Pendiente de documentar en contexto
+
+- **TASK-037 confirma empíricamente una duplicación de cola preexistente en
+  `reactive.module.ts` (TASK-014, fuera de los archivos permitidos de esta task) que hasta ahora
+  nunca se había ejecutado junta con `TradingModule`.** `TradingModule` y `ReactiveModule` llaman
+  cada uno `BullModule.registerQueue({ name: TRADING_QUEUE })` de forma independiente. Como
+  `registerQueue` no es `global`, cada llamada crea su propio provider `Queue` encapsulado en su
+  módulo — probado con un `Test.createTestingModule({ imports: [AppModule] })` sin overridear el
+  token de `TRADING_QUEUE`: `moduleRef.get(TradingService)['tradingQueue'] ===
+  moduleRef.get(MaterialEventService)['tradingQueue']` da `false`, ambos apuntando al mismo nombre
+  Redis (`trading-agent`) pero como dos instancias `Bull.Queue` distintas (con sus propios
+  clientes `ioredis` — `bclient`/`client`/`eclient` — por instancia). No rompe el bootstrap ni la
+  resolución por DI (Nest no reporta conflicto de provider — cada módulo tiene su propio scope
+  encapsulado) y es funcionalmente consistente porque Bull usa Redis como broker compartido: un
+  job encolado por cualquiera de las dos instancias lo toma el worker que sí tiene
+  `TradingProcessor.@Process` registrado (el de `TradingModule`). El costo es exclusivamente
+  operativo: el doble de conexiones Redis abiertas para la misma cola. Requiere una task de
+  arquitectura para consolidar (ej. que `ReactiveModule` importe el `Queue` ya registrado por
+  `TradingModule` en vez de volver a registrarlo, o mover el `registerQueue({name: TRADING_QUEUE})`
+  a un módulo compartido que ambos importen) — fuera del alcance y de los archivos permitidos de
+  TASK-037.
+- **El test de `reactive-module-wiring.spec.ts` overridea `getQueueToken(TRADING_QUEUE)`,
+  `getQueueToken(EVALUATION_QUEUE)` y `getQueueToken(DOCUMENT_PROCESSING_QUEUE)` con un mock de
+  cola, y `PrismaService` con `{}`.** Sin esos overrides, `Test.createTestingModule({imports:
+  [AppModule]}).compile()` instancia los 3 providers `Bull.Queue` reales (uno por cada
+  `registerQueue` del árbol de `AppModule`), que intentan conectarse a Redis y dejan handles
+  abiertos en el proceso de Jest (confirmado con `--detectOpenHandles`: "Jest did not exit one
+  second after the test run has completed" en un probe descartable que no overrideaba
+  `TRADING_QUEUE`). `PrismaService` no necesitó mock porque `apps/api/jest.config.js` ya mapea
+  `generated/prisma` a `src/__mocks__/generated-prisma.ts` (una clase `PrismaClient` vacía) vía
+  `moduleNameMapper` — igual se overridea por claridad y para no depender de ese mapeo implícito.
+  Es el primer spec del repo que instancia un módulo Nest completo (`AppModule`) con
+  `Test.createTestingModule({imports: [...]})` en vez de construir servicios sueltos con
+  providers/mocks explícitos — patrón nuevo para specs de "wiring" que verifican resolución real
+  por DI en vez de lógica de negocio.

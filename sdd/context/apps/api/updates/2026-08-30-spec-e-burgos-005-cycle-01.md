@@ -1,13 +1,12 @@
 # spec-e-burgos-005 cycle-01 — 2026-08-30
 
-> **Ciclo NO cerrado al escribirse este fragmento.** El reviewer lo dejó `in-progress` el
-> 2026-08-30: ver `## Qué sigue → Bloqueante`. El código descrito acá está mergeado, testeado y
-> es correcto; lo que falta es el último cable que lo pone en el proceso.
-
 ## Estado
 
 Módulo nuevo `src/reactive/` — la capa que hace que el bot reaccione al precio en lugar de al
-reloj. 666 tests en verde en `apps/api` (era ~430 al abrir el ciclo). El loop nace apagado por
+reloj. 669 tests en verde en `apps/api` (era ~430 al abrir el ciclo). **`ReactiveModule` está
+importado en `src/app/app.module.ts`**: los 4 servicios reactivos resuelven por DI desde
+`AppModule` y `reactive-module-wiring.spec.ts` lo sostiene (borrar el import hace fallar ese
+spec — es el candado que evita que el módulo vuelva a quedar huérfano). El loop nace apagado por
 `TradingConfig.reactiveLoopEnabled` (default `false`) y, además, la coordinación entre réplicas
 nace en su driver apagado.
 
@@ -27,23 +26,35 @@ salida.
 | `reactive-coordination.module.ts`          | Fábrica por env (`REACTIVE_COORDINATION_DRIVER`), exporta el puerto                          |
 | `reactive-runtime-thresholds.ts`           | Umbrales de infraestructura (leases, edades de stream, ping/pong, TTLs)                      |
 | `market-stream.service.ts`                 | Dueño por símbolo, ciclo de vida del WS, fan-out de `tick`/`candle`                          |
-| `stream-health.service.ts`                 | Publica y resuelve la salud por símbolo; emite la transición                                 |
+| `stream-health.service.ts`                 | Publica y resuelve la salud por símbolo; emite la transición y notifica la degradación sostenida |
 | `material-event.service.ts`                | Compone `detectMaterialEvent` y ejecuta la secuencia de adelanto del ciclo                    |
 | `fast-path.service.ts`                     | Compone `planFastPath` por tick y ejecuta vía `ActionGateService` → `PositionActionService`   |
 
 **Grafo de módulos (unidireccional, sin ciclos — no romperlo):**
 
 ```
-ReactiveCoordinationModule   (hoja: provee REACTIVE_COORDINATION)
-        ^                 ^
-        |                 |
-   TradingModule  <---  ReactiveModule
+AppModule                       (el cableado del ciclo vive en app.module.ts)
+    |
+    v
+ReactiveModule  ------------->  TradingModule
+    |                                |
+    +--------> ReactiveCoordinationModule <---+
+               (hoja: provee REACTIVE_COORDINATION)
 ```
 
-`ReactiveModule` importa `TradingModule` (por `ActionGateService` y `PositionActionService`) y
-registra `TRADING_QUEUE` por su cuenta para poder promover jobs. **`TradingModule` NO importa
-`ReactiveModule`** — y por eso `TradingController` construye a mano su propia instancia de
-`StreamHealthService` (ver `## Qué sigue`).
+`ReactiveModule` importa `TradingModule` (por `ActionGateService` y `PositionActionService`),
+`NotificationsModule` (por la notificación de degradación sostenida) y registra `TRADING_QUEUE`
+por su cuenta para poder promover jobs. **`TradingModule` NO importa `ReactiveModule`** — y por
+eso `TradingController` construye a mano su propia instancia de `StreamHealthService`
+(ver `## Qué sigue`).
+
+**Al tocar este grafo, empezar por acá:** `TradingModule` no re-exporta `BullModule`
+(`exports: [TradingService, PositionActionService, ActionGateService]`). Esa única omisión causa
+las dos deudas abiertas del módulo: obliga a `ReactiveModule` a registrar `TRADING_QUEUE` de nuevo
+—hay **dos `Bull.Queue`** para `trading-agent`, con dos pares de clientes ioredis— y deja al
+controller sin forma limpia de llegar a la capa reactiva. Las dos instancias comparten las claves
+de Redis (`bull:trading-agent:*`), así que `getDelayed()`/`promote()` cruzan sin problema y el
+adelanto por evento funciona; el costo es una conexión de más, no un bug.
 
 **Claves de coordinación, todas versionadas `rx:v1:`** — al agregar una, seguir el prefijo:
 
@@ -112,33 +123,21 @@ registra `TRADING_QUEUE` por su cuenta para poder promover jobs. **`TradingModul
 
 ## Qué sigue
 
-### Bloqueante — por esto el ciclo no se cerró
-
-- **`ReactiveModule` no está importado en `src/app/app.module.ts`.** `grep -rn "ReactiveModule"
-  apps/api/src` devuelve una sola línea: su propia declaración. Todo `src/reactive/` es
-  inalcanzable en el proceso: no hay suscripción WS, ni fast path, ni adelanto por evento, ni
-  publicación de salud. Poner `reactiveLoopEnabled = true` en una config hoy no produce ningún
-  efecto. Ninguna task del ciclo declaró `app.module.ts` en su `files[]` y el architect describe
-  el grafo de módulos (§7.1) sin asignarle dueño a ese cableado. Los specs de `src/reactive/`
-  construyen los servicios a mano, así que nada lo detecta.
-  **Al arreglarlo, agregar además un test que instancie `AppModule` con
-  `Test.createTestingModule` y afirme que `MarketStreamService` resuelve** — es la única forma de
-  que la omisión no vuelva.
-- **La notificación persistente de degradación no existe.** `degradedNotifyAfterMs` está definido
-  en `reactive-runtime-thresholds.ts` y **no lo lee nadie**: es una perilla muerta. El architect
-  (§5.3 punto 3) pide una `Notification` con `NotificationType.AGENT_ERROR` cuando la degradación
-  supera ese umbral. Ninguna task lo cubrió.
-
 ### Deuda declarada, no bloqueante
 
-- **`TradingController` construye `new StreamHealthService(...)` a mano** (constructor, ~línea 60)
+- **`TradingController` construye `new StreamHealthService(...)` a mano** (`trading.controller.ts:61`)
   porque `TradingModule` no puede importar `ReactiveModule` sin crear el ciclo que §7.1 prohíbe.
-  Resultado: dos instancias de la misma clase. La del controller es **solo de lectura** (sin
-  `AppGateway` ni `MarketStreamService`: no publica, no emite transición, su `lastKnownState`
-  queda vacío y su `onModuleInit` sale por la guarda), así que hoy no hay bug — pero es una
-  desviación del estilo de DI del repo que se rompe sola si alguien le agrega estado a `resolve()`.
-  Salida correcta: mover EP-015 a un controller propio de `ReactiveModule` sobre la misma ruta,
-  **no** `forwardRef`.
+  Resultado: dos instancias de la misma clase; la del controller es solo de lectura (sin
+  `AppGateway`, `MarketStreamService` ni `NotificationsService`).
+  **Este atajo ya se propagó una vez y es la deuda #1 del subproyecto.** Como el controller pasa 3
+  de los 6 argumentos, toda colaboración nueva de `StreamHealthService` tiene que nacer
+  **opcional** para no romperlo: le pasó a `NotificationsService` al implementarse la notificación
+  de degradación, que necesitó además un test `does nothing when no NotificationsService was
+  wired`. Una dependencia opcional es una que puede faltar en silencio, y el mecanismo se repite
+  con cada dependencia que se agregue.
+  Salida correcta: mover EP-015 a un controller propio de `ReactiveModule` sobre la misma ruta y
+  volver **obligatorio** el constructor; **no** `forwardRef`. Hacerlo junto con el
+  `exports: [BullModule]` de `TradingModule`: es el mismo archivo y la misma causa.
 - **La query del ledger de EP-016 vive en el controller**, no en `trading.service.ts`:
   `TradingController.listBotActionsForUser` usa `this.prisma` directo. Es el único acceso a datos
   del controller y un precedente que contradice la separación del resto del subproyecto; quedó así
@@ -153,5 +152,9 @@ registra `TRADING_QUEUE` por su cuenta para poder promover jobs. **`TradingModul
   puedan eludir: agregarle un `@Optional()` por descuido borraría los caps en silencio. Salida
   correcta: dar a esos 11 specs una factoría de mock de prisma compartida y volver los tres
   parámetros obligatorios.
+- `StreamHealthService.checkSustainedDegradation` marca el símbolo como notificado **antes** de
+  esperar a `notifyDegradedUsers`, así que un fallo de `prisma.tradingConfig.findMany` pierde esa
+  notificación hasta que el símbolo se recupere y vuelva a degradarse. El estado degradado sigue
+  siendo observable por EP-015 y por el evento WS, que son el canal primario.
 - Los 3 campos nuevos de `TradingConfig` (como los 17 anteriores) **solo se configuran por API**:
   sigue sin UI.

@@ -425,6 +425,25 @@
         ]
       },
       {
+        "id": "EP-015",
+        "method": "GET",
+        "path": "/trading/stream-health",
+        "module": "reactive-execution-loop",
+        "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Salud del stream reactivo por símbolo: una entrada por símbolo distinto de las TradingConfig del usuario con isRunning = true. Un símbolo sin registro se reporta UNKNOWN / NO_RECORD y nunca se omite: la ausencia de información es información. El estado no se infiere del precio, sólo de la edad del último tick (TICK_STALE) y del último heartbeat (HEARTBEAT_STALE), y UNKNOWN se trata igual que DEGRADED (fail-closed). Es el canal consultable de RN-27; el canal push equivalente es el evento WS market:stream-health, emitido sólo en la transición. Guardado por JwtAuthGuard + RolesGuard con @Roles('TRADER'), scope por userId de las TradingConfig. DEUDA CONOCIDA: lo sirve TradingController construyendo StreamHealthService con new (trading.controller.ts:61) porque TradingModule no puede importar ReactiveModule sin el ciclo que architect §7.1 prohíbe; el follow-up de cycle-01 es moverlo a un controller propio de ReactiveModule sobre la misma ruta, sin cambiar este contrato.",
+        "path_params": [],
+        "required_headers": ["Authorization"],
+        "request_body": {},
+        "responses": {
+          "200": "{ symbols: [{ symbol, state: 'HEALTHY'|'DEGRADED'|'UNKNOWN', reason: string|null, lastTickAt: string|null, ownerId: string|null, updatedAt: string|null }] }",
+          "401": "JWT ausente o invalido"
+        },
+        "changelog": []
+      },
+      {
         "id": "EP-016",
         "method": "GET",
         "path": "/trading/actions",

@@ -44,3 +44,33 @@ por una línea de import. Se detectó en el review por un grep, pero podría hab
 como "entrega 1 desplegable" (así la describe `artifacts/delivery-split.md`) y el diagnóstico
 posterior — feature encendida por config que "no hace nada", sin error ni log — es de los caros:
 no falla, no avisa, y el sospechoso obvio es el kill switch, no el contenedor de DI.
+
+## Desenlace
+
+Ambos agujeros se cerraron dentro del mismo ciclo, registrados como TASK-037 y TASK-038 antes de
+tocar código (el SPEC GATE aplica igual a lo que aparece durante una revisión). El ciclo cerró
+aprobado en segunda pasada, con 669/669 en `apps/api`. El candado contra la recaída es
+`reactive-module-wiring.spec.ts`: borrar el import de `app.module.ts` lo hace fallar.
+
+Sobre el segundo agujero se tomó la decisión de **implementar** la notificación en vez de retirar
+`degradedNotifyAfterMs`. Vale anotar por qué: borrar el requisito era el camino barato a un ciclo
+cerrado, y es exactamente el atajo que el review acababa de detectar en otra forma. Una perilla
+sin lector se arregla dándole un lector o borrándola, pero la elección no puede depender de cuál
+de las dos deja cerrar antes.
+
+## Lección 2 — construir a mano una clase de DI contagia dependencias opcionales
+
+Al implementar la notificación hubo que declarar `NotificationsService` como dependencia
+**opcional** de `StreamHealthService`, con un test extra de "no explota si no está wireada". No
+por diseño: porque `TradingController` construye esa clase con `new` pasándole 3 de sus 6
+argumentos, para esquivar un ciclo entre módulos.
+
+El mecanismo es general y se repite solo: **mientras exista un `new` a mano de una clase de DI,
+toda colaboración nueva de esa clase nace opcional**, porque obligarla rompería el sitio que la
+construye a mano. Y una dependencia opcional es una que puede faltar en producción sin que nada
+avise. La deuda no se queda quieta en el archivo donde se tomó el atajo: le cobra un peaje a cada
+cambio futuro de la clase, y el peaje se paga en robustez, no en tiempo.
+
+Al revisar: un parámetro de constructor que se vuelve opcional "para no romper un test o un
+llamador" es señal de deuda estructural en el llamador, no una decisión local. Vale subirle la
+prioridad al follow-up que la elimina — la evidencia de que se propaga ya no es hipotética.

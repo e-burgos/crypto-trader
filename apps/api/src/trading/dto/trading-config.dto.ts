@@ -419,6 +419,39 @@ export class CreateTradingConfigDto {
   @Max(0.05, { message: 'Umbral de cambio de precio del gate no puede superar $constraint1 (5%)' })
   @IsOptional()
   gatePriceChangePct?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Interruptor maestro del ciclo reactivo. false = el bot solo actúa por el ciclo LLM periódico',
+  })
+  @IsBoolean()
+  @IsOptional()
+  reactiveLoopEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 60,
+    example: 6,
+    description: 'Cap de acciones por hora móvil del ciclo reactivo (por bot)',
+  })
+  @IsInt({ message: 'Máximo de acciones por hora debe ser un entero' })
+  @Min(1, { message: 'Máximo de acciones por hora debe ser al menos $constraint1' })
+  @Max(60, { message: 'Máximo de acciones por hora no puede superar $constraint1' })
+  @IsOptional()
+  maxActionsPerHour?: number;
+
+  @ApiPropertyOptional({
+    minimum: 5,
+    maximum: 3600,
+    example: 60,
+    description: 'Tiempo mínimo en segundos entre acciones ejecutadas por el ciclo reactivo (por bot)',
+  })
+  @IsInt({ message: 'Intervalo mínimo entre acciones debe ser un entero' })
+  @Min(5, { message: 'Intervalo mínimo entre acciones debe ser al menos $constraint1 segundos' })
+  @Max(3600, { message: 'Intervalo mínimo entre acciones no puede superar $constraint1 segundos' })
+  @IsOptional()
+  minActionIntervalSec?: number;
 }
 
 export class UpdateTradingConfigDto {
@@ -748,6 +781,39 @@ export class UpdateTradingConfigDto {
   @Max(0.05, { message: 'Umbral de cambio de precio del gate no puede superar $constraint1 (5%)' })
   @IsOptional()
   gatePriceChangePct?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Interruptor maestro del ciclo reactivo. false = el bot solo actúa por el ciclo LLM periódico',
+  })
+  @IsBoolean()
+  @IsOptional()
+  reactiveLoopEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: 60,
+    example: 6,
+    description: 'Cap de acciones por hora móvil del ciclo reactivo (por bot)',
+  })
+  @IsInt({ message: 'Máximo de acciones por hora debe ser un entero' })
+  @Min(1, { message: 'Máximo de acciones por hora debe ser al menos $constraint1' })
+  @Max(60, { message: 'Máximo de acciones por hora no puede superar $constraint1' })
+  @IsOptional()
+  maxActionsPerHour?: number;
+
+  @ApiPropertyOptional({
+    minimum: 5,
+    maximum: 3600,
+    example: 60,
+    description: 'Tiempo mínimo en segundos entre acciones ejecutadas por el ciclo reactivo (por bot)',
+  })
+  @IsInt({ message: 'Intervalo mínimo entre acciones debe ser un entero' })
+  @Min(5, { message: 'Intervalo mínimo entre acciones debe ser al menos $constraint1 segundos' })
+  @Max(3600, { message: 'Intervalo mínimo entre acciones no puede superar $constraint1 segundos' })
+  @IsOptional()
+  minActionIntervalSec?: number;
 }
 
 export class StartAgentDto {

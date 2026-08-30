@@ -100,6 +100,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get userRiskPolicy() {
     return this._client.userRiskPolicy;
   }
+  get botAction() {
+    return this._client.botAction;
+  }
 
   $queryRaw<T = unknown>(
     ...args: Parameters<PrismaClientInstance['$queryRaw']>

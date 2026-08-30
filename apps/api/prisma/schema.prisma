@@ -175,6 +175,31 @@ enum DataSourceCategory {
   TOKEN_UNLOCKS   // Messari
 }
 
+enum BotActionKind {
+  BUY
+  SELL_FULL
+  SELL_PARTIAL
+  PROTECTION_REARM
+}
+
+enum BotActionSource {
+  FAST_PATH
+  LLM_CYCLE
+}
+
+enum BotActionOutcome {
+  EXECUTED
+  BLOCKED
+  DEFERRED
+  SUPERSEDED
+}
+
+enum BotActionCap {
+  ACTIONS_PER_HOUR
+  MIN_INTERVAL
+  DAILY_LOSS
+}
+
 // ── Models ───────────────────────────────────────────────
 
 model User {
@@ -207,6 +232,7 @@ model User {
   budgetPolicy      AgentBudgetPolicy?
   decisionEvaluations AgentDecisionEvaluation[]
   riskPolicy        UserRiskPolicy?
+  botActions        BotAction[]
 
   @@map("users")
 }
@@ -301,11 +327,15 @@ model TradingConfig {
   maxPositionHoldMinutes          Int?
   deterministicGateEnabled        Boolean @default(false)
   gatePriceChangePct              Float   @default(0.005)
+  reactiveLoopEnabled             Boolean @default(false)
+  maxActionsPerHour               Int     @default(6)
+  minActionIntervalSec            Int     @default(60)
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   positions Position[]
+  botActions BotAction[]
 
   @@map("trading_configs")
 }
@@ -780,4 +810,27 @@ model AgentDecisionEvaluation {
   @@index([userId, decisionId])
   @@index([status, createdAt])
   @@map("agent_decision_evaluations")
+}
+
+model BotAction {
+  id         String            @id @default(cuid())
+  userId     String
+  configId   String
+  kind       BotActionKind
+  source     BotActionSource
+  outcome    BotActionOutcome
+  blockedBy  BotActionCap?
+  /// Referencia de auditoría, sin FK a propósito (ver nota)
+  positionId String?
+  /// Referencia de auditoría, sin FK a propósito (ver nota)
+  decisionId String?
+  detail     String?
+  occurredAt DateTime          @default(now())
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config TradingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, occurredAt])
+  @@index([userId, occurredAt])
+  @@map("bot_actions")
 }

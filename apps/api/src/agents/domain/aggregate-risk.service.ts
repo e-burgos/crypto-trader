@@ -14,6 +14,17 @@ export interface AssertBuyAllowedInput {
   plannedNotionalUsd: number;
 }
 
+export interface EvaluateDailyLossInput {
+  userId: string;
+  mode: TradingMode;
+}
+
+export interface DailyLossEvaluation {
+  reached: boolean;
+  realizedPnlTodayUsd: number;
+  maxDailyLossUsd: number | null;
+}
+
 export interface AggregateRiskDecision {
   allowed: boolean;
   blockedBy: AggregateBlockReason | null;
@@ -34,6 +45,33 @@ export class AggregateRiskService {
     private readonly riskBudget: RiskBudgetService,
     private readonly notificationsService: NotificationsService,
   ) {}
+
+  async evaluateDailyLoss(
+    input: EvaluateDailyLossInput,
+  ): Promise<DailyLossEvaluation> {
+    const policy = await this.prisma.userRiskPolicy.findUnique({
+      where: { userId: input.userId },
+    });
+    if (!policy || !policy.enabled) {
+      return { reached: false, realizedPnlTodayUsd: 0, maxDailyLossUsd: null };
+    }
+
+    const { realizedPnlUsd: realizedPnlTodayUsd } =
+      await this.riskBudget.assessAggregate({
+        userId: input.userId,
+        since: startOfUtcDay(),
+      });
+
+    const reached =
+      policy.maxDailyLossUsd != null &&
+      realizedPnlTodayUsd <= -policy.maxDailyLossUsd;
+
+    return {
+      reached,
+      realizedPnlTodayUsd,
+      maxDailyLossUsd: policy.maxDailyLossUsd,
+    };
+  }
 
   async assertBuyAllowed(
     input: AssertBuyAllowedInput,
@@ -98,19 +136,18 @@ export class AggregateRiskService {
       };
     }
 
-    const since = startOfUtcDay();
-    const { realizedPnlUsd: realizedPnlTodayUsd } =
-      await this.riskBudget.assessAggregate({ userId: input.userId, since });
+    const dailyLoss = await this.evaluateDailyLoss({
+      userId: input.userId,
+      mode: input.mode,
+    });
+    const { realizedPnlTodayUsd } = dailyLoss;
 
-    if (
-      policy.maxDailyLossUsd != null &&
-      realizedPnlTodayUsd <= -policy.maxDailyLossUsd
-    ) {
+    if (dailyLoss.reached) {
       return {
         ...base,
         allowed: false,
         blockedBy: 'DAILY_LOSS',
-        detail: `Daily loss ${Math.abs(realizedPnlTodayUsd).toFixed(2)} reached the max ${policy.maxDailyLossUsd}`,
+        detail: `Daily loss ${Math.abs(realizedPnlTodayUsd).toFixed(2)} reached the max ${dailyLoss.maxDailyLossUsd}`,
         assetExposureUsd,
         equityUsd,
         realizedPnlTodayUsd,

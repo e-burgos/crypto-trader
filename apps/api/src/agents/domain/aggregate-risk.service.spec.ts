@@ -338,4 +338,189 @@ describe('AggregateRiskService', () => {
       expect(prisma.tradingConfig.updateMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('evaluateDailyLoss', () => {
+    it('reports not reached without consulting the ledger when the user has no policy row', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: { findUnique: jest.fn().mockResolvedValue(null) },
+      });
+      const { service, riskBudget } = buildService({ prisma });
+
+      const evaluation = await service.evaluateDailyLoss({
+        userId: 'user-1',
+        mode: 'SANDBOX' as any,
+      });
+
+      expect(evaluation).toEqual({
+        reached: false,
+        realizedPnlTodayUsd: 0,
+        maxDailyLossUsd: null,
+      });
+      expect(riskBudget.assessAggregate).not.toHaveBeenCalled();
+    });
+
+    it('reports not reached without consulting the ledger when the policy is disabled', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ enabled: false, maxDailyLossUsd: 1 }),
+        },
+      });
+      const { service, riskBudget } = buildService({ prisma });
+
+      const evaluation = await service.evaluateDailyLoss({
+        userId: 'user-1',
+        mode: 'SANDBOX' as any,
+      });
+
+      expect(evaluation.reached).toBe(false);
+      expect(riskBudget.assessAggregate).not.toHaveBeenCalled();
+    });
+
+    it('reports reached when realized daily loss reaches the configured max', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: {
+          findUnique: jest.fn().mockResolvedValue({
+            enabled: true,
+            maxDailyLossUsd: 50,
+          }),
+        },
+      });
+      const { service } = buildService({
+        prisma,
+        riskBudget: {
+          assessAggregate: jest.fn().mockResolvedValue({ realizedPnlUsd: -50 }),
+        },
+      });
+
+      const evaluation = await service.evaluateDailyLoss({
+        userId: 'user-1',
+        mode: 'SANDBOX' as any,
+      });
+
+      expect(evaluation).toEqual({
+        reached: true,
+        realizedPnlTodayUsd: -50,
+        maxDailyLossUsd: 50,
+      });
+    });
+
+    it('reports not reached when realized daily loss is under the configured max', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: {
+          findUnique: jest.fn().mockResolvedValue({
+            enabled: true,
+            maxDailyLossUsd: 50,
+          }),
+        },
+      });
+      const { service } = buildService({
+        prisma,
+        riskBudget: {
+          assessAggregate: jest.fn().mockResolvedValue({ realizedPnlUsd: -10 }),
+        },
+      });
+
+      const evaluation = await service.evaluateDailyLoss({
+        userId: 'user-1',
+        mode: 'SANDBOX' as any,
+      });
+
+      expect(evaluation.reached).toBe(false);
+      expect(evaluation.realizedPnlTodayUsd).toBe(-10);
+    });
+
+    it('reports not reached when the policy has no configured max', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: {
+          findUnique: jest.fn().mockResolvedValue({
+            enabled: true,
+            maxDailyLossUsd: null,
+          }),
+        },
+      });
+      const { service } = buildService({
+        prisma,
+        riskBudget: {
+          assessAggregate: jest.fn().mockResolvedValue({ realizedPnlUsd: -1000 }),
+        },
+      });
+
+      const evaluation = await service.evaluateDailyLoss({
+        userId: 'user-1',
+        mode: 'SANDBOX' as any,
+      });
+
+      expect(evaluation).toEqual({
+        reached: false,
+        realizedPnlTodayUsd: -1000,
+        maxDailyLossUsd: null,
+      });
+    });
+
+    it('never mutates state: no updateMany, no policy update, no notification', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: {
+          findUnique: jest.fn().mockResolvedValue({
+            enabled: true,
+            maxDailyLossUsd: 50,
+          }),
+          update: jest.fn().mockResolvedValue({}),
+        },
+      });
+      const { service, notifications } = buildService({
+        prisma,
+        riskBudget: {
+          assessAggregate: jest.fn().mockResolvedValue({ realizedPnlUsd: -50 }),
+        },
+      });
+
+      await service.evaluateDailyLoss({ userId: 'user-1', mode: 'SANDBOX' as any });
+
+      expect(prisma.tradingConfig.updateMany).not.toHaveBeenCalled();
+      expect(prisma.userRiskPolicy.update).not.toHaveBeenCalled();
+      expect(notifications.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('assertBuyAllowed reuses evaluateDailyLoss arithmetic', () => {
+    it('blocks with the same DAILY_LOSS outcome assertBuyAllowed produced before the refactor', async () => {
+      const prisma = createMockPrisma({
+        userRiskPolicy: {
+          findUnique: jest.fn().mockResolvedValue({
+            enabled: true,
+            maxAssetExposureUsd: null,
+            maxAssetExposurePct: null,
+            maxDailyLossUsd: 50,
+            maxDrawdownPct: null,
+            pauseAgentsOnDrawdown: true,
+          }),
+        },
+      });
+      const { service } = buildService({
+        prisma,
+        riskBudget: {
+          assessAggregate: jest.fn().mockResolvedValue({ realizedPnlUsd: -50 }),
+        },
+      });
+
+      const decision = await service.assertBuyAllowed({
+        userId: 'user-1',
+        asset: 'BTC' as any,
+        mode: 'SANDBOX' as any,
+        plannedNotionalUsd: 100,
+      });
+
+      const evaluation = await service.evaluateDailyLoss({
+        userId: 'user-1',
+        mode: 'SANDBOX' as any,
+      });
+
+      expect(decision.allowed).toBe(false);
+      expect(decision.blockedBy).toBe('DAILY_LOSS');
+      expect(decision.realizedPnlTodayUsd).toBe(evaluation.realizedPnlTodayUsd);
+      expect(evaluation.reached).toBe(true);
+    });
+  });
 });

@@ -643,10 +643,17 @@
         "TASK-019",
         "TASK-024"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/reactive-kill-switch.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-027",

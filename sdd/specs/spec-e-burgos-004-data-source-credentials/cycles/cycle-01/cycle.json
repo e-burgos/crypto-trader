@@ -59,7 +59,27 @@
       "apps/web/src/pages/dashboard/settings/index.ts",
       "libs/shared/src/types/market-data-sources.ts"
     ],
-    "files_deleted": []
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 650000,
+      "tokens_out": 55000,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 490000,
+          "tokens_out": 43000,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/opus": {
+          "tokens_in": 160000,
+          "tokens_out": 12000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
   },
   "tables_created": [],
   "endpoints_implemented": ["EP-011", "EP-012", "EP-013", "EP-014"],
@@ -103,7 +123,7 @@
       "tsc apps/api": "OK — unico error es el preexistente de swagger.setup.ts, heredado de main",
       "nx lint api,web,shared": "OK — 0 errors"
     },
-    "notes": "Ciclo que reencuadra la Spec 43 del flujo legacy dentro del arnes sdd/. Las tres correcciones estructurales frente a la implementacion legacy son el resolver unico (invariante de cycle-01 de spec-e-burgos-001), el filtro de rol ADMIN en la lectura del fallback compartido, y el llaveo de cache/rate-limit/circuito por dueno de credencial. Sin ese ultimo punto la key propia no habria dado cupo propio y la feature no habria rendido lo que promete. Los getters de diagnostico reagregan por nombre de fuente, de modo que el endpoint de admin conserva su contrato. metrics.usage se omite: no hay medicion confiable separada del resto de la sesion, y un numero inventado es peor que la ausencia.",
+    "notes": "Ciclo que reencuadra la Spec 43 del flujo legacy dentro del arnes sdd/. Las tres correcciones estructurales frente a la implementacion legacy son el resolver unico (invariante de cycle-01 de spec-e-burgos-001), el filtro de rol ADMIN en la lectura del fallback compartido, y el llaveo de cache/rate-limit/circuito por dueno de credencial. Sin ese ultimo punto la key propia no habria dado cupo propio y la feature no habria rendido lo que promete. Los getters de diagnostico reagregan por nombre de fuente, de modo que el endpoint de admin conserva su contrato. metrics.usage se registro post-cierre (cerrado por el reviewer via warning de pnpm sdd:validate) como estimacion declarada (approx: true, source: declared-estimate): no hubo medicion de sesion separada del resto del trabajo del dev, asi que la magnitud se derivo por analogia proporcional con cycle-01 de spec-e-burgos-001 (unico ciclo con by_tier medido), escalando por story points (22 SP vs 44 SP, ~50%) y contrastando contra el conteo de archivos tocados (27 vs 48, misma proporcion). El split sonnet/opus reusa la razon 75/25 del ciclo medido, ya que la sesion tambien combino implementacion (sonnet) con orquestacion/arquitectura/review (opus).",
     "follow_ups": [
       "Migrar DataSourcesController y los demas controllers con @Body() tipado inline a clases DTO: hoy el ValidationPipe global no los valida y forbidNonWhitelisted da una cobertura aparente que no existe",
       "UI de admin para el flag shared — hoy solo por API",

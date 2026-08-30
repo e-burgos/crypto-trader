@@ -109,7 +109,21 @@
     "files_deleted": [],
     "usage": {
       "tokens_in": 2980000,
-      "tokens_out": 210000
+      "tokens_out": 210000,
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 2250000,
+          "tokens_out": 164000,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/opus": {
+          "tokens_in": 730000,
+          "tokens_out": 46000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
     }
   },
   "tables_created": [

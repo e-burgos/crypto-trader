@@ -110,8 +110,8 @@
       "tokens_in": 1300000,
       "tokens_out": 105000,
       "by_tier": {
-        "sonnet": { "tokens_in": 980000, "tokens_out": 82000 },
-        "opus": { "tokens_in": 320000, "tokens_out": 23000 }
+        "claude/sonnet": { "tokens_in": 980000, "tokens_out": 82000 },
+        "claude/opus": { "tokens_in": 320000, "tokens_out": 23000 }
       }
     }
   },

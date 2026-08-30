@@ -27,12 +27,19 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/analysis/src/lib/reactive/reactive-thresholds.ts",
         "libs/analysis/src/lib/reactive/reactive-thresholds.spec.ts",
-        "libs/analysis/src/lib/index.ts"
-      ]
+        "libs/analysis/src/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 19000,
+        "tokens_out": 2000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-002",
@@ -45,12 +52,19 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/trading-engine/src/lib/risk/action-caps.ts",
         "libs/trading-engine/src/lib/risk/action-caps.spec.ts",
         "libs/trading-engine/src/lib/index.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 46000,
+        "tokens_out": 4000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-003",
@@ -63,13 +77,20 @@
       "depends_on": [
         "TASK-029"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/analysis/src/lib/reactive/stream-health.ts",
         "libs/analysis/src/lib/reactive/stream-health.spec.ts",
         "libs/analysis/src/lib/reactive/index.ts",
-        "libs/analysis/src/lib/index.ts"
-      ]
+        "libs/analysis/src/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 29000,
+        "tokens_out": 3000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-004",
@@ -83,12 +104,19 @@
       "estimation_hours": 5,
       "story_points": 8,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/trading-engine/src/lib/fast-path.ts",
         "libs/trading-engine/src/lib/fast-path.spec.ts",
         "libs/trading-engine/src/lib/index.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 58000,
+        "tokens_out": 5000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-005",
@@ -103,13 +131,20 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/analysis/src/lib/reactive/material-event.ts",
         "libs/analysis/src/lib/reactive/material-event.spec.ts",
         "libs/analysis/src/lib/reactive/index.ts",
-        "libs/analysis/src/lib/index.ts"
-      ]
+        "libs/analysis/src/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 68000,
+        "tokens_out": 6000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-006",
@@ -159,12 +194,19 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
         "apps/api/prisma/migrations/YYYYMMDDHHMMSS_add_reactive_loop_switch/migration.sql",
         "apps/api/src/trading/dto/trading-config.dto.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 37000,
+        "tokens_out": 3000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-010",
@@ -177,12 +219,19 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
         "apps/api/prisma/migrations/YYYYMMDDHHMMSS_add_action_caps_columns/migration.sql",
         "apps/api/src/trading/dto/trading-config.dto.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 56000,
+        "tokens_out": 5000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-011",
@@ -239,11 +288,18 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/agents/domain/aggregate-risk.service.ts",
         "apps/api/src/agents/domain/aggregate-risk.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 94000,
+        "tokens_out": 8000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-014",
@@ -513,12 +569,19 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
         "apps/api/prisma/migrations/YYYYMMDDHHMMSS_add_bot_actions/migration.sql",
         "apps/api/src/prisma/prisma.service.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 56000,
+        "tokens_out": 5000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-028",
@@ -531,11 +594,18 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/reactive-runtime-thresholds.ts",
         "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 45000,
+        "tokens_out": 4000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-029",
@@ -549,10 +619,17 @@
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/shared/src/types/interfaces.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 67000,
+        "tokens_out": 6000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-030",
@@ -564,11 +641,18 @@
       "estimation_hours": 5,
       "story_points": 8,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-ws.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-ws.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 124000,
+        "tokens_out": 11000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-031",
@@ -579,14 +663,21 @@
       "estimation_hours": 6,
       "story_points": 8,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/reactive-coordination.port.ts",
         "apps/api/src/reactive/redis-reactive-coordination.service.ts",
         "apps/api/src/reactive/redis-reactive-coordination.service.spec.ts",
         "apps/api/src/reactive/disabled-reactive-coordination.service.ts",
         "apps/api/src/reactive/reactive-coordination.module.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-032",
@@ -597,10 +688,17 @@
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/main.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 20000,
+        "tokens_out": 1500,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-033",
@@ -612,10 +710,17 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.isolation.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 45000,
+        "tokens_out": 4000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-034",
@@ -632,7 +737,7 @@
       "depends_on": [
         "TASK-033"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/position-action.service.ts",

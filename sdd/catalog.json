@@ -160,5 +160,9 @@
       "file": "tasks-index.schema.json"
     }
   ],
-  "memory": []
+  "memory": [
+    {
+      "file": "2026-08-30-fix-e-burgos-004.md"
+    }
+  ]
 }

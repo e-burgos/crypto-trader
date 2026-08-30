@@ -89,6 +89,7 @@ function buildQueue(overrides: { delayed?: any[] } = {}) {
     getDelayed: jest.fn().mockResolvedValue(
       overrides.delayed ?? [{ data: { configId: 'config-1' }, promote: jest.fn().mockResolvedValue(undefined) }],
     ),
+    add: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -343,6 +344,121 @@ describe('MaterialEventService', () => {
       await service.handleTick(tick);
 
       expect(job.promote).toHaveBeenCalledTimes(1);
+    });
+
+    describe('regresión: un evento adelanta el único ciclo de la ventana, nunca agrega ni pospone', () => {
+      const windowStart = 1_700_000_000_000;
+      const windowEndMs = windowStart + 60_000;
+
+      beforeEach(() => {
+        jest.useFakeTimers({ now: windowStart });
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      function buildTokenGatedCoordination(): ReactiveCoordinationPort {
+        const consumedKeys = new Set<string>();
+        return {
+          tryAcquire: jest.fn(async () => true),
+          renew: jest.fn(async () => true),
+          release: jest.fn(async () => undefined),
+          tryConsumeToken: jest.fn(async (key: string) => {
+            if (consumedKeys.has(key)) return false;
+            consumedKeys.add(key);
+            return true;
+          }),
+          setJson: jest.fn(async () => undefined),
+          getJson: jest.fn(async () => ({ windowEndMs })),
+          isHealthy: jest.fn(() => true),
+        } as unknown as ReactiveCoordinationPort;
+      }
+
+      it('un segundo evento material dentro de la misma ventana NO agrega un segundo ciclo: promote() se llama exactamente una vez', async () => {
+        const job = { data: { configId: 'config-1' }, promote: jest.fn().mockResolvedValue(undefined) };
+        const tradingQueue = buildQueue({ delayed: [job] });
+        const { service, gateway } = buildService({
+          coordination: buildTokenGatedCoordination(),
+          tradingQueue,
+        });
+
+        detectMaterialEventMock.mockReturnValueOnce(eventResult('PRICE_MOVED'));
+        await service.handleTick(tick);
+
+        detectMaterialEventMock.mockReturnValueOnce(eventResult('VOLUME_SPIKE'));
+        await service.handleTick({ ...tick, timestamp: tick.timestamp + 1_000 });
+
+        expect(job.promote).toHaveBeenCalledTimes(1);
+        expect(tradingQueue.add).not.toHaveBeenCalled();
+        expect(
+          gateway.emitToAll.mock.calls.filter(([event]: [string]) => event === 'agent:cycle-advanced'),
+        ).toHaveLength(1);
+      });
+
+      it('un evento material NO pospone la ventana vigente: nunca escribe rx:v1:window ni extiende su plazo', async () => {
+        const coordination = buildTokenGatedCoordination();
+        const { service, gateway } = buildService({ coordination });
+
+        detectMaterialEventMock.mockReturnValueOnce(eventResult('PRICE_MOVED'));
+        await service.handleTick(tick);
+
+        expect(coordination.setJson).not.toHaveBeenCalled();
+        expect(gateway.emitToAll).toHaveBeenCalledWith(
+          'agent:cycle-advanced',
+          expect.objectContaining({ advancedByMs: windowEndMs - windowStart }),
+        );
+      });
+    });
+  });
+
+  describe('guarda de salud del stream (RN-26 a RN-29): solo HEALTHY habilita el disparo por evento', () => {
+    beforeEach(() => {
+      detectMaterialEventMock.mockReturnValue(eventResult('PRICE_MOVED'));
+    });
+
+    it('salud UNKNOWN (sin registro) suspende el disparo igual que DEGRADED: no toca ventana, token, cola ni emite', async () => {
+      const { service, coordination, tradingQueue, gateway } = buildService({
+        streamHealth: buildStreamHealth({ state: 'UNKNOWN' }),
+      });
+      await service.handleTick(tick);
+
+      expect(coordination.getJson).not.toHaveBeenCalled();
+      expect(coordination.tryConsumeToken).not.toHaveBeenCalled();
+      expect(tradingQueue.getDelayed).not.toHaveBeenCalled();
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+    });
+
+    it('con el stream degradado no se escribe ni se lee nada del bot: el temporizador y el REST del ciclo quedan intactos', async () => {
+      const { service, prisma, coordination } = buildService({
+        streamHealth: buildStreamHealth({ state: 'DEGRADED' }),
+      });
+      await service.handleTick(tick);
+
+      expect(prisma.tradingConfig.findMany).toHaveBeenCalled();
+      expect(coordination.setJson).not.toHaveBeenCalled();
+      expect(coordination.getJson).not.toHaveBeenCalled();
+    });
+
+    it('la suspensión no queda pegada: al volver el stream a HEALTHY el disparo por evento se reactiva sin intervención manual', async () => {
+      const streamHealth = {
+        resolve: jest
+          .fn()
+          .mockResolvedValueOnce({ symbol: 'BTCUSDT', state: 'DEGRADED', reason: 'TICK_STALE', record: null })
+          .mockResolvedValueOnce({ symbol: 'BTCUSDT', state: 'HEALTHY', reason: null, record: null }),
+      };
+      const { service, coordination, gateway } = buildService({ streamHealth });
+
+      await service.handleTick(tick);
+      expect(coordination.getJson).not.toHaveBeenCalled();
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+
+      await service.handleTick({ ...tick, timestamp: tick.timestamp + 1_000 });
+      expect(coordination.getJson).toHaveBeenCalled();
+      expect(gateway.emitToAll).toHaveBeenCalledWith(
+        'agent:cycle-advanced',
+        expect.objectContaining({ configId: 'config-1' }),
+      );
     });
   });
 });

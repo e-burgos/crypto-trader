@@ -66,6 +66,37 @@ export function computeMacroFingerprint(macro: Record<string, unknown>): string 
   });
 }
 
+export interface ScenarioTick {
+  price: number;
+  volume: number;
+  timestamp: number;
+}
+
+export function buildScenarioTicks(
+  scenario: CostScenario,
+  tickCount: number,
+): ScenarioTick[] {
+  if (tickCount < 2) {
+    throw new Error('buildScenarioTicks requires tickCount >= 2 to interpolate a path');
+  }
+
+  const startPrice = scenario.previous.close;
+  const endPrice = scenario.close;
+  const startTime = scenario.previous.takenAt;
+  const endTime = scenario.snapshotTakenAt;
+  const volume = scenario.indicators.volume.current;
+  const lastIndex = tickCount - 1;
+
+  return Array.from({ length: tickCount }, (_, index) => {
+    const fraction = index / lastIndex;
+    return {
+      price: startPrice + (endPrice - startPrice) * fraction,
+      volume,
+      timestamp: startTime + (endTime - startTime) * fraction,
+    };
+  });
+}
+
 const NOW = 1_800_000_000_000;
 const PREVIOUS_TAKEN_AT = NOW - 15 * 60_000;
 

@@ -8,6 +8,10 @@ export interface BinanceWsConfig {
   autoReconnect?: boolean;
   /** Reconnect delay in ms (default: 5000) */
   reconnectDelay?: number;
+  /** Own ping interval in ms (default: 30000) */
+  wsPingIntervalMs?: number;
+  /** Max wait for pong before terminating the socket, in ms (default: 10000) */
+  wsPongTimeoutMs?: number;
 }
 
 export interface TickerUpdate {
@@ -32,14 +36,22 @@ export interface KlineUpdate {
 }
 
 const DEFAULT_WS_URL = 'wss://stream.binance.com:9443';
+const DEFAULT_WS_PING_INTERVAL_MS = 30_000;
+const DEFAULT_WS_PONG_TIMEOUT_MS = 10_000;
 
 export class BinanceWsClient extends EventEmitter {
   private ws: WebSocket | null = null;
   private readonly baseUrl: string;
   private readonly autoReconnect: boolean;
   private readonly reconnectDelay: number;
+  private readonly wsPingIntervalMs: number;
+  private readonly wsPongTimeoutMs: number;
   private subscriptions: string[] = [];
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private pingTimer: ReturnType<typeof setInterval> | null = null;
+  private pongTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private nextMessageId = 1;
+  private connectedFlag = false;
   private isClosing = false;
 
   constructor(config: BinanceWsConfig = {}) {
@@ -47,6 +59,8 @@ export class BinanceWsClient extends EventEmitter {
     this.baseUrl = config.baseUrl ?? DEFAULT_WS_URL;
     this.autoReconnect = config.autoReconnect ?? true;
     this.reconnectDelay = config.reconnectDelay ?? 5000;
+    this.wsPingIntervalMs = config.wsPingIntervalMs ?? DEFAULT_WS_PING_INTERVAL_MS;
+    this.wsPongTimeoutMs = config.wsPongTimeoutMs ?? DEFAULT_WS_PONG_TIMEOUT_MS;
   }
 
   /**
@@ -80,6 +94,8 @@ export class BinanceWsClient extends EventEmitter {
     this.ws = new WebSocket(url);
 
     this.ws.on('open', () => {
+      this.connectedFlag = true;
+      this.startHeartbeat();
       this.emit('connected');
     });
 
@@ -92,7 +108,18 @@ export class BinanceWsClient extends EventEmitter {
       }
     });
 
+    this.ws.on('ping', () => {
+      this.emit('heartbeat', { at: Date.now() });
+    });
+
+    this.ws.on('pong', () => {
+      this.clearPongTimeout();
+      this.emit('heartbeat', { at: Date.now() });
+    });
+
     this.ws.on('close', () => {
+      this.connectedFlag = false;
+      this.stopHeartbeat();
       this.emit('disconnected');
       if (this.autoReconnect && !this.isClosing) {
         this.scheduleReconnect();
@@ -109,6 +136,8 @@ export class BinanceWsClient extends EventEmitter {
    */
   disconnect(): void {
     this.isClosing = true;
+    this.connectedFlag = false;
+    this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -116,6 +145,63 @@ export class BinanceWsClient extends EventEmitter {
     if (this.ws) {
       this.ws.close();
       this.ws = null;
+    }
+  }
+
+  addStreams(streams: string[]): void {
+    const newStreams = streams.filter((stream) => !this.subscriptions.includes(stream));
+    if (newStreams.length === 0) return;
+
+    this.subscriptions.push(...newStreams);
+    if (this.isConnected()) {
+      this.sendStreamCommand('SUBSCRIBE', newStreams);
+    }
+  }
+
+  removeStreams(streams: string[]): void {
+    const existingStreams = streams.filter((stream) => this.subscriptions.includes(stream));
+    if (existingStreams.length === 0) return;
+
+    this.subscriptions = this.subscriptions.filter((stream) => !existingStreams.includes(stream));
+    if (this.isConnected()) {
+      this.sendStreamCommand('UNSUBSCRIBE', existingStreams);
+    }
+  }
+
+  isConnected(): boolean {
+    return this.connectedFlag;
+  }
+
+  private sendStreamCommand(method: 'SUBSCRIBE' | 'UNSUBSCRIBE', params: string[]): void {
+    this.ws?.send(JSON.stringify({ method, params, id: this.nextMessageId++ }));
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.pingTimer = setInterval(() => this.sendOwnPing(), this.wsPingIntervalMs);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
+    this.clearPongTimeout();
+  }
+
+  private sendOwnPing(): void {
+    if (!this.ws) return;
+    this.ws.ping();
+    this.clearPongTimeout();
+    this.pongTimeoutTimer = setTimeout(() => {
+      this.ws?.terminate();
+    }, this.wsPongTimeoutMs);
+  }
+
+  private clearPongTimeout(): void {
+    if (this.pongTimeoutTimer) {
+      clearTimeout(this.pongTimeoutTimer);
+      this.pongTimeoutTimer = null;
     }
   }
 

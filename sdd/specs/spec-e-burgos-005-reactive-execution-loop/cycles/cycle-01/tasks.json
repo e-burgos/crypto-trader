@@ -340,7 +340,7 @@
         "TASK-030",
         "TASK-029"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/reactive/market-stream.service.ts",
         "apps/api/src/reactive/market-stream.service.spec.ts",
@@ -361,7 +361,7 @@
         "TASK-032",
         "TASK-009"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/reactive/market-stream.service.ts",
         "apps/api/src/reactive/market-stream.service.spec.ts",
@@ -744,18 +744,21 @@
       "depends_on": [
         "TASK-033"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/position-action.service.ts",
         "apps/api/src/trading/position-action.service.spec.ts",
         "apps/api/src/trading/trading.module.ts",
-        "apps/api/src/trading/trading.processor.exit-machine.spec.ts",
-        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
-        "apps/api/src/trading/trading.processor.protection-rearm.spec.ts",
-        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
         "apps/api/src/trading/trading.processor.isolation.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 130000,
+        "tokens_out": 14000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-035",

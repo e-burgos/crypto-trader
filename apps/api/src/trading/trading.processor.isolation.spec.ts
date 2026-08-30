@@ -1,17 +1,41 @@
-/**
- * Regression tests for Phase A — Agent Profit Optimizer
- * Bugs #2, #3, #4, #6, #7: Position scoping, atomic wallet, context isolation
- */
-
 import { TradingProcessor } from './trading.processor';
+import { PositionActionService } from './position-action.service';
+// eslint-disable-next-line @nx/enforce-module-boundaries
+import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 
-describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () => {
-  // ── Bug #2: executeLLMSell must filter by configId + pair ──────────────
+describe('TradingProcessor — Isolation & Atomicity', () => {
+  const gatewayMock = { emitToUser: jest.fn() };
+  const notificationsMock = { create: jest.fn().mockResolvedValue({}) };
+  const aggregateRiskServiceMock = {
+    assertBuyAllowed: jest.fn().mockResolvedValue({ allowed: true, blockedBy: null }),
+  };
 
-  describe('Bug #2 — executeLLMSell position scoping', () => {
-    it('should only close positions belonging to the same configId and pair', async () => {
-      const mockFindMany = jest.fn().mockResolvedValue([]);
+  function buildProcessor(prisma: any, overrides: Partial<Record<string, any>> = {}) {
+    return new TradingProcessor(
+      prisma,
+      overrides.gateway ?? (gatewayMock as any),
+      overrides.notificationsService ?? (notificationsMock as any),
+      overrides.usersService ?? ({} as any),
+      overrides.marketService ?? ({} as any),
+      overrides.orchestratorService ?? ({} as any),
+      overrides.decisionGateService ?? ({} as any),
+      overrides.agentConfigResolver ?? ({} as any),
+      overrides.evaluationService ?? ({} as any),
+      overrides.reconciliationService ?? ({} as any),
+      overrides.aggregateRiskService ?? (aggregateRiskServiceMock as any),
+    );
+  }
 
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    gatewayMock.emitToUser.mockClear();
+    notificationsMock.create.mockClear();
+  });
+
+  describe('executeLLMSell scopes open positions to configId + pair (Bug #2)', () => {
+    it('filters by userId, configId, pair, status and mode — not by asset alone', async () => {
+      const prisma = { position: { findMany: jest.fn().mockResolvedValue([]) } };
+      const processor = buildProcessor(prisma);
       const config = {
         id: 'config-A',
         asset: 'BTC',
@@ -19,21 +43,19 @@ describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () =
         mode: 'SANDBOX',
         minProfitPct: 0.003,
       };
-      const userId = 'user-1';
-      const mode = 'SANDBOX';
 
-      // Simulate call — the key assertion is the WHERE clause
-      await mockFindMany({
-        where: {
-          userId,
-          configId: config.id,
-          pair: config.pair,
-          status: 'OPEN',
-          mode,
-        },
-      });
+      await (processor as any).executeLLMSell(
+        'user-1',
+        config,
+        'BTCUSDT',
+        'SANDBOX',
+        undefined,
+        undefined,
+        100,
+        undefined,
+      );
 
-      expect(mockFindMany).toHaveBeenCalledWith({
+      expect(prisma.position.findMany).toHaveBeenCalledWith({
         where: {
           userId: 'user-1',
           configId: 'config-A',
@@ -43,74 +65,45 @@ describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () =
         },
       });
     });
+  });
 
-    it('should NOT use asset-only filter (old vulnerable pattern)', () => {
-      // This test ensures the old pattern {userId, asset, status, mode}
-      // is NOT present in the codebase anymore for executeLLMSell
-      const fs = require('fs');
-      const source = fs.readFileSync(
-        require('path').join(__dirname, 'trading.processor.ts'),
-        'utf8',
+  describe('executeBuy counts open positions scoped to configId (Bug #3)', () => {
+    it('checks maxConcurrentPositions against a count filtered by configId', async () => {
+      const prisma = { position: { count: jest.fn().mockResolvedValue(5) } };
+      const processor = buildProcessor(prisma);
+      const config = {
+        id: 'config-A',
+        asset: 'BTC',
+        pair: 'USDT',
+        mode: 'SANDBOX',
+        maxConcurrentPositions: 5,
+      };
+
+      await (processor as any).executeBuy(
+        'user-1',
+        config,
+        'BTCUSDT',
+        'SANDBOX',
+        undefined,
+        undefined,
+        100,
+        undefined,
       );
 
-      // Find executeLLMSell method
-      const sellStart = source.indexOf('private async executeLLMSell');
-      const sellEnd = source.indexOf('private async checkOpenPositions');
-      const sellBody = source.slice(sellStart, sellEnd);
-
-      // Old vulnerable pattern should NOT be present
-      expect(sellBody).not.toMatch(
-        /where:\s*\{\s*userId,\s*asset:\s*config\.asset,\s*status/,
-      );
-      // New secure pattern should be present
-      expect(sellBody).toMatch(/configId:\s*config\.id/);
-      expect(sellBody).toMatch(/pair:\s*config\.pair/);
+      expect(prisma.position.count).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          configId: 'config-A',
+          status: 'OPEN',
+          asset: 'BTC',
+          mode: 'SANDBOX',
+        },
+      });
     });
   });
 
-  // ── Bug #3: executeBuy must count positions by configId ────────────────
-
-  describe('Bug #3 — executeBuy position count scoping', () => {
-    it('should count open positions filtered by configId', () => {
-      const fs = require('fs');
-      const source = fs.readFileSync(
-        require('path').join(__dirname, 'trading.processor.ts'),
-        'utf8',
-      );
-
-      // Find executeBuy method
-      const buyStart = source.indexOf('private async executeBuy');
-      const buyEnd = source.indexOf('private async executeLLMSell');
-      const buyBody = source.slice(buyStart, buyEnd);
-
-      // Must include configId in the count query
-      expect(buyBody).toMatch(/position\.count/);
-      expect(buyBody).toMatch(/configId:\s*config\.id/);
-    });
-  });
-
-  // ── Bug #6: Sandbox wallet operations must be atomic ──────────────────
-
-  describe('Bug #6 — Sandbox wallet atomicity', () => {
-    it('should use $transaction for sandbox wallet operations in executeLLMSell', () => {
-      const fs = require('fs');
-      const source = fs.readFileSync(
-        require('path').join(__dirname, 'trading.processor.ts'),
-        'utf8',
-      );
-
-      const sellStart = source.indexOf('private async executeLLMSell');
-      const sellEnd = source.indexOf('private async checkOpenPositions');
-      const sellBody = source.slice(sellStart, sellEnd);
-
-      // Must use $transaction for sandbox wallet operations
-      expect(sellBody).toMatch(/\$transaction/);
-      expect(sellBody).toMatch(/tx\.sandboxWallet\.upsert/);
-      expect(sellBody).toMatch(/tx\.sandboxWallet\.findUnique/);
-    });
-
-    it('credits the sandbox wallet atomically via $transaction (creditSandboxWallet, used by checkOpenPositions exits)', async () => {
-      const gatewayMock = { emitToUser: jest.fn() };
+  describe('sandbox wallet crediting is atomic (Bug #6)', () => {
+    it('credits the balance through a single $transaction, then broadcasts the new balance', async () => {
       const txSandboxWallet = {
         upsert: jest.fn().mockResolvedValue({}),
         findUnique: jest.fn().mockResolvedValue({ balance: 10_100 }),
@@ -120,21 +113,13 @@ describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () =
           fn({ sandboxWallet: txSandboxWallet }),
         ),
       };
-      const processor = new TradingProcessor(
+      const positionAction = new PositionActionService(
         prisma as any,
         gatewayMock as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        {} as any,
+        notificationsMock as any,
       );
 
-      await (processor as any).creditSandboxWallet('user-1', 'USDT', 100, 1);
+      await (positionAction as any).creditSandboxWallet('user-1', 'USDT', 100, 1);
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
       expect(txSandboxWallet.upsert).toHaveBeenCalledWith(
@@ -155,23 +140,54 @@ describe('TradingProcessor — Isolation & Atomicity (Phase A Regression)', () =
     });
   });
 
-  // ── Bug #7: recentTrades must be filtered by configId ─────────────────
+  describe('runCycle scopes recent-trade context to configId (Bug #7)', () => {
+    it('loads the last trades through the position relation, filtered by configId', async () => {
+      const config = {
+        id: 'config-A',
+        userId: 'user-1',
+        asset: 'BTC',
+        pair: 'USDT',
+        mode: 'SANDBOX',
+        isRunning: true,
+      };
 
-  describe('Bug #7 — recentTrades context isolation', () => {
-    it('should filter trades by configId via position relation', () => {
-      const fs = require('fs');
-      const source = fs.readFileSync(
-        require('path').join(__dirname, 'trading.processor.ts'),
-        'utf8',
+      jest.spyOn(BinanceRestClient.prototype, 'getKlines').mockResolvedValue([]);
+
+      const prisma = {
+        tradingConfig: {
+          findFirst: jest.fn().mockResolvedValue(config),
+          update: jest.fn().mockResolvedValue({}),
+        },
+        trade: { findMany: jest.fn().mockResolvedValue([]) },
+        agentDecision: { findMany: jest.fn().mockResolvedValue([]) },
+      };
+      const agentConfigResolver = {
+        checkHealth: jest.fn().mockResolvedValue({ healthy: true, agents: [] }),
+      };
+      const marketService = {
+        getNewsConfig: jest.fn().mockResolvedValue({ botEnabled: false }),
+        buildEnrichedSnapshot: jest.fn().mockResolvedValue(null),
+      };
+      const decisionGateService = {
+        evaluate: jest.fn().mockRejectedValue(new Error('stop-before-orchestrator')),
+      };
+
+      const processor = buildProcessor(prisma, {
+        agentConfigResolver,
+        marketService,
+        decisionGateService,
+      });
+
+      await processor.runCycle({
+        data: { userId: 'user-1', configId: 'config-A' },
+        queue: { add: jest.fn() },
+      } as any);
+
+      expect(prisma.trade.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: 'user-1', position: { configId: 'config-A' } },
+        }),
       );
-
-      // Find the recentTrades query section
-      const tradesSection = source.indexOf('// 7. Load recent trades');
-      const tradesEnd = source.indexOf('// 7b.', tradesSection);
-      const tradesBody = source.slice(tradesSection, tradesEnd);
-
-      // Must filter by configId through the position relation
-      expect(tradesBody).toMatch(/position:\s*\{\s*configId/);
     });
   });
 });

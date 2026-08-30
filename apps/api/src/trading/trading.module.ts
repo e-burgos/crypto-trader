@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bull';
 import { TradingController } from './trading.controller';
 import { TradingService, TRADING_QUEUE } from './trading.service';
 import { TradingProcessor } from './trading.processor';
+import { PositionActionService } from './position-action.service';
 import { ReconciliationService } from './reconciliation.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { GatewayModule } from '../gateway/gateway.module';
@@ -28,7 +29,12 @@ import { AgentDomainModule } from '../agents/domain/agent-domain.module';
     AgentDomainModule,
   ],
   controllers: [TradingController],
-  providers: [TradingService, TradingProcessor, ReconciliationService],
-  exports: [TradingService],
+  providers: [
+    TradingService,
+    TradingProcessor,
+    PositionActionService,
+    ReconciliationService,
+  ],
+  exports: [TradingService, PositionActionService],
 })
 export class TradingModule {}

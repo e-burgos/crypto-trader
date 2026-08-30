@@ -494,3 +494,46 @@ rápido, pero todavía no adelanta la apertura de decisiones nuevas.
 - **Opción C — tres entregas de ≤2 semanas.** Ninguna entrega superaba el límite, pero costaba tres
   ciclos completos de revisión y cierre para un beneficio marginal sobre el corte en dos, que ya
   deja la entrega 1 con valor desplegable por sí sola.
+
+## Pendiente de documentar en contexto
+
+Desvíos de TASK-034 respecto al listado literal de architect.md §7.3 (que nombra 6 métodos:
+`closePositionAtMarket`, `executePartialTakeProfit`, `ensureNativeProtection`,
+`attemptProtectionPlacement`, `applyProtectionOutcome`, `releaseProtectionIfNeeded`), necesarios
+para que `PositionActionService` compile como una unidad autocontenida sin dejar código muerto ni
+llamadas cruzadas de vuelta a `TradingProcessor`:
+
+- **`placeNativeProtection` también se movió**, expuesto como un cuarto método público
+  `placeInitialProtection(ctx)`. Es la única llamadora restante de `attemptProtectionPlacement` /
+  `applyProtectionOutcome` fuera de los 3 métodos obligatorios (la usa `executeBuy`, que sigue en
+  `TradingProcessor` — su wiring a `actionGate` es TASK-019, no esta task). Sin moverlo, hubiera
+  quedado un método privado en `TradingProcessor` invocando métodos privados de otra clase.
+- **`closePositionAfterProtectionFailure` y `creditSandboxWallet` también se movieron** (privados).
+  Ambos solo tenían llamadores dentro del conjunto que se movía (`applyProtectionOutcome` y
+  `closeAtMarket`/`executePartialTakeProfit` respectivamente) — dejarlos en `TradingProcessor` los
+  hubiera vuelto código muerto ahí.
+- **`releaseProtectionIfNeeded` quedó público** (no privado) en `PositionActionService`, porque
+  `TradingProcessor.executeLLMSell` (el camino de venta por LLM, fuera del alcance de esta task)
+  también debe liberar la protección nativa antes de vender — es la regla no negociable de
+  `constitution.md` §3.3 ("cancelar la protección antes de vender"), que aplica a los 4 caminos de
+  salida, no solo a los 3 que expone el contrato del fast path.
+- **El constructor de `TradingProcessor` recibe `PositionActionService` como último parámetro
+  opcional**, con fallback `new PositionActionService(prisma, gateway, notificationsService)`
+  cuando se omite. Esto evitó tocar `trading.processor.aggregate-risk.spec.ts`,
+  `trading.processor.decision-traceability.spec.ts`, `trading.processor.deterministic-gate.spec.ts`,
+  `trading.processor.reconciliation-order.spec.ts` y `trading.processor.sizing.spec.ts` — ninguno
+  está en el `files[]` de TASK-034 y todos instancian `TradingProcessor` con 11 argumentos
+  posicionales. El fallback construye la instancia con los mismos mocks de prisma/gateway/
+  notifications ya pasados, así que el comportamiento es idéntico al de antes de la extracción sin
+  tocar esos 5 archivos. En producción, Nest inyecta el `PositionActionService` real desde
+  `TradingModule` (que ahora lo declara como provider y lo exporta) — el parámetro nunca queda sin
+  resolver fuera de tests.
+- **`trading.processor.exit-machine.spec.ts`, `trading.processor.native-protection.spec.ts`,
+  `trading.processor.protection-rearm.spec.ts` y `trading.processor.sell-policy.spec.ts`** estaban
+  en el `files[]` previsto por el architect pero **no necesitaron ningún cambio**: gracias al
+  fallback del punto anterior, sus `buildProcessor(prisma)` con 11 argumentos siguen construyendo
+  un `PositionActionService` real conectado a los mismos mocks, y las aserciones (que ya eran sobre
+  comportamiento observable — llamadas a `prisma`/`gateway`/`notifications` — no sobre nombres de
+  método) pasan sin tocarlas. Solo `trading.processor.isolation.spec.ts` necesitó un cambio de
+  wiring (la prueba de `creditSandboxWallet`, que se movió, ahora instancia `PositionActionService`
+  directamente en vez de invocar el método sobre `TradingProcessor`).

@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { BullModule, getQueueToken } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { BinanceRestClient, BinanceWsClient } from '@crypto-trader/data-fetcher';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { GatewayModule } from '../gateway/gateway.module';
 import { AppGateway } from '../gateway/app.gateway';
 import { TradingModule } from '../trading/trading.module';
+import { TRADING_QUEUE } from '../trading/trading.service';
 import { ActionGateService } from '../trading/action-gate.service';
 import { PositionActionService } from '../trading/position-action.service';
 import { ReactiveCoordinationModule } from './reactive-coordination.module';
@@ -21,9 +24,16 @@ import {
 } from './market-stream.service';
 import { StreamHealthService } from './stream-health.service';
 import { FastPathService } from './fast-path.service';
+import { MaterialEventService } from './material-event.service';
 
 @Module({
-  imports: [PrismaModule, ReactiveCoordinationModule, GatewayModule, TradingModule],
+  imports: [
+    PrismaModule,
+    ReactiveCoordinationModule,
+    GatewayModule,
+    TradingModule,
+    BullModule.registerQueue({ name: TRADING_QUEUE }),
+  ],
   providers: [
     {
       provide: MARKET_STREAM_WS_CLIENT,
@@ -94,7 +104,35 @@ import { FastPathService } from './fast-path.service';
         ),
       inject: [PrismaService, MarketStreamService, ActionGateService, PositionActionService],
     },
+    {
+      provide: MaterialEventService,
+      useFactory: (
+        prisma: PrismaService,
+        marketStream: MarketStreamService,
+        streamHealth: StreamHealthService,
+        coordination: ReactiveCoordinationPort,
+        tradingQueue: Queue,
+        gateway: AppGateway,
+      ) =>
+        new MaterialEventService(
+          prisma,
+          marketStream,
+          streamHealth,
+          coordination,
+          tradingQueue,
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+          gateway,
+        ),
+      inject: [
+        PrismaService,
+        MarketStreamService,
+        StreamHealthService,
+        REACTIVE_COORDINATION,
+        getQueueToken(TRADING_QUEUE),
+        AppGateway,
+      ],
+    },
   ],
-  exports: [MarketStreamService, StreamHealthService, FastPathService],
+  exports: [MarketStreamService, StreamHealthService, FastPathService, MaterialEventService],
 })
 export class ReactiveModule {}

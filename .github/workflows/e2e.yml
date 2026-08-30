@@ -47,7 +47,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-jwt-secret-32-chars-minimum-ok
       JWT_REFRESH_SECRET: ci-refresh-secret-32-chars-min-ok
-      BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-exactly-32-chars!
+      BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-32-chars-long!
       NODE_ENV: test
       BASE_URL: http://localhost:4200
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'e2e@test.com' }}

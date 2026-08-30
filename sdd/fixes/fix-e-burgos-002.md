@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]              |
 | **Fecha**     | 2026-08-28            |
 | **Autor**     | e-burgos              |
-| **Estado**    | implemented           |
+| **Estado**    | validated             |
 | **Spec**      | N/A (repo-level)      |
 
 ## Problema
@@ -78,9 +78,14 @@ la protección de rama de `main`.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el próximo ciclo]
+> **`validated`** (2026-08-30) — fix correcto, no requiere seguimiento.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
-> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+> Verificado: `.github/workflows/sdd-validate.yml` existe, corre `pnpm sdd:validate` (step
+> "Validate SDD registries"), dispara en `push` a `main` y en todo `pull_request` contra
+> `main` (superset de "todo PR que toque `sdd/**`" — sin filtro `paths` a propósito, según
+> justifica el propio fix_document), y sigue las convenciones de `ci.yml`:
+> `actions/checkout@v4`, `pnpm/action-setup@v4`, `actions/setup-node@v4` con `node-version:
+> 22` y `cache: pnpm`. Contenido del workflow comparado línea por línea contra lo declarado
+> en la solución aplicada.
 
 ---

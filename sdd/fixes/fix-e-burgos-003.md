@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]         |
 | **Fecha**     | 2026-08-29       |
 | **Autor**     | e-burgos         |
-| **Estado**    | implemented      |
+| **Estado**    | validated        |
 | **Spec**      | N/A (repo-level) |
 
 ## Problema
@@ -78,9 +78,15 @@ vuelve a tener una longitud inválida.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> **`validated`** (2026-08-30) — fix correcto, no requiere seguimiento.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
-> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+> Verificado programáticamente: `python3 -c "print(len('ci-encryption-key-32-chars-long!'))"`
+> → `32`. `.github/workflows/ci.yml:48` tiene exactamente ese valor.
+>
+> **Hallazgo adicional durante la validación:** `.github/workflows/e2e.yml:50` tenía el
+> mismo defecto sin corregir (`ci-encryption-key-exactly-32-chars!`, 35 caracteres) y sí
+> tiene un consumidor real vía `decrypt()` (ver detalle en FIX-e-burgos-004). Al no estar
+> `e2e.yml` en el alcance declarado por este fix, se registró y resolvió como fix nuevo
+> — **FIX-e-burgos-004** — en vez de ampliar este documento.
 
 ---

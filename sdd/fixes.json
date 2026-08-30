@@ -45,7 +45,7 @@
       "severity": "medium",
       "created_at": "2026-08-28",
       "resolved_at": "2026-08-28",
-      "validated_at": null,
+      "validated_at": "2026-08-30",
       "title": "El gate de CI que el arnes declara (sdd-validate.yml) no existe: ningun PR valida sdd/**",
       "estimation_hours": 0.5,
       "description": "El dual-harness (CLAUDE.md/AGENTS.md/GEMINI.md, seccion 'TIPADO ESTRICTO DE REGISTROS SDD') afirma que 'el mismo check corre en CI (.github/workflows/sdd-validate.yml, gate de todo PR que toque sdd/**)'. Ese workflow nunca existio en el repo: los unicos workflows son ci.yml, deploy-web.yml y e2e.yml, y ninguno invoca pnpm sdd:validate. La consecuencia es que un commit que deje los registros SDD en rojo (schema invalido, catalogo stale, indice de tasks desincronizado) se mergea sin que nada lo frene, mientras agentes y devs asumen lo contrario por lo que declara el arnes. El kit tampoco lo shippea: INSTALL.md lo lista como paso opcional a copiar del repo origen. Solucion: crear .github/workflows/sdd-validate.yml que corra pnpm sdd:validate en todo push a main y todo PR que toque sdd/**, siguiendo las convenciones de ci.yml (pnpm/action-setup@v4, setup-node@v4 con node 22 y cache pnpm).",
@@ -59,7 +59,7 @@
         "sdd/fixes/fix-e-burgos-002.md"
       ],
       "test_reference": null,
-      "status": "implemented",
+      "status": "validated",
       "cycle": null,
       "usage": {
         "tokens_in": 260000,
@@ -106,7 +106,7 @@
       "severity": "high",
       "created_at": "2026-08-29",
       "resolved_at": "2026-08-29",
-      "validated_at": null,
+      "validated_at": "2026-08-30",
       "title": "BINANCE_KEY_ENCRYPTION_KEY de ci.yml tiene 35 caracteres y no 32: rompe todo test que cifre",
       "estimation_hours": 0.5,
       "description": "El job Lint & Test de .github/workflows/ci.yml exporta BINANCE_KEY_ENCRYPTION_KEY con el valor 'ci-encryption-key-exactly-32-chars!', que pese a su nombre tiene 35 caracteres. getKey() en apps/api/src/users/utils/encryption.util.ts exige exactamente KEY_LENGTH=32 y lanza 'BINANCE_KEY_ENCRYPTION_KEY must be exactly 32 characters'. El valor esta mal desde que se escribio el workflow, pero ningun test recorria el encrypt() real con el entorno de CI: los specs que tocan cifrado setean su propia clave (users.service.spec.ts usa 'dev-encryption-key-32-chars-long', 32 correctos). El primer test que llega a encrypt() sin setearla es trader-data-sources.controller.spec.ts, de spec-e-burgos-004, y destapo la trampa: CI en rojo con 1 failed / 517 passed mientras la corrida local del autor daba 62/62 verde, porque en local la clave sale del .env. Solucion: reemplazar el valor por 'ci-encryption-key-32-chars-long!', de 32 caracteres exactos.",
@@ -121,7 +121,7 @@
         "sdd/fixes/fix-e-burgos-003.md"
       ],
       "test_reference": "apps/api/src/users/trader-data-sources.controller.spec.ts (UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should save encrypted key and return masked value)",
-      "status": "implemented",
+      "status": "validated",
       "cycle": null,
       "usage": {
         "tokens_in": 190000,
@@ -130,6 +130,41 @@
         "approx": true,
         "source": "declared-estimate",
         "model_tier": "claude/opus"
+      }
+    },
+    {
+      "id": "FIX-e-burgos-004",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-004.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-08-30",
+      "resolved_at": "2026-08-30",
+      "validated_at": null,
+      "title": "BINANCE_KEY_ENCRYPTION_KEY de e2e.yml tiene 35 caracteres y no 32 (mismo defecto que FIX-003)",
+      "estimation_hours": 0.3,
+      "description": "Hallazgo durante el cierre/validacion de FIX-e-burgos-003: .github/workflows/e2e.yml exporta BINANCE_KEY_ENCRYPTION_KEY con el valor 'ci-encryption-key-exactly-32-chars!' (35 caracteres, no 32), el mismo defecto que ci.yml tenia antes de FIX-003. getKey() en apps/api/src/users/utils/encryption.util.ts exige KEY_LENGTH=32 exacto tanto para encrypt() como para decrypt(); decrypt() se usa en agent-config-resolver.service.ts, provider-health.service.ts, llm-models.service.ts, trading.processor.ts, trading.service.ts, chat.service.ts, data-source-credential-resolver.service.ts y market.service.ts, rutas que e2e/llm-provider-dashboard.spec.ts y e2e/dashboard.spec.ts ejercitan contra el usuario seed admin@crypto.com (con credenciales GROQ ya guardadas). El workflow si necesita una clave valida de 32 caracteres. No bloqueo ningun merge todavia porque e2e.yml corre solo por workflow_dispatch (no en push/PR). El fix_document de FIX-e-burgos-003 declara como alcance unicamente ci.yml, no e2e.yml, por lo que se registra como fix nuevo en vez de ampliar aquel. Solucion: reemplazar el valor por 'ci-encryption-key-32-chars-long!' (32 caracteres), el mismo ya validado en ci.yml.",
+      "justification": "Un archivo, una linea, sin contratos de API ni entidades nuevas: mismo precedente que FIX-e-burgos-003. No justifica un ciclo SDD propio. No bloquea produccion (workflow manual), pero es la misma clase de defecto latente que FIX-003 corrigio en ci.yml.",
+      "related_modules": [
+        "ci",
+        "apps/api"
+      ],
+      "affected_files": [
+        ".github/workflows/e2e.yml",
+        "sdd/fixes.json",
+        "sdd/fixes/fix-e-burgos-004.md"
+      ],
+      "test_reference": null,
+      "status": "implemented",
+      "cycle": null,
+      "usage": {
+        "tokens_in": 45000,
+        "tokens_out": 3000,
+        "duration_minutes": 6,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
       }
     }
   ]

@@ -158,7 +158,7 @@
       "type": "BUGFIX",
       "severity": "medium",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "validated_at": null,
       "title": "Un clon fresco no puede correr los tests de apps/api: BINANCE_KEY_ENCRYPTION_KEY no tiene default en el setup de Jest",
       "estimation_hours": 0.5,
@@ -172,9 +172,16 @@
         "sdd/fixes.json",
         "sdd/fixes/fix-e-burgos-005.md"
       ],
-      "test_reference": "apps/api/src/users/trader-data-sources.controller.spec.ts (UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should save encrypted key and return masked value)",
-      "status": "pending",
-      "cycle": null
+      "test_reference": "apps/api/src/users/trader-data-sources.controller.spec.ts (UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should save encrypted key and return masked value); full apps/api suite verified green 669/669 both with the var unset and with it pre-set to a different 32-char value",
+      "status": "implemented",
+      "cycle": null,
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     }
   ]
 }

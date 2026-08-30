@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]         |
 | **Fecha**     | 2026-08-30       |
 | **Autor**     | e-burgos         |
-| **Estado**    | pending          |
+| **Estado**    | implemented      |
 | **Spec**      | N/A (repo-level) |
 
 ## Problema
@@ -104,6 +104,41 @@ debe dar 666/666 en verde (hoy da 665/666 con 1 suite fallada).
   (`UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should
   save encrypted key and return masked value`) — es el único spec del repo que ejercita
   `encrypt()` sin declarar la clave, y por lo tanto el que reproduce y verifica el fix.
+
+## Resolución (2026-08-30)
+
+Se implementó la solución propuesta sin cambios respecto al plan:
+
+1. `apps/api/src/test-setup.ts` (nuevo): `process.env.BINANCE_KEY_ENCRYPTION_KEY ||= 'test-encryption-key-32-chars-ok!'` (32 caracteres exactos).
+2. `apps/api/jest.config.js`: agregado `setupFiles: ['<rootDir>/src/test-setup.ts']`.
+3. `.env.example:19`: placeholder corregido a `replace-with-32-char-secret-key!` (32 caracteres exactos).
+
+Se relevó `grep -rn "process\.env\." apps/api/src --include=*.ts | grep -v spec` en busca de
+otras variables en la misma situación (lanzan si faltan). Ninguna otra lo hace:
+`JWT_SECRET`/`JWT_REFRESH_SECRET` tienen fallback (`'dev-secret'` / `'dev-refresh-secret'`)
+salvo en `chat.module.ts`, pero ahí no se lanza excepción al arrancar; `DATABASE_URL` y
+`REDIS_URL` los consumen servicios mockeados en la suite de Jest
+(`moduleNameMapper` → `__mocks__/generated-prisma.ts`); `VOYAGE_API_KEY`/`OPENAI_*` solo se
+leen dentro de un `if`, sin lanzar si faltan. Confirmado corriendo la suite completa con las
+cuatro variables (`BINANCE_KEY_ENCRYPTION_KEY`, `DATABASE_URL`, `JWT_SECRET`,
+`VOYAGE_API_KEY`) unset simultáneamente: solo `BINANCE_KEY_ENCRYPTION_KEY` producía la falla
+original (665/666 → tras el fix, 669/669). No se tocó ninguna otra variable.
+
+**Verificación (ambas direcciones):**
+
+```
+$ env -u BINANCE_KEY_ENCRYPTION_KEY pnpm exec jest --config apps/api/jest.config.js apps/api/src
+Test Suites: 78 passed, 78 total
+Tests:       669 passed, 669 total
+
+$ BINANCE_KEY_ENCRYPTION_KEY='ci-encryption-key-32-chars-long!' pnpm exec jest --config apps/api/jest.config.js apps/api/src
+Test Suites: 78 passed, 78 total
+Tests:       669 passed, 669 total
+```
+
+Se confirmó además, con un spec temporal que aserta
+`process.env.BINANCE_KEY_ENCRYPTION_KEY === 'ci-encryption-key-32-chars-long!'` tras correr
+`setupFiles`, que el default (`||=`) no pisa un valor ya presente en el entorno.
 
 ### Decisión del Reviewer
 

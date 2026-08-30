@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]         |
 | **Fecha**     | 2026-08-30       |
 | **Autor**     | e-burgos         |
-| **Estado**    | implemented      |
+| **Estado**    | validated        |
 | **Spec**      | N/A (repo-level) |
 
 ## Problema
@@ -76,9 +76,20 @@ BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-32-chars-long!
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el próximo ciclo]
+> **`validated`** — sdd-reviewer, 2026-08-30, al cerrar
+> `spec-e-burgos-005-reactive-execution-loop` cycle-01.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> Verificación ejecutada por el reviewer:
+> `grep -rn BINANCE_KEY_ENCRYPTION_KEY .github/workflows/` devuelve el mismo valor de 32
+> caracteres (`ci-encryption-key-32-chars-long!`) en `ci.yml:48` y en `e2e.yml:50` — los dos
+> workflows quedaron consistentes y no queda ninguna otra ocurrencia del valor de 35.
+>
+> **Alcance que este fix NO cubre y que quedó abierto:** los dos fixes corrigieron la clave
+> en los workflows, no la ausencia de un default en el setup de Jest. Un clon fresco sin
+> `.env` sigue fallando `trader-data-sources.controller.spec.ts` en local. Se registró como
+> FIX-e-burgos-005.
 
 ---

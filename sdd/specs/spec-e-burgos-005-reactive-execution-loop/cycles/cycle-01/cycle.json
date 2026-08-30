@@ -34,10 +34,145 @@
   "artifacts": [
     "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-01/artifacts/delivery-split.md"
   ],
-  "metrics": null,
-  "tables_created": [],
-  "endpoints_implemented": [],
+  "metrics": {
+    "tasks_total": 36,
+    "tasks_completed": 32,
+    "tasks_skipped": 4,
+    "story_points": 165,
+    "files_created": [
+      "apps/api/prisma/migrations/20260830120000_add_bot_actions/migration.sql",
+      "apps/api/prisma/migrations/20260830120100_add_reactive_loop_switch/migration.sql",
+      "apps/api/prisma/migrations/20260830120200_add_action_caps_columns/migration.sql",
+      "apps/api/src/orchestrator/cost-harness/reactive-cost-harness.spec.ts",
+      "apps/api/src/reactive/disabled-reactive-coordination.service.ts",
+      "apps/api/src/reactive/fast-path.service.spec.ts",
+      "apps/api/src/reactive/fast-path.service.ts",
+      "apps/api/src/reactive/market-stream.service.spec.ts",
+      "apps/api/src/reactive/market-stream.service.ts",
+      "apps/api/src/reactive/material-event.service.spec.ts",
+      "apps/api/src/reactive/material-event.service.ts",
+      "apps/api/src/reactive/reactive-coordination.module.ts",
+      "apps/api/src/reactive/reactive-coordination.port.ts",
+      "apps/api/src/reactive/reactive-kill-switch.spec.ts",
+      "apps/api/src/reactive/reactive-multi-replica.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.ts",
+      "apps/api/src/reactive/reactive.module.ts",
+      "apps/api/src/reactive/redis-reactive-coordination.service.spec.ts",
+      "apps/api/src/reactive/redis-reactive-coordination.service.ts",
+      "apps/api/src/reactive/stream-health.service.spec.ts",
+      "apps/api/src/reactive/stream-health.service.ts",
+      "apps/api/src/trading/action-gate.service.spec.ts",
+      "apps/api/src/trading/action-gate.service.ts",
+      "apps/api/src/trading/bot-action-counters.spec.ts",
+      "apps/api/src/trading/bot-action-counters.ts",
+      "apps/api/src/trading/dto/list-bot-actions.dto.ts",
+      "apps/api/src/trading/position-action.service.spec.ts",
+      "apps/api/src/trading/position-action.service.ts",
+      "apps/api/src/trading/trading.controller.bot-actions.spec.ts",
+      "apps/api/src/trading/trading.processor.reactive-gate.spec.ts",
+      "apps/api/src/trading/trading.processor.reactive-window.spec.ts",
+      "libs/analysis/src/lib/reactive/index.ts",
+      "libs/analysis/src/lib/reactive/material-event.spec.ts",
+      "libs/analysis/src/lib/reactive/material-event.ts",
+      "libs/analysis/src/lib/reactive/reactive-thresholds.spec.ts",
+      "libs/analysis/src/lib/reactive/reactive-thresholds.ts",
+      "libs/analysis/src/lib/reactive/stream-health.spec.ts",
+      "libs/analysis/src/lib/reactive/stream-health.ts",
+      "libs/trading-engine/src/lib/fast-path.spec.ts",
+      "libs/trading-engine/src/lib/fast-path.ts",
+      "libs/trading-engine/src/lib/risk/action-caps.spec.ts",
+      "libs/trading-engine/src/lib/risk/action-caps.ts"
+    ],
+    "files_modified": [
+      ".github/workflows/e2e.yml",
+      "apps/api/prisma/schema.prisma",
+      "apps/api/src/agents/domain/aggregate-risk.service.spec.ts",
+      "apps/api/src/agents/domain/aggregate-risk.service.ts",
+      "apps/api/src/main.ts",
+      "apps/api/src/orchestrator/cost-harness/scenarios.fixture.ts",
+      "apps/api/src/prisma/prisma.service.ts",
+      "apps/api/src/trading/dto/trading-config.dto.ts",
+      "apps/api/src/trading/trading.controller.ts",
+      "apps/api/src/trading/trading.module.ts",
+      "apps/api/src/trading/trading.processor.isolation.spec.ts",
+      "apps/api/src/trading/trading.processor.ts",
+      "libs/analysis/src/index.ts",
+      "libs/data-fetcher/src/lib/binance/binance-ws.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-ws.client.ts",
+      "libs/shared/src/types/interfaces.ts",
+      "libs/trading-engine/src/lib/index.ts"
+    ],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 4149000,
+      "tokens_out": 383500,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 2649000,
+          "tokens_out": 253500,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/opus": {
+          "tokens_in": 1500000,
+          "tokens_out": 130000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
+  "tables_created": ["bot_actions"],
+  "endpoints_implemented": ["EP-015", "EP-016"],
   "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "issues_found": [
+    "BLOQUEANTE — ReactiveModule no esta importado en apps/api/src/app/app.module.ts: todo src/reactive/ (MarketStreamService, StreamHealthService, FastPathService, MaterialEventService) es inalcanzable en el proceso. grep -rn 'ReactiveModule' apps/api/src devuelve solo su propia declaracion. Con reactiveLoopEnabled=true no hay suscripcion WS, ni fast path, ni adelanto por evento, ni publicacion de salud. Ninguna task declaro app.module.ts en su files[] y el architect describe el grafo de modulos (§7.1) sin asignar dueno al cableado. Los 9 specs de src/reactive/ construyen los servicios con new, no con Test.createTestingModule, asi que nada lo detecta.",
+    "BLOQUEANTE — La notificacion persistente de degradacion del architect §5.3 punto 3 no existe: degradedNotifyAfterMs esta definido en reactive-runtime-thresholds.ts y no lo lee nadie (grep confirma cero lectores fuera del propio archivo de umbrales y su spec). Ninguna task del ciclo la cubre; es un hueco del planner, no una omision del implementor.",
+    "DEUDA — TradingController construye new StreamHealthService(...) a mano (trading.controller.ts ~linea 60) porque TradingModule no puede importar ReactiveModule sin el ciclo que §7.1 prohibe. Dos instancias de la misma clase. La del controller es solo de lectura (sin AppGateway ni MarketStreamService: no publica, no emite transicion, lastKnownState queda vacio y onModuleInit sale por la guarda), asi que no hay bug hoy. Salida correcta: mover EP-015 a un controller propio de ReactiveModule sobre la misma ruta; NO forwardRef.",
+    "DEUDA — La query del ledger de EP-016 vive en el controller (TradingController.listBotActionsForUser usa this.prisma directo), no en trading.service.ts. Es el unico acceso a datos del controller y un precedente contra la separacion del resto del subproyecto; quedo asi porque el files[] de TASK-014 solo permitia tocar el controller. PrismaService no estaba inyectado en ese controller antes de este ciclo.",
+    "DEUDA — Los 3 parametros opcionales del constructor de TradingProcessor (positionAction, coordination, actionGate) existen para no arreglar los mocks de prisma de 11 specs preexistentes. Solo coordination lleva @Optional() y su fallback (DisabledReactiveCoordination) es fail-closed, asi que Nest falla la resolucion si faltan los providers de los otros dos: NO hay fail-open en produccion. Aun asi PassthroughActionGate ejecuta todo y devuelve EXECUTED con detail ACTION_GATE_NOT_INJECTED dentro de la clase cuyo punto es que los caps no se puedan eludir: agregarle un @Optional() por descuido borraria los caps en silencio. Salida correcta: factoria de mock de prisma compartida para esos 11 specs y los tres parametros obligatorios.",
+    "OBSERVACION — CA-003 se verifica con un solo escenario de los 12 congelados: medido por el reviewer, unicamente broken-price-spike adelanta el ciclo, y lo hace por PRICE_MOVED. LEVEL_BREAK y VOLUME_SPIKE nunca se ejercitan en el harness (si en los 10 tests unitarios de libs/analysis/src/lib/reactive/material-event.spec.ts). La condicion de no-vacuidad exige >= 1 y se cumple con lo justo. Ampliar los escenarios impacta al harness hermano de costo de LLM.",
+    "CORREGIDO POR EL REVIEWER — tasks.json de TASK-009/010/027 declaraba rutas de migracion con el placeholder literal YYYYMMDDHHMMSS_; se reemplazaron por las 3 rutas reales. Ahora los 36 files[] del ciclo existen en disco.",
+    "CORREGIDO POR EL REVIEWER — api.json no tenia registrada la modificacion de EP-006/EP-007 que el architect §11 exige (los 3 campos nuevos del body: reactiveLoopEnabled, maxActionsPerHour, minActionIntervalSec). Los DTOs si los declaran en Create y Update. Se registraron status updated + updated_in_cycle 1 + changelog.",
+    "OBSERVACION MENOR — planner.md referencia libs/analysis/src/lib/index.ts en 3 lugares; ese barrel no existe, el real es libs/analysis/src/index.ts. tasks.json ya tenia la ruta correcta, asi que no hay defecto de registro: queda como erratum del documento narrativo.",
+    "OBSERVACION MENOR — libs/analysis/src/lib/reactive/reactive-thresholds.ts documenta sus 5 umbrales con JSDoc de una linea, a diferencia del precedente gate-thresholds.ts que no los comenta. Cuatro expresan una restriccion que el nombre no puede llevar (referencia a RN-6, el default que se pisa en runtime, el denominador del ratio, el piso anti division por cero) y caen dentro de las excepciones de la regla de codigo sin comentarios; solo la de minEvaluationIntervalMs es redundante. No amerita request de cambios."
+  ],
+  "reviewer_report": {
+    "approved": false,
+    "date": "2026-08-30",
+    "ca_results": {
+      "CA-001": "PASS — reactive-kill-switch.spec.ts (7 asserts): con reactiveLoopEnabled=false ActionGateService es passthrough puro (no toca coordinacion ni el ledger, propaga el fallo de execute() sin escribir BLOCKED), MarketStreamService no toma el lease rx:v1:owner:{symbol} ni conecta el WS aunque un config hermano si tenga el loop encendido. trading.processor.reactive-window.spec.ts agrega el caso sin coordinacion inyectada: el re-encolado es identico al previo al ciclo. NOTA: hoy CA-001 se cumple ademas por una razon que NO es la disenada — ReactiveModule no esta montado (ver issues_found).",
+      "CA-002": "PASS (a nivel de servicio) — material-event.service.spec.ts, describe \"secuencia de adelanto (D2)\" + \"regresion: un evento adelanta el unico ciclo de la ventana\": el evento consume el token rx:v1:advance de un solo uso y promueve el job delayed; un segundo evento en la misma ventana llama promote() exactamente una vez; el evento nunca escribe ni extiende rx:v1:window. Una ventana sin evento no adelanta nada y el temporizador queda intacto. NO verificable end-to-end mientras ReactiveModule este huerfano.",
+      "CA-003": "PASS — reactive-cost-harness.spec.ts, 6 asserts sobre los 12 escenarios congelados: un ciclo de decision por ventana con el loop on y off, llamadas al LLM del run reactivo <= baseline POR ESCENARIO, idem en el agregado (y en scoreRun().invocations), a lo sumo un adelanto por escenario, y la condicion de no-vacuidad >= 1. Medido por el reviewer: el numero real de escenarios que adelantan es 1 de 12 (broken-price-spike, por PRICE_MOVED) — cumple con lo justo. Ver la observacion en issues_found.",
+      "CA-004": "PASS — action-gate.service.spec.ts (14 asserts): ActionGateService.authorizeAndRun es la unica puerta y evalua los caps igual para FAST_PATH y LLM_CYCLE. Bloquea BUY por perdida diaria como DISCARDED sin invocar execute(), difiere por cap horario y por cooldown, y el describe \"the hard stop can never be blocked by a cap\" consagra que la salida nunca queda atrapada (evaluateActionCaps exime toda accion REDUCING antes de mirar cap alguno). Ningun parametro del LLM entra en el calculo: los caps salen de columnas de TradingConfig y de conteos sobre bot_actions. fast-path.service.spec.ts verifica que si la puerta bloquea, PositionActionService nunca se invoca.",
+      "CA-005": "PASS con reserva — resolveStreamHealth nunca infiere del precio: decide por edad del ultimo tick (TICK_STALE) y del ultimo heartbeat (HEARTBEAT_STALE), y UNKNOWN/NO_RECORD se trata igual que DEGRADED (fail-closed). Observable por EP-015 GET /trading/stream-health y por el evento WS market:stream-health, emitido solo en la transicion (stream-health.service.spec.ts: no emite en el primer publish ni mientras el estado se repite). material-event.service.spec.ts, describe \"guarda de salud del stream\": con el stream no HEALTHY el disparo por evento se suspende sin efectos laterales, el temporizador + REST siguen intactos, y la suspension no queda pegada al volver a HEALTHY. RESERVA: el punto 3 de §5.3 del architect (Notification persistente tras degradedNotifyAfterMs) no esta implementado.",
+      "CA-006": "PASS — position-action.service.spec.ts, describe \"closeAtMarket (CA-006)\" y el equivalente de la venta parcial: se afirma el ORDEN de invocacion (cancelProtectionOrder.mock.invocationCallOrder anterior al de placeMarketOrder), no solo que se llame. La implementacion es unica: releaseProtectionIfNeeded en PositionActionService, reusada por los cuatro caminos de salida (fast path x3 + executeLLMSell del camino LLM) en vez de reimplementarse en el fast path.",
+      "CA-007": "PASS (a nivel de servicio) — reactive-multi-replica.spec.ts, 2 escenarios con N instancias reales compartiendo un unico store de coordinacion: exactamente una se suscribe al simbolo y el fast path ejecuta una sola vez (TASK-035), y un mismo evento material adelanta exactamente un ciclo en total (TASK-036). Los caps se cuentan sobre bot_actions (estado compartido), nunca sobre memoria de proceso; la coordinacion NO degrada a memoria: sin Redis el driver es DisabledReactiveCoordination y todo queda fail-closed."
+    },
+    "tests": {
+      "sdd:validate": "OK — 18 files valid, cross-checks passed (corrido antes de revisar y despues de cada escritura del cierre)",
+      "nx test api": "666/666 en 77 suites — SOLO con BINANCE_KEY_ENCRYPTION_KEY de 32 caracteres en el entorno. Sin esa variable: 665/666, falla trader-data-sources.controller.spec.ts, defecto ajeno a este ciclo registrado como FIX-e-burgos-005",
+      "nx test analysis": "158/158 en 16 suites",
+      "nx test trading-engine": "134/134 en 7 suites",
+      "nx test data-fetcher": "103/103 en 5 suites (el cliente WS paso de 7 a 22 tests, aditivos)",
+      "nx test shared": "7/7",
+      "nx run-many -t lint": "0 errores, 757 warnings preexistentes de no-explicit-any en los 5 proyectos",
+      "nx run-many -t typecheck": "OK en analysis, trading-engine, data-fetcher y shared (apps/api no expone target typecheck)",
+      "nx build api": "webpack compiled successfully"
+    },
+    "notes": "NO APROBADO. El trabajo entregado es de buena calidad — 36 tasks resueltas (32 done + 4 skipped), los 7 criterios de aceptacion verificados con evidencia, 1068 tests en verde en los 5 subproyectos, lint y build limpios, cero comentarios narrativos nuevos en codigo de implementacion — pero el ciclo no puede marcarse completed por dos huecos del planner, no del implementor: (1) ReactiveModule nunca se importa en app.module.ts, con lo cual la capacidad principal del ciclo es inalcanzable en el proceso y 'entrega 1 desplegable con valor por si sola' (artifacts/delivery-split.md) hoy es falso; (2) la notificacion persistente de degradacion del architect §5.3 punto 3 no tiene task. Ambos requieren que el planner agregue tasks a este ciclo. TASKS SKIPPED (4, todas cierre valido, ninguna pendiente): TASK-006 y TASK-007 absorbidas por TASK-005 (detectMaterialEvent quedo como una unica funcion pura que resuelve los tres tipos de evento, y el spike de volumen se calcula sobre la misma vela); TASK-008 absorbida por TASK-005 + TASK-020 (la composicion del detector no necesito pieza propia); TASK-025 dividida en TASK-035 (entrega 1) y TASK-036 (entrega 2) por la decision de corte del dev del 2026-08-29, su ID no se reutiliza. TELEMETRIA: consolidada sumando el usage ya registrado por las 32 tasks cerradas (2.649.000 in / 253.500 out, todas claude/sonnet — 30 declared-estimate y 2 session-report, por lo que la entrada suma approx: true). La linea claude/opus (1.500.000 / 130.000) es estimacion propia del reviewer y cubre lo que ninguna task registro: los documentos del ciclo (brief 243 lineas, functional 639, planner 651, architect 1339), la coordinacion del fan-out de 9 agentes y esta revision. duration_minutes se OMITE a proposito: ninguna task registro tiempo de pared y el reviewer no inventa un numero. El usage de FIX-e-burgos-004 no se suma acá: es un fix repo-level con cycle null y ya tiene su propio registro en sdd/fixes.json. MODULO Y SPEC: el modulo reactive-execution-loop queda en in_progress_modules con cycles_completed 1 y la spec queda in-progress, lo que seria correcto incluso con el ciclo aprobado — la spec declara un cycle-02 en su §3 (ordenes condicionales de ENTRADA en el exchange) y el validador exige que un modulo en completed_modules tenga su spec en status completed. REGISTRO DE DATOS: trading_configs quedo con updated_in_cycle 1 siguiendo el architect §11, aunque venia de 3; la numeracion de ciclos es por spec y la tabla arrastra el spec que la creo (spec-001), asi que el campo es ambiguo entre specs — el changelog nombra la spec explicitamente para desambiguar. FIXES: FIX-e-burgos-004 pasa a validated (verificado: ci.yml:48 y e2e.yml:50 comparten el mismo valor de 32 caracteres y no queda ninguna ocurrencia del de 35); FIX-e-burgos-002 y 003 ya estaban validated; se registra FIX-e-burgos-005 (pending) por el defecto de robustez ajeno al ciclo. CONTEXTO: los 5 fragmentos aditivos y las filas de la tabla-snapshot global ya estan escritos, de modo que el cierre real solo requiera actualizar el bloque 'Bloqueante' del fragmento de apps/api.",
+    "follow_ups": [
+      "BLOQUEANTE del cierre — planner: crear una task que importe ReactiveModule en apps/api/src/app/app.module.ts y la cierre con un test que instancie AppModule via Test.createTestingModule y afirme que MarketStreamService, FastPathService, MaterialEventService y StreamHealthService resuelven. Un spec que construye servicios con new no prueba que existan en la aplicacion, y es exactamente por eso que la omision sobrevivio a 666 tests verdes.",
+      "BLOQUEANTE del cierre — planner: crear la task de la notificacion persistente de §5.3 punto 3 (Notification con NotificationType.AGENT_ERROR y JSON.stringify({ key: 'streamDegraded', symbol }) cuando la degradacion supera degradedNotifyAfterMs), o bien retirar degradedNotifyAfterMs del archivo de umbrales si la decision es no implementarla. Una perilla sin lector es peor que ninguna perilla.",
+      "cycle-02 o el ciclo que toque trading.module.ts — mover EP-015 a un controller propio de ReactiveModule sobre la misma ruta y eliminar el new StreamHealthService(...) del TradingController. No usar forwardRef: §7.1 prohibe el ciclo entre modulos.",
+      "cycle-02 — mover TradingController.listBotActionsForUser a trading.service.ts y sacar PrismaService del controller.",
+      "cycle-02 — dar a los 11 specs de trading una factoria de mock de prisma compartida, volver obligatorios los 3 parametros opcionales del constructor de TradingProcessor y eliminar PassthroughActionGate.",
+      "cycle-02 — ampliar los 12 escenarios congelados con al menos uno que dispare LEVEL_BREAK y uno que dispare VOLUME_SPIKE, coordinado con el harness hermano de costo de LLM que comparte la fixture.",
+      "cycle-02 — unificar el $transaction de wallet SANDBOX inline de executeLLMSell (trading.processor.ts:1350) con creditSandboxWallet, que ya vive en PositionActionService. Es la mitad que quedo abierta del item de deuda de apps/api/context_prompt.md.",
+      "FIX-e-burgos-005 (pending) — dar a la suite de apps/api un default para BINANCE_KEY_ENCRYPTION_KEY via setupFiles, para que un clon fresco corra en verde sin .env."
+    ]
+  }
 }

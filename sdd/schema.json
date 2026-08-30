@@ -245,7 +245,7 @@
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
         "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": 3,
+        "updated_in_cycle": 1,
         "migration_file": "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
         "columns": {
           "id": {
@@ -428,6 +428,21 @@
             "type": "Float @default(0.005)",
             "constraints": ["NOT NULL"],
             "notes": "NUEVO cycle-03: umbral de cambio significativo de precio de la condicion 3 del gate (default 0.5%). Unico umbral del gate que es per-config; los otros cuatro (banda RSI 40-60, delta RSI 5, edad de snapshot 5 min, edad de decision previa 90 min) son constantes de libs/analysis. DTO: @Min(0.0005) @Max(0.05) en Create y Update o el request entero responde 400"
+          },
+          "reactive_loop_enabled": {
+            "type": "Boolean @default(false)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO spec-005 cycle-01: interruptor maestro del loop reactivo. Nace apagado (CA-001): sin tocarlo el bot se comporta exactamente igual que antes del ciclo. DTO: @IsBoolean() @IsOptional() en Create y Update o el request entero responde 400 (forbidNonWhitelisted)"
+          },
+          "max_actions_per_hour": {
+            "type": "Int @default(6)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO spec-005 cycle-01: cap de acciones por hora movil, por bot. Fuera del alcance del LLM: se evalua en ActionGateService, unica puerta de los dos caminos de ejecucion. DTO: @IsInt() @Min(1) @Max(60) en Create y Update"
+          },
+          "min_action_interval_sec": {
+            "type": "Int @default(60)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO spec-005 cycle-01: cooldown minimo entre acciones ejecutadas, por bot. El stop duro nunca puede ser bloqueado por este cap (architect §3.1). DTO: @IsInt() @Min(5) @Max(3600) en Create y Update"
           }
         },
         "indexes": [
@@ -449,6 +464,12 @@
             "date": "2026-08-17",
             "migration": "20260817160000_add_cost_gate_fields",
             "change": "cycle-03: 2 columnas para el gate determinista pre-LLM (deterministic_gate_enabled, gate_price_change_pct). El interruptor nace apagado; el default de umbral reproduce el comportamiento actual porque sin el interruptor nunca se evalua"
+          },
+          {
+            "cycle": 1,
+            "date": "2026-08-30",
+            "migration": "20260830120100_add_reactive_loop_switch + 20260830120200_add_action_caps_columns",
+            "change": "spec-e-burgos-005 cycle-01 (updated_in_cycle vuelve a 1 porque la numeracion de ciclos es por spec, no global): reactiveLoopEnabled, maxActionsPerHour y minActionIntervalSec para el loop reactivo. Los tres nacen sin alterar el comportamiento: el interruptor apagado y los dos caps solo se evaluan con el interruptor encendido"
           }
         ]
       },
@@ -1089,6 +1110,98 @@
             "cycle": 1,
             "date": "2026-08-19",
             "change": "tabla del flujo legacy registrada en SDD; agregada la columna shared"
+          }
+        ]
+      },
+      "bot_actions": {
+        "module": "reactive-execution-loop",
+        "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
+        "status": "migrated",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260830120000_add_bot_actions/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"],
+            "notes": "dato operativo del bot: sin sentido huerfano, por eso si lleva FK con CASCADE"
+          },
+          "config_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "FK trading_configs(id) ON DELETE CASCADE"
+            ],
+            "notes": "idem user_id: FK con CASCADE"
+          },
+          "kind": {
+            "type": "BotActionKind",
+            "constraints": ["NOT NULL"],
+            "notes": "BUY | SELL_FULL | SELL_PARTIAL | PROTECTION_REARM. La exposicion (aumenta/reduce/neutra) NO se persiste: se deriva con classifyActionExposure para no tener una segunda fuente de verdad"
+          },
+          "source": {
+            "type": "BotActionSource",
+            "constraints": ["NOT NULL"],
+            "notes": "FAST_PATH | LLM_CYCLE. Los caps se cuentan igual para los dos caminos (CA-004)"
+          },
+          "outcome": {
+            "type": "BotActionOutcome",
+            "constraints": ["NOT NULL"],
+            "notes": "EXECUTED | BLOCKED | DEFERRED | SUPERSEDED. Un HOLD del LLM no genera fila: solo las acciones que llegan a la puerta"
+          },
+          "blocked_by": {
+            "type": "BotActionCap",
+            "constraints": ["NULL"],
+            "notes": "ACTIONS_PER_HOUR | MIN_INTERVAL | DAILY_LOSS. Distingue un bloqueo por cap de un HOLD ordinario (EP-016)"
+          },
+          "position_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "Referencia de auditoria SIN FK a proposito: el ledger debe sobrevivir al borrado de lo que referencia; un CASCADE borraria la evidencia y un SET NULL la borraria en silencio"
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "Referencia de auditoria SIN FK, misma razon que position_id"
+          },
+          "detail": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "Motivo legible del outcome (REACTIVE_LOOP_DISABLED, EXECUTION_ERROR, ...)"
+          },
+          "occurred_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"],
+            "notes": "Eje temporal de los dos contadores del cap: count de la ventana movil de 1h y max(occurredAt) del cooldown"
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_bot_actions",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "idx_bot_actions_config_occurred",
+            "type": "INDEX",
+            "columns": ["configId", "occurredAt"]
+          },
+          {
+            "name": "idx_bot_actions_user_occurred",
+            "type": "INDEX",
+            "columns": ["userId", "occurredAt"]
+          }
+        ],
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-08-30",
+            "migration": "20260830120000_add_bot_actions",
+            "change": "spec-e-burgos-005 cycle-01: tabla nueva. Ledger compartido de acciones del bot sobre el que se cuentan los tres caps de frecuencia (CA-004) y que garantiza que el conteo sea estado compartido entre replicas y no memoria de proceso (CA-007). Aditiva: ninguna instalacion existente cambia de conducta, el loop reactivo nace apagado"
           }
         ]
       }

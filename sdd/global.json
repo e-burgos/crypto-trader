@@ -40,8 +40,8 @@
         "libs/analysis",
         "libs/shared"
       ],
-      "description": "Loop de ejecucion dirigido por precio: despertar por evento material sobre stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST",
-      "cycles_completed": 0
+      "description": "Loop de ejecucion dirigido por precio: despertar por evento material sobre stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST. cycle-01 cerrado 2026-08-30 (las 5 capas entregadas, el loop nace apagado). El modulo sigue in-progress porque la spec tiene un cycle-02 declarado en su §3: ordenes condicionales de ENTRADA descansando en el exchange (LIMIT_MAKER colocable, OCO de entrada, trailingDelta), que requiere extender BinanceRestClient y OrderExecutorPort",
+      "cycles_completed": 1
     }
   ],
   "pending_modules": [],

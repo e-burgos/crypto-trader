@@ -197,7 +197,7 @@
       "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
-        "apps/api/prisma/migrations/YYYYMMDDHHMMSS_add_reactive_loop_switch/migration.sql",
+        "apps/api/prisma/migrations/20260830120100_add_reactive_loop_switch/migration.sql",
         "apps/api/src/trading/dto/trading-config.dto.ts"
       ],
       "usage": {
@@ -222,7 +222,7 @@
       "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
-        "apps/api/prisma/migrations/YYYYMMDDHHMMSS_add_action_caps_columns/migration.sql",
+        "apps/api/prisma/migrations/20260830120200_add_action_caps_columns/migration.sql",
         "apps/api/src/trading/dto/trading-config.dto.ts"
       ],
       "usage": {
@@ -670,7 +670,7 @@
       "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
-        "apps/api/prisma/migrations/YYYYMMDDHHMMSS_add_bot_actions/migration.sql",
+        "apps/api/prisma/migrations/20260830120000_add_bot_actions/migration.sql",
         "apps/api/src/prisma/prisma.service.ts"
       ],
       "usage": {

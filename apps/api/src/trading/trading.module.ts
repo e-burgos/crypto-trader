@@ -14,6 +14,8 @@ import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
 import { EvaluationModule } from '../agents/evaluation/evaluation.module';
 import { AgentDomainModule } from '../agents/domain/agent-domain.module';
+import { ReactiveCoordinationModule } from '../reactive/reactive-coordination.module';
+import { ActionGateService } from './action-gate.service';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { AgentDomainModule } from '../agents/domain/agent-domain.module';
     AgentConfigModule,
     EvaluationModule,
     AgentDomainModule,
+    ReactiveCoordinationModule,
   ],
   controllers: [TradingController],
   providers: [
@@ -34,7 +37,8 @@ import { AgentDomainModule } from '../agents/domain/agent-domain.module';
     TradingProcessor,
     PositionActionService,
     ReconciliationService,
+    ActionGateService,
   ],
-  exports: [TradingService, PositionActionService],
+  exports: [TradingService, PositionActionService, ActionGateService],
 })
 export class TradingModule {}

@@ -1,6 +1,6 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
-import { Logger } from '@nestjs/common';
+import { Inject, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -17,6 +17,11 @@ import {
   PositionActionService,
   type DecisionExecutionContext,
 } from './position-action.service';
+import {
+  REACTIVE_COORDINATION,
+  type ReactiveCoordinationPort,
+} from '../reactive/reactive-coordination.port';
+import { DisabledReactiveCoordination } from '../reactive/disabled-reactive-coordination.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -59,6 +64,7 @@ export class TradingProcessor {
   private readonly logger = new Logger(TradingProcessor.name);
   private readonly positionManager = new PositionManager();
   private readonly positionAction: PositionActionService;
+  private readonly coordination: ReactiveCoordinationPort;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -73,10 +79,14 @@ export class TradingProcessor {
     private readonly reconciliationService: ReconciliationService,
     private readonly aggregateRiskService: AggregateRiskService,
     positionAction?: PositionActionService,
+    @Optional()
+    @Inject(REACTIVE_COORDINATION)
+    coordination?: ReactiveCoordinationPort,
   ) {
     this.positionAction =
       positionAction ??
       new PositionActionService(prisma, gateway, notificationsService);
+    this.coordination = coordination ?? new DisabledReactiveCoordination();
   }
 
   @Process('run-cycle')
@@ -559,26 +569,7 @@ export class TradingProcessor {
       );
 
       // 12. Schedule next cycle — uses the same effectiveWaitMinutes computed above.
-      const delay = effectiveWaitMinutes * 60 * 1000;
-
-      // Re-queue only if still running.
-      // NOTE: We intentionally omit jobId here. Using the same static jobId while
-      // the current job is still active causes Bull to return the existing active job
-      // instead of creating a new delayed one, silently stopping the agent.
-      const currentConfig = await this.prisma.tradingConfig.findUnique({
-        where: { id: configId },
-        select: { isRunning: true },
-      });
-      if (currentConfig?.isRunning) {
-        await job.queue.add(
-          'run-cycle',
-          { userId, configId },
-          { delay, removeOnComplete: true },
-        );
-        this.logger.log(
-          `Next cycle for config ${configId} in ${effectiveWaitMinutes}min`,
-        );
-      }
+      await this.scheduleNextCycle(job, userId, configId, effectiveWaitMinutes);
     } catch (err) {
       // Extract Binance-specific error detail from Axios response body
       const httpStatus = (err as any)?.response?.status as number | undefined;
@@ -1203,6 +1194,41 @@ export class TradingProcessor {
         position: closedPosition,
       });
     }
+  }
+
+  private async scheduleNextCycle(
+    job: Job<AgentJobData>,
+    userId: string,
+    configId: string,
+    effectiveWaitMinutes: number,
+  ) {
+    const delay = effectiveWaitMinutes * 60 * 1000;
+
+    // Re-queue only if still running.
+    // NOTE: We intentionally omit jobId here. Using the same static jobId while
+    // the current job is still active causes Bull to return the existing active job
+    // instead of creating a new delayed one, silently stopping the agent.
+    const currentConfig = await this.prisma.tradingConfig.findUnique({
+      where: { id: configId },
+      select: { isRunning: true },
+    });
+    if (!currentConfig?.isRunning) return;
+
+    await job.queue.add(
+      'run-cycle',
+      { userId, configId },
+      { delay, removeOnComplete: true },
+    );
+    if (this.coordination.isHealthy()) {
+      await this.coordination.setJson(
+        `rx:v1:window:${configId}`,
+        { windowEndMs: Date.now() + delay },
+        delay,
+      );
+    }
+    this.logger.log(
+      `Next cycle for config ${configId} in ${effectiveWaitMinutes}min`,
+    );
   }
 
   private async checkOpenPositions(

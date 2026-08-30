@@ -279,12 +279,19 @@
         "TASK-013",
         "TASK-031"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/trading/action-gate.service.ts",
         "apps/api/src/trading/action-gate.service.spec.ts",
         "apps/api/src/trading/trading.module.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 11000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-013",
@@ -396,7 +403,7 @@
         "TASK-029",
         "TASK-028"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/reactive/stream-health.service.ts",
         "apps/api/src/reactive/stream-health.service.spec.ts",
@@ -486,11 +493,18 @@
       "depends_on": [
         "TASK-031"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/trading.processor.reactive-window.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 60000,
+        "tokens_out": 7000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-022",

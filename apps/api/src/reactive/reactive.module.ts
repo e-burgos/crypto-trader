@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto';
 import { BinanceRestClient, BinanceWsClient } from '@crypto-trader/data-fetcher';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
+import { GatewayModule } from '../gateway/gateway.module';
+import { AppGateway } from '../gateway/app.gateway';
 import { ReactiveCoordinationModule } from './reactive-coordination.module';
 import { REACTIVE_COORDINATION } from './reactive-coordination.port';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
@@ -14,9 +16,10 @@ import {
   type MarketStreamRestClient,
   type MarketStreamWsClient,
 } from './market-stream.service';
+import { StreamHealthService } from './stream-health.service';
 
 @Module({
-  imports: [PrismaModule, ReactiveCoordinationModule],
+  imports: [PrismaModule, ReactiveCoordinationModule, GatewayModule],
   providers: [
     {
       provide: MARKET_STREAM_WS_CLIENT,
@@ -53,7 +56,24 @@ import {
         MARKET_STREAM_REST_CLIENT,
       ],
     },
+    {
+      provide: StreamHealthService,
+      useFactory: (
+        coordination: ReactiveCoordinationPort,
+        prisma: PrismaService,
+        gateway: AppGateway,
+        marketStream: MarketStreamService,
+      ) =>
+        new StreamHealthService(
+          coordination,
+          prisma,
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+          gateway,
+          marketStream,
+        ),
+      inject: [REACTIVE_COORDINATION, PrismaService, AppGateway, MarketStreamService],
+    },
   ],
-  exports: [MarketStreamService],
+  exports: [MarketStreamService, StreamHealthService],
 })
 export class ReactiveModule {}

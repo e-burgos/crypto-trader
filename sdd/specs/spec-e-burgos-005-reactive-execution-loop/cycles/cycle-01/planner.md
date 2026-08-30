@@ -537,3 +537,71 @@ llamadas cruzadas de vuelta a `TradingProcessor`:
   método) pasan sin tocarlas. Solo `trading.processor.isolation.spec.ts` necesitó un cambio de
   wiring (la prueba de `creditSandboxWallet`, que se movió, ahora instancia `PositionActionService`
   directamente en vez de invocar el método sobre `TradingProcessor`).
+
+Desvíos de TASK-016/TASK-015 (`market-stream.service.ts`) respecto a puntos de architect.md que no
+quedan completamente especificados (ninguno afecta el invariante de dueño único de §1; son
+decisiones de implementación sobre huecos del contrato):
+
+- **`StreamHealthRecord` no se escribe en Redis desde `MarketStreamService`.** §7.4 describe en
+  prosa que el servicio "publica salud (throttled 5s)", pero §7.2 asigna esa responsabilidad al
+  archivo `stream-health.service.ts` ("Publica y resuelve el estado por símbolo") de TASK-017 —que
+  no existe todavía y depende de TASK-015—, y architect.md no define ninguna clave Redis para este
+  registro (solo lista `rx:v1:owner:`, `rx:v1:window:`, `rx:v1:advance:`, `rx:v1:bot:`).
+  `MarketStreamService` mantiene `connectedAt` / `lastTickAtMs` / `lastHeartbeatAtMs` en memoria por
+  símbolo y los expone vía `getHealthSnapshot(symbol)`; TASK-017 deberá leer este snapshot (o los
+  eventos `symbol-owned` / `symbol-released`) y hacer el `setJson` real a Redis con la clave que
+  defina.
+- **Un solo timer cubre renovación (`ownerRenewIntervalMs`) y barrido de adquisición
+  (`ownerSweepIntervalMs`)**, en vez de dos temporizadores independientes. Ambos umbrales por
+  default valen 10_000ms y architect.md no tiene ningún test que los requiera desacoplados; se
+  simplificó a un único `runOwnershipCycle()` que hace renovación + adquisición en la misma
+  pasada, invocado desde un solo `setInterval(ownerSweepIntervalMs)`.
+- **Superficie de fan-out (eventos `tick`/`candle`/`symbol-owned`/`symbol-released` vía
+  `EventEmitter`, y los getters `getOwnedSymbols`/`isOwner`/`isWarmupComplete`/`getSymbolFilters`)
+  es una decisión de diseño, no un contrato literal de architect.md**, que solo describe el pipeline
+  en prosa (§7.4). Se siguió el mismo patrón que ya usa `BinanceWsClient` (extender `EventEmitter`)
+  para que TASK-018 (`fast-path.service.ts`) y TASK-020 (`material-event.service.ts`) puedan
+  consumir ticks/velas sin acoplarse a los detalles de ownership.
+- **`lotStep`/`minNotional`** se resuelven de forma fire-and-forget al tomar la propiedad (no
+  bloquean la conexión WS ni la suscripción), cacheados por símbolo y expuestos vía
+  `getSymbolFilters(symbol)`.
+
+Desvíos de TASK-017 (`stream-health.service.ts` + EP-015):
+
+- **Decisión sobre publicación compartida (el punto crítico dejado abierto por TASK-015/016):
+  SÍ hace falta.** §5.1 ya lo exige literalmente — habla de `PX = streamHealthTtlMs` sobre el
+  registro, que es vocabulario de `SET ... PX` de Redis, no de una estructura en memoria — y el
+  propio EP-015 (§10.1) tiene que devolver una respuesta correcta sin importar qué réplica atienda
+  el request HTTP, mientras que `MarketStreamService.getHealthSnapshot(symbol)` solo tiene datos en
+  la réplica que efectivamente posee el símbolo. Sin publicación compartida, cualquier réplica que
+  no sea dueña reportaría `UNKNOWN/NO_RECORD` para un símbolo sano en otra réplica, violando el
+  contrato. `StreamHealthService` escribe `StreamHealthRecord` a Redis vía
+  `ReactiveCoordinationPort.setJson` con la clave **`rx:v1:health:{symbol}`** (mismo estilo que
+  `rx:v1:owner:{symbol}` / `rx:v1:window:{configId}`) y TTL `streamHealthTtlMs`, cada
+  `healthPublishIntervalMs`, solo para los símbolos que la réplica actual posee
+  (`MarketStreamService.getOwnedSymbols()` + `getHealthSnapshot()`). La lectura (`resolve()`,
+  usada por EP-015 y por el futuro guard de TASK-023) siempre pasa por `coordination.getJson` +
+  `resolveStreamHealth`, nunca por el snapshot en memoria — así es correcta corra en la réplica que
+  corra.
+- **Instanciación manual de `StreamHealthService` dentro de `TradingController`** (no como
+  provider de Nest en `trading.module.ts`). El architect (§7.1) prohíbe que `TradingModule` importe
+  `ReactiveModule` (para evitar el ciclo, ya que `ReactiveModule` importa `TradingModule`), pero
+  `MarketStreamService` — necesario para el lado "publica" — solo vive en `ReactiveModule`. Esta
+  task tenía además prohibido tocar `trading.module.ts` (otro agente lo está modificando en
+  paralelo). Se resolvió construyendo dos instancias separadas de la misma clase: la de
+  `ReactiveModule` (registrada como provider real, con `MarketStreamService` inyectado, dueña del
+  timer de publicación y de emitir `market:stream-health`) y la de `TradingController` (creada con
+  `new StreamHealthService(...)` en el constructor del controller, usando solo `PrismaService` y
+  `REACTIVE_COORDINATION` — ambos ya resolubles en `TradingModule` porque ya importa `PrismaModule`
+  (global) y `ReactiveCoordinationModule`), sin `MarketStreamService` ni `AppGateway`: esa instancia
+  solo lee (`resolve`/`getHealthForUser`), nunca publica ni emite transición. Es una desviación del
+  estilo habitual de DI del repo (constructor injection puro); el Reviewer debería evaluar si,
+  cuando el otro agente cierre su cambio en `trading.module.ts`, conviene reemplazarlo por un
+  provider real de Nest para `StreamHealthService` en ese módulo.
+- **No se implementó la notificación persistente de §5.3 punto 3** (`Notification` con
+  `NotificationType.AGENT_ERROR` tras `degradedNotifyAfterMs` de degradación sostenida). El título
+  de la task y su `files[]` solo cubren "publica/resuelve/emite transición" (puntos 1 y 2 de §5.3);
+  la notificación persistente no aparece asignada a ninguna task del ciclo (`grep` sobre
+  `planner.md` no encuentra `degradedNotifyAfterMs` fuera de architect.md). Requeriría inyectar
+  `NotificationsService` + resolver "usuarios afectados" por símbolo, fuera del alcance y de los
+  archivos permitidos de esta task. Queda pendiente crear una task dedicada.

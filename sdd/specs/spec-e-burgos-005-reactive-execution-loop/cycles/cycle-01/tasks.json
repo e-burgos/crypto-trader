@@ -403,12 +403,20 @@
         "TASK-029",
         "TASK-028"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/stream-health.service.ts",
         "apps/api/src/reactive/stream-health.service.spec.ts",
-        "apps/api/src/trading/trading.controller.ts"
-      ]
+        "apps/api/src/trading/trading.controller.ts",
+        "apps/api/src/reactive/reactive.module.ts"
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 12000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-018",

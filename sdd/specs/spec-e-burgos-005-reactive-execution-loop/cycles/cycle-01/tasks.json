@@ -340,12 +340,19 @@
         "TASK-030",
         "TASK-029"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/market-stream.service.ts",
         "apps/api/src/reactive/market-stream.service.spec.ts",
         "apps/api/src/reactive/reactive.module.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 15000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-016",
@@ -361,12 +368,19 @@
         "TASK-032",
         "TASK-009"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/market-stream.service.ts",
         "apps/api/src/reactive/market-stream.service.spec.ts",
         "apps/api/src/reactive/reactive.module.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 15000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-017",

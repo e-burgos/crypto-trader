@@ -1,6 +1,7 @@
 export * from './lib/indicators';
 export * from './lib/llm';
 export * from './lib/gate';
+export * from './lib/reactive';
 export {
   captureRateLimits,
   getRateLimits,

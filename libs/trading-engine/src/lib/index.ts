@@ -41,6 +41,24 @@ export type {
   TradeSimulationResult,
 } from './risk/trade-simulation';
 
+export { classifyActionExposure, evaluateActionCaps } from './risk/action-caps';
+export type {
+  BotActionKind,
+  ActionExposure,
+  ActionCapId,
+  ActionCapsInput,
+  ActionCapsDecision,
+} from './risk/action-caps';
+
+export { planFastPath } from './fast-path';
+export type {
+  FastPathActionKind,
+  FastPathPositionSnapshot,
+  FastPathConfigSnapshot,
+  PlanFastPathInput,
+  FastPathPlan,
+} from './fast-path';
+
 export { resolveTradeQuantity } from './sizing';
 export type {
   AegisVerdictValue,

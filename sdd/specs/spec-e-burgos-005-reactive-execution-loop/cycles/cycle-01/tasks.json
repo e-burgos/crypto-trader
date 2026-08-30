@@ -901,6 +901,44 @@
         "approx": true,
         "source": "declared-estimate"
       }
+    },
+    {
+      "id": "TASK-037",
+      "title": "Cablear ReactiveModule en AppModule + test de resolucion por DI (los 4 servicios reactivos resuelven desde AppModule)",
+      "user_stories": [
+        "US-01-020"
+      ],
+      "estimation_hours": 2,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-016",
+        "TASK-017",
+        "TASK-018",
+        "TASK-020"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/app/app.module.ts",
+        "apps/api/src/reactive/reactive-module-wiring.spec.ts"
+      ]
+    },
+    {
+      "id": "TASK-038",
+      "title": "Notificacion persistente AGENT_ERROR cuando la degradacion del stream supera degradedNotifyAfterMs (architect §5.3 punto 3)",
+      "user_stories": [
+        "US-01-017",
+        "US-01-018"
+      ],
+      "estimation_hours": 3,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-017"
+      ],
+      "status": "pending",
+      "files": [
+        "apps/api/src/reactive/stream-health.service.ts",
+        "apps/api/src/reactive/stream-health.service.spec.ts"
+      ]
     }
   ]
 }

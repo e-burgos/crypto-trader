@@ -318,3 +318,31 @@ export interface PlatformStats {
   totalPnl: number;
   activeAgents: number;
 }
+
+// ── Reactive Market Stream ───────────────────────────────
+export interface MarketTick {
+  symbol: string;
+  price: number;
+  timestamp: number;
+}
+
+export interface MarketCandleTick {
+  symbol: string;
+  interval: string;
+  openTime: number;
+  closeTime: number;
+  close: number;
+  volume: number;
+  isClosed: boolean;
+}
+
+export type StreamHealthState = 'HEALTHY' | 'DEGRADED' | 'UNKNOWN';
+
+export interface StreamHealthRecord {
+  symbol: string;
+  ownerId: string;
+  connectedAt: number;
+  lastTickAtMs: number;
+  lastHeartbeatAtMs: number;
+  publishedAt: number;
+}

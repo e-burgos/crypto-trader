@@ -43,7 +43,7 @@
     },
     {
       "id": "TASK-002",
-      "title": "Función pura evaluateActionCaps + classifyActionExposure (contrato exacto architect.md §6.3)",
+      "title": "Funci\u00f3n pura evaluateActionCaps + classifyActionExposure (contrato exacto architect.md \u00a76.3)",
       "user_stories": [
         "US-01-013",
         "US-01-014",
@@ -68,7 +68,7 @@
     },
     {
       "id": "TASK-003",
-      "title": "Función pura resolveStreamHealth (UNKNOWN se trata como degradado en todo consumidor)",
+      "title": "Funci\u00f3n pura resolveStreamHealth (UNKNOWN se trata como degradado en todo consumidor)",
       "user_stories": [
         "US-01-017"
       ],
@@ -94,7 +94,7 @@
     },
     {
       "id": "TASK-004",
-      "title": "Función pura planFastPath (NO invoca evaluateSellPolicy; shouldExitByTime queda fuera)",
+      "title": "Funci\u00f3n pura planFastPath (NO invoca evaluateSellPolicy; shouldExitByTime queda fuera)",
       "user_stories": [
         "US-01-006",
         "US-01-007",
@@ -120,7 +120,7 @@
     },
     {
       "id": "TASK-005",
-      "title": "Función pura detectMaterialEvent (PRICE_MOVED, LEVEL_BREAK, VOLUME_SPIKE, guardas fail-closed)",
+      "title": "Funci\u00f3n pura detectMaterialEvent (PRICE_MOVED, LEVEL_BREAK, VOLUME_SPIKE, guardas fail-closed)",
       "user_stories": [
         "US-01-001",
         "US-01-002",
@@ -148,7 +148,7 @@
     },
     {
       "id": "TASK-006",
-      "title": "ABSORBIDO por TASK-005 — detectMaterialEvent es una única función, no 3 detectores separados (architect.md §4.3)",
+      "title": "ABSORBIDO por TASK-005 \u2014 detectMaterialEvent es una \u00fanica funci\u00f3n, no 3 detectores separados (architect.md \u00a74.3)",
       "user_stories": [
         "US-01-002"
       ],
@@ -160,7 +160,7 @@
     },
     {
       "id": "TASK-007",
-      "title": "ABSORBIDO por TASK-005 — el spike de volumen se calcula sobre @kline_1h normalizado, no sobre ratio directo (architect.md §12.1)",
+      "title": "ABSORBIDO por TASK-005 \u2014 el spike de volumen se calcula sobre @kline_1h normalizado, no sobre ratio directo (architect.md \u00a712.1)",
       "user_stories": [
         "US-01-003"
       ],
@@ -172,7 +172,7 @@
     },
     {
       "id": "TASK-008",
-      "title": "ABSORBIDO por TASK-005 y TASK-020 — la composición de detectores y la garantía de no alargar el temporizador quedan en detectMaterialEvent y en el diseño de D2",
+      "title": "ABSORBIDO por TASK-005 y TASK-020 \u2014 la composici\u00f3n de detectores y la garant\u00eda de no alargar el temporizador quedan en detectMaterialEvent y en el dise\u00f1o de D2",
       "user_stories": [
         "US-01-001",
         "US-01-002",
@@ -187,7 +187,7 @@
     },
     {
       "id": "TASK-009",
-      "title": "Columna reactiveLoopEnabled en trading_configs (migración propia + DTOs, default false)",
+      "title": "Columna reactiveLoopEnabled en trading_configs (migraci\u00f3n propia + DTOs, default false)",
       "user_stories": [
         "US-01-020"
       ],
@@ -235,7 +235,7 @@
     },
     {
       "id": "TASK-011",
-      "title": "Contadores de bot_actions (acciones EXECUTED en la última hora, timestamp de la última) para ActionGateService",
+      "title": "Contadores de bot_actions (acciones EXECUTED en la \u00faltima hora, timestamp de la \u00faltima) para ActionGateService",
       "user_stories": [
         "US-01-013",
         "US-01-014",
@@ -263,7 +263,7 @@
     },
     {
       "id": "TASK-012",
-      "title": "ActionGateService.authorizeAndRun — única puerta (passthrough si loop off, fail-closed, lease de bot, revalidación SUPERSEDED, caps, ledger)",
+      "title": "ActionGateService.authorizeAndRun \u2014 \u00fanica puerta (passthrough si loop off, fail-closed, lease de bot, revalidaci\u00f3n SUPERSEDED, caps, ledger)",
       "user_stories": [
         "US-01-011",
         "US-01-012",
@@ -295,7 +295,7 @@
     },
     {
       "id": "TASK-013",
-      "title": "AggregateRiskService.evaluateDailyLoss (lectura pura) + assertBuyAllowed reusa la misma aritmética",
+      "title": "AggregateRiskService.evaluateDailyLoss (lectura pura) + assertBuyAllowed reusa la misma aritm\u00e9tica",
       "user_stories": [
         "US-01-015"
       ],
@@ -317,7 +317,7 @@
     },
     {
       "id": "TASK-014",
-      "title": "EP-016 GET /trading/actions — ledger consultable de bot_actions (paginado, filtros)",
+      "title": "EP-016 GET /trading/actions \u2014 ledger consultable de bot_actions (paginado, filtros)",
       "user_stories": [
         "US-01-016"
       ],
@@ -327,16 +327,23 @@
         "TASK-012",
         "TASK-027"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.controller.ts",
         "apps/api/src/trading/dto/list-bot-actions.dto.ts",
         "apps/api/src/trading/trading.controller.bot-actions.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 105000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-015",
-      "title": "MarketStreamService — suscripción WS por símbolo bajo el dueño (BinanceWsClient extendido, warmup, fan-out de ticks)",
+      "title": "MarketStreamService \u2014 suscripci\u00f3n WS por s\u00edmbolo bajo el due\u00f1o (BinanceWsClient extendido, warmup, fan-out de ticks)",
       "user_stories": [
         "US-01-020"
       ],
@@ -363,7 +370,7 @@
     },
     {
       "id": "TASK-016",
-      "title": "MarketStreamService — dueño por símbolo (lease Redis rx:v1:owner:{symbol}, renovación CAS, barrido, cierre ordenado)",
+      "title": "MarketStreamService \u2014 due\u00f1o por s\u00edmbolo (lease Redis rx:v1:owner:{symbol}, renovaci\u00f3n CAS, barrido, cierre ordenado)",
       "user_stories": [
         "US-01-019"
       ],
@@ -391,7 +398,7 @@
     },
     {
       "id": "TASK-017",
-      "title": "StreamHealthService (publica/resuelve/emite transición) + EP-015 GET /trading/stream-health",
+      "title": "StreamHealthService (publica/resuelve/emite transici\u00f3n) + EP-015 GET /trading/stream-health",
       "user_stories": [
         "US-01-017"
       ],
@@ -420,7 +427,7 @@
     },
     {
       "id": "TASK-018",
-      "title": "FastPathService — compone planFastPath por tick y delega en PositionActionService vía ActionGateService",
+      "title": "FastPathService \u2014 compone planFastPath por tick y delega en PositionActionService v\u00eda ActionGateService",
       "user_stories": [
         "US-01-006",
         "US-01-007",
@@ -437,7 +444,7 @@
         "TASK-034",
         "TASK-015"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/reactive/fast-path.service.ts",
         "apps/api/src/reactive/fast-path.service.spec.ts",
@@ -446,7 +453,7 @@
     },
     {
       "id": "TASK-019",
-      "title": "Wiring de los 5 puntos de ejecución del camino LLM a actionGate.authorizeAndRun (executeBuy, executeLLMSell, executePartialTakeProfit, closePositionAtMarket, ensureNativeProtection)",
+      "title": "Wiring de los 5 puntos de ejecuci\u00f3n del camino LLM a actionGate.authorizeAndRun (executeBuy, executeLLMSell, executePartialTakeProfit, closePositionAtMarket, ensureNativeProtection)",
       "user_stories": [
         "US-01-011",
         "US-01-012"
@@ -466,7 +473,7 @@
     },
     {
       "id": "TASK-020",
-      "title": "MaterialEventService — secuencia de adelanto D2 (guardas, ventana, token de un solo uso, promote())",
+      "title": "MaterialEventService \u2014 secuencia de adelanto D2 (guardas, ventana, token de un solo uso, promote())",
       "user_stories": [
         "US-01-001",
         "US-01-002",
@@ -490,7 +497,7 @@
     },
     {
       "id": "TASK-021",
-      "title": "Escribir rx:v1:window:{configId} en coordination inmediatamente después del re-encolado de runCycle",
+      "title": "Escribir rx:v1:window:{configId} en coordination inmediatamente despu\u00e9s del re-encolado de runCycle",
       "user_stories": [
         "US-01-001",
         "US-01-002",
@@ -516,7 +523,7 @@
     },
     {
       "id": "TASK-022",
-      "title": "Test de regresión: un evento material adelanta el único ciclo de la ventana, nunca agrega uno ni la pospone",
+      "title": "Test de regresi\u00f3n: un evento material adelanta el \u00fanico ciclo de la ventana, nunca agrega uno ni la pospone",
       "user_stories": [
         "US-01-004"
       ],
@@ -550,7 +557,7 @@
     },
     {
       "id": "TASK-024",
-      "title": "reactive-cost-harness.spec.ts — buildScenarioTicks (interpolación lineal) + assert por escenario + no-vacuidad",
+      "title": "reactive-cost-harness.spec.ts \u2014 buildScenarioTicks (interpolaci\u00f3n lineal) + assert por escenario + no-vacuidad",
       "user_stories": [
         "US-01-005"
       ],
@@ -568,7 +575,7 @@
     },
     {
       "id": "TASK-025",
-      "title": "DIVIDIDO en TASK-035 (entrega 1: una suscripcion y una ejecucion bajo N instancias) y TASK-036 (entrega 2: un evento, un ciclo) — el corte en dos entregas adelanto la mitad que no depende de TASK-021",
+      "title": "DIVIDIDO en TASK-035 (entrega 1: una suscripcion y una ejecucion bajo N instancias) y TASK-036 (entrega 2: un evento, un ciclo) \u2014 el corte en dos entregas adelanto la mitad que no depende de TASK-021",
       "user_stories": [
         "US-01-019"
       ],
@@ -580,7 +587,7 @@
     },
     {
       "id": "TASK-026",
-      "title": "Test de regresión CA-001: con reactiveLoopEnabled=false, ActionGateService es passthrough y MarketStreamService no toma leases",
+      "title": "Test de regresi\u00f3n CA-001: con reactiveLoopEnabled=false, ActionGateService es passthrough y MarketStreamService no toma leases",
       "user_stories": [
         "US-01-020"
       ],
@@ -602,7 +609,7 @@
     },
     {
       "id": "TASK-027",
-      "title": "Tabla bot_actions (4 CREATE TYPE + tabla + índices + FKs sin cascada de auditoría) — migración propia",
+      "title": "Tabla bot_actions (4 CREATE TYPE + tabla + \u00edndices + FKs sin cascada de auditor\u00eda) \u2014 migraci\u00f3n propia",
       "user_stories": [
         "US-01-013",
         "US-01-014",
@@ -676,7 +683,7 @@
     },
     {
       "id": "TASK-030",
-      "title": "Extensiones aditivas de BinanceWsClient — heartbeat ping/pong, ping propio + pong timeout, addStreams/removeStreams, isConnected",
+      "title": "Extensiones aditivas de BinanceWsClient \u2014 heartbeat ping/pong, ping propio + pong timeout, addStreams/removeStreams, isConnected",
       "user_stories": [
         "US-01-017",
         "US-01-020"
@@ -699,7 +706,7 @@
     },
     {
       "id": "TASK-031",
-      "title": "ReactiveCoordinationPort — RedisReactiveCoordination (CAS Lua) + DisabledReactiveCoordination + fábrica por env (nunca degrada a memoria)",
+      "title": "ReactiveCoordinationPort \u2014 RedisReactiveCoordination (CAS Lua) + DisabledReactiveCoordination + f\u00e1brica por env (nunca degrada a memoria)",
       "user_stories": [
         "US-01-019"
       ],

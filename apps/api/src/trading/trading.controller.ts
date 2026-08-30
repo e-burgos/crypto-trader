@@ -30,6 +30,7 @@ import {
   StopAgentsByModeDto,
 } from './dto/trading-config.dto';
 import { UpdateUserRiskPolicyDto } from './dto/user-risk-policy.dto';
+import { ListBotActionsDto } from './dto/list-bot-actions.dto';
 import { generateAgentName } from './trading-agent-utils';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -54,7 +55,7 @@ export class TradingController {
 
   constructor(
     private readonly tradingService: TradingService,
-    prisma: PrismaService,
+    private readonly prisma: PrismaService,
     @Inject(REACTIVE_COORDINATION) coordination: ReactiveCoordinationPort,
   ) {
     this.streamHealthService = new StreamHealthService(
@@ -264,6 +265,72 @@ export class TradingController {
   })
   getStreamHealth(@CurrentUser() user: RequestUser) {
     return this.streamHealthService.getHealthForUser(user.userId);
+  }
+
+  @Get('actions')
+  @ApiOperation({
+    summary: 'Ledger consultable de acciones del bot (paginado, filtrable)',
+  })
+  @ApiQuery({ name: 'configId', required: false, type: String })
+  @ApiQuery({
+    name: 'outcome',
+    required: false,
+    enum: ['EXECUTED', 'BLOCKED', 'DEFERRED', 'SUPERSEDED'],
+  })
+  @ApiQuery({
+    name: 'since',
+    required: false,
+    type: String,
+    example: '2026-08-01T00:00:00Z',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description:
+      'blockedBy distingue un bloqueo por cap de un HOLD ordinario del LLM',
+  })
+  getBotActions(
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListBotActionsDto,
+  ) {
+    return this.listBotActionsForUser(user.userId, query);
+  }
+
+  private async listBotActionsForUser(userId: string, query: ListBotActionsDto) {
+    const limit = query.limit ?? 50;
+
+    const items = await this.prisma.botAction.findMany({
+      where: {
+        userId,
+        ...(query.configId ? { configId: query.configId } : {}),
+        ...(query.outcome ? { outcome: query.outcome } : {}),
+        ...(query.since ? { occurredAt: { gte: new Date(query.since) } } : {}),
+      },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        configId: true,
+        kind: true,
+        source: true,
+        outcome: true,
+        blockedBy: true,
+        positionId: true,
+        decisionId: true,
+        detail: true,
+        occurredAt: true,
+      },
+    });
+
+    const hasMore = items.length > limit;
+    const page = hasMore ? items.slice(0, limit) : items;
+
+    return {
+      items: page,
+      nextCursor: hasMore ? page[page.length - 1].id : null,
+    };
   }
 
   // ── Positions ─────────────────────────────────────────────────────────────

@@ -410,6 +410,25 @@
             "change": "agregado el flag shared al request body"
           }
         ]
+      },
+      {
+        "id": "EP-016",
+        "method": "GET",
+        "path": "/trading/actions",
+        "module": "reactive-execution-loop",
+        "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
+        "status": "implemented",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Ledger consultable de bot_actions: registro de cada acción elegible del bot reactivo, ejecutada, bloqueada por un cap, diferida por lease ocupado o superseded por cambio de posición. Distingue un bloqueo por cap (blockedBy) de un HOLD ordinario del LLM, que no genera fila. Query params opcionales: configId (string), outcome (EXECUTED|BLOCKED|DEFERRED|SUPERSEDED), since (ISO-8601, occurredAt >=), limit (1..200, default 50), cursor (id de la última fila de la página anterior). Paginado por cursor (id, orden occurredAt desc). Guardado por JwtAuthGuard + RolesGuard con @Roles('TRADER'); scope estricto por userId de la fila (bot_actions.userId), no por join contra TradingConfig.",
+        "path_params": [],
+        "required_headers": ["Authorization"],
+        "request_body": {},
+        "responses": {
+          "200": "{ items: [{ id, configId, kind, source, outcome, blockedBy, positionId, decisionId, detail, occurredAt }], nextCursor: string|null }",
+          "401": "JWT ausente o invalido"
+        },
+        "changelog": []
       }
     ]
   }

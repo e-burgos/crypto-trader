@@ -248,11 +248,18 @@
         "TASK-027",
         "TASK-002"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/trading/bot-action-counters.ts",
         "apps/api/src/trading/bot-action-counters.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 6000,
+        "model_tier": "claude/sonnet",
+        "approx": false,
+        "source": "session-report"
+      }
     },
     {
       "id": "TASK-012",

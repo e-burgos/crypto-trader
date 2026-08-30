@@ -7,6 +7,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { GatewayModule } from '../gateway/gateway.module';
 import { AppGateway } from '../gateway/app.gateway';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { NotificationsService } from '../notifications/notifications.service';
 import { TradingModule } from '../trading/trading.module';
 import { TRADING_QUEUE } from '../trading/trading.service';
 import { ActionGateService } from '../trading/action-gate.service';
@@ -31,6 +33,7 @@ import { MaterialEventService } from './material-event.service';
     PrismaModule,
     ReactiveCoordinationModule,
     GatewayModule,
+    NotificationsModule,
     TradingModule,
     BullModule.registerQueue({ name: TRADING_QUEUE }),
   ],
@@ -77,6 +80,7 @@ import { MaterialEventService } from './material-event.service';
         prisma: PrismaService,
         gateway: AppGateway,
         marketStream: MarketStreamService,
+        notifications: NotificationsService,
       ) =>
         new StreamHealthService(
           coordination,
@@ -84,8 +88,15 @@ import { MaterialEventService } from './material-event.service';
           DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
           gateway,
           marketStream,
+          notifications,
         ),
-      inject: [REACTIVE_COORDINATION, PrismaService, AppGateway, MarketStreamService],
+      inject: [
+        REACTIVE_COORDINATION,
+        PrismaService,
+        AppGateway,
+        MarketStreamService,
+        NotificationsService,
+      ],
     },
     {
       provide: FastPathService,

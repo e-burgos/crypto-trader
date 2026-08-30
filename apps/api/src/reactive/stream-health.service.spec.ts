@@ -1,8 +1,12 @@
 import { StreamHealthService, streamHealthKey } from './stream-health.service';
 import { DEFAULT_REACTIVE_RUNTIME_THRESHOLDS } from './reactive-runtime-thresholds';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
+import { NotificationType } from '@crypto-trader/shared';
 import type { StreamHealthRecord } from '@crypto-trader/shared';
-import type { MarketStreamService, SymbolHealthSnapshot } from './market-stream.service';
+import type {
+  MarketStreamService,
+  SymbolHealthSnapshot,
+} from './market-stream.service';
 import type { AppGateway } from '../gateway/app.gateway';
 
 function createFakeCoordination(): ReactiveCoordinationPort & {
@@ -18,13 +22,19 @@ function createFakeCoordination(): ReactiveCoordinationPort & {
     setJson: jest.fn(async (key: string, value: unknown) => {
       store.set(key, value);
     }),
-    getJson: jest.fn(async (key: string) => (store.has(key) ? store.get(key) : null)),
+    getJson: jest.fn(async (key: string) =>
+      store.has(key) ? store.get(key) : null,
+    ),
     isHealthy: jest.fn(() => true),
   };
-  return fake as unknown as ReactiveCoordinationPort & { store: Map<string, unknown> };
+  return fake as unknown as ReactiveCoordinationPort & {
+    store: Map<string, unknown>;
+  };
 }
 
-function createFakePrisma(configs: Array<{ asset: string; pair: string }>) {
+function createFakePrisma(
+  configs: Array<{ asset: string; pair: string; userId?: string }>,
+) {
   return {
     tradingConfig: {
       findMany: jest.fn().mockResolvedValue(configs),
@@ -34,6 +44,12 @@ function createFakePrisma(configs: Array<{ asset: string; pair: string }>) {
 
 function createFakeGateway(): AppGateway {
   return { emitToAll: jest.fn() } as unknown as AppGateway;
+}
+
+function createFakeNotifications(): {
+  create: jest.Mock;
+} {
+  return { create: jest.fn().mockResolvedValue(undefined) };
 }
 
 function createFakeMarketStream(
@@ -68,7 +84,9 @@ describe('StreamHealthService', () => {
         reason: 'NO_RECORD',
         record: null,
       });
-      expect(coordination.getJson).toHaveBeenCalledWith(streamHealthKey('BTCUSDT'));
+      expect(coordination.getJson).toHaveBeenCalledWith(
+        streamHealthKey('BTCUSDT'),
+      );
     });
 
     it('reports HEALTHY for a fresh record within both thresholds', async () => {
@@ -103,7 +121,8 @@ describe('StreamHealthService', () => {
         symbol: 'BTCUSDT',
         ownerId: 'instance-a',
         connectedAt: now - 60_000,
-        lastTickAtMs: now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1,
+        lastTickAtMs:
+          now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1,
         lastHeartbeatAtMs: now,
         publishedAt: now,
       };
@@ -128,7 +147,8 @@ describe('StreamHealthService', () => {
         ownerId: 'instance-a',
         connectedAt: now - 60_000,
         lastTickAtMs: now,
-        lastHeartbeatAtMs: now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamHeartbeatMaxAgeMs - 1,
+        lastHeartbeatAtMs:
+          now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamHeartbeatMaxAgeMs - 1,
         publishedAt: now,
       };
       coordination.store.set(streamHealthKey('BTCUSDT'), record);
@@ -250,7 +270,8 @@ describe('StreamHealthService', () => {
     it('emits market:stream-health on transition healthy -> degraded, but not on the first publish', async () => {
       const coordination = createFakeCoordination();
       const now = Date.now();
-      const staleTick = now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const staleTick =
+        now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
       const marketStream = createFakeMarketStream({
         BTCUSDT: {
           symbol: 'BTCUSDT',
@@ -322,6 +343,156 @@ describe('StreamHealthService', () => {
     });
   });
 
+  describe('sustained degradation notification (architect §5.3 point 3)', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('notifies once per sustained degradation, never per publish tick, and notifies again after a recovery', async () => {
+      jest.useFakeTimers();
+      const start = new Date('2026-01-01T00:00:00.000Z').getTime();
+      jest.setSystemTime(start);
+
+      const coordination = createFakeCoordination();
+      const staleSince =
+        start - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const snapshots: Record<string, SymbolHealthSnapshot | undefined> = {
+        BTCUSDT: {
+          symbol: 'BTCUSDT',
+          ownerId: 'instance-a',
+          connectedAt: start - 120_000,
+          lastTickAtMs: staleSince,
+          lastHeartbeatAtMs: start,
+        },
+      };
+      const marketStream = createFakeMarketStream(snapshots);
+      const prisma = createFakePrisma([
+        { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
+      ]);
+      const notifications = createFakeNotifications();
+      const service = new StreamHealthService(
+        coordination,
+        prisma as never,
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        marketStream,
+        notifications as never,
+      );
+
+      await service.publishOwnedSymbols();
+      expect(notifications.create).not.toHaveBeenCalled();
+
+      jest.setSystemTime(
+        start +
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs -
+          1_000,
+      );
+      await service.publishOwnedSymbols();
+      expect(notifications.create).not.toHaveBeenCalled();
+
+      jest.setSystemTime(
+        start + DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs + 1,
+      );
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+      expect(notifications.create).toHaveBeenNthCalledWith(
+        1,
+        'user-1',
+        NotificationType.AGENT_ERROR,
+        JSON.stringify({ key: 'streamDegraded', symbol: 'BTCUSDT' }),
+      );
+
+      jest.setSystemTime(
+        start +
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs +
+          30_000,
+      );
+      await service.publishOwnedSymbols();
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+
+      const recoveredAt =
+        start +
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs +
+        40_000;
+      jest.setSystemTime(recoveredAt);
+      snapshots.BTCUSDT = {
+        symbol: 'BTCUSDT',
+        ownerId: 'instance-a',
+        connectedAt: start - 120_000,
+        lastTickAtMs: recoveredAt,
+        lastHeartbeatAtMs: recoveredAt,
+      };
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+
+      const redegradedAt = recoveredAt + 1_000;
+      jest.setSystemTime(redegradedAt);
+      snapshots.BTCUSDT = {
+        symbol: 'BTCUSDT',
+        ownerId: 'instance-a',
+        connectedAt: start - 120_000,
+        lastTickAtMs:
+          redegradedAt -
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs -
+          1,
+        lastHeartbeatAtMs: redegradedAt,
+      };
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+
+      jest.setSystemTime(
+        redegradedAt +
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs +
+          1,
+      );
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(2);
+      expect(notifications.create).toHaveBeenNthCalledWith(
+        2,
+        'user-1',
+        NotificationType.AGENT_ERROR,
+        JSON.stringify({ key: 'streamDegraded', symbol: 'BTCUSDT' }),
+      );
+    });
+
+    it('does nothing when no NotificationsService was wired', async () => {
+      jest.useFakeTimers();
+      const start = new Date('2026-01-01T00:00:00.000Z').getTime();
+      jest.setSystemTime(start);
+
+      const coordination = createFakeCoordination();
+      const staleSince =
+        start - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const marketStream = createFakeMarketStream({
+        BTCUSDT: {
+          symbol: 'BTCUSDT',
+          ownerId: 'instance-a',
+          connectedAt: start - 120_000,
+          lastTickAtMs: staleSince,
+          lastHeartbeatAtMs: start,
+        },
+      });
+      const prisma = createFakePrisma([
+        { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
+      ]);
+      const service = new StreamHealthService(
+        coordination,
+        prisma as never,
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        marketStream,
+      );
+
+      await service.publishOwnedSymbols();
+      jest.setSystemTime(
+        start + DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs + 1,
+      );
+
+      await expect(service.publishOwnedSymbols()).resolves.toBeUndefined();
+    });
+  });
+
   describe('lifecycle', () => {
     it('publishes immediately and on an interval when a MarketStreamService is wired', () => {
       jest.useFakeTimers();
@@ -339,11 +510,15 @@ describe('StreamHealthService', () => {
       service.onModuleInit();
       expect(publishSpy).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.healthPublishIntervalMs);
+      jest.advanceTimersByTime(
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.healthPublishIntervalMs,
+      );
       expect(publishSpy).toHaveBeenCalledTimes(2);
 
       service.onApplicationShutdown();
-      jest.advanceTimersByTime(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.healthPublishIntervalMs * 2);
+      jest.advanceTimersByTime(
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.healthPublishIntervalMs * 2,
+      );
       expect(publishSpy).toHaveBeenCalledTimes(2);
 
       jest.useRealTimers();

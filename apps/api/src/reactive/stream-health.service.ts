@@ -1,8 +1,21 @@
-import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
-import type { StreamHealthRecord, StreamHealthState } from '@crypto-trader/shared';
-import { resolveStreamHealth, type StreamHealthReason } from '@crypto-trader/analysis';
+import {
+  Injectable,
+  Logger,
+  OnApplicationShutdown,
+  OnModuleInit,
+} from '@nestjs/common';
+import { NotificationType } from '@crypto-trader/shared';
+import type {
+  StreamHealthRecord,
+  StreamHealthState,
+} from '@crypto-trader/shared';
+import {
+  resolveStreamHealth,
+  type StreamHealthReason,
+} from '@crypto-trader/analysis';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { AppGateway } from '../gateway/app.gateway';
+import type { NotificationsService } from '../notifications/notifications.service';
 import type { MarketStreamService } from './market-stream.service';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
 import type { ReactiveRuntimeThresholds } from './reactive-runtime-thresholds';
@@ -34,9 +47,13 @@ function errorMessage(err: unknown): string {
 }
 
 @Injectable()
-export class StreamHealthService implements OnModuleInit, OnApplicationShutdown {
+export class StreamHealthService
+  implements OnModuleInit, OnApplicationShutdown
+{
   private readonly logger = new Logger(StreamHealthService.name);
   private readonly lastKnownState = new Map<string, StreamHealthState>();
+  private readonly degradedSinceMs = new Map<string, number>();
+  private readonly notifiedDegradations = new Set<string>();
   private publishTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -45,17 +62,22 @@ export class StreamHealthService implements OnModuleInit, OnApplicationShutdown 
     private readonly thresholds: ReactiveRuntimeThresholds,
     private readonly gateway?: AppGateway,
     private readonly marketStream?: MarketStreamService,
+    private readonly notifications?: NotificationsService,
   ) {}
 
   onModuleInit(): void {
     if (!this.marketStream) return;
 
     this.publishOwnedSymbols().catch((err) =>
-      this.logger.error(`Failed to publish stream health: ${errorMessage(err)}`),
+      this.logger.error(
+        `Failed to publish stream health: ${errorMessage(err)}`,
+      ),
     );
     this.publishTimer = setInterval(() => {
       this.publishOwnedSymbols().catch((err) =>
-        this.logger.error(`Failed to publish stream health: ${errorMessage(err)}`),
+        this.logger.error(
+          `Failed to publish stream health: ${errorMessage(err)}`,
+        ),
       );
     }, this.thresholds.healthPublishIntervalMs);
   }
@@ -70,7 +92,9 @@ export class StreamHealthService implements OnModuleInit, OnApplicationShutdown 
     if (!marketStream) return;
 
     await Promise.all(
-      marketStream.getOwnedSymbols().map((symbol) => this.publishSymbol(symbol)),
+      marketStream
+        .getOwnedSymbols()
+        .map((symbol) => this.publishSymbol(symbol)),
     );
   }
 
@@ -93,11 +117,17 @@ export class StreamHealthService implements OnModuleInit, OnApplicationShutdown 
       this.thresholds.streamHealthTtlMs,
     );
 
-    this.checkTransition(symbol, record);
+    const { state, reason } = this.resolveRecord(record);
+    this.checkTransition(symbol, record, state, reason);
+    await this.checkSustainedDegradation(symbol, state);
   }
 
-  private checkTransition(symbol: string, record: StreamHealthRecord): void {
-    const { state, reason } = this.resolveRecord(record);
+  private checkTransition(
+    symbol: string,
+    record: StreamHealthRecord,
+    state: StreamHealthState,
+    reason: StreamHealthReason,
+  ): void {
     const previous = this.lastKnownState.get(symbol);
     this.lastKnownState.set(symbol, state);
 
@@ -117,6 +147,53 @@ export class StreamHealthService implements OnModuleInit, OnApplicationShutdown 
     });
   }
 
+  private async checkSustainedDegradation(
+    symbol: string,
+    state: StreamHealthState,
+  ): Promise<void> {
+    if (state === 'HEALTHY') {
+      this.degradedSinceMs.delete(symbol);
+      this.notifiedDegradations.delete(symbol);
+      return;
+    }
+
+    const now = Date.now();
+    const since = this.degradedSinceMs.get(symbol) ?? now;
+    if (!this.degradedSinceMs.has(symbol))
+      this.degradedSinceMs.set(symbol, since);
+
+    if (this.notifiedDegradations.has(symbol)) return;
+    if (now - since < this.thresholds.degradedNotifyAfterMs) return;
+
+    this.notifiedDegradations.add(symbol);
+    await this.notifyDegradedUsers(symbol);
+  }
+
+  private async notifyDegradedUsers(symbol: string): Promise<void> {
+    if (!this.notifications) return;
+
+    const configs = await this.prisma.tradingConfig.findMany({
+      where: { isRunning: true },
+      select: { userId: true, asset: true, pair: true },
+    });
+
+    const userIds = new Set(
+      (configs as Array<{ userId: string; asset: string; pair: string }>)
+        .filter((config) => `${config.asset}${config.pair}` === symbol)
+        .map((config) => config.userId),
+    );
+
+    await Promise.all(
+      [...userIds].map((userId) =>
+        this.notifications?.create(
+          userId,
+          NotificationType.AGENT_ERROR,
+          JSON.stringify({ key: 'streamDegraded', symbol }),
+        ),
+      ),
+    );
+  }
+
   private resolveRecord(record: StreamHealthRecord | null): {
     state: StreamHealthState;
     reason: StreamHealthReason;
@@ -132,12 +209,16 @@ export class StreamHealthService implements OnModuleInit, OnApplicationShutdown 
   }
 
   async resolve(symbol: string): Promise<StreamHealthStatus> {
-    const record = await this.coordination.getJson<StreamHealthRecord>(streamHealthKey(symbol));
+    const record = await this.coordination.getJson<StreamHealthRecord>(
+      streamHealthKey(symbol),
+    );
     const { state, reason } = this.resolveRecord(record);
     return { symbol, state, reason, record };
   }
 
-  async getHealthForUser(userId: string): Promise<{ symbols: StreamHealthSymbolEntry[] }> {
+  async getHealthForUser(
+    userId: string,
+  ): Promise<{ symbols: StreamHealthSymbolEntry[] }> {
     const configs = await this.prisma.tradingConfig.findMany({
       where: { userId, isRunning: true },
       select: { asset: true, pair: true },
@@ -151,7 +232,9 @@ export class StreamHealthService implements OnModuleInit, OnApplicationShutdown 
       ),
     ];
 
-    const statuses = await Promise.all(symbols.map((symbol) => this.resolve(symbol)));
+    const statuses = await Promise.all(
+      symbols.map((symbol) => this.resolve(symbol)),
+    );
 
     return {
       symbols: statuses.map(({ symbol, state, reason, record }) => ({

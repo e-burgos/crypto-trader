@@ -1,8 +1,14 @@
 import { TradingProcessor } from './trading.processor';
 import type { AegisVerdict } from '../orchestrator/dto/decision-synthesis.dto';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 
 describe('TradingProcessor — resolveBuySizing (TASK-011)', () => {
+  const prismaMock = createTradingPrismaMock();
   const processor = new TradingProcessor(
+    prismaMock,
     {} as any,
     {} as any,
     {} as any,
@@ -13,7 +19,7 @@ describe('TradingProcessor — resolveBuySizing (TASK-011)', () => {
     {} as any,
     {} as any,
     {} as any,
-    {} as any,
+    ...createTradingProcessorCollaborators({ prisma: prismaMock }),
   );
 
   const resolve = (

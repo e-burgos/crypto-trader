@@ -1,4 +1,8 @@
 import { TradingProcessor } from './trading.processor';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 
@@ -21,8 +25,9 @@ describe('TradingProcessor — executeBuy aggregate risk gate (TASK-015)', () =>
   }
 
   function buildProcessor(prisma: any, aggregateRiskService: any) {
+    const prismaMock = createTradingPrismaMock(prisma);
     return new TradingProcessor(
-      prisma,
+      prismaMock,
       gatewayMock as any,
       notificationsMock as any,
       {} as any,
@@ -33,6 +38,12 @@ describe('TradingProcessor — executeBuy aggregate risk gate (TASK-015)', () =>
       {} as any,
       {} as any,
       aggregateRiskService,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        gateway: gatewayMock,
+        notificationsService: notificationsMock,
+        aggregateRiskService,
+      }),
     );
   }
 

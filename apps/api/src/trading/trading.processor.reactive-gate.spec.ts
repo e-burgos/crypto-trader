@@ -1,4 +1,8 @@
 import { TradingProcessor } from './trading.processor';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 
@@ -36,10 +40,17 @@ describe('TradingProcessor — wiring of the LLM_CYCLE path to actionGate.author
     actionGate: { authorizeAndRun: jest.Mock },
     overrides: Partial<Record<string, any>> = {},
   ) {
+    const prismaMock = createTradingPrismaMock(prisma);
+    const gateway = overrides.gateway ?? (gatewayMock as any);
+    const notificationsService =
+      overrides.notificationsService ?? (notificationsMock as any);
+    const aggregateRiskService =
+      overrides.aggregateRiskService ?? (aggregateRiskServiceMock as any);
+
     return new TradingProcessor(
-      prisma,
-      overrides.gateway ?? (gatewayMock as any),
-      overrides.notificationsService ?? (notificationsMock as any),
+      prismaMock,
+      gateway,
+      notificationsService,
       {} as any,
       {} as any,
       {} as any,
@@ -47,10 +58,14 @@ describe('TradingProcessor — wiring of the LLM_CYCLE path to actionGate.author
       {} as any,
       {} as any,
       {} as any,
-      overrides.aggregateRiskService ?? (aggregateRiskServiceMock as any),
-      undefined,
-      undefined,
-      actionGate as any,
+      aggregateRiskService,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        gateway,
+        notificationsService,
+        aggregateRiskService,
+        actionGate: actionGate as any,
+      }),
     );
   }
 

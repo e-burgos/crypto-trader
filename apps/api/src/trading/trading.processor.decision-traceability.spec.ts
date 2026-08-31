@@ -1,4 +1,8 @@
 import { TradingProcessor } from './trading.processor';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 
 describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => {
   const gatewayMock = { emitToUser: jest.fn() };
@@ -9,8 +13,9 @@ describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => 
   };
 
   function buildProcessor(prisma: any) {
+    const prismaMock = createTradingPrismaMock(prisma);
     return new TradingProcessor(
-      prisma,
+      prismaMock,
       gatewayMock as any,
       notificationsMock as any,
       {} as any,
@@ -21,6 +26,12 @@ describe('TradingProcessor — Trade.decisionId traceability (TASK-016)', () => 
       {} as any,
       {} as any,
       aggregateRiskServiceMock as any,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        gateway: gatewayMock,
+        notificationsService: notificationsMock,
+        aggregateRiskService: aggregateRiskServiceMock,
+      }),
     );
   }
 

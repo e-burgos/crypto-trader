@@ -1,4 +1,8 @@
 import { TradingProcessor } from './trading.processor';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 
 const mockGetKlines = jest.fn();
 
@@ -76,8 +80,9 @@ describe('TradingProcessor — deterministic gate wiring (TASK-002, TASK-003)', 
   }
 
   function buildProcessor(prisma: any, orchestratorService: any, decisionGateService: any) {
+    const prismaMock = createTradingPrismaMock(prisma);
     return new TradingProcessor(
-      prisma,
+      prismaMock,
       gatewayMock as any,
       notificationsMock as any,
       {} as any,
@@ -88,6 +93,11 @@ describe('TradingProcessor — deterministic gate wiring (TASK-002, TASK-003)', 
       evaluationServiceMock as any,
       {} as any,
       {} as any,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        gateway: gatewayMock,
+        notificationsService: notificationsMock,
+      }),
     );
   }
 

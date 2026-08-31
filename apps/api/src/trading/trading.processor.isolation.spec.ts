@@ -1,5 +1,9 @@
 import { TradingProcessor } from './trading.processor';
 import { PositionActionService } from './position-action.service';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 
@@ -11,10 +15,17 @@ describe('TradingProcessor — Isolation & Atomicity', () => {
   };
 
   function buildProcessor(prisma: any, overrides: Partial<Record<string, any>> = {}) {
+    const prismaMock = createTradingPrismaMock(prisma);
+    const gateway = overrides.gateway ?? (gatewayMock as any);
+    const notificationsService =
+      overrides.notificationsService ?? (notificationsMock as any);
+    const aggregateRiskService =
+      overrides.aggregateRiskService ?? (aggregateRiskServiceMock as any);
+
     return new TradingProcessor(
-      prisma,
-      overrides.gateway ?? (gatewayMock as any),
-      overrides.notificationsService ?? (notificationsMock as any),
+      prismaMock,
+      gateway,
+      notificationsService,
       overrides.usersService ?? ({} as any),
       overrides.marketService ?? ({} as any),
       overrides.orchestratorService ?? ({} as any),
@@ -22,7 +33,13 @@ describe('TradingProcessor — Isolation & Atomicity', () => {
       overrides.agentConfigResolver ?? ({} as any),
       overrides.evaluationService ?? ({} as any),
       overrides.reconciliationService ?? ({} as any),
-      overrides.aggregateRiskService ?? (aggregateRiskServiceMock as any),
+      aggregateRiskService,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        gateway,
+        notificationsService,
+        aggregateRiskService,
+      }),
     );
   }
 

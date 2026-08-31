@@ -1,6 +1,6 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
-import { Inject, Logger, Optional } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -20,13 +20,11 @@ import {
 import {
   ActionGateService,
   type ActionRequest,
-  type ActionResult,
 } from './action-gate.service';
 import {
   REACTIVE_COORDINATION,
   type ReactiveCoordinationPort,
 } from '../reactive/reactive-coordination.port';
-import { DisabledReactiveCoordination } from '../reactive/disabled-reactive-coordination.service';
 
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
@@ -66,35 +64,10 @@ interface AgentJobData {
   configId: string;
 }
 
-interface ActionGatePort {
-  authorizeAndRun<T>(
-    request: ActionRequest,
-    execute: () => Promise<T>,
-  ): Promise<ActionResult<T>>;
-}
-
-class PassthroughActionGate implements ActionGatePort {
-  async authorizeAndRun<T>(
-    _request: ActionRequest,
-    execute: () => Promise<T>,
-  ): Promise<ActionResult<T>> {
-    const value = await execute();
-    return {
-      outcome: 'EXECUTED',
-      blockedBy: null,
-      detail: 'ACTION_GATE_NOT_INJECTED',
-      value,
-    };
-  }
-}
-
 @Processor(TRADING_QUEUE)
 export class TradingProcessor {
   private readonly logger = new Logger(TradingProcessor.name);
   private readonly positionManager = new PositionManager();
-  private readonly positionAction: PositionActionService;
-  private readonly coordination: ReactiveCoordinationPort;
-  private readonly actionGate: ActionGatePort;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -108,18 +81,11 @@ export class TradingProcessor {
     private readonly evaluationService: EvaluationService,
     private readonly reconciliationService: ReconciliationService,
     private readonly aggregateRiskService: AggregateRiskService,
-    positionAction?: PositionActionService,
-    @Optional()
+    private readonly positionAction: PositionActionService,
     @Inject(REACTIVE_COORDINATION)
-    coordination?: ReactiveCoordinationPort,
-    actionGate?: ActionGateService,
-  ) {
-    this.positionAction =
-      positionAction ??
-      new PositionActionService(prisma, gateway, notificationsService);
-    this.coordination = coordination ?? new DisabledReactiveCoordination();
-    this.actionGate = actionGate ?? new PassthroughActionGate();
-  }
+    private readonly coordination: ReactiveCoordinationPort,
+    private readonly actionGate: ActionGateService,
+  ) {}
 
   private buildActionRequest(params: {
     userId: string;

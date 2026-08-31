@@ -1,4 +1,8 @@
 import { TradingProcessor } from './trading.processor';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 
 describe('TradingProcessor — reactive window write on re-queue', () => {
   function buildProcessor(
@@ -6,8 +10,9 @@ describe('TradingProcessor — reactive window write on re-queue', () => {
     coordination: any,
     queueAddMock: jest.Mock,
   ) {
+    const prismaMock = createTradingPrismaMock(prisma);
     const processor = new TradingProcessor(
-      prisma,
+      prismaMock,
       {} as any,
       {} as any,
       {} as any,
@@ -18,8 +23,10 @@ describe('TradingProcessor — reactive window write on re-queue', () => {
       {} as any,
       {} as any,
       {} as any,
-      undefined,
-      coordination,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        coordination,
+      }),
     );
     const job = {
       data: { userId: 'user-1', configId: 'config-A' },
@@ -115,15 +122,16 @@ describe('TradingProcessor — reactive window write on re-queue', () => {
     expect(coordination.setJson).not.toHaveBeenCalled();
   });
 
-  it('falls back to a disabled (unhealthy) coordination port when none is injected, so the cycle behaves exactly as before this task', async () => {
+  it('uses the disabled (unhealthy) coordination port, so the cycle behaves exactly as before this task', async () => {
     const prisma = {
       tradingConfig: {
         findUnique: jest.fn().mockResolvedValue({ isRunning: true }),
       },
     };
     const queueAddMock = jest.fn().mockResolvedValue(undefined);
+    const prismaMock = createTradingPrismaMock(prisma);
     const processor = new TradingProcessor(
-      prisma as any,
+      prismaMock,
       {} as any,
       {} as any,
       {} as any,
@@ -134,6 +142,7 @@ describe('TradingProcessor — reactive window write on re-queue', () => {
       {} as any,
       {} as any,
       {} as any,
+      ...createTradingProcessorCollaborators({ prisma: prismaMock }),
     );
     const job = {
       data: { userId: 'user-1', configId: 'config-A' },

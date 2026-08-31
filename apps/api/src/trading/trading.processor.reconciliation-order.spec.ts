@@ -1,5 +1,9 @@
 import { TradingProcessor } from './trading.processor';
 import { encrypt } from '../users/utils/encryption.util';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 
 describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-013, RN-07)', () => {
   const originalKey = process.env.BINANCE_KEY_ENCRYPTION_KEY;
@@ -70,8 +74,9 @@ describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-0
 
     const notificationsService = { create: jest.fn().mockResolvedValue({}) };
 
+    const prismaMock = createTradingPrismaMock(prisma);
     const processor = new TradingProcessor(
-      prisma as any,
+      prismaMock,
       {} as any,
       notificationsService as any,
       {} as any,
@@ -82,6 +87,10 @@ describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-0
       {} as any,
       reconciliationService as any,
       {} as any,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        notificationsService,
+      }),
     );
 
     await processor.runCycle({
@@ -124,8 +133,9 @@ describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-0
     };
     const notificationsService = { create: jest.fn().mockResolvedValue({}) };
 
+    const prismaMock = createTradingPrismaMock(prisma);
     const processor = new TradingProcessor(
-      prisma as any,
+      prismaMock,
       {} as any,
       notificationsService as any,
       {} as any,
@@ -136,6 +146,10 @@ describe('TradingProcessor — reconciliation runs as step 0 of runCycle (TASK-0
       {} as any,
       reconciliationService as any,
       {} as any,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        notificationsService,
+      }),
     );
 
     await processor.runCycle({

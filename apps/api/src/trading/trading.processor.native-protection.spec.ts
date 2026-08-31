@@ -1,4 +1,8 @@
 import { TradingProcessor } from './trading.processor';
+import {
+  createTradingPrismaMock,
+  createTradingProcessorCollaborators,
+} from './__mocks__/trading-processor-deps';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 
@@ -37,8 +41,9 @@ describe('TradingProcessor — native SL/TP protection on BUY (TASK-012)', () =>
   };
 
   function buildProcessor(prisma: any) {
+    const prismaMock = createTradingPrismaMock(prisma);
     return new TradingProcessor(
-      prisma,
+      prismaMock,
       gatewayMock as any,
       notificationsMock as any,
       {} as any,
@@ -49,6 +54,12 @@ describe('TradingProcessor — native SL/TP protection on BUY (TASK-012)', () =>
       {} as any,
       {} as any,
       aggregateRiskServiceMock as any,
+      ...createTradingProcessorCollaborators({
+        prisma: prismaMock,
+        gateway: gatewayMock,
+        notificationsService: notificationsMock,
+        aggregateRiskService: aggregateRiskServiceMock,
+      }),
     );
   }
 

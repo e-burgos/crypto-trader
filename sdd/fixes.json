@@ -3,7 +3,12 @@
   "_description": "Global fixes index. Each fix maps to its owning spec via spec_id. Fixes not tied to a spec have spec_id: null and live in sdd/fixes.md. Spec-scoped fixes live in sdd/specs/{spec-id}/fixes.md. Maintained by: sdd-orchestrator.",
   "_version": "3.0.0",
   "_convention": "Fix ID format: FIX-[gh-user]-[spec-NNN]-[seq] for spec-scoped fixes. FIX-[gh-user]-[seq] for repo-level fixes.",
-  "_keywords": ["[FIX]", "[BUGFIX]", "[HOTFIX]", "[IMPROVEMENT]"],
+  "_keywords": [
+    "[FIX]",
+    "[BUGFIX]",
+    "[HOTFIX]",
+    "[IMPROVEMENT]"
+  ],
   "fixes": [
     {
       "id": "FIX-e-burgos-001",
@@ -19,7 +24,9 @@
       "estimation_hours": 0.5,
       "description": "sdd/scripts/rebuild-catalog.mjs solo detecta 'skill.md' en minúsculas, pero las skills de este repo están versionadas como sdd/skills/<dir>/SKILL.md (requisito del descubrimiento de skills de Claude Code vía el symlink .claude/skills -> ../sdd/skills en un filesystem case-sensitive). buildCatalog() devuelve skills vacío y el chequeo de frescura de catalog.json falla siempre; regenerar el catálogo vacía la sección skills del visor, y las entradas actuales apuntan a un skill.md inexistente (404 en el visor). Solución: detectar SKILL.md o skill.md registrando el nombre real del archivo, y relajar skills[].file en catalog.schema.json de const 'skill.md' a enum ['skill.md', 'SKILL.md'].",
       "justification": "Bloquea el arranque del cycle-01 de spec-e-burgos-001-agents-simplification: sin sdd:validate en verde el ciclo no queda registrado y ningún commit es válido; el mismo check es gate de CI para todo PR que toque sdd/**. Es un defecto de tooling del arnés, ajeno al alcance de la spec, y no justifica un ciclo SDD propio (2 archivos, sin contratos de API ni entidades nuevas).",
-      "related_modules": ["sdd-harness"],
+      "related_modules": [
+        "sdd-harness"
+      ],
       "affected_files": [
         "sdd/scripts/rebuild-catalog.mjs",
         "sdd/schemas/catalog.schema.json",
@@ -43,7 +50,9 @@
       "estimation_hours": 0.5,
       "description": "El dual-harness (CLAUDE.md/AGENTS.md/GEMINI.md, seccion 'TIPADO ESTRICTO DE REGISTROS SDD') afirma que 'el mismo check corre en CI (.github/workflows/sdd-validate.yml, gate de todo PR que toque sdd/**)'. Ese workflow nunca existio en el repo: los unicos workflows son ci.yml, deploy-web.yml y e2e.yml, y ninguno invoca pnpm sdd:validate. La consecuencia es que un commit que deje los registros SDD en rojo (schema invalido, catalogo stale, indice de tasks desincronizado) se mergea sin que nada lo frene, mientras agentes y devs asumen lo contrario por lo que declara el arnes. El kit tampoco lo shippea: INSTALL.md lo lista como paso opcional a copiar del repo origen. Solucion: crear .github/workflows/sdd-validate.yml que corra pnpm sdd:validate en todo push a main y todo PR que toque sdd/**, siguiendo las convenciones de ci.yml (pnpm/action-setup@v4, setup-node@v4 con node 22 y cache pnpm).",
       "justification": "Es un defecto de tooling del arnes, ajeno al alcance de cualquier spec de producto: no toca contrato de API, ni modulos de dominio, ni schema.json, y se resuelve con un solo archivo nuevo. Mismo precedente que FIX-e-burgos-001. No puede esperar un ciclo SDD porque es el gate que protege la integridad de los registros de todos los ciclos siguientes: cada dia sin el es otra ventana para mergear sdd/ en rojo, y el arnes ya promete que la ventana esta cerrada.",
-      "related_modules": ["sdd-harness"],
+      "related_modules": [
+        "sdd-harness"
+      ],
       "affected_files": [
         ".github/workflows/sdd-validate.yml",
         "sdd/fixes.json",
@@ -75,7 +84,9 @@
       "estimation_hours": 1,
       "description": "SettingsDataSourcesPage agrupaba con una lista hardcodeada CATEGORY_ORDER = [PRICE, NEWS, ONCHAIN, SOCIAL, ALTERNATIVE] que no coincide con el tipo canonico DataSourceCategoryType de libs/shared: la unica interseccion es NEWS, y el filter descartaba en silencio toda categoria fuera de la lista, ocultando 7 de las 8 fuentes mientras la barra de resumen seguia contando 8. Corregido derivando las etiquetas del tipo canonico (Record<DataSourceCategoryType, string>, de modo que el compilador exige una etiqueta por valor) y agregando las categorias desconocidas al final en vez de descartarlas. Incluye dos defectos de presentacion de la misma tarjeta: el nombre truncado a cero por compartir fila con los badges, y la categoria renderizada como Defi_onchain.",
       "justification": "El cycle-01 ya esta cerrado y validado. Es un defecto de presentacion del frontend del mismo ciclo, sin cambios de contrato de API, de entidades ni de resolucion de credenciales: tres archivos de UI y sus tests. No justifica un ciclo SDD propio.",
-      "related_modules": ["market-data-credentials"],
+      "related_modules": [
+        "market-data-credentials"
+      ],
       "affected_files": [
         "apps/web/src/components/settings/data-source-categories.ts",
         "apps/web/src/pages/dashboard/settings/data-sources.tsx",
@@ -100,7 +111,10 @@
       "estimation_hours": 0.5,
       "description": "El job Lint & Test de .github/workflows/ci.yml exporta BINANCE_KEY_ENCRYPTION_KEY con el valor 'ci-encryption-key-exactly-32-chars!', que pese a su nombre tiene 35 caracteres. getKey() en apps/api/src/users/utils/encryption.util.ts exige exactamente KEY_LENGTH=32 y lanza 'BINANCE_KEY_ENCRYPTION_KEY must be exactly 32 characters'. El valor esta mal desde que se escribio el workflow, pero ningun test recorria el encrypt() real con el entorno de CI: los specs que tocan cifrado setean su propia clave (users.service.spec.ts usa 'dev-encryption-key-32-chars-long', 32 correctos). El primer test que llega a encrypt() sin setearla es trader-data-sources.controller.spec.ts, de spec-e-burgos-004, y destapo la trampa: CI en rojo con 1 failed / 517 passed mientras la corrida local del autor daba 62/62 verde, porque en local la clave sale del .env. Solucion: reemplazar el valor por 'ci-encryption-key-32-chars-long!', de 32 caracteres exactos.",
       "justification": "Bloquea el merge del PR #58 (spec-e-burgos-004) con una falla que no pertenece a esa spec: el defecto esta en la configuracion de CI, no en el codigo del ciclo. Un archivo, una linea, sin contratos de API ni entidades nuevas: no justifica un ciclo SDD propio. Se aplica sobre la branch del PR en vez de un PR aparte contra main porque asi el PR queda verde de inmediato y el arreglo llega a main con el mismo merge, sin encadenar dependencias entre PRs.",
-      "related_modules": ["ci", "apps/api"],
+      "related_modules": [
+        "ci",
+        "apps/api"
+      ],
       "affected_files": [
         ".github/workflows/ci.yml",
         "sdd/fixes.json",
@@ -132,7 +146,10 @@
       "estimation_hours": 0.3,
       "description": "Hallazgo durante el cierre/validacion de FIX-e-burgos-003: .github/workflows/e2e.yml exporta BINANCE_KEY_ENCRYPTION_KEY con el valor 'ci-encryption-key-exactly-32-chars!' (35 caracteres, no 32), el mismo defecto que ci.yml tenia antes de FIX-003. getKey() en apps/api/src/users/utils/encryption.util.ts exige KEY_LENGTH=32 exacto tanto para encrypt() como para decrypt(); decrypt() se usa en agent-config-resolver.service.ts, provider-health.service.ts, llm-models.service.ts, trading.processor.ts, trading.service.ts, chat.service.ts, data-source-credential-resolver.service.ts y market.service.ts, rutas que e2e/llm-provider-dashboard.spec.ts y e2e/dashboard.spec.ts ejercitan contra el usuario seed admin@crypto.com (con credenciales GROQ ya guardadas). El workflow si necesita una clave valida de 32 caracteres. No bloqueo ningun merge todavia porque e2e.yml corre solo por workflow_dispatch (no en push/PR). El fix_document de FIX-e-burgos-003 declara como alcance unicamente ci.yml, no e2e.yml, por lo que se registra como fix nuevo en vez de ampliar aquel. Solucion: reemplazar el valor por 'ci-encryption-key-32-chars-long!' (32 caracteres), el mismo ya validado en ci.yml.",
       "justification": "Un archivo, una linea, sin contratos de API ni entidades nuevas: mismo precedente que FIX-e-burgos-003. No justifica un ciclo SDD propio. No bloquea produccion (workflow manual), pero es la misma clase de defecto latente que FIX-003 corrigio en ci.yml.",
-      "related_modules": ["ci", "apps/api"],
+      "related_modules": [
+        "ci",
+        "apps/api"
+      ],
       "affected_files": [
         ".github/workflows/e2e.yml",
         "sdd/fixes.json",
@@ -164,7 +181,10 @@
       "estimation_hours": 0.5,
       "description": "Detectado por el sdd-reviewer al cerrar spec-e-burgos-005 cycle-01. apps/api/src/users/trader-data-sources.controller.spec.ts falla en todo clon fresco del repo: getKey() (apps/api/src/users/utils/encryption.util.ts:8-13) exige BINANCE_KEY_ENCRYPTION_KEY con exactamente 32 caracteres, y apps/api/jest.config.js no declara setupFiles ni globalSetup que le den un default. En CI pasa porque ci.yml:48 la define en el env del job (FIX-e-burgos-003); en la maquina del autor pasa porque sale del .env; en un clon nuevo no existe y la suite queda 665/666. .env.example:19 la documenta con el placeholder '<exactly-32-chars-secret-key-here>', que ni siquiera tiene 32 caracteres, asi que copiar .env.example tampoco arregla la corrida. Reproducido por el reviewer con: env -u BINANCE_KEY_ENCRYPTION_KEY pnpm exec jest --config apps/api/jest.config.js apps/api/src/users/trader-data-sources.controller.spec.ts -> 1 failed / 4 passed. Es la tercera aparicion de la misma familia que FIX-e-burgos-003 (ci.yml) y FIX-e-burgos-004 (e2e.yml): aquellos corrigieron el VALOR de la clave en los workflows, ninguno la AUSENCIA de un default para la corrida local. Solucion propuesta: apps/api/src/test-setup.ts con process.env.BINANCE_KEY_ENCRYPTION_KEY ||= <32 chars> (solo si no viene del entorno, para no pisar el de CI), declarado como setupFiles en apps/api/jest.config.js, y placeholder de .env.example corregido a 32 caracteres reales.",
       "justification": "Defecto de infraestructura de tests, no de contrato de negocio: no toca entidades, endpoints ni componentes, y ninguna historia de usuario lo cubre. Un archivo de setup y una linea de configuracion. Mismo precedente que FIX-e-burgos-003 y FIX-e-burgos-004. Se registra en vez de arreglarse dentro de spec-e-burgos-005 cycle-01 porque es anterior y ajeno a ese ciclo (el spec que falla pertenece a spec-e-burgos-004) y mezclarlo habria contaminado el diff del cierre.",
-      "related_modules": ["apps/api", "ci"],
+      "related_modules": [
+        "apps/api",
+        "ci"
+      ],
       "affected_files": [
         "apps/api/src/test-setup.ts",
         "apps/api/jest.config.js",
@@ -182,6 +202,129 @@
         "source": "declared-estimate",
         "model_tier": "claude/sonnet"
       }
+    },
+    {
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-005-reactive-execution-loop",
+      "type": "IMPROVEMENT",
+      "severity": "medium",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "title": "Una sola instancia de StreamHealthService por inyeccion, y un solo registro de TRADING_QUEUE",
+      "estimation_hours": 4,
+      "description": "trading.controller.ts:61 construye StreamHealthService a mano con 3 de 6 argumentos, porque TradingModule no puede importar ReactiveModule sin el ciclo que architect §7.1 prohibe. Mover EP-015 a un controller propio de ReactiveModule sobre la misma ruta y volver obligatorio el constructor. Sin forwardRef. En el mismo cambio, hacer que TradingModule re-exporte BullModule y borrar el registerQueue de reactive.module.ts, para que Nest provea una unica Bull.Queue en vez de dos con sus dos pares de clientes ioredis. La falta de ese export es la causa de fondo de ambos.",
+      "justification": "Deuda declarada por el sdd-reviewer al cerrar el cycle-01 (cycle.json -> reviewer_report.follow_ups). No agrega comportamiento de usuario, endpoints ni schema: consolida atajos de cableado que el ciclo tomo para no expandir el alcance de sus tasks. Va por FIX GATE y no dentro del cycle-02, cuyo alcance declarado en la spec §3 es la reaccion empujada al exchange (LIMIT_MAKER de entrada, OCO de entrada, trailingDelta); mezclar refactors ahi le enturbiaria el alcance.",
+      "related_modules": [
+        "reactive-execution-loop"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/trading.controller.ts",
+        "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/reactive/reactive.module.ts",
+        "apps/api/src/reactive/stream-health.service.ts"
+      ],
+      "test_reference": "La suite de apps/api en verde y una sola instancia resuelta por DI para StreamHealthService y para la cola",
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-005-001",
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-001.md"
+    },
+    {
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-005-reactive-execution-loop",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "title": "La notificacion de degradacion no se pierde si falla la escritura",
+      "estimation_hours": 1,
+      "description": "StreamHealthService.checkSustainedDegradation marca notifiedDegradations ANTES de que notifyDegradedUsers resuelva. Un fallo de prisma.tradingConfig.findMany pierde el aviso de esa degradacion hasta que el simbolo se recupere y vuelva a degradarse. Marcar despues de que resuelva, o revertir la marca si rechaza.",
+      "justification": "Deuda declarada por el sdd-reviewer al cerrar el cycle-01 (cycle.json -> reviewer_report.follow_ups). No agrega comportamiento de usuario, endpoints ni schema: consolida atajos de cableado que el ciclo tomo para no expandir el alcance de sus tasks. Va por FIX GATE y no dentro del cycle-02, cuyo alcance declarado en la spec §3 es la reaccion empujada al exchange (LIMIT_MAKER de entrada, OCO de entrada, trailingDelta); mezclar refactors ahi le enturbiaria el alcance.",
+      "related_modules": [
+        "reactive-execution-loop"
+      ],
+      "affected_files": [
+        "apps/api/src/reactive/stream-health.service.ts",
+        "apps/api/src/reactive/stream-health.service.spec.ts"
+      ],
+      "test_reference": "Test que fuerza el rechazo de la escritura y verifica que la siguiente pasada vuelve a intentar la notificacion",
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-005-002",
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-002.md"
+    },
+    {
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-005-reactive-execution-loop",
+      "type": "IMPROVEMENT",
+      "severity": "medium",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "title": "Dependencias obligatorias en TradingProcessor y eliminacion de PassthroughActionGate",
+      "estimation_hours": 5,
+      "description": "positionAction, coordination y actionGate son opcionales en el constructor solo para no tocar los mocks de prisma de 11 specs preexistentes. El fallback de actionGate es un PassthroughActionGate que ejecuta todo y devuelve EXECUTED, dentro de la clase cuyo punto es que los caps no se puedan eludir. Hoy es inalcanzable por DI (Nest falla la resolucion si falta el provider), pero sigue alcanzable desde cualquier construccion manual. Dar a los specs una factoria de mock de prisma compartida, volver obligatorios los tres parametros y borrar PassthroughActionGate.",
+      "justification": "Deuda declarada por el sdd-reviewer al cerrar el cycle-01 (cycle.json -> reviewer_report.follow_ups). No agrega comportamiento de usuario, endpoints ni schema: consolida atajos de cableado que el ciclo tomo para no expandir el alcance de sus tasks. Va por FIX GATE y no dentro del cycle-02, cuyo alcance declarado en la spec §3 es la reaccion empujada al exchange (LIMIT_MAKER de entrada, OCO de entrada, trailingDelta); mezclar refactors ahi le enturbiaria el alcance.",
+      "related_modules": [
+        "reactive-execution-loop"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/trading.processor.ts"
+      ],
+      "test_reference": "Los 11 specs de trading en verde con la factoria compartida y sin ningun parametro opcional en el constructor",
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-005-003",
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-003.md"
+    },
+    {
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-005-reactive-execution-loop",
+      "type": "IMPROVEMENT",
+      "severity": "medium",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "title": "Acceso a datos fuera del controller y unificacion del credito de wallet sandbox",
+      "estimation_hours": 3,
+      "description": "La query del ledger quedo en TradingController.listBotActionsForUser en vez de trading.service.ts, y obligo a inyectar PrismaService en el controller, que antes no lo tenia. Ademas el  de wallet SANDBOX inline de executeLLMSell duplica creditSandboxWallet, que ya vive en PositionActionService.",
+      "justification": "Deuda declarada por el sdd-reviewer al cerrar el cycle-01 (cycle.json -> reviewer_report.follow_ups). No agrega comportamiento de usuario, endpoints ni schema: consolida atajos de cableado que el ciclo tomo para no expandir el alcance de sus tasks. Va por FIX GATE y no dentro del cycle-02, cuyo alcance declarado en la spec §3 es la reaccion empujada al exchange (LIMIT_MAKER de entrada, OCO de entrada, trailingDelta); mezclar refactors ahi le enturbiaria el alcance.",
+      "related_modules": [
+        "reactive-execution-loop"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/trading.controller.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/position-action.service.ts"
+      ],
+      "test_reference": "La suite de apps/api en verde, sin PrismaService en el controller y con un solo credito de wallet sandbox",
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-005-004",
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-004.md"
+    },
+    {
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-005-reactive-execution-loop",
+      "type": "IMPROVEMENT",
+      "severity": "medium",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "title": "Ampliar los escenarios congelados que ejercitan el harness de costo",
+      "estimation_hours": 3,
+      "description": "De los 12 escenarios congelados, solo broken-price-spike produce un adelanto: los otros 11 tienen extremos estables en precio. La garantia de CA-003 se apoya en un unico punto de datos y el chequeo de no-vacuidad se cumple con lo justo. Agregar al menos un escenario que dispare LEVEL_BREAK y uno que dispare VOLUME_SPIKE, coordinado con el harness hermano de costo de LLM que comparte la fixture.",
+      "justification": "Deuda declarada por el sdd-reviewer al cerrar el cycle-01 (cycle.json -> reviewer_report.follow_ups). No agrega comportamiento de usuario, endpoints ni schema: consolida atajos de cableado que el ciclo tomo para no expandir el alcance de sus tasks. Va por FIX GATE y no dentro del cycle-02, cuyo alcance declarado en la spec §3 es la reaccion empujada al exchange (LIMIT_MAKER de entrada, OCO de entrada, trailingDelta); mezclar refactors ahi le enturbiaria el alcance.",
+      "related_modules": [
+        "reactive-execution-loop"
+      ],
+      "affected_files": [
+        "apps/api/src/orchestrator/cost-harness/scenarios.fixture.ts",
+        "apps/api/src/orchestrator/cost-harness/reactive-cost-harness.spec.ts"
+      ],
+      "test_reference": "El harness reactivo con al menos 3 escenarios que adelantan, cubriendo los tres tipos de evento, y el harness hermano en verde",
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-005-005",
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-005.md"
     }
   ]
 }

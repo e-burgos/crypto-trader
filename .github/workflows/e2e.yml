@@ -1,11 +1,10 @@
 name: E2E Tests
 
 on:
-  # E2E requires a full running stack (API + DB + Redis + seeded users).
-  # Run manually only — not on push/PR — to avoid blocking CI with infra failures.
-  # Fix needed before re-enabling automatic runs:
-  #   1. Add /api/health endpoint
-  #   2. Add DB seed step for E2E users (trader@cryptotrader.dev, admin@crypto.com)
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -20,7 +19,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: crypto
           POSTGRES_PASSWORD: crypto123
@@ -50,8 +49,8 @@ jobs:
       BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-32-chars-long!
       NODE_ENV: test
       BASE_URL: http://localhost:4200
-      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'e2e@test.com' }}
-      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || 'Password123!' }}
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || 'trader@cryptotrader.dev' }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || 'trader123' }}
 
     steps:
       - name: Checkout
@@ -72,9 +71,17 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run Prisma migrations
+      - name: Generate Prisma client
         working-directory: apps/api
-        run: ../../node_modules/.bin/prisma db push --accept-data-loss
+        run: ../../node_modules/.bin/prisma generate
+
+      - name: Apply Prisma migrations
+        working-directory: apps/api
+        run: ../../node_modules/.bin/prisma migrate deploy
+
+      - name: Seed E2E users
+        working-directory: apps/api
+        run: ../../node_modules/.bin/prisma db seed
 
       - name: Start API server
         run: pnpm nx serve api &

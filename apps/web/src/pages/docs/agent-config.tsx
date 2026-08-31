@@ -20,8 +20,8 @@ export function DocsAgentConfigPage() {
   const { prev, next } = getPageNavigation('agent-config');
 
   // Adapter: these UI components expect t(key, opts?) => string
-  const t = (key: string, opts?: Record<string, unknown>) =>
-    rawT(key, opts as never) as string;
+  const t = (key: string, opts?: string | Record<string, unknown>) =>
+    rawT(key, opts as never) as unknown as string;
 
   return (
     <div>

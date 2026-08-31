@@ -625,6 +625,40 @@
         "model_tier": "claude/opus"
       },
       "process_note": "Toca 7 archivos (4 de codigo + 3 specs), por encima del limite de 5 del FIX GATE. Se mantiene como fix porque no agrega endpoints, entidades ni tablas: es una regla de negocio sobre metodos existentes, centralizada en un unico helper. La cuarta ruta de arranque (la rama de fallback de chat.service) se incluyo porque escribe isRunning directo y habria quedado como bypass del techo."
+    },
+    {
+      "id": "FIX-e-burgos-012",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-012.md",
+      "type": "BUGFIX",
+      "severity": "high",
+      "created_at": "2026-08-31",
+      "resolved_at": "2026-08-31",
+      "validated_at": null,
+      "title": "CI no protege casi nada: lint con || true, tests solo de api, sin typecheck, y valida un esquema que produccion no usa",
+      "estimation_hours": 4,
+      "description": "Seis huecos verificados en .github/workflows/. (a) ci.yml:78 terminaba en || true, asi que ningun error de ESLint podia fallar el job. (b) La auditoria reporto que apps/api y apps/web no se lintean por falta de eslint.config propio: es falso positivo, @nx/eslint/plugin infiere el target lint desde la config de la raiz y la corrida procesa 268 archivos en apps/api y 250 en apps/web. (c) ci.yml:81 corria solo pnpm nx test api; los tests de web y de las 5 libs con vite.config.mts no corrian nunca pese a existir el script test:all. (d) Ningun workflow corria typecheck, y el script estaba doblemente roto: run-many --all incluia al proyecto raiz crypto-trader, cuyo target typecheck reinvoca el mismo script (recursion, medida en 34 tsc concurrentes sin terminar a los 10 min), y apps/api no tiene target typecheck asi que el gate cubria 0% del backend. (e) ci.yml:75 y e2e.yml:77 aplicaban el esquema con prisma db push --accept-data-loss mientras produccion corre prisma migrate deploy: las 37 migraciones no se ejercitaban en ningun workflow. (f) e2e.yml estaba restringido a workflow_dispatch por dos motivos ya resueltos (falta /api/health, falta seed E2E), pero ademas le faltaba prisma generate --el cliente esta gitignoreado-- y sus credenciales por defecto (e2e@test.com) no existen en el seed.",
+      "justification": "Es la causa raiz de la auditoria: los hallazgos FIX-e-burgos-006 a 011 llegaron a main porque ningun gate los podia detener. Va por FIX GATE y no por ciclo SDD: son 3 archivos de infraestructura de CI, sin endpoints nuevos, sin entidades nuevas y sin tocar sdd/schema.json. No puede esperar un ciclo porque mientras siga asi cualquier fix que se mergee entra sin verificacion, incluidos los de esta misma auditoria.",
+      "related_modules": [
+        "ci-cd",
+        "platform-security"
+      ],
+      "affected_files": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/e2e.yml",
+        "package.json"
+      ],
+      "test_reference": "GitHub Actions no se puede ejecutar desde el entorno de trabajo, asi que cada comando del workflow se verifico localmente tal cual quedo escrito contra un PostgreSQL 16 con pgvector y un Redis reales: prisma migrate deploy aplica las 37 migraciones (y falla con P3018 sobre postgres:16-alpine, lo que prueba que el cambio a pgvector/pgvector:pg16 es obligatorio), prisma db seed crea los 4 usuarios de e2e/, GET /api/health devuelve 200, POST /api/auth/login da 200 con trader@cryptotrader.dev y 401 con el default viejo e2e@test.com, lint --all da 0 errores en 11 proyectos, test:all con CI=true da 1126 tests en 7 proyectos sin colgarse en watch, y pnpm typecheck termina y reporta los 5 errores preexistentes en vez de recursar",
+      "status": "implemented",
+      "cycle": "cycle-01",
+      "usage": {
+        "tokens_in": 210000,
+        "tokens_out": 26000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

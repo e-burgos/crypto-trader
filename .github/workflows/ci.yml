@@ -17,7 +17,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: crypto
           POSTGRES_PASSWORD: crypto123
@@ -47,6 +47,7 @@ jobs:
       JWT_REFRESH_SECRET: ci-refresh-secret-32-chars-min-ok
       BINANCE_KEY_ENCRYPTION_KEY: ci-encryption-key-32-chars-long!
       NODE_ENV: test
+      CI: true
 
     steps:
       - name: Checkout
@@ -70,15 +71,18 @@ jobs:
         working-directory: apps/api
         run: ../../node_modules/.bin/prisma generate
 
-      - name: Run Prisma migrations (test DB)
+      - name: Apply Prisma migrations (test DB)
         working-directory: apps/api
-        run: ../../node_modules/.bin/prisma db push --accept-data-loss
+        run: ../../node_modules/.bin/prisma migrate deploy
 
       - name: Lint all projects
-        run: pnpm nx run-many --target=lint --all --parallel=3 || true
+        run: pnpm nx run-many --target=lint --all --parallel=3
 
-      - name: Run API tests
-        run: pnpm nx test api --skip-nx-cache
+      - name: Typecheck all projects
+        run: pnpm typecheck
+
+      - name: Run all tests
+        run: pnpm test:all
 
   build:
     name: Build

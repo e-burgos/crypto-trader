@@ -37,7 +37,7 @@ export function setupSwagger(app: INestApplication): void {
   app.use(
     '/api/docs',
     apiReference({
-      spec: { url: '/api/docs-json' },
+      url: '/api/docs-json',
       theme: 'default',
       darkMode: true,
       metaData: {

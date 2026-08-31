@@ -56,7 +56,6 @@ export function DocsTOC({
     }, 80);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [externalItems, contentSelector, triggerKey]);
 
   // navbar h-14 = 56px + 16px breathing room

@@ -382,11 +382,11 @@
     {
       "author": "e-burgos",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "related_modules": [
         "platform-security"
       ],
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-006",
       "spec_id": null,
@@ -399,18 +399,26 @@
       "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
       "affected_files": [
         "apps/api/Dockerfile",
-        "apps/api/prisma/seed.ts"
+        "apps/api/prisma/seed.ts",
+        ".env.example"
       ],
-      "test_reference": "El entrypoint de produccion no siembra; la semilla sigue disponible para desarrollo y para el target db-seed de Nx"
+      "test_reference": "El entrypoint de produccion solo siembra datos de referencia (agentes, proveedores LLM, data sources); no crea ninguna cuenta demo. En desarrollo y CI (NODE_ENV != production) el target db-seed de Nx sigue creando los cuatro usuarios y sus trading configs. apps/api jest: 673/673 en verde",
+      "usage": {
+        "tokens_in": 155000,
+        "tokens_out": 11000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "author": "e-burgos",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-31",
       "related_modules": [
         "platform-security"
       ],
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-007",
       "spec_id": null,
@@ -422,22 +430,32 @@
       "description": "auth.module.ts:12 y jwt.strategy.ts:17 caen a dev-secret; auth.service.ts:56,76 caen a dev-refresh-secret. No hay validacion de entorno al arrancar, asi que si la variable falta en produccion nada lo detecta y cualquiera que lea el repositorio puede forjar un token de administrador. Agravado por chat.module.ts:19, que usa process.env.JWT_SECRET sin fallback: si falta, ese modulo valida contra undefined mientras el resto firma con el valor por defecto. Hay que eliminar los fallbacks y validar el entorno al arrancar, fallando ruidoso.",
       "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
       "affected_files": [
+        "apps/api/src/common/config/env.config.ts",
+        "apps/api/src/main.ts",
         "apps/api/src/auth/auth.module.ts",
-        "apps/api/src/auth/strategies/jwt.strategy.ts",
         "apps/api/src/auth/auth.service.ts",
+        "apps/api/src/auth/strategies/jwt.strategy.ts",
         "apps/api/src/chat/chat.module.ts",
-        "apps/api/src/main.ts"
+        "apps/api/src/test-setup.ts",
+        ".env.example"
       ],
-      "test_reference": "La app no arranca sin JWT_SECRET ni JWT_REFRESH_SECRET, con mensaje explicito; ningun fallback hardcodeado queda en el codigo"
+      "test_reference": "pnpm exec jest --config apps/api/jest.config.js apps/api/src (673/673 green); pnpm nx build api ok; boot without JWT_SECRET exits 1 with the missing-variable list; grep -rn \"dev-secret|dev-refresh-secret\" apps/api/src returns nothing",
+      "usage": {
+        "tokens_in": 92000,
+        "tokens_out": 9000,
+        "model_tier": "claude/opus",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "author": "e-burgos",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-31",
       "related_modules": [
         "platform-security"
       ],
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-008",
       "spec_id": null,
@@ -450,19 +468,28 @@
       "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
       "affected_files": [
         "package.json",
+        "pnpm-lock.yaml",
         "apps/api/src/app/app.module.ts",
-        "apps/api/src/auth/auth.controller.ts"
+        "apps/api/src/auth/auth.controller.ts",
+        "apps/api/src/auth/auth.rate-limit.spec.ts"
       ],
-      "test_reference": "Los endpoints de autenticacion rechazan con 429 al superar el limite; el resto de la API mantiene su comportamiento"
+      "test_reference": "apps/api/src/auth/auth.rate-limit.spec.ts",
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 12000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "author": "e-burgos",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-31",
       "related_modules": [
         "platform-security"
       ],
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-009",
       "spec_id": null,
@@ -477,16 +504,23 @@
         "apps/api/src/gateway/app.gateway.ts",
         "apps/web/src/hooks/use-websocket.ts"
       ],
-      "test_reference": "Un unico nombre de evento en emisor y receptor, verificado por grep en ambos lados"
+      "test_reference": "app.gateway.spec.ts ancla el nombre en ambos lados: emitPriceUpdate emite price:tick a la sala price:{symbol} y el hook use-websocket.ts se suscribe a ese mismo nombre; grep en apps/libs/e2e no deja ninguna ocurrencia de price:update",
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 12000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "author": "e-burgos",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-31",
       "related_modules": [
         "reactive-execution-loop"
       ],
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-006",
       "spec_id": "spec-e-burgos-005-reactive-execution-loop",
@@ -501,7 +535,14 @@
         "apps/api/src/reactive/material-event.service.ts",
         "apps/api/src/reactive/stream-health.service.ts"
       ],
-      "test_reference": "Ningun evento del loop reactivo llega a un socket que no sea el del dueno de la config; probado con un test que verifica el destinatario"
+      "test_reference": "material-event.service.spec.ts verifica que cada dueno recibe solo el adelanto de su propia config y que emitToAll no se llama; stream-health.service.spec.ts verifica que market:stream-health solo llega a los usuarios con un bot corriendo ese simbolo y a nadie si no hay ninguno; grep sin emitToAll en los dos servicios reactivos",
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 12000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

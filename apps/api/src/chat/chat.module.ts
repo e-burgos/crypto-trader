@@ -7,6 +7,7 @@ import { OrchestratorModule } from '../orchestrator/orchestrator.module';
 import { LlmModule } from '../llm/llm.module';
 import { AgentConfigModule } from '../agents/agent-config.module';
 import { TradingModule } from '../trading/trading.module';
+import { getJwtSecret } from '../common/config/env.config';
 
 @Module({
   imports: [
@@ -15,8 +16,8 @@ import { TradingModule } from '../trading/trading.module';
     LlmModule,
     AgentConfigModule,
     TradingModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
+    JwtModule.registerAsync({
+      useFactory: () => ({ secret: getJwtSecret() }),
     }),
   ],
   controllers: [ChatController],

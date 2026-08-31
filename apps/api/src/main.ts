@@ -2,8 +2,11 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { setupSwagger } from './common/swagger/swagger.setup';
+import { validateRequiredEnv } from './common/config/env.config';
 
 async function bootstrap() {
+  validateRequiredEnv();
+
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
   const globalPrefix = 'api';
@@ -28,4 +31,7 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  Logger.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

@@ -8,6 +8,11 @@ import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import {
+  getJwtExpiresIn,
+  getJwtRefreshExpiresIn,
+  getJwtRefreshSecret,
+} from '../common/config/env.config';
 
 @Injectable()
 export class AuthService {
@@ -53,7 +58,7 @@ export class AuthService {
   async refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
+        secret: getJwtRefreshSecret(),
       });
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
@@ -70,11 +75,11 @@ export class AuthService {
     const payload = { sub: userId, email, role };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+        expiresIn: getJwtExpiresIn(),
       } as any),
       this.jwtService.signAsync(payload, {
-        secret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
-        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+        secret: getJwtRefreshSecret(),
+        expiresIn: getJwtRefreshExpiresIn(),
       } as any),
     ]);
     return { accessToken, refreshToken };

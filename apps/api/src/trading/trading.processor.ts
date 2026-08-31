@@ -1313,24 +1313,12 @@ export class TradingProcessor {
         if (mode === TradingMode.SANDBOX) {
           const proceeds = order.price * order.quantity;
           const fee = proceeds * TRADE_FEE_PCT;
-          const updatedWallet = await this.prisma.$transaction(async (tx) => {
-            await tx.sandboxWallet.upsert({
-              where: { userId_currency: { userId, currency: pos.pair as any } },
-              create: {
-                userId,
-                currency: pos.pair as any,
-                balance: 10_000 + proceeds - fee,
-              },
-              update: { balance: { increment: proceeds - fee } },
-            });
-            return tx.sandboxWallet.findUnique({
-              where: { userId_currency: { userId, currency: pos.pair as any } },
-            });
-          });
-          this.gateway.emitToUser(userId, 'wallet:updated', {
-            currency: pos.pair,
-            balance: updatedWallet?.balance,
-          });
+          await this.positionAction.creditSandboxWallet(
+            userId,
+            pos.pair,
+            proceeds,
+            fee,
+          );
         }
 
         await this.notificationsService.create(

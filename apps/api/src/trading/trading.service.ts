@@ -23,6 +23,7 @@ import {
   UpdateUserRiskPolicyDto,
   UserRiskPolicyResponse,
 } from './dto/user-risk-policy.dto';
+import { ListBotActionsDto } from './dto/list-bot-actions.dto';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 // eslint-disable-next-line @nx/enforce-module-boundaries
@@ -580,6 +581,44 @@ export class TradingService implements OnModuleInit {
       isRunning: config.isRunning,
       updatedAt: config.updatedAt,
     }));
+  }
+
+  // ── Bot action ledger ─────────────────────────────────────────────────────
+
+  async getBotActions(userId: string, query: ListBotActionsDto) {
+    const limit = query.limit ?? 50;
+
+    const items = await this.prisma.botAction.findMany({
+      where: {
+        userId,
+        ...(query.configId ? { configId: query.configId } : {}),
+        ...(query.outcome ? { outcome: query.outcome } : {}),
+        ...(query.since ? { occurredAt: { gte: new Date(query.since) } } : {}),
+      },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        configId: true,
+        kind: true,
+        source: true,
+        outcome: true,
+        blockedBy: true,
+        positionId: true,
+        decisionId: true,
+        detail: true,
+        occurredAt: true,
+      },
+    });
+
+    const hasMore = items.length > limit;
+    const page = hasMore ? items.slice(0, limit) : items;
+
+    return {
+      items: page,
+      nextCursor: hasMore ? page[page.length - 1].id : null,
+    };
   }
 
   // ── Positions ─────────────────────────────────────────────────────────────

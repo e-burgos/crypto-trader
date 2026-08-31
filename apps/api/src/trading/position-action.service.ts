@@ -556,7 +556,7 @@ export class PositionActionService {
     });
   }
 
-  private async creditSandboxWallet(
+  async creditSandboxWallet(
     userId: string,
     currency: string,
     proceeds: number,

@@ -1,4 +1,5 @@
 import { TradingController } from './trading.controller';
+import { TradingService } from './trading.service';
 import type { RequestUser } from '../auth/decorators/current-user.decorator';
 
 type BotActionRow = {
@@ -39,12 +40,18 @@ describe('TradingController.getBotActions', () => {
     const findMany = jest.fn().mockResolvedValue(findManyResult);
     const prisma = { botAction: { findMany } };
 
-    const tradingService = {};
-
-    const controller = new TradingController(
-      tradingService as never,
+    const tradingService = new TradingService(
       prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
     );
+
+    const controller = new TradingController(tradingService);
 
     return { controller, findMany };
   }

@@ -38,7 +38,6 @@ import {
   CurrentUser,
   type RequestUser,
 } from '../auth/decorators/current-user.decorator';
-import { PrismaService } from '../prisma/prisma.service';
 
 @ApiTags('trading')
 @ApiBearerAuth('access-token')
@@ -46,10 +45,7 @@ import { PrismaService } from '../prisma/prisma.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('TRADER')
 export class TradingController {
-  constructor(
-    private readonly tradingService: TradingService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly tradingService: TradingService) {}
 
   // ── Config ────────────────────────────────────────────────────────────────
 
@@ -264,43 +260,7 @@ export class TradingController {
     @CurrentUser() user: RequestUser,
     @Query() query: ListBotActionsDto,
   ) {
-    return this.listBotActionsForUser(user.userId, query);
-  }
-
-  private async listBotActionsForUser(userId: string, query: ListBotActionsDto) {
-    const limit = query.limit ?? 50;
-
-    const items = await this.prisma.botAction.findMany({
-      where: {
-        userId,
-        ...(query.configId ? { configId: query.configId } : {}),
-        ...(query.outcome ? { outcome: query.outcome } : {}),
-        ...(query.since ? { occurredAt: { gte: new Date(query.since) } } : {}),
-      },
-      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-      select: {
-        id: true,
-        configId: true,
-        kind: true,
-        source: true,
-        outcome: true,
-        blockedBy: true,
-        positionId: true,
-        decisionId: true,
-        detail: true,
-        occurredAt: true,
-      },
-    });
-
-    const hasMore = items.length > limit;
-    const page = hasMore ? items.slice(0, limit) : items;
-
-    return {
-      items: page,
-      nextCursor: hasMore ? page[page.length - 1].id : null,
-    };
+    return this.tradingService.getBotActions(user.userId, query);
   }
 
   // ── Positions ─────────────────────────────────────────────────────────────

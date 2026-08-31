@@ -320,7 +320,7 @@
       "type": "IMPROVEMENT",
       "severity": "medium",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "title": "Acceso a datos fuera del controller y unificacion del credito de wallet sandbox",
       "estimation_hours": 3,
       "description": "La query del ledger quedo en TradingController.listBotActionsForUser en vez de trading.service.ts, y obligo a inyectar PrismaService en el controller, que antes no lo tenia. Ademas el  de wallet SANDBOX inline de executeLLMSell duplica creditSandboxWallet, que ya vive en PositionActionService.",
@@ -335,10 +335,18 @@
         "apps/api/src/trading/position-action.service.ts"
       ],
       "test_reference": "La suite de apps/api en verde, sin PrismaService en el controller y con un solo credito de wallet sandbox",
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-004",
-      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-004.md"
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-004.md",
+      "usage": {
+        "tokens_in": 150000,
+        "tokens_out": 9000,
+        "duration_minutes": 10,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "author": "e-burgos",

@@ -1,6 +1,7 @@
 # Constitución — libs/trading-engine
 
-> Versión 1.3 | Última actualización: cycle-03 | Fecha: 2026-08-18
+> Versión 1.4 | Última actualización: cycle-01 | Fecha: 2026-08-30
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-005 cycle-01 (2026-08-30)
 
 ## 1. Propósito
 
@@ -20,6 +21,13 @@
 - `src/lib/sizing.ts` — `resolveTradeQuantity`: `ceilingQuantity` sale de `calculateTradeQuantity` (sin tocar) y `factor = min(aegis × verdict, forge)` con `clamp(·,0,1)` en **cada** factor ⇒ el techo `balance × maxTradePct` es inviolable **por construcción**, no por casos de test. Ante contradicción AEGIS vs FORGE gana el más conservador (`min`, nunca promedio ni producto).
 - `src/lib/sell-policy.ts` — `evaluateSellPolicy`: toma de ganancia (idéntica al comportamiento previo) y corte de pérdida por señal, **fail-closed en cadena** (cualquier dato faltante o fuera de rango ⇒ `NONE`). Usa el **edge ratio** sobre `simulateTrade` con `stopLossPct: 0` —el costo de salirse ahora— y no el `riskRewardRatio`, que tiende a infinito al acercarse el precio al stop y recomendaría sostener justo cuando el corte importa.
 - `src/lib/position-manager.ts` — funciones puras junto a la clase existente (`PositionManager` no se modificó): `updateTrailingStop` (cierra con `stopPrice = max(baseStop, candidate)`, lo que garantiza que el stop **nunca retrocede**), `shouldExitByTime`, `resolvePartialTakeProfit` (devuelve `null` si la porción vendida **o el remanente** quedan bajo `minNotional`; su `newStopPrice` es el breakeven **neto de las dos comisiones**, `entry × (1 + 2×TRADE_FEE_PCT)`), `applyPartialExit` (no cierra la posición: baja `quantity`, acumula `realizedPnlDelta` y suma el fee) y `resolveProtectionRearm(input): ProtectionRearmDecision` — decide `REARM` vs `NONE` con razón tipada (`DISABLED`, `SANDBOX`, `NOT_PROTECTED`, `NO_STOP`, `BELOW_THRESHOLD`); umbral `PROTECTION_REARM_MIN_STOP_DELTA_PCT` = 0.1 % sobre el stop vigente, rechaza valores no finitos o ≤ 0. **La lib solo decide** — cancelar y recolocar contra el exchange es orquestación de `apps/api` (`TradingProcessor.ensureNativeProtection`), que debe tratar la cancelación fallida como posición **desprotegida** y no recolocar con la OCO vieja todavía viva.
+- **`src/lib/fast-path.ts` — `planFastPath(input): FastPathPlan`.** Compone las funciones ya existentes de `position-manager` (`updateTrailingStop`, `resolvePartialTakeProfit`, `resolveProtectionRearm`) y devuelve **una sola** acción de un set cerrado de cuatro: `HARD_STOP_EXIT | TRAILING_EXIT | PARTIAL_TAKE_PROFIT | PROTECTION_REARM`, o `NONE`. Dos invariantes que un cambio futuro no puede romper:
+  - **No invoca `evaluateSellPolicy`.** El "stop duro" del fast path es el cruce del precio contra el stop efectivo, no el `LOSS_CUT` por señal de aquella función — son dos reglas distintas y mezclarlas metería la tesis del LLM en el camino de reflejos.
+  - Devuelve siempre el `TrailingState` recalculado, **incluso con `action: 'NONE'`**, para que el llamador persista el `highWaterPrice` sin ejecutar nada.
+- **`src/lib/risk/action-caps.ts` — `evaluateActionCaps` + `classifyActionExposure`.** `src/lib/risk/` deja de tener un solo archivo: junto a `trade-simulation.ts` vive el primer límite de frecuencia real del motor.
+  - `classifyActionExposure(kind)` mapea `BotActionKind` a `INCREASING | REDUCING | NEUTRAL`. Es la **única** fuente de verdad de esa clasificación: `bot_actions` NO persiste una columna `exposure` a propósito, se deriva siempre de acá. Al agregar un `BotActionKind` hay que decidir su exposure explícitamente.
+  - **Regla que no se puede relajar:** toda acción `REDUCING` (`SELL_FULL`, `SELL_PARTIAL`) sale `allowed` **antes de mirar cap alguno** (`REDUCING_EXPOSURE_EXEMPT`). Un cap nunca puede dejar a un bot atrapado dentro de una posición perdedora; los caps frenan el sobre-operar, no el salir.
+  - Un cap devuelve `disposition: 'DEFERRED'` (volvé más tarde: hora/cooldown) o `'DISCARDED'` (no vuelvas: pérdida diaria). El llamador persiste esa distinción en `bot_actions.outcome`.
 - `src/lib/risk/` — simulación pura, exportada por el barrel:
 
   ```ts

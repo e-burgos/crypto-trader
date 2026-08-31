@@ -1,7 +1,7 @@
 # Constitución — apps/api
 
-> Versión 1.3 | Última actualización: cycle-01 | Fecha: 2026-08-19
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19)
+> Versión 1.4 | Última actualización: cycle-01 | Fecha: 2026-08-30
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30)
 
 ## 1. Propósito
 
@@ -35,6 +35,8 @@
 | `aegisVerdictSchema` (`src/orchestrator/dto/`) | **Única** lectura del verdict de AEGIS: `blockReasons: AegisBlockReason[]` tipado (zod, un `.catch()` por campo para degradar a neutro ante payload parcial). `isOverridableBlock` es **fail-closed**: sin `blockReasons`, con array vacío o con cualquier motivo fuera del conjunto anulable, el BLOCK se respeta. El regex `isFalseConcentrationBlock` sobre `reason` fue eliminado y **no se reintroduce**.            |
 | `ReconciliationService` (`src/trading/`)     | **Única** puerta de sincronización con el exchange; corre como paso previo a toda decisión del ciclo (antes del health check del LLM), solo en LIVE/TESTNET. Idempotente por **transición condicional** (`updateMany` con `status: 'OPEN'` esperado + guard `claimed.count === 0`), nunca por conteo de trades. Barre OCO zombie por `clientOrderId` con prefijo `prot-`, preservando antes las `PROTECTED` de otras configs del mismo usuario/símbolo. |
 | `DecisionGateService` (`src/orchestrator/decision-gate.service.ts`) | **Único** gate determinista pre-LLM: resuelve HOLD sin llamar al LLM cuando las 5 condiciones de "sin señal" se cumplen a la vez, persistiendo una `AgentDecision` con `llmCostUsd = 0`. **Fail-closed**: reconciliación no confirmada, indicadores incompletos/stale, sin decisión previa o sin snapshot en la previa → llama al LLM. Nace apagado (`deterministicGateEnabled` default `false`). |
+| `ActionGateService.authorizeAndRun` (`src/trading/action-gate.service.ts`) | **Única** puerta de toda acción automática — camino reactivo y camino del LLM por igual. Es el invariante central del loop reactivo: un cap no se puede eludir porque no hay segunda puerta. Toma el lease del bot, revalida la posición esperada (`SUPERSEDED` si cambió bajo el lease), evalúa los caps, ejecuta y escribe la fila en `bot_actions`, liberando el lease pase lo que pase. **Cualquier punto de ejecución nuevo pasa por acá, nunca llama al executor directo.** |
+| `PositionActionService` (`src/trading/position-action.service.ts`) | Implementación **única** del camino de salida, extraída de `TradingProcessor`: `closeAtMarket`, `executePartialTakeProfit`, `rearmProtection`, `releaseProtectionIfNeeded` (+ privados `closePositionAfterProtectionFailure` y `creditSandboxWallet`). El fast path la reusa en vez de reimplementarla — eso es lo que garantiza liberar la protección nativa antes de vender en los cuatro caminos. `releaseProtectionIfNeeded` es **público** porque `executeLLMSell` también lo necesita. |
 | `DataSourceCredentialResolver` (`market/data-source-credential-resolver.service.ts`) | **Única** cascada de credenciales de fuentes externas: `propia del trader → admin con shared:true → ninguna`. `MarketService` y `listSharedDataSourceIds()` (EP-011) delegan acá — ningún otro lugar consulta `dataSourceCredential`/`newsApiCredential` directo. El fallback compartido filtra por `role: 'ADMIN'` en la lectura, no confía en quién escribió el flag. |
 
 ### 3.2 Evaluación de decisiones
@@ -54,6 +56,56 @@
 - `Trade.decisionId` (nullable, FK `ON DELETE SET NULL`) se setea en los 4 puntos de creación del flujo real; `null` en la reconciliación (lo ejecutó el exchange) y en el cierre manual.
 - El contrato del JSON de AEGIS viaja en el **user prompt** de `buildTaskUserPrompt('risk_gate')` además del seed: el system prompt vive en la tabla `AgentDefinition` y una instalación ya seedeada no lo actualiza al desplegar.
 
+### 3.4 Loop reactivo — despertar por evento y reflejos sin LLM (spec-005 cycle-01)
+
+`src/reactive/` es la capa que hace que el bot reaccione al precio en lugar de al reloj. **Nace apagada** por `TradingConfig.reactiveLoopEnabled` (default `false`) y, además, la coordinación entre réplicas nace en su driver apagado.
+
+| Archivo | Responsabilidad |
+| --- | --- |
+| `reactive-coordination.port.ts` | `ReactiveCoordinationPort` + símbolo de DI `REACTIVE_COORDINATION` |
+| `redis-reactive-coordination.service.ts` | Implementación ioredis; lease y token con CAS en Lua |
+| `disabled-reactive-coordination.service.ts` | Implementación apagada: todo `false`/`null`, `isHealthy() === false` |
+| `reactive-coordination.module.ts` | Fábrica por env (`REACTIVE_COORDINATION_DRIVER`), exporta el puerto |
+| `reactive-runtime-thresholds.ts` | Umbrales de infraestructura (leases, edades de stream, ping/pong, TTLs) |
+| `market-stream.service.ts` | Dueño por símbolo, ciclo de vida del WS, fan-out de `tick`/`candle` |
+| `stream-health.service.ts` | Publica y resuelve la salud por símbolo; emite la transición y notifica la degradación sostenida |
+| `material-event.service.ts` | Compone `detectMaterialEvent` y ejecuta la secuencia de adelanto del ciclo |
+| `fast-path.service.ts` | Compone `planFastPath` por tick y ejecuta vía `ActionGateService` → `PositionActionService` |
+
+**Grafo de módulos (unidireccional, sin ciclos — no romperlo):**
+
+```
+AppModule                       (el cableado del ciclo vive en app.module.ts)
+    |
+    v
+ReactiveModule  ------------->  TradingModule
+    |                                |
+    +--------> ReactiveCoordinationModule <---+
+               (hoja: provee REACTIVE_COORDINATION)
+```
+
+`ReactiveModule` está importado en `src/app/app.module.ts` y `reactive-module-wiring.spec.ts` es el candado que lo sostiene: borrar el import hace fallar ese spec, de modo que el módulo no puede volver a quedar huérfano. Importa `TradingModule` (por `ActionGateService` y `PositionActionService`), `NotificationsModule` (por la notificación de degradación sostenida) y registra `TRADING_QUEUE` por su cuenta para poder promover jobs. **`TradingModule` NO importa `ReactiveModule`.**
+
+**Al tocar este grafo, empezar por acá:** `TradingModule` no re-exporta `BullModule` (`exports: [TradingService, PositionActionService, ActionGateService]`). Esa única omisión causa las dos deudas abiertas del módulo — obliga a `ReactiveModule` a registrar `TRADING_QUEUE` de nuevo (hay **dos `Bull.Queue`** para `trading-agent`, con dos pares de clientes ioredis) y deja al controller sin forma limpia de llegar a la capa reactiva. Las dos instancias comparten las claves de Redis (`bull:trading-agent:*`), así que `getDelayed()`/`promote()` cruzan sin problema y el adelanto por evento funciona: el costo es una conexión de más, no un bug.
+
+**Claves de coordinación, todas versionadas `rx:v1:`** — al agregar una, seguir el prefijo:
+
+| Clave | Qué es |
+| --- | --- |
+| `rx:v1:owner:{symbol}` | Lease del dueño del símbolo (una suscripción WS por símbolo) |
+| `rx:v1:health:{symbol}` | `StreamHealthRecord` publicado, con TTL — lo lee cualquier réplica |
+| `rx:v1:window:{configId}` | Fin de la ventana del temporizador vigente |
+| `rx:v1:advance:{configId}:{windowEnd}` | Token de un solo uso: **un** adelanto por ventana |
+| `rx:v1:bot:{configId}` | Lease de acción del bot: serializa las acciones de un mismo bot |
+
+Cambios de acompañamiento en `src/trading/`:
+
+- `bot-action-counters.ts` — las dos lecturas sobre `bot_actions` que alimentan los caps: conteo de la hora móvil y `max(occurredAt)` de la última acción ejecutada.
+- `aggregate-risk.service.ts` — suma `evaluateDailyLoss` como **lectura pura** (sin efectos), para que el cap de pérdida diaria se pueda evaluar desde la puerta sin arrastrar el efecto de `assertBuyAllowed`.
+- `trading.processor.ts` — pasó de ~1961 a ~1400 líneas al extraerse `PositionActionService`; sus 5 puntos de ejecución pasan por `authorizeAndRun` y escribe `rx:v1:window:{configId}` al re-encolar. **La omisión deliberada del `jobId` en el re-encolado sigue vigente y sigue siendo obligatoria** (reusar un jobId estático con el job activo hace que Bull devuelva el job existente y el agente se detenga en silencio); el adelanto por evento se hace con `Job.promote()`, no removiendo y re-encolando.
+
+**Datos:** tabla nueva `bot_actions` (+4 enums), ledger sobre el que se cuentan los caps — `positionId`/`decisionId` **sin FK a propósito**: es auditoría y debe sobrevivir al borrado de lo que referencia. Getter `botAction` dado de alta en `PrismaService`. `trading_configs` suma `reactiveLoopEnabled`, `maxActionsPerHour`, `minActionIntervalSec`.
+
 ## 4. Convenciones propias
 
 - Controladores solo reciben/delegan/responden; la lógica de negocio vive en Services. Errores vía `HttpException`.
@@ -64,6 +116,7 @@
 - **`ValidationPipe` global con `forbidNonWhitelisted: true`:** un campo nuevo de `TradingConfig` que no esté declarado en `CreateTradingConfigDto` **y** `UpdateTradingConfigDto` hace que el request entero responda 400 — no que el campo se ignore.
 - **Los getters de `PrismaService` son 1:1 con los modelos:** dropear un modelo sin borrar su getter (o agregarlo sin declararlo) rompe el build.
 - Todo interruptor de comportamiento de trading nace **apagado** en la migración: una instalación existente que despliegue sin tocar su config debe producir exactamente las mismas órdenes que antes.
+- **`main.ts` llama `app.enableShutdownHooks()`** — es **prerrequisito** de los `OnApplicationShutdown` de `src/reactive/`. Sin esa línea Nest nunca los invoca y los timers/leases quedan colgados.
 - `src/testing/source-scanner.ts` + `forbidden-symbols.spec.ts`: guard estático que falla el build si reaparecen `isFalseConcentrationBlock` o el cast `as unknown as AgentId` en `apps/api`/`libs/`.
 - Controllers que tipan `@Body()` con object types inline (ej. `DataSourcesController`) **no** pasan por el `ValidationPipe` global — `toValidate` saltea el metatype `Object`. Migrar a DTO classes antes de confiar en `whitelist`/`forbidNonWhitelisted` ahí.
 

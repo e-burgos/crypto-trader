@@ -1,6 +1,7 @@
 # Constitución — libs/data-fetcher
 
-> Versión 1.2 | Última actualización: cycle-02 | Fecha: 2026-08-17
+> Versión 1.3 | Última actualización: cycle-01 | Fecha: 2026-08-30
+> Fragmentos consolidados: spec-e-burgos-001 cycle-02 (2026-08-17) + spec-e-burgos-005 cycle-01 (2026-08-30)
 
 ## 1. Propósito
 
@@ -33,6 +34,12 @@
   - `ENDPOINT_WEIGHTS` lleva los pesos reales, con entradas separadas por método para `/api/v3/orderList` (GET 4, DELETE 1). **`getOpenOrders` siempre se llama con símbolo**: sin él el peso salta a 80.
   - Clasificación de errores exportada como utilidades puras: `RETRYABLE_BINANCE_ERROR_CODES`, `isRetryableBinanceErrorCode`, `getBinanceErrorCode`. Reintentables: `-1021`, `-1001`/`-1000`, `429`/`-1003`. No reintentables: `-1013` (filtro), `-2010` (saldo o cruce), `-2011`, `-2013` (⇒ `MISSING` en la reconciliación). **Reintentar un `-1013` o un `-2010` es quemar el rate limit sin ninguna chance de éxito.**
   - `signedRequest` no cambió: HMAC-SHA256 sobre el query string con `recvWindow: 60000`.
+- **`BinanceWsClient` — riel de mercado en vivo, con consumidor en producción** (`apps/api/src/reactive/market-stream.service.ts`). Cuatro capacidades, todas opt-in por configuración o por llamada explícita:
+  - **Heartbeat propio.** `ws.ping()` cada `wsPingIntervalMs` (default 30 s); si no llega `pong` en `wsPongTimeoutMs` (default 10 s) se hace `ws.terminate()` para que actúe el `autoReconnect` que ya existía. Resuelve el modo de falla real del cliente: **un socket TCP medio abierto produce silencio permanente y `close` nunca llega, así que `autoReconnect` no se disparaba nunca**. `on('ping')`/`on('pong')` emiten `heartbeat` `{ at }`.
+  - **`addStreams(streams)` / `removeStreams(streams)`.** Con el socket conectado envían `{ method: 'SUBSCRIBE' | 'UNSUBSCRIBE', params, id }`; sin conectar solo actualizan la lista pendiente. Antes el conjunto de suscripciones **solo se podía fijar antes de `connect()`**, y el conjunto de símbolos activos cambia cada vez que un bot arranca o para.
+  - **`isConnected(): boolean`.**
+  - `BinanceWsConfig` suma `wsPingIntervalMs` y `wsPongTimeoutMs` (ambos opcionales).
+  Streams que consume `apps/api` por símbolo: `{symbol}@miniTicker` (precio, ~1/s) y `{symbol}@kline_1h` (vela en curso). **El intervalo de la kline debe coincidir con el timeframe del `IndicatorSnapshot`** (`getKlines('1h', 200)`): cambiarlo de un lado sin el otro deja al detector de eventos comparando contra una referencia de otro timeframe.
 - `ExchangeOrderState` / `ExchangeOrderStatus` viven en **`libs/shared`**, no acá: es lo que permite que `libs/trading-engine` tipe su `OrderExecutorPort` sin depender de esta lib. El resto del contrato (`SymbolFilters`, `OrderValidationError`, `OcoOrderResult`) sí es propio.
 
 ## 4. Convenciones propias

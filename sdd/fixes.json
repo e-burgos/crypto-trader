@@ -378,6 +378,130 @@
       },
       "id": "FIX-e-burgos-005-005",
       "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-005.md"
+    },
+    {
+      "author": "e-burgos",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "related_modules": [
+        "platform-security"
+      ],
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-006",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-006.md",
+      "type": "HOTFIX",
+      "severity": "critical",
+      "title": "El contenedor de produccion siembra usuarios demo con contrasenas publicas en cada arranque",
+      "estimation_hours": 1.5,
+      "description": "apps/api/Dockerfile:40 ejecuta prisma db seed incondicionalmente como parte del entrypoint. apps/api/prisma/seed.ts crea cuatro cuentas -- dos de ellas con rol ADMIN -- con contrasenas hardcodeadas y visibles en el repositorio publico. Combinado con railway.toml, todo despliegue queda con cuentas administradoras cuyas credenciales cualquiera puede leer del repo. La semilla debe quedar fuera del arranque de produccion, o condicionada a una variable explicita que no este activa por default.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
+      "affected_files": [
+        "apps/api/Dockerfile",
+        "apps/api/prisma/seed.ts"
+      ],
+      "test_reference": "El entrypoint de produccion no siembra; la semilla sigue disponible para desarrollo y para el target db-seed de Nx"
+    },
+    {
+      "author": "e-burgos",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "related_modules": [
+        "platform-security"
+      ],
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-007",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-007.md",
+      "type": "HOTFIX",
+      "severity": "critical",
+      "title": "Sin JWT_SECRET la app arranca igual con un secreto conocido escrito en el codigo",
+      "estimation_hours": 2,
+      "description": "auth.module.ts:12 y jwt.strategy.ts:17 caen a dev-secret; auth.service.ts:56,76 caen a dev-refresh-secret. No hay validacion de entorno al arrancar, asi que si la variable falta en produccion nada lo detecta y cualquiera que lea el repositorio puede forjar un token de administrador. Agravado por chat.module.ts:19, que usa process.env.JWT_SECRET sin fallback: si falta, ese modulo valida contra undefined mientras el resto firma con el valor por defecto. Hay que eliminar los fallbacks y validar el entorno al arrancar, fallando ruidoso.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
+      "affected_files": [
+        "apps/api/src/auth/auth.module.ts",
+        "apps/api/src/auth/strategies/jwt.strategy.ts",
+        "apps/api/src/auth/auth.service.ts",
+        "apps/api/src/chat/chat.module.ts",
+        "apps/api/src/main.ts"
+      ],
+      "test_reference": "La app no arranca sin JWT_SECRET ni JWT_REFRESH_SECRET, con mensaje explicito; ningun fallback hardcodeado queda en el codigo"
+    },
+    {
+      "author": "e-burgos",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "related_modules": [
+        "platform-security"
+      ],
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-008",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-008.md",
+      "type": "HOTFIX",
+      "severity": "critical",
+      "title": "Sin limite de intentos en login y register: fuerza bruta sin friccion",
+      "estimation_hours": 2,
+      "description": "No hay ningun mecanismo de rate limiting en el backend (no existe @nestjs/throttler en package.json). /api/auth/login y /api/auth/register aceptan intentos ilimitados. El costo 12 de bcrypt limita el throughput pero no impide el ataque, y ademas convierte cada intento en trabajo caro para el servidor, con lo que la ausencia de limite es tambien un vector de agotamiento de recursos.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
+      "affected_files": [
+        "package.json",
+        "apps/api/src/app/app.module.ts",
+        "apps/api/src/auth/auth.controller.ts"
+      ],
+      "test_reference": "Los endpoints de autenticacion rechazan con 429 al superar el limite; el resto de la API mantiene su comportamiento"
+    },
+    {
+      "author": "e-burgos",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "related_modules": [
+        "platform-security"
+      ],
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-009",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-009.md",
+      "type": "BUGFIX",
+      "severity": "high",
+      "title": "El precio en vivo nunca llega al frontend: el backend emite price:update y el cliente escucha price:tick",
+      "estimation_hours": 1,
+      "description": "app.gateway.ts:67 emite price:update a la sala price:{symbol}; apps/web/src/hooks/use-websocket.ts:57 escucha price:tick. No hay ningun otro emisor de price:tick en apps/api/src, asi que el store de precios del frontend nunca se actualiza por esa via. Hay que unificar el nombre del evento en los dos lados.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
+      "affected_files": [
+        "apps/api/src/gateway/app.gateway.ts",
+        "apps/web/src/hooks/use-websocket.ts"
+      ],
+      "test_reference": "Un unico nombre de evento en emisor y receptor, verificado por grep en ambos lados"
+    },
+    {
+      "author": "e-burgos",
+      "created_at": "2026-08-30",
+      "resolved_at": null,
+      "related_modules": [
+        "reactive-execution-loop"
+      ],
+      "status": "pending",
+      "cycle": "cycle-01",
+      "id": "FIX-e-burgos-005-006",
+      "spec_id": "spec-e-burgos-005-reactive-execution-loop",
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-006.md",
+      "type": "BUGFIX",
+      "severity": "high",
+      "title": "La telemetria del loop reactivo se emite a todos los sockets con el configId del bot",
+      "estimation_hours": 2,
+      "description": "material-event.service.ts:252 emite agent:cycle-advanced y stream-health.service.ts:135 emite market:stream-health, ambos por emitToAll, de modo que llegan a todos los sockets conectados llevando configId y simbolo. Contradice el aislamiento multiusuario que declara la constitucion del subproyecto (§1.3), y lo introdujo este mismo ciclo. Deben ir por emitToUser al dueno de la config, o a una sala por usuario.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30. Va por FIX GATE y no por ciclo SDD: son defectos concretos y acotados, sin contrato de API nuevo ni entidades nuevas, y los tres primeros son criticos sobre una plataforma que ejecuta ordenes con dinero real -- esperar un ciclo completo deja la ventana abierta.",
+      "affected_files": [
+        "apps/api/src/reactive/material-event.service.ts",
+        "apps/api/src/reactive/stream-health.service.ts"
+      ],
+      "test_reference": "Ningun evento del loop reactivo llega a un socket que no sea el del dueno de la config; probado con un test que verifica el destinatario"
     }
   ]
 }

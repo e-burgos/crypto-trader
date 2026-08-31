@@ -60,14 +60,12 @@ export class StreamHealthService
     private readonly coordination: ReactiveCoordinationPort,
     private readonly prisma: PrismaService,
     private readonly thresholds: ReactiveRuntimeThresholds,
-    private readonly gateway?: AppGateway,
-    private readonly marketStream?: MarketStreamService,
-    private readonly notifications?: NotificationsService,
+    private readonly gateway: AppGateway,
+    private readonly marketStream: MarketStreamService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   onModuleInit(): void {
-    if (!this.marketStream) return;
-
     this.publishOwnedSymbols().catch((err) =>
       this.logger.error(
         `Failed to publish stream health: ${errorMessage(err)}`,
@@ -88,18 +86,15 @@ export class StreamHealthService
   }
 
   async publishOwnedSymbols(): Promise<void> {
-    const marketStream = this.marketStream;
-    if (!marketStream) return;
-
     await Promise.all(
-      marketStream
+      this.marketStream
         .getOwnedSymbols()
         .map((symbol) => this.publishSymbol(symbol)),
     );
   }
 
   private async publishSymbol(symbol: string): Promise<void> {
-    const snapshot = this.marketStream?.getHealthSnapshot(symbol);
+    const snapshot = this.marketStream.getHealthSnapshot(symbol);
     if (!snapshot) return;
 
     const record: StreamHealthRecord = {
@@ -137,7 +132,7 @@ export class StreamHealthService
     this.logger.log(
       `Stream health transition for ${symbol}: ${previous} -> ${state}${reason ? ` (${reason})` : ''}`,
     );
-    this.gateway?.emitToAll('market:stream-health', {
+    this.gateway.emitToAll('market:stream-health', {
       symbol,
       state,
       reason,
@@ -175,8 +170,6 @@ export class StreamHealthService
   }
 
   private async notifyDegradedUsers(symbol: string): Promise<void> {
-    if (!this.notifications) return;
-
     const configs = await this.prisma.tradingConfig.findMany({
       where: { isRunning: true },
       select: { userId: true, asset: true, pair: true },
@@ -190,7 +183,7 @@ export class StreamHealthService
 
     await Promise.all(
       [...userIds].map((userId) =>
-        this.notifications?.create(
+        this.notifications.create(
           userId,
           NotificationType.AGENT_ERROR,
           JSON.stringify({ key: 'streamDegraded', symbol }),

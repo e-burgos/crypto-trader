@@ -74,6 +74,9 @@ describe('StreamHealthService', () => {
         coordination,
         prisma as never,
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        createFakeMarketStream({}),
+        createFakeNotifications() as never,
       );
 
       const status = await service.resolve('BTCUSDT');
@@ -105,6 +108,9 @@ describe('StreamHealthService', () => {
         coordination,
         createFakePrisma([]) as never,
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        createFakeMarketStream({}),
+        createFakeNotifications() as never,
       );
 
       const status = await service.resolve('BTCUSDT');
@@ -131,6 +137,9 @@ describe('StreamHealthService', () => {
         coordination,
         createFakePrisma([]) as never,
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        createFakeMarketStream({}),
+        createFakeNotifications() as never,
       );
 
       const status = await service.resolve('BTCUSDT');
@@ -156,6 +165,9 @@ describe('StreamHealthService', () => {
         coordination,
         createFakePrisma([]) as never,
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        createFakeMarketStream({}),
+        createFakeNotifications() as never,
       );
 
       const status = await service.resolve('BTCUSDT');
@@ -187,6 +199,9 @@ describe('StreamHealthService', () => {
         coordination,
         prisma as never,
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        createFakeMarketStream({}),
+        createFakeNotifications() as never,
       );
 
       const result = await service.getHealthForUser('user-1');
@@ -239,6 +254,7 @@ describe('StreamHealthService', () => {
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
         gateway,
         marketStream,
+        createFakeNotifications() as never,
       );
 
       await service.publishOwnedSymbols();
@@ -253,18 +269,6 @@ describe('StreamHealthService', () => {
         }),
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamHealthTtlMs,
       );
-    });
-
-    it('does nothing when no MarketStreamService was wired (read-only instance)', async () => {
-      const coordination = createFakeCoordination();
-      const service = new StreamHealthService(
-        coordination,
-        createFakePrisma([]) as never,
-        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
-      );
-
-      await expect(service.publishOwnedSymbols()).resolves.toBeUndefined();
-      expect(coordination.setJson).not.toHaveBeenCalled();
     });
 
     it('emits market:stream-health on transition healthy -> degraded, but not on the first publish', async () => {
@@ -288,6 +292,7 @@ describe('StreamHealthService', () => {
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
         gateway,
         marketStream,
+        createFakeNotifications() as never,
       );
 
       await service.publishOwnedSymbols();
@@ -334,6 +339,7 @@ describe('StreamHealthService', () => {
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
         gateway,
         marketStream,
+        createFakeNotifications() as never,
       );
 
       await service.publishOwnedSymbols();
@@ -456,42 +462,6 @@ describe('StreamHealthService', () => {
       );
     });
 
-    it('does nothing when no NotificationsService was wired', async () => {
-      jest.useFakeTimers();
-      const start = new Date('2026-01-01T00:00:00.000Z').getTime();
-      jest.setSystemTime(start);
-
-      const coordination = createFakeCoordination();
-      const staleSince =
-        start - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
-      const marketStream = createFakeMarketStream({
-        BTCUSDT: {
-          symbol: 'BTCUSDT',
-          ownerId: 'instance-a',
-          connectedAt: start - 120_000,
-          lastTickAtMs: staleSince,
-          lastHeartbeatAtMs: start,
-        },
-      });
-      const prisma = createFakePrisma([
-        { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
-      ]);
-      const service = new StreamHealthService(
-        coordination,
-        prisma as never,
-        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
-        createFakeGateway(),
-        marketStream,
-      );
-
-      await service.publishOwnedSymbols();
-      jest.setSystemTime(
-        start + DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs + 1,
-      );
-
-      await expect(service.publishOwnedSymbols()).resolves.toBeUndefined();
-    });
-
     it('retries the notification on the next pass when the write rejects', async () => {
       jest.useFakeTimers();
       const start = new Date('2026-01-01T00:00:00.000Z').getTime();
@@ -596,7 +566,7 @@ describe('StreamHealthService', () => {
   });
 
   describe('lifecycle', () => {
-    it('publishes immediately and on an interval when a MarketStreamService is wired', () => {
+    it('publishes immediately, then on an interval, and stops on shutdown', () => {
       jest.useFakeTimers();
       const coordination = createFakeCoordination();
       const marketStream = createFakeMarketStream({});
@@ -606,6 +576,7 @@ describe('StreamHealthService', () => {
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
         createFakeGateway(),
         marketStream,
+        createFakeNotifications() as never,
       );
       const publishSpy = jest.spyOn(service, 'publishOwnedSymbols');
 
@@ -624,18 +595,6 @@ describe('StreamHealthService', () => {
       expect(publishSpy).toHaveBeenCalledTimes(2);
 
       jest.useRealTimers();
-    });
-
-    it('does nothing on init when no MarketStreamService was wired', () => {
-      const coordination = createFakeCoordination();
-      const service = new StreamHealthService(
-        coordination,
-        createFakePrisma([]) as never,
-        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
-      );
-
-      expect(() => service.onModuleInit()).not.toThrow();
-      expect(() => service.onApplicationShutdown()).not.toThrow();
     });
   });
 });

@@ -39,6 +39,6 @@ import { ActionGateService } from './action-gate.service';
     ReconciliationService,
     ActionGateService,
   ],
-  exports: [TradingService, PositionActionService, ActionGateService],
+  exports: [TradingService, PositionActionService, ActionGateService, BullModule],
 })
 export class TradingModule {}

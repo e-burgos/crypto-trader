@@ -40,20 +40,10 @@ describe('TradingController.getBotActions', () => {
     const prisma = { botAction: { findMany } };
 
     const tradingService = {};
-    const coordination = {
-      tryAcquire: jest.fn(),
-      release: jest.fn(),
-      renew: jest.fn(),
-      tryConsumeToken: jest.fn(),
-      setJson: jest.fn(),
-      getJson: jest.fn(),
-      isHealthy: jest.fn().mockReturnValue(true),
-    };
 
     const controller = new TradingController(
       tradingService as never,
       prisma as never,
-      coordination as never,
     );
 
     return { controller, findMany };

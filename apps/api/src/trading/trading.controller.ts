@@ -5,7 +5,6 @@ import {
   Put,
   Delete,
   Body,
-  Inject,
   Param,
   Query,
   UseGuards,
@@ -40,10 +39,6 @@ import {
   type RequestUser,
 } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
-import { REACTIVE_COORDINATION } from '../reactive/reactive-coordination.port';
-import type { ReactiveCoordinationPort } from '../reactive/reactive-coordination.port';
-import { DEFAULT_REACTIVE_RUNTIME_THRESHOLDS } from '../reactive/reactive-runtime-thresholds';
-import { StreamHealthService } from '../reactive/stream-health.service';
 
 @ApiTags('trading')
 @ApiBearerAuth('access-token')
@@ -51,19 +46,10 @@ import { StreamHealthService } from '../reactive/stream-health.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('TRADER')
 export class TradingController {
-  private readonly streamHealthService: StreamHealthService;
-
   constructor(
     private readonly tradingService: TradingService,
     private readonly prisma: PrismaService,
-    @Inject(REACTIVE_COORDINATION) coordination: ReactiveCoordinationPort,
-  ) {
-    this.streamHealthService = new StreamHealthService(
-      coordination,
-      prisma,
-      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
-    );
-  }
+  ) {}
 
   // ── Config ────────────────────────────────────────────────────────────────
 
@@ -249,22 +235,6 @@ export class TradingController {
   @ApiResponse({ status: 200, description: 'Lista de estados de agentes' })
   getAgentStatus(@CurrentUser() user: RequestUser) {
     return this.tradingService.getAgentStatus(user.userId);
-  }
-
-  // ── Reactive stream health ───────────────────────────────────────────────
-
-  @Get('stream-health')
-  @ApiOperation({
-    summary:
-      'Salud del stream reactivo por símbolo de las configuraciones activas del usuario',
-  })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Un símbolo sin registro se reporta UNKNOWN/NO_RECORD, nunca se omite',
-  })
-  getStreamHealth(@CurrentUser() user: RequestUser) {
-    return this.streamHealthService.getHealthForUser(user.userId);
   }
 
   @Get('actions')

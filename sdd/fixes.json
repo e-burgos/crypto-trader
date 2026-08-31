@@ -209,7 +209,7 @@
       "type": "IMPROVEMENT",
       "severity": "medium",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "title": "Una sola instancia de StreamHealthService por inyeccion, y un solo registro de TRADING_QUEUE",
       "estimation_hours": 4,
       "description": "trading.controller.ts:61 construye StreamHealthService a mano con 3 de 6 argumentos, porque TradingModule no puede importar ReactiveModule sin el ciclo que architect §7.1 prohibe. Mover EP-015 a un controller propio de ReactiveModule sobre la misma ruta y volver obligatorio el constructor. Sin forwardRef. En el mismo cambio, hacer que TradingModule re-exporte BullModule y borrar el registerQueue de reactive.module.ts, para que Nest provea una unica Bull.Queue en vez de dos con sus dos pares de clientes ioredis. La falta de ese export es la causa de fondo de ambos.",
@@ -220,11 +220,22 @@
       "affected_files": [
         "apps/api/src/trading/trading.controller.ts",
         "apps/api/src/trading/trading.module.ts",
+        "apps/api/src/trading/trading.controller.bot-actions.spec.ts",
         "apps/api/src/reactive/reactive.module.ts",
-        "apps/api/src/reactive/stream-health.service.ts"
+        "apps/api/src/reactive/stream-health.service.ts",
+        "apps/api/src/reactive/stream-health.controller.ts",
+        "apps/api/src/reactive/stream-health.service.spec.ts",
+        "apps/api/src/reactive/reactive-module-wiring.spec.ts"
       ],
       "test_reference": "La suite de apps/api en verde y una sola instancia resuelta por DI para StreamHealthService y para la cola",
-      "status": "pending",
+      "usage": {
+        "tokens_in": 210000,
+        "tokens_out": 14000,
+        "model_tier": "claude/opus",
+        "approx": true,
+        "source": "declared-estimate"
+      },
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-001",
       "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-001.md"
@@ -266,7 +277,7 @@
       "type": "IMPROVEMENT",
       "severity": "medium",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "title": "Dependencias obligatorias en TradingProcessor y eliminacion de PassthroughActionGate",
       "estimation_hours": 5,
       "description": "positionAction, coordination y actionGate son opcionales en el constructor solo para no tocar los mocks de prisma de 11 specs preexistentes. El fallback de actionGate es un PassthroughActionGate que ejecuta todo y devuelve EXECUTED, dentro de la clase cuyo punto es que los caps no se puedan eludir. Hoy es inalcanzable por DI (Nest falla la resolucion si falta el provider), pero sigue alcanzable desde cualquier construccion manual. Dar a los specs una factoria de mock de prisma compartida, volver obligatorios los tres parametros y borrar PassthroughActionGate.",
@@ -275,13 +286,33 @@
         "reactive-execution-loop"
       ],
       "affected_files": [
-        "apps/api/src/trading/trading.processor.ts"
+        "apps/api/src/trading/trading.processor.ts",
+        "apps/api/src/trading/__mocks__/trading-processor-deps.ts",
+        "apps/api/src/trading/trading.processor.aggregate-risk.spec.ts",
+        "apps/api/src/trading/trading.processor.decision-traceability.spec.ts",
+        "apps/api/src/trading/trading.processor.deterministic-gate.spec.ts",
+        "apps/api/src/trading/trading.processor.exit-machine.spec.ts",
+        "apps/api/src/trading/trading.processor.isolation.spec.ts",
+        "apps/api/src/trading/trading.processor.native-protection.spec.ts",
+        "apps/api/src/trading/trading.processor.protection-rearm.spec.ts",
+        "apps/api/src/trading/trading.processor.reactive-gate.spec.ts",
+        "apps/api/src/trading/trading.processor.reactive-window.spec.ts",
+        "apps/api/src/trading/trading.processor.reconciliation-order.spec.ts",
+        "apps/api/src/trading/trading.processor.sell-policy.spec.ts",
+        "apps/api/src/trading/trading.processor.sizing.spec.ts"
       ],
       "test_reference": "Los 11 specs de trading en verde con la factoria compartida y sin ningun parametro opcional en el constructor",
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-003",
-      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-003.md"
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-003.md",
+      "usage": {
+        "tokens_in": 210000,
+        "tokens_out": 22000,
+        "model_tier": "claude/opus",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "author": "e-burgos",

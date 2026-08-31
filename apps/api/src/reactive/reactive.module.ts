@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { BullModule, getQueueToken } from '@nestjs/bull';
+import { getQueueToken } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { BinanceRestClient, BinanceWsClient } from '@crypto-trader/data-fetcher';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -25,6 +25,7 @@ import {
   type MarketStreamWsClient,
 } from './market-stream.service';
 import { StreamHealthService } from './stream-health.service';
+import { StreamHealthController } from './stream-health.controller';
 import { FastPathService } from './fast-path.service';
 import { MaterialEventService } from './material-event.service';
 
@@ -35,8 +36,8 @@ import { MaterialEventService } from './material-event.service';
     GatewayModule,
     NotificationsModule,
     TradingModule,
-    BullModule.registerQueue({ name: TRADING_QUEUE }),
   ],
+  controllers: [StreamHealthController],
   providers: [
     {
       provide: MARKET_STREAM_WS_CLIENT,

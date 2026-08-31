@@ -3,6 +3,7 @@ dist/
 .worktrees/
 .env
 !.env.example
+.env.production
 **/generated/prisma
 
 .nx/installation

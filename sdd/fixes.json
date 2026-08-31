@@ -315,7 +315,7 @@
       "type": "IMPROVEMENT",
       "severity": "medium",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "title": "Ampliar los escenarios congelados que ejercitan el harness de costo",
       "estimation_hours": 3,
       "description": "De los 12 escenarios congelados, solo broken-price-spike produce un adelanto: los otros 11 tienen extremos estables en precio. La garantia de CA-003 se apoya en un unico punto de datos y el chequeo de no-vacuidad se cumple con lo justo. Agregar al menos un escenario que dispare LEVEL_BREAK y uno que dispare VOLUME_SPIKE, coordinado con el harness hermano de costo de LLM que comparte la fixture.",
@@ -328,8 +328,15 @@
         "apps/api/src/orchestrator/cost-harness/reactive-cost-harness.spec.ts"
       ],
       "test_reference": "El harness reactivo con al menos 3 escenarios que adelantan, cubriendo los tres tipos de evento, y el harness hermano en verde",
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
+      "usage": {
+        "tokens_in": 128000,
+        "tokens_out": 14000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      },
       "id": "FIX-e-burgos-005-005",
       "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-005.md"
     }

@@ -97,6 +97,36 @@ export function buildScenarioTicks(
   });
 }
 
+export interface ScenarioCandle {
+  volume: number;
+  openTime: number;
+  closeTime: number;
+}
+
+export const HARNESS_CANDLE_DURATION_MS = 60 * 60_000;
+
+export function buildScenarioCandleAt(
+  scenario: CostScenario,
+  tick: ScenarioTick,
+): ScenarioCandle {
+  const closeTime = scenario.snapshotTakenAt;
+  const openTime = closeTime - HARNESS_CANDLE_DURATION_MS;
+  const windowStart = scenario.previous.takenAt;
+  const windowSpan = closeTime - windowStart;
+
+  const elapsedFractionAtWindowStart = (windowStart - openTime) / HARNESS_CANDLE_DURATION_MS;
+  const volumeAtWindowStart = scenario.indicators.volume.average * elapsedFractionAtWindowStart;
+  const windowFraction = windowSpan > 0 ? (tick.timestamp - windowStart) / windowSpan : 1;
+
+  return {
+    volume:
+      volumeAtWindowStart +
+      (scenario.indicators.volume.current - volumeAtWindowStart) * windowFraction,
+    openTime,
+    closeTime,
+  };
+}
+
 const NOW = 1_800_000_000_000;
 const PREVIOUS_TAKEN_AT = NOW - 15 * 60_000;
 
@@ -135,7 +165,13 @@ function buildIndicators(overrides: {
   ema9?: number;
   ema21?: number;
   emaTrend?: string;
+  volumeCurrent?: number;
+  volumeAverage?: number;
+  supportResistance?: { support: number[]; resistance: number[] };
 }): IndicatorSnapshot {
+  const volumeCurrent = overrides.volumeCurrent ?? 1_200;
+  const volumeAverage = overrides.volumeAverage ?? 1_150;
+
   return {
     rsi: { value: overrides.rsi ?? 52, signal: 'NEUTRAL' as never },
     macd: { macd: 12.4, signal: 10.1, histogram: 2.3, crossover: 'NONE' as never },
@@ -153,8 +189,16 @@ function buildIndicators(overrides: {
       ema200: 58_000,
       trend: (overrides.emaTrend ?? 'BULLISH') as never,
     },
-    volume: { current: 1_200, average: 1_150, ratio: 1.04, signal: 'NORMAL' as never },
-    supportResistance: { support: [58_500], resistance: [61_500] },
+    volume: {
+      current: volumeCurrent,
+      average: volumeAverage,
+      ratio: volumeCurrent / volumeAverage,
+      signal: 'NORMAL' as never,
+    },
+    supportResistance: overrides.supportResistance ?? {
+      support: [58_500],
+      resistance: [61_500],
+    },
     timestamp: NOW,
   };
 }
@@ -422,4 +466,59 @@ export const SCENARIOS: readonly CostScenario[] = Object.freeze([
       macro: NO_MACRO,
     }),
   },
+]);
+
+const LEVEL_BREAK_PREVIOUS_CLOSE = 59_800;
+const LEVEL_BREAK_CLOSE = 60_090;
+const LEVEL_BREAK_INDICATORS = buildIndicators({
+  supportResistance: { support: [59_950], resistance: [61_500] },
+});
+
+const VOLUME_SPIKE_INDICATORS = buildIndicators({ volumeCurrent: 3_200 });
+
+// kept out of SCENARIOS: CA-059 freezes that fixture at exactly 12 and the LLM cost harness asserts those absolute counts
+export const REACTIVE_EVENT_SCENARIOS: readonly CostScenario[] = Object.freeze([
+  {
+    id: 'level-break-under-price-threshold',
+    withSignal: false,
+    now: NOW,
+    snapshotTakenAt: NOW,
+    reconciliationConfirmed: true,
+    close: LEVEL_BREAK_CLOSE,
+    indicators: LEVEL_BREAK_INDICATORS,
+    openPositions: NO_POSITIONS,
+    news: STABLE_NEWS,
+    macro: NO_MACRO,
+    previous: buildPrevious({
+      close: LEVEL_BREAK_PREVIOUS_CLOSE,
+      indicators: LEVEL_BREAK_INDICATORS,
+      openPositions: NO_POSITIONS,
+      news: STABLE_NEWS,
+      macro: NO_MACRO,
+    }),
+  },
+  {
+    id: 'volume-spike-with-flat-price',
+    withSignal: false,
+    now: NOW,
+    snapshotTakenAt: NOW,
+    reconciliationConfirmed: true,
+    close: STABLE_CLOSE,
+    indicators: VOLUME_SPIKE_INDICATORS,
+    openPositions: NO_POSITIONS,
+    news: STABLE_NEWS,
+    macro: NO_MACRO,
+    previous: buildPrevious({
+      close: STABLE_CLOSE,
+      indicators: VOLUME_SPIKE_INDICATORS,
+      openPositions: NO_POSITIONS,
+      news: STABLE_NEWS,
+      macro: NO_MACRO,
+    }),
+  },
+]);
+
+export const REACTIVE_HARNESS_SCENARIOS: readonly CostScenario[] = Object.freeze([
+  ...SCENARIOS,
+  ...REACTIVE_EVENT_SCENARIOS,
 ]);

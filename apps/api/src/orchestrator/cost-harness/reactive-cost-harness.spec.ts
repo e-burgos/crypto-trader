@@ -6,13 +6,17 @@ import {
   DEFAULT_MATERIAL_EVENT_THRESHOLDS,
   type MaterialEventReference,
   type MaterialEventState,
+  type MaterialEventType,
 } from '@crypto-trader/analysis';
 import type { AgentTask } from '../sub-agent.service';
 import {
+  buildScenarioCandleAt,
   buildScenarioTicks,
   computeMacroFingerprint,
   computeNewsFingerprint,
   computePositionsFingerprint,
+  REACTIVE_EVENT_SCENARIOS,
+  REACTIVE_HARNESS_SCENARIOS,
   SCENARIOS,
   type CostScenario,
   type ScenarioTick,
@@ -33,7 +37,19 @@ interface ScenarioOutcome {
   cycles: number;
   llmCalls: number;
   advancesGranted: number;
+  advanceEvent: MaterialEventType | null;
 }
+
+interface DetectedAdvance {
+  tick: ScenarioTick;
+  event: MaterialEventType;
+}
+
+const EXPECTED_ADVANCE_EVENT: Readonly<Record<string, MaterialEventType>> = {
+  'broken-price-spike': 'PRICE_MOVED',
+  'level-break-under-price-threshold': 'LEVEL_BREAK',
+  'volume-spike-with-flat-price': 'VOLUME_SPIKE',
+};
 
 function buildMaterialReference(scenario: CostScenario): MaterialEventReference {
   return {
@@ -52,10 +68,10 @@ function initialDetectorState(): MaterialEventState {
   };
 }
 
-function findAdvanceTick(
+function findAdvance(
   scenario: CostScenario,
   ticks: readonly ScenarioTick[],
-): ScenarioTick | null {
+): DetectedAdvance | null {
   const reference = buildMaterialReference(scenario);
   let state = initialDetectorState();
 
@@ -63,14 +79,14 @@ function findAdvanceTick(
     const result = detectMaterialEvent({
       now: tick.timestamp,
       tick: { price: tick.price, timestamp: tick.timestamp },
-      candle: null,
+      candle: buildScenarioCandleAt(scenario, tick),
       reference,
       state,
       thresholds: DEFAULT_MATERIAL_EVENT_THRESHOLDS,
       referenceMaxAgeMs: DEFAULT_GATE_THRESHOLDS.previousDecisionMaxAgeMs,
     });
     state = result.state;
-    if (result.event) return tick;
+    if (result.event) return { tick, event: result.event };
   }
 
   return null;
@@ -132,7 +148,7 @@ async function runBaseline(
   if (!holds) {
     await recordDecisionCall(scenarioKey('BASELINE', scenario), calls);
   }
-  return { cycles: 1, llmCalls: holds ? 0 : 1, advancesGranted: 0 };
+  return { cycles: 1, llmCalls: holds ? 0 : 1, advancesGranted: 0, advanceEvent: null };
 }
 
 async function runReactive(
@@ -140,15 +156,20 @@ async function runReactive(
   calls: RecordedCall[],
 ): Promise<ScenarioOutcome> {
   const ticks = buildScenarioTicks(scenario, TICK_COUNT);
-  const advanceTick = findAdvanceTick(scenario, ticks);
-  const decisionClose = advanceTick ? advanceTick.price : scenario.close;
-  const decisionTakenAt = advanceTick ? advanceTick.timestamp : scenario.snapshotTakenAt;
+  const advance = findAdvance(scenario, ticks);
+  const decisionClose = advance ? advance.tick.price : scenario.close;
+  const decisionTakenAt = advance ? advance.tick.timestamp : scenario.snapshotTakenAt;
 
   const holds = gateHoldsAt(scenario, decisionClose, decisionTakenAt);
   if (!holds) {
     await recordDecisionCall(scenarioKey('REACTIVE', scenario), calls);
   }
-  return { cycles: 1, llmCalls: holds ? 0 : 1, advancesGranted: advanceTick ? 1 : 0 };
+  return {
+    cycles: 1,
+    llmCalls: holds ? 0 : 1,
+    advancesGranted: advance ? 1 : 0,
+    advanceEvent: advance ? advance.event : null,
+  };
 }
 
 describe('Reactive cost harness — CA-003 (architect.md §4.4): the reactive loop must not raise LLM cost', () => {
@@ -157,16 +178,16 @@ describe('Reactive cost harness — CA-003 (architect.md §4.4): the reactive lo
   const reactiveByScenario = new Map<string, ScenarioOutcome>();
 
   beforeAll(async () => {
-    for (const scenario of SCENARIOS) {
+    for (const scenario of REACTIVE_HARNESS_SCENARIOS) {
       baselineByScenario.set(scenario.id, await runBaseline(scenario, calls));
     }
-    for (const scenario of SCENARIOS) {
+    for (const scenario of REACTIVE_HARNESS_SCENARIOS) {
       reactiveByScenario.set(scenario.id, await runReactive(scenario, calls));
     }
   });
 
   it('buildScenarioTicks interpolates linearly between the previous and current decision, sustaining volume', () => {
-    for (const scenario of SCENARIOS) {
+    for (const scenario of REACTIVE_HARNESS_SCENARIOS) {
       const ticks = buildScenarioTicks(scenario, TICK_COUNT);
 
       expect(ticks).toHaveLength(TICK_COUNT);
@@ -185,26 +206,26 @@ describe('Reactive cost harness — CA-003 (architect.md §4.4): the reactive lo
   });
 
   it('cycles: every scenario resolves exactly one decision cycle per window, with the loop off or on (D2)', () => {
-    for (const scenario of SCENARIOS) {
+    for (const scenario of REACTIVE_HARNESS_SCENARIOS) {
       expect(baselineByScenario.get(scenario.id)?.cycles).toBe(1);
       expect(reactiveByScenario.get(scenario.id)?.cycles).toBe(1);
     }
   });
 
   it('CA-003 per scenario: the reactive run never calls the LLM more than the baseline run', () => {
-    for (const scenario of SCENARIOS) {
+    for (const scenario of REACTIVE_HARNESS_SCENARIOS) {
       const baseline = baselineByScenario.get(scenario.id);
       const reactive = reactiveByScenario.get(scenario.id);
       expect(reactive?.llmCalls).toBeLessThanOrEqual(baseline?.llmCalls ?? 0);
     }
   });
 
-  it('CA-003 aggregate: total reactive LLM calls never exceed total baseline calls across the 12 scenarios', () => {
-    const totalBaseline = SCENARIOS.reduce(
+  it('CA-003 aggregate: total reactive LLM calls never exceed total baseline calls across every harness scenario', () => {
+    const totalBaseline = REACTIVE_HARNESS_SCENARIOS.reduce(
       (sum, s) => sum + (baselineByScenario.get(s.id)?.llmCalls ?? 0),
       0,
     );
-    const totalReactive = SCENARIOS.reduce(
+    const totalReactive = REACTIVE_HARNESS_SCENARIOS.reduce(
       (sum, s) => sum + (reactiveByScenario.get(s.id)?.llmCalls ?? 0),
       0,
     );
@@ -219,17 +240,41 @@ describe('Reactive cost harness — CA-003 (architect.md §4.4): the reactive lo
   });
 
   it('window-token invariant: no scenario grants more than one advance (rx:v1:advance token, D2)', () => {
-    for (const scenario of SCENARIOS) {
+    for (const scenario of REACTIVE_HARNESS_SCENARIOS) {
       expect(reactiveByScenario.get(scenario.id)?.advancesGranted).toBeLessThanOrEqual(1);
     }
   });
 
-  it('non-vacuity: at least one of the 12 scenarios actually advances its cycle', () => {
-    const totalAdvances = SCENARIOS.reduce(
+  it('non-vacuity: at least three scenarios actually advance their cycle', () => {
+    const totalAdvances = REACTIVE_HARNESS_SCENARIOS.reduce(
       (sum, s) => sum + (reactiveByScenario.get(s.id)?.advancesGranted ?? 0),
       0,
     );
 
-    expect(totalAdvances).toBeGreaterThanOrEqual(1);
+    expect(totalAdvances).toBeGreaterThanOrEqual(3);
+  });
+
+  it('the harness exercises all three material event types, each advance matching its declared type', () => {
+    const advancedEvents = REACTIVE_HARNESS_SCENARIOS.map((s) => ({
+      id: s.id,
+      event: reactiveByScenario.get(s.id)?.advanceEvent ?? null,
+    })).filter((entry) => entry.event !== null);
+
+    for (const entry of advancedEvents) {
+      expect(entry.event).toBe(EXPECTED_ADVANCE_EVENT[entry.id]);
+    }
+
+    expect(new Set(advancedEvents.map((entry) => entry.event))).toEqual(
+      new Set<MaterialEventType>(['PRICE_MOVED', 'LEVEL_BREAK', 'VOLUME_SPIKE']),
+    );
+  });
+
+  it('the reactive-only scenarios are absent from the frozen fixture the LLM cost harness asserts on (CA-059)', () => {
+    for (const scenario of REACTIVE_EVENT_SCENARIOS) {
+      expect(SCENARIOS.some((s) => s.id === scenario.id)).toBe(false);
+    }
+    expect(REACTIVE_HARNESS_SCENARIOS).toHaveLength(
+      SCENARIOS.length + REACTIVE_EVENT_SCENARIOS.length,
+    );
   });
 });

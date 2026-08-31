@@ -27,6 +27,7 @@ import { LLMUsageService } from '../llm/llm-usage.service';
 import { AgentConfigResolverService } from '../agents/agent-config-resolver.service';
 import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
 import { TradingService } from '../trading/trading.service';
+import { assertModeWithinPlatformCeiling } from '../common/platform-operation-mode';
 
 const PROVIDER_LABELS: Record<LLMProvider, string> = {
   [LLMProvider.CLAUDE]: 'Anthropic Claude',
@@ -796,6 +797,14 @@ export class ChatService {
         if (this.tradingService) {
           result = await this.tradingService.startAgent(userId, { configId });
         } else {
+          const owner = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { platformOperationMode: true },
+          });
+          assertModeWithinPlatformCeiling(
+            config.mode,
+            owner?.platformOperationMode ?? 'SANDBOX',
+          );
           await this.prisma.tradingConfig.update({
             where: { id: configId },
             data: { isRunning: true },

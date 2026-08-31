@@ -85,3 +85,14 @@ export class LLMOptionResponse {
   model!: string;
   models!: string[];
 }
+
+export class SelectOptionDto {
+  @ApiProperty({ example: 'confirm-buy' })
+  @IsString()
+  @IsNotEmpty()
+  optionId!: string;
+
+  @ApiProperty({ example: 'BTCUSDT' })
+  @IsString()
+  value!: string;
+}

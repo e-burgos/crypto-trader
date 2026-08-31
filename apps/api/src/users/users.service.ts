@@ -19,6 +19,7 @@ import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import { recordCall } from '../llm/provider-health.service';
 import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
+import { modesAbovePlatformCeiling } from '../common/platform-operation-mode';
 
 @Injectable()
 export class UsersService {
@@ -83,12 +84,31 @@ export class UsersService {
       }
     }
 
+    await this.assertNoAgentsRunningAboveCeiling(userId, mode);
+
     await this.prisma.user.update({
       where: { id: userId },
       data: { platformOperationMode: mode },
     });
 
     return { platformOperationMode: mode };
+  }
+
+  private async assertNoAgentsRunningAboveCeiling(
+    userId: string,
+    platformMode: string,
+  ) {
+    const modesAbove = modesAbovePlatformCeiling(platformMode);
+    if (modesAbove.length === 0) return;
+
+    const running = await this.prisma.tradingConfig.count({
+      where: { userId, isRunning: true, mode: { in: modesAbove as any } },
+    });
+    if (running > 0) {
+      throw new BadRequestException(
+        `You have ${running} agent(s) running above ${platformMode}. Stop them before switching the platform to ${platformMode}.`,
+      );
+    }
   }
 
   // ── Binance credentials ────────────────────────────────────────────────────

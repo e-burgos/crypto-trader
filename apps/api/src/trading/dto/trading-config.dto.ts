@@ -836,3 +836,31 @@ export class StopAgentsByModeDto {
   @IsEnum(TradingModeEnum)
   mode!: TradingModeEnum;
 }
+
+export class InitSandboxWalletDto {
+  @ApiPropertyOptional({ minimum: 0, maximum: 10_000_000, example: 10_000 })
+  @IsNumber({}, { message: 'Capital USDT debe ser un número válido' })
+  @Min(0, { message: 'Capital USDT debe ser mayor o igual a $constraint1' })
+  @Max(10_000_000, { message: 'Capital USDT no puede superar $constraint1' })
+  @IsOptional()
+  capitalUsdt?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 10_000_000, example: 10_000 })
+  @IsNumber({}, { message: 'Capital USDC debe ser un número válido' })
+  @Min(0, { message: 'Capital USDC debe ser mayor o igual a $constraint1' })
+  @Max(10_000_000, { message: 'Capital USDC no puede superar $constraint1' })
+  @IsOptional()
+  capitalUsdc?: number;
+}
+
+export class AutoNameAgentDto {
+  @ApiProperty({ example: 'BTC' })
+  @IsString()
+  @MaxLength(20)
+  asset!: string;
+
+  @ApiPropertyOptional({ enum: RiskProfileEnum, example: RiskProfileEnum.MODERATE })
+  @IsEnum(RiskProfileEnum)
+  @IsOptional()
+  riskProfile?: RiskProfileEnum;
+}

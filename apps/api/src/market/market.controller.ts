@@ -18,6 +18,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { MarketService } from './market.service';
+import { UpdateNewsConfigDto } from './dto/news-config.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   CurrentUser,
@@ -94,15 +95,7 @@ export class MarketController {
   @ApiResponse({ status: 200 })
   updateNewsConfig(
     @CurrentUser() user: RequestUser,
-    @Body()
-    body: {
-      intervalMinutes?: number;
-      newsCount?: number;
-      enabledSources?: string[];
-      onlySummary?: boolean;
-      botEnabled?: boolean;
-      newsWeight?: number;
-    },
+    @Body() body: UpdateNewsConfigDto,
   ) {
     return this.marketService.updateNewsConfig(user.userId, body);
   }

@@ -29,6 +29,9 @@ const mockPrismaService = {
   adminAction: {
     create: jest.fn(),
   },
+  tradingConfig: {
+    count: jest.fn().mockResolvedValue(0),
+  },
 };
 
 describe('UsersService', () => {

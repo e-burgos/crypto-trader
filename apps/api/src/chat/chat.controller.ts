@@ -28,6 +28,7 @@ import {
   CreateSessionDto,
   SendMessageDto,
   UpdateSessionDto,
+  SelectOptionDto,
 } from './dto/chat.dto';
 import { ExecuteToolDto } from './dto/execute-tool.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -233,7 +234,7 @@ export class ChatController {
   selectOption(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
-    @Body() body: { optionId: string; value: string },
+    @Body() body: SelectOptionDto,
   ) {
     return this.chatService.processSelection(user.userId, id, body);
   }

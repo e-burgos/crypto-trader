@@ -27,6 +27,11 @@ import { DataSourceRegistryService } from '../market/data-source-registry.servic
 import { PrismaService } from '../prisma/prisma.service';
 import { encrypt } from '../users/utils/encryption.util';
 import type { DataSourceStatus } from '@crypto-trader/shared';
+import {
+  SetDataSourceCredentialDto,
+  ToggleDataSourceDto,
+  UpdateDataSourceConfigDto,
+} from './dto/data-sources.dto';
 
 @ApiTags('admin/data-sources')
 @ApiBearerAuth('access-token')
@@ -82,7 +87,7 @@ export class DataSourcesController {
   @ApiResponse({ status: 200, description: 'Source toggled' })
   async toggle(
     @Param('id') id: string,
-    @Body() body: { isActive: boolean },
+    @Body() body: ToggleDataSourceDto,
     @CurrentUser() user: RequestUser,
   ) {
     const updated = await this.registry.toggleSource(id, body.isActive);
@@ -114,12 +119,7 @@ export class DataSourcesController {
   @ApiResponse({ status: 200, description: 'Config updated' })
   async updateConfig(
     @Param('id') id: string,
-    @Body()
-    body: {
-      priority?: number;
-      rateLimitPerMin?: number;
-      pollingIntervalMs?: number;
-    },
+    @Body() body: UpdateDataSourceConfigDto,
     @CurrentUser() user: RequestUser,
   ) {
     const updated = await this.registry.updateConfig(id, body);
@@ -130,7 +130,7 @@ export class DataSourcesController {
         action: 'DATA_SOURCE_CONFIG_UPDATED',
         details: {
           dataSourceId: id,
-          changes: body,
+          changes: { ...body },
         },
       },
     });
@@ -189,7 +189,7 @@ export class DataSourcesController {
   @ApiResponse({ status: 200, description: 'API key saved (encrypted)' })
   async setCredential(
     @Param('id') id: string,
-    @Body() body: { apiKey: string; shared?: boolean },
+    @Body() body: SetDataSourceCredentialDto,
     @CurrentUser() user: RequestUser,
   ) {
     // Validate source exists

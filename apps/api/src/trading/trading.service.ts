@@ -44,6 +44,7 @@ import {
   MAX_ACTIVE_AGENTS_PER_USER,
 } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
+import { assertModeWithinPlatformCeiling } from '../common/platform-operation-mode';
 
 const DEFAULTS = {
   buyThreshold: 70,
@@ -167,7 +168,25 @@ export class TradingService implements OnModuleInit {
     });
   }
 
+  private async getPlatformOperationMode(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { platformOperationMode: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user.platformOperationMode;
+  }
+
+  private async assertModeAllowedForUser(userId: string, mode: string) {
+    assertModeWithinPlatformCeiling(
+      mode,
+      await this.getPlatformOperationMode(userId),
+    );
+  }
+
   async createConfig(userId: string, dto: CreateTradingConfigDto) {
+    await this.assertModeAllowedForUser(userId, dto.mode);
+
     // Build a comparable snapshot of the incoming config values
     const incoming = {
       asset: dto.asset,
@@ -242,6 +261,8 @@ export class TradingService implements OnModuleInit {
       where: { id: configId, userId },
     });
     if (!config) throw new NotFoundException('Trading config not found');
+
+    if (dto.mode) await this.assertModeAllowedForUser(userId, dto.mode);
 
     return this.prisma.tradingConfig.update({
       where: { id: configId },
@@ -334,6 +355,9 @@ export class TradingService implements OnModuleInit {
         `No trading config found with id ${dto.configId}.`,
       );
     }
+
+    await this.assertModeAllowedForUser(userId, config.mode);
+
     if (config.isRunning) {
       throw new BadRequestException(
         `Agent for config ${dto.configId} is already running`,

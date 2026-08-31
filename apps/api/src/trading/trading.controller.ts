@@ -27,6 +27,8 @@ import {
   StartAgentDto,
   StopAgentDto,
   StopAgentsByModeDto,
+  InitSandboxWalletDto,
+  AutoNameAgentDto,
 } from './dto/trading-config.dto';
 import { UpdateUserRiskPolicyDto } from './dto/user-risk-policy.dto';
 import { ListBotActionsDto } from './dto/list-bot-actions.dto';
@@ -74,7 +76,7 @@ export class TradingController {
   @ApiResponse({ status: 200, description: 'Wallets inicializadas' })
   initSandboxWallet(
     @CurrentUser() user: RequestUser,
-    @Body() body: { capitalUsdt?: number; capitalUsdc?: number },
+    @Body() body: InitSandboxWalletDto,
   ) {
     return this.tradingService.initSandboxWallets(
       user.userId,
@@ -114,11 +116,7 @@ export class TradingController {
   @ApiOperation({ summary: 'Generar nombre automático para un agente' })
   @ApiResponse({ status: 200, description: 'Nombre generado' })
   autoName(
-    @Body()
-    body: {
-      asset: string;
-      riskProfile: string;
-    },
+    @Body() body: AutoNameAgentDto,
   ) {
     return {
       name: generateAgentName({

@@ -543,6 +543,88 @@
         "source": "declared-estimate",
         "model_tier": "claude/opus"
       }
+    },
+    {
+      "id": "FIX-e-burgos-010",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-010.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-08-31",
+      "resolved_at": "2026-08-31",
+      "validated_at": null,
+      "title": "Endpoints con @Body() de tipo inline saltean el ValidationPipe global: entran campos arbitrarios",
+      "estimation_hours": 2,
+      "description": "main.ts monta un ValidationPipe global con whitelist y forbidNonWhitelisted, la defensa contra asignacion masiva. El ValidationPipe solo valida cuando el metatype del parametro es una clase con metadata de class-validator: si el @Body() se tipa con un objeto inline el metatype es Object, el pipe hace short-circuit y el body entra crudo, sin validacion de tipos ni descarte de campos de mas. La auditoria lo detecto en apps/api/src/admin/data-sources.controller.ts y el barrido del backend encontro el mismo patron en 8 endpoints repartidos en 5 controllers (admin/data-sources x3, users x1, trading x2, chat x1, market x1). Cada uno debe pasar a una clase DTO con decoradores de class-validator.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30, severidad media. Va por FIX GATE y no por ciclo SDD: no crea endpoints ni entidades ni toca schema.json, es el endurecimiento de contratos de request ya existentes. Uno de los endpoints afectados escribe credenciales cifradas y otro toca la config de bots que operan con dinero real, asi que la ventana no conviene dejarla abierta hasta el proximo ciclo.",
+      "related_modules": [
+        "platform-security",
+        "api-contracts"
+      ],
+      "affected_files": [
+        "apps/api/src/admin/data-sources.controller.ts",
+        "apps/api/src/admin/dto/data-sources.dto.ts",
+        "apps/api/src/users/users.controller.ts",
+        "apps/api/src/users/dto/data-source-credential.dto.ts",
+        "apps/api/src/market/market.controller.ts",
+        "apps/api/src/market/dto/news-config.dto.ts",
+        "apps/api/src/trading/trading.controller.ts",
+        "apps/api/src/trading/dto/trading-config.dto.ts",
+        "apps/api/src/chat/chat.controller.ts",
+        "apps/api/src/chat/dto/chat.dto.ts",
+        "apps/api/src/common/body-dto-validation.spec.ts"
+      ],
+      "test_reference": "apps/api/src/common/body-dto-validation.spec.ts: corre el ValidationPipe global real (whitelist + forbidNonWhitelisted) contra las 8 clases DTO nuevas — acepta el body legitimo, rechaza el body con campos no declarados y rechaza el body mal tipado o fuera de rango; ademas un guard estatico recorre todos los *.controller.ts de apps/api/src y falla si algun @Body() queda tipado con algo que no sea una clase *Dto",
+      "status": "implemented",
+      "cycle": "cycle-01",
+      "usage": {
+        "tokens_in": 210000,
+        "tokens_out": 18000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      },
+      "process_note": "Toca 11 archivos, por encima del limite de 5 del FIX GATE. No se redirige a ciclo SDD porque no hay contrato nuevo: son 8 endpoints ya existentes que pasan a declarar el body que siempre recibieron, mas los archivos DTO que los alojan y un unico spec. El limite del gate apunta a cambios de alcance disperso, y este es un unico patron repetido; dividirlo en fixes por controller habria multiplicado el registro sin bajar el riesgo."
+    },
+    {
+      "id": "FIX-e-burgos-011",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-011.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-08-31",
+      "resolved_at": "2026-08-31",
+      "validated_at": null,
+      "title": "El modo de plataforma del usuario no se hace cumplir: se puede crear y arrancar un bot por encima de el",
+      "estimation_hours": 3,
+      "description": "User.platformOperationMode (SANDBOX/TESTNET/LIVE) se valida al cambiarlo -- users.service.ts exige las keys de Binance del modo destino -- pero ningun punto del backend impide crear, editar o arrancar una TradingConfig cuyo mode sea mas riesgoso que el modo de plataforma del usuario. trading.service.ts createConfig, updateConfig y startAgent nunca leen platformOperationMode. Hoy el modo de plataforma es una preferencia de interfaz, no un limite: el frontend lo fuerza en el formulario de alta y detiene los agentes del modo saliente antes de cambiarlo, pero un request directo a la API salta esas dos barreras.",
+      "justification": "Hallazgo de la auditoria de seguridad e infraestructura del 2026-08-30, severidad media. Va por FIX GATE y no por ciclo SDD: no agrega endpoints ni entidades, es una regla de negocio sobre metodos existentes. La consecuencia de equivocarse es operar con dinero real mientras el usuario cree estar en simulacion -- el mismo riesgo operativo que la spec 32 declaro como motivo de existir del modo de plataforma.",
+      "related_modules": [
+        "trading",
+        "platform-security"
+      ],
+      "affected_files": [
+        "apps/api/src/common/platform-operation-mode.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/users/users.service.ts",
+        "apps/api/src/chat/chat.service.ts",
+        "apps/api/src/trading/trading.service.platform-mode-ceiling.spec.ts",
+        "apps/api/src/users/users.service.platform-mode-ceiling.spec.ts",
+        "apps/api/src/chat/chat.start-agent-ceiling.spec.ts"
+      ],
+      "test_reference": "trading.service.platform-mode-ceiling.spec.ts: startAgent rechaza un bot LIVE con la plataforma en SANDBOX y en TESTNET sin tocar la cola ni isRunning, arranca el bot cuyo modo coincide y arranca un bot SANDBOX con la plataforma en LIVE (techo, no igualdad); createConfig rechaza la config LIVE bajo plataforma SANDBOX; updateConfig rechaza subir el modo por encima del techo. users.service.platform-mode-ceiling.spec.ts: no se puede bajar el modo de plataforma con agentes corriendo por encima del techo nuevo. chat.start-agent-ceiling.spec.ts: la rama de start_agent que no delega en TradingService tambien respeta el techo",
+      "status": "implemented",
+      "cycle": "cycle-01",
+      "usage": {
+        "tokens_in": 210000,
+        "tokens_out": 18000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      },
+      "process_note": "Toca 7 archivos (4 de codigo + 3 specs), por encima del limite de 5 del FIX GATE. Se mantiene como fix porque no agrega endpoints, entidades ni tablas: es una regla de negocio sobre metodos existentes, centralizada en un unico helper. La cuarta ruta de arranque (la rama de fallback de chat.service) se incluyo porque escribe isRunning directo y habria quedado como bypass del techo."
     }
   ]
 }

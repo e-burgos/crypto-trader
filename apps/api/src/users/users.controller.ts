@@ -48,6 +48,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { DataSourceRegistryService } from '../market/data-source-registry.service';
 import { DataSourceCredentialResolver } from '../market/data-source-credential-resolver.service';
 import { encrypt } from './utils/encryption.util';
+import { SetMyDataSourceCredentialDto } from './dto/data-source-credential.dto';
 import type { TraderDataSourceInfo } from '@crypto-trader/shared';
 
 @ApiTags('users')
@@ -459,7 +460,7 @@ export class UsersController {
   })
   async setMyDataSourceCredential(
     @Param('id') id: string,
-    @Body() body: { apiKey: string },
+    @Body() body: SetMyDataSourceCredentialDto,
     @CurrentUser() user: RequestUser,
   ) {
     const config = await this.prisma.dataSourceConfig.findFirst({

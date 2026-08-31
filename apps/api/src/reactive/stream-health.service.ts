@@ -166,7 +166,12 @@ export class StreamHealthService
     if (now - since < this.thresholds.degradedNotifyAfterMs) return;
 
     this.notifiedDegradations.add(symbol);
-    await this.notifyDegradedUsers(symbol);
+    try {
+      await this.notifyDegradedUsers(symbol);
+    } catch (err) {
+      this.notifiedDegradations.delete(symbol);
+      throw err;
+    }
   }
 
   private async notifyDegradedUsers(symbol: string): Promise<void> {

@@ -235,7 +235,7 @@
       "type": "BUGFIX",
       "severity": "medium",
       "created_at": "2026-08-30",
-      "resolved_at": null,
+      "resolved_at": "2026-08-30",
       "title": "La notificacion de degradacion no se pierde si falla la escritura",
       "estimation_hours": 1,
       "description": "StreamHealthService.checkSustainedDegradation marca notifiedDegradations ANTES de que notifyDegradedUsers resuelva. Un fallo de prisma.tradingConfig.findMany pierde el aviso de esa degradacion hasta que el simbolo se recupere y vuelva a degradarse. Marcar despues de que resuelva, o revertir la marca si rechaza.",
@@ -248,10 +248,17 @@
         "apps/api/src/reactive/stream-health.service.spec.ts"
       ],
       "test_reference": "Test que fuerza el rechazo de la escritura y verifica que la siguiente pasada vuelve a intentar la notificacion",
-      "status": "pending",
+      "status": "implemented",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-002",
-      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-002.md"
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-002.md",
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 6000,
+        "model_tier": "claude/opus",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "author": "e-burgos",

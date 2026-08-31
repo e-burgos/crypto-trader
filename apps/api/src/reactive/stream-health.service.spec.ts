@@ -491,6 +491,108 @@ describe('StreamHealthService', () => {
 
       await expect(service.publishOwnedSymbols()).resolves.toBeUndefined();
     });
+
+    it('retries the notification on the next pass when the write rejects', async () => {
+      jest.useFakeTimers();
+      const start = new Date('2026-01-01T00:00:00.000Z').getTime();
+      jest.setSystemTime(start);
+
+      const coordination = createFakeCoordination();
+      const staleSince =
+        start - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const marketStream = createFakeMarketStream({
+        BTCUSDT: {
+          symbol: 'BTCUSDT',
+          ownerId: 'instance-a',
+          connectedAt: start - 120_000,
+          lastTickAtMs: staleSince,
+          lastHeartbeatAtMs: start,
+        },
+      });
+      const prisma = createFakePrisma([
+        { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
+      ]);
+      prisma.tradingConfig.findMany.mockRejectedValueOnce(
+        new Error('database unavailable'),
+      );
+      const notifications = createFakeNotifications();
+      const service = new StreamHealthService(
+        coordination,
+        prisma as never,
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        marketStream,
+        notifications as never,
+      );
+
+      await service.publishOwnedSymbols();
+      expect(notifications.create).not.toHaveBeenCalled();
+
+      jest.setSystemTime(
+        start + DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs + 1,
+      );
+      await expect(service.publishOwnedSymbols()).rejects.toThrow(
+        'database unavailable',
+      );
+      expect(notifications.create).not.toHaveBeenCalled();
+
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+      expect(notifications.create).toHaveBeenCalledWith(
+        'user-1',
+        NotificationType.AGENT_ERROR,
+        JSON.stringify({ key: 'streamDegraded', symbol: 'BTCUSDT' }),
+      );
+
+      await service.publishOwnedSymbols();
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('notifies once when two passes overlap while the write is still in flight', async () => {
+      jest.useFakeTimers();
+      const start = new Date('2026-01-01T00:00:00.000Z').getTime();
+      jest.setSystemTime(start);
+
+      const coordination = createFakeCoordination();
+      const staleSince =
+        start - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const marketStream = createFakeMarketStream({
+        BTCUSDT: {
+          symbol: 'BTCUSDT',
+          ownerId: 'instance-a',
+          connectedAt: start - 120_000,
+          lastTickAtMs: staleSince,
+          lastHeartbeatAtMs: start,
+        },
+      });
+      const prisma = createFakePrisma([]);
+      prisma.tradingConfig.findMany.mockImplementation(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        return [{ asset: 'BTC', pair: 'USDT', userId: 'user-1' }];
+      });
+      const notifications = createFakeNotifications();
+      const service = new StreamHealthService(
+        coordination,
+        prisma as never,
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        createFakeGateway(),
+        marketStream,
+        notifications as never,
+      );
+
+      await service.publishOwnedSymbols();
+      jest.setSystemTime(
+        start + DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.degradedNotifyAfterMs + 1,
+      );
+
+      await Promise.all([
+        service.publishOwnedSymbols(),
+        service.publishOwnedSymbols(),
+      ]);
+
+      expect(notifications.create).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('lifecycle', () => {

@@ -42,8 +42,14 @@ function createFakePrisma(
   };
 }
 
-function createFakeGateway(): AppGateway {
-  return { emitToAll: jest.fn() } as unknown as AppGateway;
+function createFakeGateway(): AppGateway & {
+  emitToAll: jest.Mock;
+  emitToUser: jest.Mock;
+} {
+  return { emitToAll: jest.fn(), emitToUser: jest.fn() } as unknown as AppGateway & {
+    emitToAll: jest.Mock;
+    emitToUser: jest.Mock;
+  };
 }
 
 function createFakeNotifications(): {
@@ -288,7 +294,9 @@ describe('StreamHealthService', () => {
       const gateway = createFakeGateway();
       const service = new StreamHealthService(
         coordination,
-        createFakePrisma([]) as never,
+        createFakePrisma([
+          { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
+        ]) as never,
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
         gateway,
         marketStream,
@@ -296,7 +304,7 @@ describe('StreamHealthService', () => {
       );
 
       await service.publishOwnedSymbols();
-      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).not.toHaveBeenCalled();
 
       (marketStream.getHealthSnapshot as jest.Mock).mockReturnValue({
         symbol: 'BTCUSDT',
@@ -308,8 +316,10 @@ describe('StreamHealthService', () => {
 
       await service.publishOwnedSymbols();
 
-      expect(gateway.emitToAll).toHaveBeenCalledTimes(1);
-      expect(gateway.emitToAll).toHaveBeenCalledWith(
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).toHaveBeenCalledTimes(1);
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-1',
         'market:stream-health',
         expect.objectContaining({
           symbol: 'BTCUSDT',
@@ -318,6 +328,91 @@ describe('StreamHealthService', () => {
           ownerId: 'instance-a',
         }),
       );
+    });
+
+    it('aislamiento multiusuario: la transicion solo llega a los usuarios con un bot corriendo ese simbolo (FIX-e-burgos-005-006)', async () => {
+      const coordination = createFakeCoordination();
+      const now = Date.now();
+      const staleTick =
+        now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const marketStream = createFakeMarketStream({
+        BTCUSDT: {
+          symbol: 'BTCUSDT',
+          ownerId: 'instance-a',
+          connectedAt: now - 60_000,
+          lastTickAtMs: now,
+          lastHeartbeatAtMs: now,
+        },
+      });
+      const gateway = createFakeGateway();
+      const service = new StreamHealthService(
+        coordination,
+        createFakePrisma([
+          { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
+          { asset: 'BTC', pair: 'USDT', userId: 'user-2' },
+          { asset: 'BTC', pair: 'USDT', userId: 'user-1' },
+          { asset: 'ETH', pair: 'USDT', userId: 'user-3' },
+        ]) as never,
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        gateway,
+        marketStream,
+        createFakeNotifications() as never,
+      );
+
+      await service.publishOwnedSymbols();
+      (marketStream.getHealthSnapshot as jest.Mock).mockReturnValue({
+        symbol: 'BTCUSDT',
+        ownerId: 'instance-a',
+        connectedAt: now - 60_000,
+        lastTickAtMs: staleTick,
+        lastHeartbeatAtMs: now,
+      });
+      await service.publishOwnedSymbols();
+
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(
+        gateway.emitToUser.mock.calls.map(([userId]: [string]) => userId),
+      ).toEqual(['user-1', 'user-2']);
+    });
+
+    it('sin ningun bot corriendo ese simbolo, la transicion no llega a nadie (FIX-e-burgos-005-006)', async () => {
+      const coordination = createFakeCoordination();
+      const now = Date.now();
+      const staleTick =
+        now - DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs - 1;
+      const marketStream = createFakeMarketStream({
+        BTCUSDT: {
+          symbol: 'BTCUSDT',
+          ownerId: 'instance-a',
+          connectedAt: now - 60_000,
+          lastTickAtMs: now,
+          lastHeartbeatAtMs: now,
+        },
+      });
+      const gateway = createFakeGateway();
+      const service = new StreamHealthService(
+        coordination,
+        createFakePrisma([
+          { asset: 'ETH', pair: 'USDT', userId: 'user-3' },
+        ]) as never,
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        gateway,
+        marketStream,
+        createFakeNotifications() as never,
+      );
+
+      await service.publishOwnedSymbols();
+      (marketStream.getHealthSnapshot as jest.Mock).mockReturnValue({
+        symbol: 'BTCUSDT',
+        ownerId: 'instance-a',
+        connectedAt: now - 60_000,
+        lastTickAtMs: staleTick,
+        lastHeartbeatAtMs: now,
+      });
+      await service.publishOwnedSymbols();
+
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).not.toHaveBeenCalled();
     });
 
     it('does not emit again while the state stays the same across publishes', async () => {
@@ -346,6 +441,7 @@ describe('StreamHealthService', () => {
       await service.publishOwnedSymbols();
 
       expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).not.toHaveBeenCalled();
     });
   });
 

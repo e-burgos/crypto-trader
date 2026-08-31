@@ -94,7 +94,7 @@ function buildQueue(overrides: { delayed?: any[] } = {}) {
 }
 
 function buildGateway() {
-  return { emitToAll: jest.fn() };
+  return { emitToAll: jest.fn(), emitToUser: jest.fn() };
 }
 
 function buildService(
@@ -248,12 +248,46 @@ describe('MaterialEventService', () => {
       );
       const delayed = await tradingQueue.getDelayed();
       expect(delayed[0].promote).toHaveBeenCalled();
-      expect(gateway.emitToAll).toHaveBeenCalledWith('agent:cycle-advanced', {
+      expect(gateway.emitToUser).toHaveBeenCalledWith('user-1', 'agent:cycle-advanced', {
         configId: 'config-1',
         symbol: 'BTCUSDT',
         eventType: 'PRICE_MOVED',
         advancedByMs: expect.any(Number),
       });
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+    });
+
+    it('aislamiento multiusuario: cada dueno recibe solo el adelanto de su propia config (FIX-e-burgos-005-006)', async () => {
+      const otherConfig = { ...baseConfig, id: 'config-2', userId: 'user-2' };
+      const { service, gateway } = buildService({
+        prisma: buildPrisma({ configs: [baseConfig, otherConfig] }),
+        tradingQueue: buildQueue({
+          delayed: [
+            { data: { configId: 'config-1' }, promote: jest.fn().mockResolvedValue(undefined) },
+            { data: { configId: 'config-2' }, promote: jest.fn().mockResolvedValue(undefined) },
+          ],
+        }),
+      });
+
+      await service.handleTick(tick);
+
+      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).toHaveBeenCalledTimes(2);
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-1',
+        'agent:cycle-advanced',
+        expect.objectContaining({ configId: 'config-1' }),
+      );
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-2',
+        'agent:cycle-advanced',
+        expect.objectContaining({ configId: 'config-2' }),
+      );
+      for (const [userId, , payload] of gateway.emitToUser.mock.calls) {
+        expect((payload as { configId: string }).configId).toBe(
+          userId === 'user-1' ? 'config-1' : 'config-2',
+        );
+      }
     });
 
     it('config con reactiveLoopEnabled=false no adelanta nada', async () => {
@@ -302,7 +336,7 @@ describe('MaterialEventService', () => {
         tradingQueue: buildQueue({ delayed: [{ data: { configId: 'otro-config' }, promote: jest.fn() }] }),
       });
       await service.handleTick(tick);
-      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).not.toHaveBeenCalled();
     });
 
     it('promote() ya disparado o ya promovido: la excepción se traga y aun así se observa el adelanto', async () => {
@@ -315,7 +349,7 @@ describe('MaterialEventService', () => {
       });
       await expect(service.handleTick(tick)).resolves.toBeUndefined();
       expect(rejectingJob.promote).toHaveBeenCalled();
-      expect(gateway.emitToAll).toHaveBeenCalled();
+      expect(gateway.emitToUser).toHaveBeenCalled();
     });
 
     it('el mismo evento llegando dos veces solo adelanta una vez (token SET NX)', async () => {
@@ -392,7 +426,7 @@ describe('MaterialEventService', () => {
         expect(job.promote).toHaveBeenCalledTimes(1);
         expect(tradingQueue.add).not.toHaveBeenCalled();
         expect(
-          gateway.emitToAll.mock.calls.filter(([event]: [string]) => event === 'agent:cycle-advanced'),
+          gateway.emitToUser.mock.calls.filter(([, event]: [string, string]) => event === 'agent:cycle-advanced'),
         ).toHaveLength(1);
       });
 
@@ -404,7 +438,8 @@ describe('MaterialEventService', () => {
         await service.handleTick(tick);
 
         expect(coordination.setJson).not.toHaveBeenCalled();
-        expect(gateway.emitToAll).toHaveBeenCalledWith(
+        expect(gateway.emitToUser).toHaveBeenCalledWith(
+          'user-1',
           'agent:cycle-advanced',
           expect.objectContaining({ advancedByMs: windowEndMs - windowStart }),
         );
@@ -426,7 +461,7 @@ describe('MaterialEventService', () => {
       expect(coordination.getJson).not.toHaveBeenCalled();
       expect(coordination.tryConsumeToken).not.toHaveBeenCalled();
       expect(tradingQueue.getDelayed).not.toHaveBeenCalled();
-      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).not.toHaveBeenCalled();
     });
 
     it('con el stream degradado no se escribe ni se lee nada del bot: el temporizador y el REST del ciclo quedan intactos', async () => {
@@ -451,11 +486,12 @@ describe('MaterialEventService', () => {
 
       await service.handleTick(tick);
       expect(coordination.getJson).not.toHaveBeenCalled();
-      expect(gateway.emitToAll).not.toHaveBeenCalled();
+      expect(gateway.emitToUser).not.toHaveBeenCalled();
 
       await service.handleTick({ ...tick, timestamp: tick.timestamp + 1_000 });
       expect(coordination.getJson).toHaveBeenCalled();
-      expect(gateway.emitToAll).toHaveBeenCalledWith(
+      expect(gateway.emitToUser).toHaveBeenCalledWith(
+        'user-1',
         'agent:cycle-advanced',
         expect.objectContaining({ configId: 'config-1' }),
       );

@@ -113,16 +113,16 @@ export class StreamHealthService
     );
 
     const { state, reason } = this.resolveRecord(record);
-    this.checkTransition(symbol, record, state, reason);
+    await this.checkTransition(symbol, record, state, reason);
     await this.checkSustainedDegradation(symbol, state);
   }
 
-  private checkTransition(
+  private async checkTransition(
     symbol: string,
     record: StreamHealthRecord,
     state: StreamHealthState,
     reason: StreamHealthReason,
-  ): void {
+  ): Promise<void> {
     const previous = this.lastKnownState.get(symbol);
     this.lastKnownState.set(symbol, state);
 
@@ -132,14 +132,34 @@ export class StreamHealthService
     this.logger.log(
       `Stream health transition for ${symbol}: ${previous} -> ${state}${reason ? ` (${reason})` : ''}`,
     );
-    this.gateway.emitToAll('market:stream-health', {
+
+    const payload = {
       symbol,
       state,
       reason,
       lastTickAt: new Date(record.lastTickAtMs).toISOString(),
       ownerId: record.ownerId,
       changedAt,
+    };
+    const userIds = await this.resolveUserIdsRunningSymbol(symbol);
+    for (const userId of userIds) {
+      this.gateway.emitToUser(userId, 'market:stream-health', payload);
+    }
+  }
+
+  private async resolveUserIdsRunningSymbol(symbol: string): Promise<string[]> {
+    const configs = await this.prisma.tradingConfig.findMany({
+      where: { isRunning: true },
+      select: { userId: true, asset: true, pair: true },
     });
+
+    return [
+      ...new Set(
+        (configs as Array<{ userId: string; asset: string; pair: string }>)
+          .filter((config) => `${config.asset}${config.pair}` === symbol)
+          .map((config) => config.userId),
+      ),
+    ];
   }
 
   private async checkSustainedDegradation(
@@ -170,19 +190,10 @@ export class StreamHealthService
   }
 
   private async notifyDegradedUsers(symbol: string): Promise<void> {
-    const configs = await this.prisma.tradingConfig.findMany({
-      where: { isRunning: true },
-      select: { userId: true, asset: true, pair: true },
-    });
-
-    const userIds = new Set(
-      (configs as Array<{ userId: string; asset: string; pair: string }>)
-        .filter((config) => `${config.asset}${config.pair}` === symbol)
-        .map((config) => config.userId),
-    );
+    const userIds = await this.resolveUserIdsRunningSymbol(symbol);
 
     await Promise.all(
-      [...userIds].map((userId) =>
+      userIds.map((userId) =>
         this.notifications.create(
           userId,
           NotificationType.AGENT_ERROR,

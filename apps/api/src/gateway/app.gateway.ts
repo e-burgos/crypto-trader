@@ -64,7 +64,7 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   emitPriceUpdate(symbol: string, data: unknown) {
-    this.server.to(`price:${symbol}`).emit('price:update', data);
+    this.server.to(`price:${symbol}`).emit('price:tick', data);
   }
 
   emitTradeExecuted(userId: string, data: unknown) {

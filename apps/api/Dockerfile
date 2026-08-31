@@ -37,4 +37,6 @@ COPY --from=builder /app/apps/api/generated ./apps/api/generated
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && npx prisma db seed && cd /app && node dist/apps/api/main.js"]
+# The seed provisions reference data only: SEED_DEMO_ACCOUNTS=false locks out the
+# repository-visible demo logins even if NODE_ENV is ever changed (FIX-e-burgos-006)
+CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && SEED_DEMO_ACCOUNTS=false npx prisma db seed && cd /app && node dist/apps/api/main.js"]

@@ -2,13 +2,21 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { setupSwagger } from './common/swagger/swagger.setup';
-import { validateRequiredEnv } from './common/config/env.config';
+import {
+  getTrustedProxyHops,
+  validateRequiredEnv,
+} from './common/config/env.config';
 
 async function bootstrap() {
   validateRequiredEnv();
 
   const app = await NestFactory.create(AppModule);
   app.enableShutdownHooks();
+  // trusting hops the deployment does not actually have lets a client forge its own rate-limit identity
+  const trustedProxyHops = getTrustedProxyHops();
+  if (trustedProxyHops > 0) {
+    app.getHttpAdapter().getInstance().set('trust proxy', trustedProxyHops);
+  }
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(

@@ -32,6 +32,18 @@ export function validateRequiredEnv(): void {
   );
 }
 
+export function getTrustedProxyHops(): number {
+  const raw = process.env.TRUST_PROXY_HOPS;
+  if (!raw || raw.trim() === '') return 0;
+  const hops = Number.parseInt(raw, 10);
+  if (!Number.isInteger(hops) || hops < 0) {
+    throw new Error(
+      `TRUST_PROXY_HOPS must be a non-negative integer, received "${raw}".`,
+    );
+  }
+  return hops;
+}
+
 export function getJwtSecret(): string {
   return readRequiredEnv('JWT_SECRET');
 }

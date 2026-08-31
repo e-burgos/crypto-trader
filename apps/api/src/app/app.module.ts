@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from '../prisma';
 import { AuthModule } from '../auth/auth.module';
+import { AUTH_THROTTLER, LOGIN_RATE_LIMIT } from '../auth/auth.controller';
 import { UsersModule } from '../users/users.module';
 import { GatewayModule } from '../gateway/gateway.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -23,6 +25,9 @@ import { ReactiveModule } from '../reactive/reactive.module';
   imports: [
     BullModule.forRoot({
       redis: process.env.REDIS_URL || 'redis://localhost:6379',
+    }),
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: AUTH_THROTTLER, ...LOGIN_RATE_LIMIT }],
     }),
     PrismaModule,
     AuthModule,

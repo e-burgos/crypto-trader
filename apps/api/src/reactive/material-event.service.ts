@@ -249,7 +249,7 @@ export class MaterialEventService implements OnModuleInit, OnApplicationShutdown
     this.logger.log(
       `Cycle advanced for config ${config.id} on ${symbol} by ${eventType} (advancedByMs=${remaining})`,
     );
-    this.gateway?.emitToAll('agent:cycle-advanced', {
+    this.gateway?.emitToUser(config.userId, 'agent:cycle-advanced', {
       configId: config.id,
       symbol,
       eventType,

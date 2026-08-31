@@ -268,7 +268,7 @@ describe('reactive multi-replica advance token (CA-007 / TASK-036, entrega 2)', 
     service: MaterialEventService;
     job: { data: { configId: string }; promote: jest.Mock };
     queue: { getDelayed: jest.Mock; add: jest.Mock };
-    gateway: { emitToAll: jest.Mock };
+    gateway: { emitToAll: jest.Mock; emitToUser: jest.Mock };
   }
 
   function createSharedTokenCoordination(): ReactiveCoordinationPort {
@@ -294,12 +294,13 @@ describe('reactive multi-replica advance token (CA-007 / TASK-036, entrega 2)', 
       getDelayed: jest.fn().mockResolvedValue([job]),
       add: jest.fn().mockResolvedValue(undefined),
     };
-    const gateway = { emitToAll: jest.fn() };
+    const gateway = { emitToAll: jest.fn(), emitToUser: jest.fn() };
     const prisma = {
       tradingConfig: {
         findMany: jest.fn().mockResolvedValue([
           {
             id: configId,
+            userId: 'user-1',
             asset: 'BTC',
             pair: 'USDT',
             isRunning: true,
@@ -356,7 +357,8 @@ describe('reactive multi-replica advance token (CA-007 / TASK-036, entrega 2)', 
     const totalPromotes = replicas.reduce((sum, r) => sum + r.job.promote.mock.calls.length, 0);
     const totalAdvancedEmits = replicas.reduce(
       (sum, r) =>
-        sum + r.gateway.emitToAll.mock.calls.filter(([event]) => event === 'agent:cycle-advanced').length,
+        sum +
+        r.gateway.emitToUser.mock.calls.filter(([, event]) => event === 'agent:cycle-advanced').length,
       0,
     );
 

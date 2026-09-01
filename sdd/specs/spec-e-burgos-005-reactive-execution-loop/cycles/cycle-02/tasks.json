@@ -651,12 +651,20 @@
         "TASK-009",
         "TASK-024"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "sdd/context/libs/shared/updates/2026-09-01-spec-e-burgos-005-cycle-02.md",
         "sdd/context/libs/data-fetcher/updates/2026-09-01-spec-e-burgos-005-cycle-02.md",
         "sdd/context/libs/trading-engine/updates/2026-09-01-spec-e-burgos-005-cycle-02.md"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 15000,
+        "tokens_out": 3000,
+        "duration_minutes": 3,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     },
     {
       "id": "TASK-026",

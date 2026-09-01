@@ -1416,6 +1416,348 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
     });
   });
 
+  describe('getEntryOrderStatus', () => {
+    it('reports a loose LIMIT_MAKER entry as FILLED with price/quantity', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 1001,
+          symbol: 'ENTRYUSDT',
+          status: 'FILLED',
+          type: 'LIMIT_MAKER',
+          origQty: '0.5',
+          executedQty: '0.5',
+          cummulativeQuoteQty: '23150',
+        },
+      });
+
+      const status = await client.getEntryOrderStatus('ENTRYUSDT', {
+        orderListId: null,
+        orderId: '1001',
+      });
+
+      expect(status).toEqual({
+        state: 'FILLED',
+        filledLeg: 'LIMIT',
+        executedPrice: 46300,
+        executedQuantity: 0.5,
+        remainingQuantity: 0,
+        partial: false,
+        orderId: '1001',
+      });
+      expect(getMockClient().request).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a partially filled entry as FILLED with partial: true', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 1002,
+          symbol: 'ENTRYUSDT',
+          status: 'PARTIALLY_FILLED',
+          type: 'STOP_LOSS_LIMIT',
+          origQty: '1',
+          executedQty: '0.4',
+          cummulativeQuoteQty: '43324',
+        },
+      });
+
+      const status = await client.getEntryOrderStatus('ENTRYUSDT', {
+        orderListId: null,
+        orderId: '1002',
+      });
+
+      expect(status.state).toBe('FILLED');
+      expect(status.partial).toBe(true);
+      expect(status.filledLeg).toBe('STOP');
+      expect(status.executedQuantity).toBe(0.4);
+      expect(status.remainingQuantity).toBe(0.6);
+    });
+
+    it('reports RESTING for a loose entry still NEW', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 1003,
+          symbol: 'ENTRYUSDT',
+          status: 'NEW',
+          type: 'LIMIT_MAKER',
+          origQty: '0.5',
+          executedQty: '0',
+        },
+      });
+
+      const status = await client.getEntryOrderStatus('ENTRYUSDT', {
+        orderListId: null,
+        orderId: '1003',
+      });
+
+      expect(status.state).toBe('RESTING');
+      expect(status.partial).toBe(false);
+    });
+
+    it('reports MISSING for a loose entry when Binance returns -2013', async () => {
+      getMockClient().request.mockRejectedValueOnce({
+        response: { data: { code: -2013 } },
+      });
+
+      const status = await client.getEntryOrderStatus('ENTRYUSDT', {
+        orderListId: null,
+        orderId: '1004',
+      });
+
+      expect(status.state).toBe('MISSING');
+    });
+
+    it('queries only the requested leg when opts.leg is given', async () => {
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 2002,
+          symbol: 'ENTRYOCOUSDT',
+          status: 'NEW',
+          type: 'STOP_LOSS_LIMIT',
+          origQty: '0.2',
+          executedQty: '0',
+        },
+      });
+
+      const status = await client.getEntryOrderStatus(
+        'ENTRYOCOUSDT',
+        {
+          orderListId: '2000',
+          orderId: null,
+          limitLegOrderId: '2001',
+          stopLegOrderId: '2002',
+        },
+        { leg: 'STOP' },
+      );
+
+      expect(status.state).toBe('RESTING');
+      expect(getMockClient().request).toHaveBeenCalledTimes(1);
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params).toEqual(
+        expect.objectContaining({
+          symbol: 'ENTRYOCOUSDT',
+          orderId: '2002',
+        }),
+      );
+    });
+
+    it('queries the list and both legs when opts.leg is not given, and reports the leg that filled', async () => {
+      getMockClient()
+        .request.mockResolvedValueOnce({
+          data: {
+            orderListId: 2000,
+            listOrderStatus: 'EXECUTING',
+            orders: [
+              { symbol: 'ENTRYOCOUSDT', orderId: 2001, clientOrderId: 'l' },
+              { symbol: 'ENTRYOCOUSDT', orderId: 2002, clientOrderId: 's' },
+            ],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 2001,
+            symbol: 'ENTRYOCOUSDT',
+            status: 'NEW',
+            type: 'LIMIT_MAKER',
+            origQty: '0.2',
+            executedQty: '0',
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 2002,
+            symbol: 'ENTRYOCOUSDT',
+            status: 'FILLED',
+            type: 'STOP_LOSS_LIMIT',
+            origQty: '0.2',
+            executedQty: '0.2',
+            cummulativeQuoteQty: '21662',
+          },
+        });
+
+      const status = await client.getEntryOrderStatus('ENTRYOCOUSDT', {
+        orderListId: '2000',
+        orderId: null,
+        limitLegOrderId: '2001',
+        stopLegOrderId: '2002',
+      });
+
+      expect(status.state).toBe('FILLED');
+      expect(status.filledLeg).toBe('STOP');
+      expect(status.executedQuantity).toBe(0.2);
+      expect(getMockClient().request).toHaveBeenCalledTimes(3);
+    });
+
+    it('reports RESTING when the list is EXECUTING and neither leg filled', async () => {
+      getMockClient()
+        .request.mockResolvedValueOnce({
+          data: {
+            orderListId: 2003,
+            listOrderStatus: 'EXECUTING',
+            orders: [
+              { symbol: 'ENTRYOCOUSDT', orderId: 2004, clientOrderId: 'l' },
+              { symbol: 'ENTRYOCOUSDT', orderId: 2005, clientOrderId: 's' },
+            ],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 2004,
+            symbol: 'ENTRYOCOUSDT',
+            status: 'NEW',
+            type: 'LIMIT_MAKER',
+            origQty: '0.2',
+            executedQty: '0',
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 2005,
+            symbol: 'ENTRYOCOUSDT',
+            status: 'NEW',
+            type: 'STOP_LOSS_LIMIT',
+            origQty: '0.2',
+            executedQty: '0',
+          },
+        });
+
+      const status = await client.getEntryOrderStatus('ENTRYOCOUSDT', {
+        orderListId: '2003',
+        orderId: null,
+        limitLegOrderId: '2004',
+        stopLegOrderId: '2005',
+      });
+
+      expect(status.state).toBe('RESTING');
+    });
+
+    it('reports CANCELLED when the list is ALL_DONE and neither leg filled', async () => {
+      getMockClient()
+        .request.mockResolvedValueOnce({
+          data: {
+            orderListId: 2006,
+            listOrderStatus: 'ALL_DONE',
+            orders: [
+              { symbol: 'ENTRYOCOUSDT', orderId: 2007, clientOrderId: 'l' },
+              { symbol: 'ENTRYOCOUSDT', orderId: 2008, clientOrderId: 's' },
+            ],
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 2007,
+            symbol: 'ENTRYOCOUSDT',
+            status: 'EXPIRED',
+            type: 'LIMIT_MAKER',
+          },
+        })
+        .mockResolvedValueOnce({
+          data: {
+            orderId: 2008,
+            symbol: 'ENTRYOCOUSDT',
+            status: 'CANCELED',
+            type: 'STOP_LOSS_LIMIT',
+          },
+        });
+
+      const status = await client.getEntryOrderStatus('ENTRYOCOUSDT', {
+        orderListId: '2006',
+        orderId: null,
+        limitLegOrderId: '2007',
+        stopLegOrderId: '2008',
+      });
+
+      expect(status.state).toBe('CANCELLED');
+    });
+
+    it('reports MISSING for an OCO entry when the list itself returns -2013', async () => {
+      getMockClient().request.mockRejectedValueOnce({
+        response: { data: { code: -2013 } },
+      });
+
+      const status = await client.getEntryOrderStatus('ENTRYOCOUSDT', {
+        orderListId: '2009',
+        orderId: null,
+        limitLegOrderId: '2010',
+        stopLegOrderId: '2011',
+      });
+
+      expect(status.state).toBe('MISSING');
+      expect(getMockClient().request).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('cancelEntryOrder', () => {
+    it('sends a DELETE to /api/v3/orderList when orderListId is present', async () => {
+      getMockClient().request.mockResolvedValueOnce({ data: {} });
+
+      await client.cancelEntryOrder('ENTRYUSDT', {
+        orderListId: '3000',
+        orderId: null,
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('DELETE');
+      expect(call.url).toBe('/api/v3/orderList');
+      expect(call.params).toEqual(
+        expect.objectContaining({ symbol: 'ENTRYUSDT', orderListId: '3000' }),
+      );
+    });
+
+    it('sends a DELETE to /api/v3/order when only orderId is present', async () => {
+      getMockClient().request.mockResolvedValueOnce({ data: {} });
+
+      await client.cancelEntryOrder('ENTRYUSDT', {
+        orderListId: null,
+        orderId: '3001',
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('DELETE');
+      expect(call.url).toBe('/api/v3/order');
+      expect(call.params).toEqual(
+        expect.objectContaining({ symbol: 'ENTRYUSDT', orderId: '3001' }),
+      );
+    });
+
+    it('resolves without throwing when Binance returns -2013 (already gone)', async () => {
+      getMockClient().request.mockRejectedValueOnce({
+        response: { data: { code: -2013 } },
+      });
+
+      await expect(
+        client.cancelEntryOrder('ENTRYUSDT', {
+          orderListId: null,
+          orderId: '3002',
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('resolves without throwing when Binance returns -2011 (unknown order)', async () => {
+      getMockClient().request.mockRejectedValueOnce({
+        response: { data: { code: -2011 } },
+      });
+
+      await expect(
+        client.cancelEntryOrder('ENTRYUSDT', {
+          orderListId: '3003',
+          orderId: null,
+        }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('re-throws any other error', async () => {
+      const error = { response: { data: { code: -1013 } } };
+      getMockClient().request.mockRejectedValueOnce(error);
+
+      await expect(
+        client.cancelEntryOrder('ENTRYUSDT', {
+          orderListId: null,
+          orderId: '3004',
+        }),
+      ).rejects.toBe(error);
+    });
+  });
+
   describe('cancelOrder / cancelOcoOrderList', () => {
     it('sends a DELETE to /api/v3/order with symbol and orderId', async () => {
       getMockClient().request.mockResolvedValueOnce({ data: {} });

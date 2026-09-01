@@ -5,6 +5,8 @@ import {
   TradeType,
   ExchangeOrderState,
   ExchangeOrderStatus,
+  EntryOrderLeg,
+  EntryOrderExchangeStatus,
 } from '@crypto-trader/shared';
 import { CandleInterval } from '@crypto-trader/shared';
 import axios, { AxiosInstance } from 'axios';
@@ -68,6 +70,7 @@ interface BinanceOrderStatusResponse {
   status: string;
   type?: string;
   price?: string;
+  origQty?: string;
   executedQty?: string;
   cummulativeQuoteQty?: string;
 }
@@ -933,6 +936,88 @@ export class BinanceRestClient {
     };
   }
 
+  private missingEntryOrderStatus(): EntryOrderExchangeStatus {
+    return {
+      state: 'MISSING',
+      filledLeg: null,
+      executedPrice: null,
+      executedQuantity: null,
+      remainingQuantity: null,
+      partial: false,
+      orderId: null,
+    };
+  }
+
+  private legForEntryOrderType(type?: string): EntryOrderLeg | null {
+    if (type === 'STOP_LOSS_LIMIT') return 'STOP';
+    if (type === 'LIMIT_MAKER') return 'LIMIT';
+    return null;
+  }
+
+  private toEntryOrderStatus(
+    data: BinanceOrderStatusResponse,
+  ): EntryOrderExchangeStatus {
+    const executedQty = parseFloat(data.executedQty ?? '0');
+    const origQty = parseFloat(data.origQty ?? String(executedQty));
+    const quoteQty = parseFloat(data.cummulativeQuoteQty ?? '0');
+    const orderId = data.orderId != null ? String(data.orderId) : null;
+
+    if (
+      data.status === 'FILLED' ||
+      (data.status === 'PARTIALLY_FILLED' && executedQty > 0)
+    ) {
+      return {
+        state: 'FILLED',
+        filledLeg: this.legForEntryOrderType(data.type),
+        executedPrice:
+          executedQty > 0 && quoteQty > 0 ? quoteQty / executedQty : null,
+        executedQuantity: executedQty,
+        remainingQuantity: origQty - executedQty,
+        partial: data.status === 'PARTIALLY_FILLED',
+        orderId,
+      };
+    }
+
+    if (data.status === 'NEW' || data.status === 'PARTIALLY_FILLED') {
+      return {
+        state: 'RESTING',
+        filledLeg: null,
+        executedPrice: null,
+        executedQuantity: null,
+        remainingQuantity: origQty - executedQty,
+        partial: false,
+        orderId,
+      };
+    }
+
+    return {
+      state: 'CANCELLED',
+      filledLeg: null,
+      executedPrice: null,
+      executedQuantity: null,
+      remainingQuantity: null,
+      partial: false,
+      orderId,
+    };
+  }
+
+  private async fetchEntryLegStatus(
+    symbol: string,
+    orderId: string,
+  ): Promise<EntryOrderExchangeStatus> {
+    try {
+      const { data } = await this.signedRequest<BinanceOrderStatusResponse>(
+        '/api/v3/order',
+        'GET',
+        { symbol, orderId },
+      );
+      return this.toEntryOrderStatus(data);
+    } catch (error) {
+      if (this.isOrderMissing(error)) return this.missingEntryOrderStatus();
+      throw error;
+    }
+  }
+
   /**
    * Query the current state of a single order.
    */
@@ -1000,6 +1085,88 @@ export class BinanceRestClient {
       executedQuantity: null,
       orderId: null,
     };
+  }
+
+  async getEntryOrderStatus(
+    symbol: string,
+    ref: {
+      orderListId?: string | null;
+      orderId?: string | null;
+      limitLegOrderId?: string | null;
+      stopLegOrderId?: string | null;
+    },
+    opts?: { leg?: EntryOrderLeg },
+  ): Promise<EntryOrderExchangeStatus> {
+    if (ref.orderListId == null) {
+      if (ref.orderId == null) return this.missingEntryOrderStatus();
+      return this.fetchEntryLegStatus(symbol, ref.orderId);
+    }
+
+    if (opts?.leg) {
+      const legOrderId =
+        opts.leg === 'LIMIT' ? ref.limitLegOrderId : ref.stopLegOrderId;
+      if (legOrderId == null) return this.missingEntryOrderStatus();
+      return this.fetchEntryLegStatus(symbol, legOrderId);
+    }
+
+    let listData: BinanceOcoStatusResponse;
+    try {
+      const { data } = await this.signedRequest<BinanceOcoStatusResponse>(
+        '/api/v3/orderList',
+        'GET',
+        { orderListId: ref.orderListId },
+      );
+      listData = data;
+    } catch (error) {
+      if (this.isOrderMissing(error)) return this.missingEntryOrderStatus();
+      throw error;
+    }
+
+    const legStatuses = await Promise.all(
+      listData.orders.map((order) =>
+        this.fetchEntryLegStatus(symbol, String(order.orderId)),
+      ),
+    );
+    const filledLegStatus = legStatuses.find(
+      (status) => status.state === 'FILLED',
+    );
+    if (filledLegStatus) return filledLegStatus;
+
+    return {
+      state:
+        listData.listOrderStatus === 'ALL_DONE' ? 'CANCELLED' : 'RESTING',
+      filledLeg: null,
+      executedPrice: null,
+      executedQuantity: null,
+      remainingQuantity: null,
+      partial: false,
+      orderId: null,
+    };
+  }
+
+  async cancelEntryOrder(
+    symbol: string,
+    ref: { orderListId?: string | null; orderId?: string | null },
+  ): Promise<void> {
+    try {
+      if (ref.orderListId != null) {
+        await this.signedRequest('/api/v3/orderList', 'DELETE', {
+          symbol,
+          orderListId: ref.orderListId,
+        });
+        return;
+      }
+      if (ref.orderId != null) {
+        await this.signedRequest('/api/v3/order', 'DELETE', {
+          symbol,
+          orderId: ref.orderId,
+        });
+      }
+    } catch (error) {
+      const code = getBinanceErrorCode(error);
+      if (code === -2011 || code === -2013) return;
+      throw error;
+    }
   }
 
   /**

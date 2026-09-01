@@ -1,0 +1,212 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
+  "cycle": 1,
+  "module": "infra-hetzner-cloudflare",
+  "apps": [
+    "apps/api"
+  ],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": {
+    "tasks_generated": true
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Llevar los scripts de provisioning del VPS al repo, idempotentes y con contrato",
+      "user_stories": [
+        "US-01-002"
+      ],
+      "estimation_hours": 3,
+      "story_points": 8,
+      "depends_on": [],
+      "status": "pending",
+      "files": [
+        "infra/scripts/provision-01-base.sh",
+        "infra/scripts/provision-02-sshd.sh",
+        "infra/scripts/provision-03-firewall.sh"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "Suite de shell del provisioning: idempotencia, variables faltantes y ausencia de secretos",
+      "user_stories": [
+        "US-01-002"
+      ],
+      "estimation_hours": 2,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/scripts/provision.test.sh"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "Documentar el estado verificado del servidor y las mediciones de linea de base",
+      "user_stories": [
+        "US-01-001",
+        "US-01-002"
+      ],
+      "estimation_hours": 1,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "files": [
+        "docs/infra/hetzner-server.md"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "docker-compose.prod.yml con Postgres pgvector y Redis en noeviction + AOF, sin puertos publicados",
+      "user_stories": [
+        "US-01-003"
+      ],
+      "estimation_hours": 3,
+      "story_points": 8,
+      "depends_on": [
+        "TASK-001"
+      ],
+      "status": "pending",
+      "files": [
+        "docker-compose.prod.yml"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "00-init.sql: base crypto_trader y rol de aplicacion sin superusuario",
+      "user_stories": [
+        "US-01-003"
+      ],
+      "estimation_hours": 1.5,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/db/00-init.sql"
+      ]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Levantar el stack en el VPS y aplicar las 37 migraciones con prisma migrate deploy",
+      "user_stories": [
+        "US-01-003"
+      ],
+      "estimation_hours": 2,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-005"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/scripts/db-migrate.sh"
+      ]
+    },
+    {
+      "id": "TASK-007",
+      "title": "Verificar por evidencia el aislamiento de red: 5432 y 6379 no responden desde fuera",
+      "user_stories": [
+        "US-01-003"
+      ],
+      "estimation_hours": 1,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-006"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/scripts/verify-network-isolation.sh"
+      ]
+    },
+    {
+      "id": "TASK-008",
+      "title": "Decidir y registrar el RPO: condiciona el cron y las reglas de lifecycle",
+      "user_stories": [
+        "US-01-005"
+      ],
+      "estimation_hours": 1,
+      "story_points": 2,
+      "depends_on": [],
+      "status": "pending",
+      "files": [
+        "docs/infra/rpo-decision.md"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Portar db-backup.sh a una sola base, conservando pg_dump -Fc, la guarda H-9, DRY_RUN y FAKE_TS",
+      "user_stories": [
+        "US-01-004"
+      ],
+      "estimation_hours": 3,
+      "story_points": 8,
+      "depends_on": [
+        "TASK-006"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/scripts/db-backup.sh"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Portar db-restore.sh con --dbname obligatorio y las dos suites de shell",
+      "user_stories": [
+        "US-01-004"
+      ],
+      "estimation_hours": 2,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-009"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/scripts/db-restore.sh",
+        "infra/scripts/db-backup.test.sh",
+        "infra/scripts/db-restore.test.sh"
+      ]
+    },
+    {
+      "id": "TASK-011",
+      "title": "Bucket privado en R2, credenciales acotadas, reglas de lifecycle y cron de backup",
+      "user_stories": [
+        "US-01-004",
+        "US-01-005"
+      ],
+      "estimation_hours": 2,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-008",
+        "TASK-010"
+      ],
+      "status": "pending",
+      "files": [
+        "infra/scripts/db-backup-cron-install.sh",
+        "docs/infra/r2-backups.md"
+      ]
+    },
+    {
+      "id": "TASK-012",
+      "title": "Restaurar un dump de R2 en una base descartable y verificar los datos",
+      "user_stories": [
+        "US-01-004"
+      ],
+      "estimation_hours": 3,
+      "story_points": 8,
+      "depends_on": [
+        "TASK-011"
+      ],
+      "status": "pending",
+      "files": [
+        "docs/infra/db-backup-restore-runbook.md"
+      ]
+    }
+  ]
+}

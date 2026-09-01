@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 1,
+  "module": "infra-hetzner-cloudflare",
+  "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
+  "apps": [
+    "apps/api"
+  ],
+  "phase": "server-data-and-safety-net",
+  "flow": "full",
+  "objectives": [
+    "Versionar el provisioning del CX23 como scripts idempotentes: sin backups de Hetzner, la configuracion del servidor solo existe en git",
+    "Levantar pgvector/pgvector:pg16 y Redis con persistencia en la red interna del compose, sin puertos publicados",
+    "Aplicar las 37 migraciones con prisma migrate deploy, incluida CREATE EXTENSION vector que exige la imagen pgvector",
+    "Portar db-backup.sh y db-restore.sh de display-ads con sus suites de shell, incluida la guarda H-9 que rechaza buckets cuyo nombre contenga 'media'",
+    "Cerrar la cadena de backup restaurando en una base descartable: un backup que nunca se restauro no es un backup",
+    "Resolver la decision de RPO, que condiciona el cron y las reglas de lifecycle del bucket"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-08-31",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/tasks.json"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

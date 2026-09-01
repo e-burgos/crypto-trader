@@ -79,6 +79,20 @@
           "tasks_done": 34
         }
       }
+    },
+    "spec-e-burgos-008-infra-hetzner-cloudflare": {
+      "cycles": {
+        "cycle-01": {
+          "file": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/tasks.json",
+          "module": "infra-hetzner-cloudflare",
+          "apps": [
+            "apps/api"
+          ],
+          "status": "in-progress",
+          "tasks_total": 12,
+          "tasks_done": 0
+        }
+      }
     }
   }
 }

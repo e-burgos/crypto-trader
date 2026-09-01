@@ -23,7 +23,11 @@
     {
       "module": "market-data-credentials",
       "spec": "spec-e-burgos-004-data-source-credentials",
-      "apps": ["apps/api", "apps/web", "libs/shared"],
+      "apps": [
+        "apps/api",
+        "apps/web",
+        "libs/shared"
+      ],
       "description": "Resolucion hibrida de credenciales de data sources: cascada unica propia -> admin compartida -> fuente omitida, aislamiento de cache/rate-limit/circuito por dueno de credencial, y self-service del trader",
       "cycles_completed": 1,
       "completed_at": "2026-08-19"
@@ -42,6 +46,16 @@
       ],
       "description": "Loop de ejecucion dirigido por precio: despertar por evento material sobre stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST. cycle-01 cerrado 2026-08-30 (las 5 capas entregadas, el loop nace apagado). El modulo sigue in-progress porque la spec tiene un cycle-02 declarado en su §3: ordenes condicionales de ENTRADA descansando en el exchange (LIMIT_MAKER colocable, OCO de entrada, trailingDelta), que requiere extender BinanceRestClient y OrderExecutorPort",
       "cycles_completed": 1
+    },
+    {
+      "module": "infra-hetzner-cloudflare",
+      "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
+      "apps": [
+        "apps/api",
+        "apps/web"
+      ],
+      "description": "Migracion de Railway + GitHub Pages a Hetzner + Cloudflare: VPS CX23 con Postgres pgvector y Redis autoalojados sin puerto publico, backups a Cloudflare R2 con restore verificado, imagen en GHCR, nginx con Origin Certificate y SPA en Cloudflare Pages. Los ciclos agrupan las 8 fases del plan docs/infra/migration-hetzner-cloudflare.md; cada fase conserva su criterio de hecho como CA de la spec. cycle-01 en curso (Fases 1-3): la Fase 1 quedo cerrada el 2026-08-31",
+      "cycles_completed": 0
     }
   ],
   "pending_modules": [],

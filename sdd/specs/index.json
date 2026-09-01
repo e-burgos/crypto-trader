@@ -29,7 +29,9 @@
       "title": "Resolución híbrida de credenciales de data sources",
       "created_at": "2026-08-19",
       "completed_at": "2026-08-19",
-      "depends_on": ["spec-e-burgos-001-agents-simplification"]
+      "depends_on": [
+        "spec-e-burgos-001-agents-simplification"
+      ]
     },
     {
       "id": "spec-e-burgos-005-reactive-execution-loop",
@@ -43,7 +45,23 @@
       "title": "Loop de ejecución reactivo: despertar por evento, fast path determinístico y caps duros",
       "created_at": "2026-08-29",
       "completed_at": null,
-      "depends_on": ["spec-e-burgos-001-agents-simplification"]
+      "depends_on": [
+        "spec-e-burgos-001-agents-simplification"
+      ]
+    },
+    {
+      "id": "spec-e-burgos-008-infra-hetzner-cloudflare",
+      "author": "e-burgos",
+      "slug": "infra-hetzner-cloudflare",
+      "folder": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare",
+      "file": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/spec-e-burgos-008-infra-hetzner-cloudflare.spec.md",
+      "module": "infra-hetzner-cloudflare",
+      "app": "apps/api",
+      "status": "in-progress",
+      "title": "Migracion de infraestructura de Railway + GitHub Pages a Hetzner + Cloudflare",
+      "created_at": "2026-08-31",
+      "completed_at": null,
+      "depends_on": []
     }
   ]
 }

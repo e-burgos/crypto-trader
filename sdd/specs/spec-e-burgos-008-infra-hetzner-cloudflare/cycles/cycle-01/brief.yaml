@@ -1,0 +1,92 @@
+# sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 1
+module: infra-hetzner-cloudflare
+phase: server-data-and-safety-net
+date: 2026-08-31
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Dejar el VPS de Hetzner con Postgres (pgvector) y Redis corriendo en red interna sin puerto
+  publico, con las migraciones aplicadas y con una cadena de backup a Cloudflare R2 cuyo restore
+  fue verificado en una base descartable — de modo que la Fase 4 (migrar los datos de produccion,
+  el paso irreversible) tenga una red debajo.
+
+scope:
+  - Fase 1 — Servidor en pie: CX23, firewall de Hetzner, usuario no-root con clave dedicada, Docker
+  - Fase 1 — Provisioning versionado como scripts idempotentes (no pasos ejecutados a mano)
+  - Fase 2 — pgvector/pgvector:pg16 y Redis con persistencia en red interna, sin puertos publicados
+  - Fase 2 — Las 37 migraciones con prisma migrate deploy, incluida CREATE EXTENSION vector
+  - Fase 3 — Port de db-backup.sh y db-restore.sh con sus suites de shell, incluida la guarda H-9
+  - Fase 3 — Bucket privado en R2, reglas de lifecycle, cron de backup
+  - Fase 3 — Restore verificado en una base descartable
+  - Decision de RPO (spec §7 punto 1), porque condiciona el diseno de los backups
+
+out_of_scope:
+  - Migrar los datos de produccion desde Railway (Fase 4, cycle-02)
+  - Levantar la API y nginx (Fase 5, cycle-02)
+  - Frontend en Cloudflare Pages y corte de DNS (Fases 6-7, cycle-03)
+  - Observabilidad y Resend (Fase 8 y spec aparte)
+  - Arreglar el health check (hallazgo D): pertenece a la Fase 5
+
+dependencies_required:
+  - Ninguna spec previa. La spec declara depends_on vacio.
+
+open_decisions_blocking:
+  - Cuenta de Cloudflare a usar (spec §7 punto 2) — bloquea la Fase 3 completa
+  - RPO (spec §7 punto 1) — bloquea el diseno del cron y las reglas de lifecycle
+
+agent_contexts:
+  functional:
+    goal: >
+      Expresar como historias verificables lo que el operador necesita del servidor, la base y la
+      cadena de backup. El usuario de este ciclo NO es el trader: es quien opera la plataforma.
+    business_context: >
+      La plataforma ejecuta ordenes con dinero real sobre datos que hoy viven en Railway. Perder la
+      base es perder posiciones y trades reales. Este ciclo no cambia nada que el trader vea.
+    relevant_spec_sections:
+      - "§3 Cycle-01"
+      - "§5 Restricciones de diseno"
+      - "§6 CA-001, CA-002, CA-003"
+
+  planner:
+    goal: >
+      Ordenar las tres fases en tasks con dependencias explicitas, respetando que Fase 3 se cierra
+      ANTES de que exista cualquier dato de produccion en el servidor.
+    output_file: sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/planner.md
+
+  architect:
+    goal: >
+      Definir el contrato del compose de produccion, la topologia de red interna, el esquema de
+      nombres y retencion en R2, y el contrato de los scripts de backup/restore.
+    existing_tables: []      # el ciclo no crea ni modifica tablas
+    existing_endpoints: []   # el ciclo no crea ni modifica endpoints
+    output_file: sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/architect.md
+
+  implementor_back:
+    goal: >
+      Escribir docker-compose.prod.yml, los scripts de infra/scripts/ con sus tests de shell, y
+      ejecutarlos contra el VPS. No toca codigo de apps/api en este ciclo.
+    app: apps/api
+    app_context: sdd/context/apps/api/context_prompt.md
+
+  reviewer:
+    goal: Validar todo el output del ciclo y verificar CA-001 a CA-003 por evidencia, no por lectura
+    output_file: sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/cycle.json
+
+notes: |
+  La Fase 1 se ejecuto el 2026-08-31 ANTES de abrir esta spec, porque no escribia nada en el repo
+  (provisioning puro sobre el VPS). Sus scripts se versionan en este ciclo, que es lo que la vuelve
+  reproducible. Estado verificado al abrir el ciclo:
+    - CX23 #164138483, Ubuntu 26.04.1 LTS, 2 vCPU / 3.7 GiB / 38 GB, Helsinki (hel1)
+    - Acceso solo por clave crypto-trader-hetzner-202608; PasswordAuthentication no
+    - Usuario deploy (uid 1000, sudo NOPASSWD, grupo docker); root en prohibit-password
+    - Docker 29.7.2 + Compose 5.5.0; docker run hello-world OK
+    - Firewall Hetzner crypto-trader-prod (id 11552165) applied: TCP/22 solo desde la IP del dev
+    - Swap 2 GiB (el servidor venia con swap 0 y 3.7 GiB de RAM), vm.swappiness=10
+    - unattended-upgrades activo, NTP sincronizado en UTC
+    - Latencia medida a api.binance.com: ~263 ms por request; drift de reloj -140 ms
+  Es decir: CA-001 ya se cumple. La task que lo cubre es de versionado y verificacion, no de
+  ejecucion.

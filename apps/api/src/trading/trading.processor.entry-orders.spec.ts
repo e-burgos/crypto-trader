@@ -572,52 +572,157 @@ describe('TradingProcessor — resting entry placement (TASK-013)', () => {
     expect(prisma.trade.create).toHaveBeenCalledTimes(1);
   });
 
-  it('with entryOrderMode MARKET the market path runs untouched and writes no entry row', async () => {
-    const placeMarketOrder = jest
-      .spyOn(BinanceRestClient.prototype, 'placeMarketOrder')
-      .mockResolvedValue({
-        orderId: 'order-1',
-        price: 65_000,
-        quantity: 0.007,
-      } as any);
-    const placeLimitMaker = jest.spyOn(
-      BinanceRestClient.prototype,
-      'placeLimitMakerBuyOrder',
-    );
-    const placeOco = jest.spyOn(
-      BinanceRestClient.prototype,
-      'placeOcoBuyOrder',
-    );
-    const actionGate = {
-      authorizeAndRun: jest.fn().mockImplementation(async (_req, execute) => ({
-        outcome: 'EXECUTED',
-        blockedBy: null,
-        detail: 'ok',
-        value: await execute(),
-      })),
-    };
-    const prisma = makePrismaMock({
-      count: jest.fn().mockResolvedValue(0),
-      aggregate: jest
-        .fn()
-        .mockResolvedValue({ _sum: { plannedNotionalUsd: null } }),
-      findMany: jest.fn().mockResolvedValue([]),
-      create: jest.fn(),
-    });
-    const { processor } = buildProcessor(prisma, actionGate);
+  describe.each([
+    ['LIVE', 'MARKET' as const],
+    ['LIVE', undefined],
+    ['TESTNET', 'MARKET' as const],
+    ['TESTNET', undefined],
+  ])(
+    'CA-001 equivalence — mode %s, entryOrderMode %s behaves exactly like the pre-cycle market buy (TASK-023)',
+    (mode, entryOrderMode) => {
+      it('places one market order with the pre-cycle args and never touches the entry-order machinery', async () => {
+        const placeMarketOrder = jest
+          .spyOn(BinanceRestClient.prototype, 'placeMarketOrder')
+          .mockResolvedValue({
+            orderId: 'order-1',
+            price: 65_000,
+            quantity: 0.007,
+          } as any);
+        const placeLimitMaker = jest.spyOn(
+          BinanceRestClient.prototype,
+          'placeLimitMakerBuyOrder',
+        );
+        const placeStopLossLimit = jest.spyOn(
+          BinanceRestClient.prototype,
+          'placeStopLossLimitOrder',
+        );
+        const placeOco = jest.spyOn(
+          BinanceRestClient.prototype,
+          'placeOcoBuyOrder',
+        );
+        const cancelEntryOrder = jest.spyOn(
+          BinanceRestClient.prototype,
+          'cancelEntryOrder',
+        );
+        const actionGate = {
+          authorizeAndRun: jest
+            .fn()
+            .mockImplementation(async (_req, execute) => ({
+              outcome: 'EXECUTED',
+              blockedBy: null,
+              detail: 'ok',
+              value: await execute(),
+            })),
+        };
+        const entryOrderCount = jest.fn().mockResolvedValue(0);
+        const entryOrderFindMany = jest.fn().mockResolvedValue([]);
+        const entryOrderCreate = jest.fn();
+        const prisma = makePrismaMock({
+          count: entryOrderCount,
+          aggregate: jest
+            .fn()
+            .mockResolvedValue({ _sum: { plannedNotionalUsd: null } }),
+          findMany: entryOrderFindMany,
+          create: entryOrderCreate,
+        });
+        const { processor } = buildProcessor(prisma, actionGate);
+        const config = {
+          ...baseConfig,
+          mode,
+          ...(entryOrderMode === undefined
+            ? { entryOrderMode: undefined }
+            : { entryOrderMode }),
+        };
 
-    await runBuy(processor, { ...baseConfig, entryOrderMode: 'MARKET' });
+        await runBuy(processor, config);
 
-    expect(placeMarketOrder).toHaveBeenCalledTimes(1);
-    expect(placeLimitMaker).not.toHaveBeenCalled();
-    expect(placeOco).not.toHaveBeenCalled();
-    expect(prisma.entryOrder.create).not.toHaveBeenCalled();
-    expect(prisma.entryOrder.findMany).not.toHaveBeenCalled();
-    expect(actionGate.authorizeAndRun.mock.calls[0][0]).toMatchObject({
-      kind: 'BUY',
-      detail: 'BUY',
-    });
-  });
+        expect(placeMarketOrder).toHaveBeenCalledTimes(1);
+        expect(placeMarketOrder.mock.calls[0][0]).toBe('BTCUSDT');
+        expect(placeMarketOrder.mock.calls[0][1]).toBe('BUY');
+        expect(placeMarketOrder.mock.calls[0][2]).toBeCloseTo(
+          (10_000 * baseConfig.maxTradePct) / 65_000,
+          6,
+        );
+        expect(placeLimitMaker).not.toHaveBeenCalled();
+        expect(placeStopLossLimit).not.toHaveBeenCalled();
+        expect(placeOco).not.toHaveBeenCalled();
+        expect(cancelEntryOrder).not.toHaveBeenCalled();
+
+        expect(entryOrderCreate).not.toHaveBeenCalled();
+        expect(entryOrderFindMany).not.toHaveBeenCalled();
+        expect(entryOrderCount).toHaveBeenCalledTimes(1);
+
+        expect(actionGate.authorizeAndRun).toHaveBeenCalledTimes(1);
+        expect(actionGate.authorizeAndRun.mock.calls[0][0]).toMatchObject({
+          kind: 'BUY',
+          source: 'LLM_CYCLE',
+          detail: 'BUY',
+        });
+        expect(prisma.position.create).toHaveBeenCalledTimes(1);
+        expect(prisma.trade.create).toHaveBeenCalledTimes(1);
+      });
+    },
+  );
+
+  describe.each([['MARKET' as const], [undefined]])(
+    'CA-001 equivalence — SANDBOX with entryOrderMode %s never reaches the entry-order machinery (TASK-023)',
+    (entryOrderMode) => {
+      it('sizes and settles against the sandbox wallet exactly once, ignoring entryOrderMode', async () => {
+        jest
+          .spyOn(BinanceRestClient.prototype, 'getTickerPrice')
+          .mockResolvedValue(65_000);
+        const placeLimitMaker = jest.spyOn(
+          BinanceRestClient.prototype,
+          'placeLimitMakerBuyOrder',
+        );
+        const placeOco = jest.spyOn(
+          BinanceRestClient.prototype,
+          'placeOcoBuyOrder',
+        );
+        const actionGate = {
+          authorizeAndRun: jest
+            .fn()
+            .mockImplementation(async (_req, execute) => ({
+              outcome: 'EXECUTED',
+              blockedBy: null,
+              detail: 'ok',
+              value: await execute(),
+            })),
+        };
+        const entryOrderCount = jest.fn().mockResolvedValue(0);
+        const entryOrderFindMany = jest.fn().mockResolvedValue([]);
+        const entryOrderCreate = jest.fn();
+        const prisma = makePrismaMock({
+          count: entryOrderCount,
+          aggregate: jest
+            .fn()
+            .mockResolvedValue({ _sum: { plannedNotionalUsd: null } }),
+          findMany: entryOrderFindMany,
+          create: entryOrderCreate,
+        });
+        const { processor } = buildProcessor(prisma, actionGate);
+        const config = {
+          ...baseConfig,
+          mode: 'SANDBOX',
+          ...(entryOrderMode === undefined
+            ? { entryOrderMode: undefined }
+            : { entryOrderMode }),
+        };
+
+        await runBuy(processor, config);
+
+        expect(placeLimitMaker).not.toHaveBeenCalled();
+        expect(placeOco).not.toHaveBeenCalled();
+        expect(entryOrderCreate).not.toHaveBeenCalled();
+        expect(entryOrderFindMany).not.toHaveBeenCalled();
+        expect(entryOrderCount).toHaveBeenCalledTimes(1);
+        expect(actionGate.authorizeAndRun).toHaveBeenCalledTimes(1);
+        expect(prisma.position.create).toHaveBeenCalledTimes(1);
+        expect(prisma.trade.create).toHaveBeenCalledTimes(1);
+      });
+    },
+  );
+
   it('the concurrency reader counts RESTING entries on the MARKET path too (TASK-018)', async () => {
     const placeMarketOrder = jest.spyOn(
       BinanceRestClient.prototype,

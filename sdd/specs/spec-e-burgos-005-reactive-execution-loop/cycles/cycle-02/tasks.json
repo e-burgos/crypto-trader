@@ -622,10 +622,17 @@
         "TASK-018",
         "TASK-022"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.entry-orders.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 4000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-024",

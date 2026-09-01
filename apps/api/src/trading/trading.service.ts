@@ -55,6 +55,8 @@ const DEFAULTS = {
   maxTradePct: 0.05,
   maxConcurrentPositions: 2,
   minIntervalMinutes: 5,
+  entryOrderMode: 'MARKET',
+  entryOrderTtlMinutes: 120,
 };
 
 const DEFAULT_RISK_POLICY: UserRiskPolicyResponse = {
@@ -202,6 +204,10 @@ export class TradingService implements OnModuleInit {
       minIntervalMinutes: dto.minIntervalMinutes ?? DEFAULTS.minIntervalMinutes,
       intervalMode: dto.intervalMode ?? 'AGENT',
       orderPriceOffsetPct: dto.orderPriceOffsetPct ?? 0,
+      entryOrderMode: dto.entryOrderMode ?? DEFAULTS.entryOrderMode,
+      entryOrderTtlMinutes:
+        dto.entryOrderTtlMinutes ?? DEFAULTS.entryOrderTtlMinutes,
+      entryTrailingDeltaBips: dto.entryTrailingDeltaBips ?? null,
     };
 
     // Detect configs for the same pair that share identical parameters
@@ -248,6 +254,9 @@ export class TradingService implements OnModuleInit {
         intervalMode: incoming.intervalMode as any,
         orderPriceOffsetPct: incoming.orderPriceOffsetPct,
         riskProfile: (dto.riskProfile ?? 'MODERATE') as any,
+        entryOrderMode: incoming.entryOrderMode as any,
+        entryOrderTtlMinutes: incoming.entryOrderTtlMinutes,
+        entryTrailingDeltaBips: incoming.entryTrailingDeltaBips,
       },
     });
   }

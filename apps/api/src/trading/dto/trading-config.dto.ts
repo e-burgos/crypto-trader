@@ -48,6 +48,12 @@ export enum LLMProviderEnum {
   OPENROUTER = 'OPENROUTER',
 }
 
+export enum EntryOrderModeEnum {
+  MARKET = 'MARKET',
+  LIMIT_MAKER = 'LIMIT_MAKER',
+  OCO = 'OCO',
+}
+
 export class CreateTradingConfigDto {
   @ApiPropertyOptional({
     example: 'BTC Agresivo',
@@ -452,6 +458,44 @@ export class CreateTradingConfigDto {
   @Max(3600, { message: 'Intervalo mínimo entre acciones no puede superar $constraint1 segundos' })
   @IsOptional()
   minActionIntervalSec?: number;
+
+  @ApiPropertyOptional({
+    enum: EntryOrderModeEnum,
+    example: EntryOrderModeEnum.MARKET,
+    description:
+      'Modo de la orden de entrada. MARKET = compra a mercado (comportamiento actual). ' +
+      'LIMIT_MAKER = entrada descansando en el soporte. OCO = soporte + ruptura. ' +
+      'Se ignora en modo SANDBOX.',
+  })
+  @IsEnum(EntryOrderModeEnum)
+  @IsOptional()
+  entryOrderMode?: EntryOrderModeEnum;
+
+  @ApiPropertyOptional({
+    minimum: 5,
+    maximum: 1440,
+    example: 120,
+    description: 'Minutos desde placedAt tras los que una entrada sin fill vence y se cancela',
+  })
+  @IsInt({ message: 'TTL de la entrada debe ser un entero' })
+  @Min(5, { message: 'TTL de la entrada debe ser al menos $constraint1 minutos' })
+  @Max(1440, { message: 'TTL de la entrada no puede superar $constraint1 minutos (24hs)' })
+  @IsOptional()
+  entryOrderTtlMinutes?: number;
+
+  @ApiPropertyOptional({
+    minimum: 10,
+    maximum: 2000,
+    example: 100,
+    description:
+      'trailingDelta en BIPS de la pierna de ruptura del OCO de entrada (100 = 1%). ' +
+      'Omitirlo deja la pierna en nivel fijo. El rango real lo fija el filtro TRAILING_DELTA del símbolo.',
+  })
+  @IsInt({ message: 'Trailing delta de entrada debe ser un entero en BIPS' })
+  @Min(10, { message: 'Trailing delta de entrada debe ser al menos $constraint1 BIPS' })
+  @Max(2000, { message: 'Trailing delta de entrada no puede superar $constraint1 BIPS' })
+  @IsOptional()
+  entryTrailingDeltaBips?: number;
 }
 
 export class UpdateTradingConfigDto {
@@ -814,6 +858,44 @@ export class UpdateTradingConfigDto {
   @Max(3600, { message: 'Intervalo mínimo entre acciones no puede superar $constraint1 segundos' })
   @IsOptional()
   minActionIntervalSec?: number;
+
+  @ApiPropertyOptional({
+    enum: EntryOrderModeEnum,
+    example: EntryOrderModeEnum.MARKET,
+    description:
+      'Modo de la orden de entrada. MARKET = compra a mercado (comportamiento actual). ' +
+      'LIMIT_MAKER = entrada descansando en el soporte. OCO = soporte + ruptura. ' +
+      'Se ignora en modo SANDBOX.',
+  })
+  @IsEnum(EntryOrderModeEnum)
+  @IsOptional()
+  entryOrderMode?: EntryOrderModeEnum;
+
+  @ApiPropertyOptional({
+    minimum: 5,
+    maximum: 1440,
+    example: 120,
+    description: 'Minutos desde placedAt tras los que una entrada sin fill vence y se cancela',
+  })
+  @IsInt({ message: 'TTL de la entrada debe ser un entero' })
+  @Min(5, { message: 'TTL de la entrada debe ser al menos $constraint1 minutos' })
+  @Max(1440, { message: 'TTL de la entrada no puede superar $constraint1 minutos (24hs)' })
+  @IsOptional()
+  entryOrderTtlMinutes?: number;
+
+  @ApiPropertyOptional({
+    minimum: 10,
+    maximum: 2000,
+    example: 100,
+    description:
+      'trailingDelta en BIPS de la pierna de ruptura del OCO de entrada (100 = 1%). ' +
+      'Omitirlo deja la pierna en nivel fijo. El rango real lo fija el filtro TRAILING_DELTA del símbolo.',
+  })
+  @IsInt({ message: 'Trailing delta de entrada debe ser un entero en BIPS' })
+  @Min(10, { message: 'Trailing delta de entrada debe ser al menos $constraint1 BIPS' })
+  @Max(2000, { message: 'Trailing delta de entrada no puede superar $constraint1 BIPS' })
+  @IsOptional()
+  entryTrailingDeltaBips?: number;
 }
 
 export class StartAgentDto {

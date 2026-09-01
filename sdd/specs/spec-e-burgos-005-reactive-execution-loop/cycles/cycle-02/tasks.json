@@ -264,11 +264,20 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/dto/trading-config.dto.ts",
-        "apps/api/src/trading/dto/trading-config.dto.spec.ts"
-      ]
+        "apps/api/src/trading/dto/trading-config.dto.spec.ts",
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.service.entry-order-config.spec.ts"
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-012",

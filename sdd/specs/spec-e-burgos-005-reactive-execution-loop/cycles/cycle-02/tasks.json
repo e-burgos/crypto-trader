@@ -63,9 +63,10 @@
       "usage": {
         "tokens_in": 55000,
         "tokens_out": 3500,
-        "model_tier": "claude/sonnet",
+        "duration_minutes": 3,
         "approx": true,
-        "source": "declared-estimate"
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
       }
     },
     {
@@ -80,11 +81,19 @@
       "depends_on": [
         "TASK-002"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 40000,
+        "tokens_out": 6000,
+        "duration_minutes": 3,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-004",
@@ -98,11 +107,19 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 45000,
+        "tokens_out": 7000,
+        "duration_minutes": 4,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-005",
@@ -117,11 +134,19 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 70000,
+        "tokens_out": 14000,
+        "duration_minutes": 5,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-006",
@@ -136,11 +161,19 @@
         "TASK-004",
         "TASK-005"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 60000,
+        "tokens_out": 11000,
+        "duration_minutes": 5,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-007",

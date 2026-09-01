@@ -523,13 +523,21 @@
       "depends_on": [
         "TASK-015"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/entry-fill-watch.service.ts",
         "apps/api/src/reactive/entry-fill-watch.service.spec.ts",
         "apps/api/src/reactive/reactive-runtime-thresholds.ts",
         "apps/api/src/reactive/reactive.module.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 12000,
+        "duration_minutes": 10,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-020",

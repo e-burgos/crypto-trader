@@ -134,7 +134,7 @@
       "estimation_hours": 1,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "docs/infra/rpo-decision.md"
       ]
@@ -150,7 +150,7 @@
       "depends_on": [
         "TASK-006"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "infra/scripts/db-backup.sh"
       ]

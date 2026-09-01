@@ -217,7 +217,7 @@
         "TASK-006",
         "TASK-008"
       ],
-      "status": "pending",
+      "status": "skipped",
       "files": [
         "libs/trading-engine/src/lib/order-executor.ts",
         "libs/trading-engine/src/lib/order-executor.spec.ts"
@@ -296,7 +296,7 @@
         "TASK-010",
         "TASK-011"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/trading/entry-order.service.spec.ts"
@@ -315,7 +315,7 @@
       "depends_on": [
         "TASK-012"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/trading.processor.entry-orders.spec.ts"
@@ -363,7 +363,7 @@
         "TASK-012",
         "TASK-014"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/trading/entry-order.service.spec.ts",
@@ -383,7 +383,7 @@
       "depends_on": [
         "TASK-015"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/reconciliation.service.ts",
         "apps/api/src/trading/reconciliation.service.spec.ts",
@@ -404,7 +404,7 @@
         "TASK-013",
         "TASK-015"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/trading.service.ts",
@@ -424,7 +424,7 @@
         "TASK-012",
         "TASK-015"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/agents/domain/risk-budget.service.ts",
@@ -539,7 +539,7 @@
         "TASK-005",
         "TASK-006"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.testnet.spec.ts",
         "libs/data-fetcher/project.json"

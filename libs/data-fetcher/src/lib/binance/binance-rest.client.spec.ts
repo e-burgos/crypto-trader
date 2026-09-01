@@ -232,6 +232,12 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
         filterType?: 'NOTIONAL' | 'MIN_NOTIONAL';
         applyToMarket?: string;
       };
+      trailingDelta?: {
+        minTrailingAboveDelta: string;
+        maxTrailingAboveDelta: string;
+        minTrailingBelowDelta: string;
+        maxTrailingBelowDelta: string;
+      };
       omitFilters?: boolean;
     } = {},
   ) {
@@ -254,6 +260,15 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
         minNotional: opts.notional?.minNotional ?? '10.00000000',
         applyToMarket: opts.notional?.applyToMarket ?? 'true',
       });
+      if (opts.trailingDelta) {
+        filters.push({
+          filterType: 'TRAILING_DELTA',
+          minTrailingAboveDelta: opts.trailingDelta.minTrailingAboveDelta,
+          maxTrailingAboveDelta: opts.trailingDelta.maxTrailingAboveDelta,
+          minTrailingBelowDelta: opts.trailingDelta.minTrailingBelowDelta,
+          maxTrailingBelowDelta: opts.trailingDelta.maxTrailingBelowDelta,
+        });
+      }
     }
     return { symbols: [{ symbol, filters }] };
   }
@@ -312,6 +327,34 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
         price: { minPrice: 0, maxPrice: 0, tickSize: 1e-8 },
         notional: { minNotional: 0, applyToMarket: false },
       });
+    });
+
+    it('parses the TRAILING_DELTA filter when the symbol declares it', async () => {
+      mockExchangeInfo('GSFUSDT5', {
+        trailingDelta: {
+          minTrailingAboveDelta: '10',
+          maxTrailingAboveDelta: '2000',
+          minTrailingBelowDelta: '10',
+          maxTrailingBelowDelta: '2000',
+        },
+      });
+
+      const filters = await client.getSymbolFilters('GSFUSDT5');
+
+      expect(filters.trailingDelta).toEqual({
+        minTrailingAboveDelta: 10,
+        maxTrailingAboveDelta: 2000,
+        minTrailingBelowDelta: 10,
+        maxTrailingBelowDelta: 2000,
+      });
+    });
+
+    it('leaves trailingDelta absent when the symbol does not declare the filter', async () => {
+      mockExchangeInfo('GSFUSDT6');
+
+      const filters = await client.getSymbolFilters('GSFUSDT6');
+
+      expect(filters.trailingDelta).toBeUndefined();
     });
   });
 

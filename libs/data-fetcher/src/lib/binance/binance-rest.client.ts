@@ -99,17 +99,26 @@ export interface BinanceRestConfig {
   testnet?: boolean;
 }
 
+export interface TrailingDeltaFilter {
+  minTrailingAboveDelta: number;
+  maxTrailingAboveDelta: number;
+  minTrailingBelowDelta: number;
+  maxTrailingBelowDelta: number;
+}
+
 export interface SymbolFilters {
   lotSize: { minQty: number; maxQty: number; stepSize: number };
   price: { minPrice: number; maxPrice: number; tickSize: number };
   notional: { minNotional: number; applyToMarket: boolean };
+  trailingDelta?: TrailingDeltaFilter;
 }
 
 export type OrderValidationCode =
   | 'LOT_SIZE'
   | 'PRICE_FILTER'
   | 'MIN_NOTIONAL'
-  | 'PRICE_CROSSES_MARKET';
+  | 'PRICE_CROSSES_MARKET'
+  | 'TRAILING_DELTA';
 
 export class OrderValidationError extends Error {
   constructor(
@@ -351,6 +360,9 @@ export class BinanceRestClient {
     const notionalFilter = symbolInfo?.filters.find(
       (f) => f.filterType === 'NOTIONAL' || f.filterType === 'MIN_NOTIONAL',
     );
+    const trailingDeltaFilter = symbolInfo?.filters.find(
+      (f) => f.filterType === 'TRAILING_DELTA',
+    );
 
     const result: SymbolFilters = {
       lotSize: lotSizeFilter
@@ -377,6 +389,24 @@ export class BinanceRestClient {
               notionalFilter['applyMinToMarket'] === 'true',
           }
         : { minNotional: 0, applyToMarket: false },
+      ...(trailingDeltaFilter
+        ? {
+            trailingDelta: {
+              minTrailingAboveDelta: parseFloat(
+                trailingDeltaFilter['minTrailingAboveDelta'],
+              ),
+              maxTrailingAboveDelta: parseFloat(
+                trailingDeltaFilter['maxTrailingAboveDelta'],
+              ),
+              minTrailingBelowDelta: parseFloat(
+                trailingDeltaFilter['minTrailingBelowDelta'],
+              ),
+              maxTrailingBelowDelta: parseFloat(
+                trailingDeltaFilter['maxTrailingBelowDelta'],
+              ),
+            },
+          }
+        : {}),
     };
 
     BinanceRestClient.symbolFiltersCache.set(cacheKey, result);

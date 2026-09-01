@@ -8,6 +8,7 @@ export {
 } from './binance-rest.client';
 export type {
   SymbolFilters,
+  TrailingDeltaFilter,
   OrderValidationCode,
   OcoOrderResult,
 } from './binance-rest.client';

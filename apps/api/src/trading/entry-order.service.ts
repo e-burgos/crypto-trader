@@ -59,6 +59,11 @@ export interface RestingEntryOrder {
   placedAt: Date;
   expiresAt: Date;
   decisionId: string | null;
+  cancelReason: EntryOrderCancelReason | null;
+}
+
+export function normalizeEntryClientOrderId(clientOrderId: string): string {
+  return clientOrderId.replace(/-(l|s)$/, '');
 }
 
 export interface PlaceRestingParams {
@@ -386,6 +391,68 @@ export class EntryOrderService {
     return (await this.prisma.entryOrder.findMany({
       where: { configId, symbol, status: 'RESTING' },
     })) as unknown as RestingEntryOrder[];
+  }
+
+  async listRestingClientOrderIds(
+    userId: string,
+    symbol: string,
+  ): Promise<string[]> {
+    const rows = (await this.prisma.entryOrder.findMany({
+      where: { userId, symbol, status: 'RESTING' },
+      select: { clientOrderId: true },
+    })) as unknown as Array<{ clientOrderId: string }>;
+    return rows.map((row) => row.clientOrderId);
+  }
+
+  async confirmExternalCancellation(order: RestingEntryOrder): Promise<void> {
+    const reason = order.cancelReason ?? 'VANISHED_ON_EXCHANGE';
+    await this.applyTerminalStatus(order, 'CANCELLED', reason);
+    if (order.cancelReason === null) {
+      await this.recordEntryCancelAction({
+        userId: order.userId,
+        configId: order.configId,
+        reason,
+        decisionId: order.decisionId,
+      });
+    }
+  }
+
+  async markMissing(order: RestingEntryOrder): Promise<void> {
+    await this.prisma.entryOrder.update({
+      where: { id: order.id },
+      data: {
+        status: 'MISSING',
+        cancelReason: 'VANISHED_ON_EXCHANGE',
+        settledAt: new Date(),
+      } as any,
+    });
+
+    await this.notificationsService
+      .create(
+        order.userId,
+        NotificationType.AGENT_ERROR,
+        JSON.stringify({
+          key: 'entryOrderMissing',
+          entryOrderId: order.id,
+          symbol: order.symbol,
+        }),
+      )
+      .catch(() => null);
+
+    this.gateway.emitToUser(order.userId, 'entry-order:missing', {
+      configId: order.configId,
+      entryOrderId: order.id,
+      symbol: order.symbol,
+      orderListId: order.orderListId,
+      orderId: order.orderId,
+    });
+
+    await this.recordEntryCancelAction({
+      userId: order.userId,
+      configId: order.configId,
+      reason: 'VANISHED_ON_EXCHANGE',
+      decisionId: order.decisionId,
+    });
   }
 
   async countResting(scope: RestingScope): Promise<number> {

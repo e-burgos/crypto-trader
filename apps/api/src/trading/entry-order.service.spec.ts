@@ -102,6 +102,7 @@ describe('EntryOrderService — placement and cancellation (TASK-012)', () => {
     placedAt: new Date('2026-09-01T10:00:00Z'),
     expiresAt: new Date('2026-09-01T12:00:00Z'),
     decisionId: 'decision-1',
+    cancelReason: null,
   };
 
   beforeEach(() => {
@@ -508,6 +509,7 @@ describe('EntryOrderService.settleFill (TASK-015)', () => {
     placedAt: new Date('2026-09-01T10:00:00Z'),
     expiresAt: new Date('2026-09-01T12:00:00Z'),
     decisionId: 'decision-1',
+    cancelReason: null,
   };
 
   function makePrisma(overrides: any = {}) {

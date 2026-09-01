@@ -3,11 +3,16 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType, TRADE_FEE_PCT } from '@crypto-trader/shared';
-import type { OrderExecutorPort } from '@crypto-trader/trading-engine';
+import type {
+  OpenOrderSummary,
+  OrderExecutorPort,
+} from '@crypto-trader/trading-engine';
 import { placeProtectionWithRetry } from './protection-retry';
 import {
+  ENTRY_CLIENT_ORDER_ID_PREFIX,
   EntryOrderService,
   entryOrderRefOf,
+  normalizeEntryClientOrderId,
   type RestingEntryOrder,
 } from './entry-order.service';
 
@@ -18,6 +23,8 @@ export interface ReconciliationOutcome {
   stillUnprotected: number;
   orphanOrdersCancelled: number;
   entryOrdersSettled: number;
+  entryOrdersExpired: number;
+  entryOrphansCancelled: number;
 }
 
 interface ReconciliationConfig {
@@ -37,6 +44,7 @@ interface ReconciliationInput {
   config: ReconciliationConfig;
   symbol: string;
   executor: OrderExecutorPort;
+  now?: Date;
 }
 
 interface ReconciledPosition {
@@ -75,6 +83,8 @@ export class ReconciliationService {
       stillUnprotected: 0,
       orphanOrdersCancelled: 0,
       entryOrdersSettled: 0,
+      entryOrdersExpired: 0,
+      entryOrphansCancelled: 0,
     };
 
     const openPositions = (await this.prisma.position.findMany({
@@ -114,10 +124,23 @@ export class ReconciliationService {
     await this.reconcileEntryOrders(input, outcome);
 
     await this.addExternalLiveOrderIds(input, liveOrderListIds);
+    const openOrders = await input.executor
+      .getOpenOrders(input.symbol)
+      .catch(() => []);
     outcome.orphanOrdersCancelled = await this.sweepOrphanOrders(
       input,
       liveOrderListIds,
+      openOrders,
     );
+    const entryOrphanCandidates = openOrders.filter((order) =>
+      order.clientOrderId.startsWith(ENTRY_CLIENT_ORDER_ID_PREFIX),
+    );
+    if (entryOrphanCandidates.length > 0) {
+      outcome.entryOrphansCancelled = await this.sweepOrphanEntryOrders(
+        input,
+        entryOrphanCandidates,
+      );
+    }
 
     return outcome;
   }
@@ -130,8 +153,6 @@ export class ReconciliationService {
       input.config.id,
       input.symbol,
     );
-    if (resting.length === 0) return;
-
     for (const order of resting) {
       await this.reconcileEntryOrder(input, order, outcome);
     }
@@ -158,7 +179,65 @@ export class ReconciliationService {
         status,
       });
       if (settled === 'SETTLED') outcome.entryOrdersSettled++;
+      return;
     }
+
+    if (status.state === 'CANCELLED') {
+      await this.entryOrders.confirmExternalCancellation(order);
+      return;
+    }
+
+    if (status.state === 'MISSING') {
+      await this.entryOrders.markMissing(order);
+      return;
+    }
+
+    const now = input.now ?? new Date();
+    if (now.getTime() < order.expiresAt.getTime()) return;
+
+    const expired = await this.entryOrders.cancelResting({
+      userId: input.userId,
+      configId: order.configId,
+      symbol: order.symbol,
+      executor: input.executor,
+      reason: 'TTL_EXPIRED',
+      terminalStatus: 'EXPIRED',
+      rows: [order],
+      recordAction: true,
+      decisionId: order.decisionId,
+    });
+    outcome.entryOrdersExpired += expired.cancelled.length;
+  }
+
+  private async sweepOrphanEntryOrders(
+    input: ReconciliationInput,
+    openOrders: OpenOrderSummary[],
+  ): Promise<number> {
+    const liveEntryCids = new Set(
+      await this.entryOrders.listRestingClientOrderIds(
+        input.userId,
+        input.symbol,
+      ),
+    );
+    let cancelled = 0;
+    for (const order of openOrders) {
+      if (liveEntryCids.has(normalizeEntryClientOrderId(order.clientOrderId)))
+        continue;
+      try {
+        await input.executor.cancelEntryOrder(input.symbol, {
+          orderListId: order.orderListId,
+          orderId: order.orderId,
+          limitLegOrderId: null,
+          stopLegOrderId: null,
+        });
+        cancelled++;
+      } catch (err) {
+        this.logger.warn(
+          `Failed to cancel orphan entry order ${order.clientOrderId} for ${input.symbol}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+    return cancelled;
   }
 
   private async reconcileProtected(
@@ -371,10 +450,8 @@ export class ReconciliationService {
   private async sweepOrphanOrders(
     input: ReconciliationInput,
     liveOrderListIds: Set<string>,
+    openOrders: OpenOrderSummary[],
   ): Promise<number> {
-    const openOrders = await input.executor
-      .getOpenOrders(input.symbol)
-      .catch(() => []);
     let cancelled = 0;
     for (const order of openOrders) {
       if (!order.clientOrderId.startsWith('prot-')) continue;

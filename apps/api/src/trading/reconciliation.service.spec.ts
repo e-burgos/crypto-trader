@@ -510,4 +510,257 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
       executor.getEntryOrderStatus.mock.invocationCallOrder[0],
     ).toBeLessThan(executor.getOpenOrders.mock.invocationCallOrder[0]);
   });
+  function restingStatus() {
+    return {
+      state: 'RESTING' as const,
+      filledLeg: null,
+      executedPrice: null,
+      executedQuantity: null,
+      remainingQuantity: 0.02,
+      partial: false,
+      orderId: 'oid-1',
+    };
+  }
+
+  it('entry step — an expired TTL cancels on the exchange BEFORE marking the row EXPIRED', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest.fn().mockResolvedValue(restingStatus()),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+      now: new Date('2026-09-01T12:00:01Z'),
+    });
+
+    expect(executor.cancelEntryOrder).toHaveBeenCalledTimes(1);
+    const update = prisma.entryOrder.update.mock.calls[0];
+    expect(
+      executor.cancelEntryOrder.mock.invocationCallOrder[0],
+    ).toBeLessThan(prisma.entryOrder.update.mock.invocationCallOrder[0]);
+    expect(update[0].data).toMatchObject({
+      status: 'EXPIRED',
+      cancelReason: 'TTL_EXPIRED',
+    });
+    expect(outcome.entryOrdersExpired).toBe(1);
+    expect(prisma.botAction.create.mock.calls[0][0].data).toMatchObject({
+      kind: 'ENTRY_CANCEL',
+      detail: 'TTL_EXPIRED',
+    });
+  });
+
+  it('entry step — the TTL is computed from placedAt, so a query before expiry leaves the row alone', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest.fn().mockResolvedValue(restingStatus()),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+      now: new Date('2026-09-01T11:59:59Z'),
+    });
+
+    expect(executor.cancelEntryOrder).not.toHaveBeenCalled();
+    expect(prisma.entryOrder.update).not.toHaveBeenCalled();
+    expect(outcome.entryOrdersExpired).toBe(0);
+  });
+
+  it('entry step — a failed cancellation leaves the expired row RESTING with lastError', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest.fn().mockResolvedValue(restingStatus()),
+      cancelEntryOrder: jest.fn().mockRejectedValue(new Error('timeout')),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+      now: new Date('2026-09-01T13:00:00Z'),
+    });
+
+    expect(prisma.entryOrder.update.mock.calls[0][0].data).toEqual({
+      lastError: 'timeout',
+    });
+    expect(outcome.entryOrdersExpired).toBe(0);
+  });
+
+  it('entry step — a confirmed fill wins over an expired TTL in the same pass', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest.fn().mockResolvedValue({
+        state: 'FILLED',
+        filledLeg: 'LIMIT',
+        executedPrice: 63_000,
+        executedQuantity: 0.02,
+        remainingQuantity: 0,
+        partial: false,
+        orderId: 'oid-1',
+      }),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: { ...baseConfig, nativeProtectionEnabled: false },
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+      now: new Date('2026-09-01T20:00:00Z'),
+    });
+
+    expect(outcome.entryOrdersSettled).toBe(1);
+    expect(outcome.entryOrdersExpired).toBe(0);
+    expect(executor.cancelEntryOrder).not.toHaveBeenCalled();
+    expect(prisma.entryOrder.updateMany.mock.calls[0][0].data.status).toBe(
+      'FILLED',
+    );
+  });
+
+  it('entry step — a cancellation nobody asked for is confirmed as VANISHED_ON_EXCHANGE', async () => {
+    const prisma = makePrisma([], [{ ...restingEntry, cancelReason: null }]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest
+        .fn()
+        .mockResolvedValue({ ...restingStatus(), state: 'CANCELLED' }),
+    });
+
+    await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(prisma.entryOrder.update.mock.calls[0][0].data).toMatchObject({
+      status: 'CANCELLED',
+      cancelReason: 'VANISHED_ON_EXCHANGE',
+    });
+    expect(executor.cancelEntryOrder).not.toHaveBeenCalled();
+  });
+
+  it('entry step — a cancellation we had already requested keeps its own reason', async () => {
+    const prisma = makePrisma([], [
+      { ...restingEntry, cancelReason: 'BOT_STOPPED' },
+    ]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest
+        .fn()
+        .mockResolvedValue({ ...restingStatus(), state: 'CANCELLED' }),
+    });
+
+    await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(prisma.entryOrder.update.mock.calls[0][0].data.cancelReason).toBe(
+      'BOT_STOPPED',
+    );
+    expect(prisma.botAction.create).not.toHaveBeenCalled();
+  });
+
+  it('entry step — MISSING persists the row and raises an AGENT_ERROR, never deleting it', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest
+        .fn()
+        .mockResolvedValue({ ...restingStatus(), state: 'MISSING' }),
+    });
+
+    await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(prisma.entryOrder.update.mock.calls[0][0].data).toMatchObject({
+      status: 'MISSING',
+      cancelReason: 'VANISHED_ON_EXCHANGE',
+    });
+    expect((prisma.entryOrder as any).delete).toBeUndefined();
+    expect(
+      notificationsMock.create.mock.calls.some((call: any) =>
+        call[2].includes('entryOrderMissing'),
+      ),
+    ).toBe(true);
+    expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
+      'user-1',
+      'entry-order:missing',
+      expect.objectContaining({ entryOrderId: 'entry-1' }),
+    );
+  });
+
+  it('orphan sweep — one getOpenOrders call feeds both sweeps and each keeps to its own prefix', async () => {
+    const prisma = makePrisma([], []);
+    prisma.entryOrder.findMany = jest
+      .fn()
+      .mockImplementation(({ select }: any) =>
+        Promise.resolve(select ? [{ clientOrderId: 'ent-alive' }] : []),
+      );
+    const executor = makeExecutor({
+      getOpenOrders: jest.fn().mockResolvedValue([
+        { orderId: '1', clientOrderId: 'prot-pos-9-1', orderListId: 'ol-9' },
+        { orderId: '2', clientOrderId: 'ent-alive-l', orderListId: 'ol-1' },
+        { orderId: '3', clientOrderId: 'ent-alive-s', orderListId: 'ol-1' },
+        { orderId: '4', clientOrderId: 'ent-orphan', orderListId: null },
+        { orderId: '5', clientOrderId: 'manual-order', orderListId: null },
+      ]),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(executor.getOpenOrders).toHaveBeenCalledTimes(1);
+    expect(outcome.entryOrphansCancelled).toBe(1);
+    expect(executor.cancelEntryOrder).toHaveBeenCalledTimes(1);
+    expect(executor.cancelEntryOrder.mock.calls[0][1]).toMatchObject({
+      orderId: '4',
+    });
+    expect(outcome.orphanOrdersCancelled).toBe(1);
+    expect(executor.cancelProtectionOrder).toHaveBeenCalledTimes(1);
+    expect(executor.cancelProtectionOrder.mock.calls[0][1]).toEqual({
+      orderListId: 'ol-9',
+    });
+  });
+
+  it('orphan sweep — an entry of another config of the same user is never swept', async () => {
+    const prisma = makePrisma([], []);
+    prisma.entryOrder.findMany = jest
+      .fn()
+      .mockImplementation(({ where, select }: any) =>
+        Promise.resolve(
+          select && where.userId ? [{ clientOrderId: 'ent-other-bot' }] : [],
+        ),
+      );
+    const executor = makeExecutor({
+      getOpenOrders: jest
+        .fn()
+        .mockResolvedValue([
+          { orderId: '9', clientOrderId: 'ent-other-bot', orderListId: null },
+        ]),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(outcome.entryOrphansCancelled).toBe(0);
+    expect(executor.cancelEntryOrder).not.toHaveBeenCalled();
+  });
 });

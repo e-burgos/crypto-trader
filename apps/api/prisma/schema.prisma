@@ -85,6 +85,11 @@ enum DocumentStatus {
   AGENT_STOPPED
   AGENT_KILLED
   LLM_PROVIDER_DISABLED
+  /// Fallas de infraestructura detectadas por el chequeo diario del VPS: backups
+  /// que no suben, certificado por vencer, disco, contenedores caidos. Separado
+  /// de AGENT_ERROR a proposito: "mi bot fallo" y "el servidor se queda sin
+  /// disco" son urgencias distintas y el operador tiene que poder distinguirlas.
+  INFRA_ALERT
 }
 
 enum LLMProvider {

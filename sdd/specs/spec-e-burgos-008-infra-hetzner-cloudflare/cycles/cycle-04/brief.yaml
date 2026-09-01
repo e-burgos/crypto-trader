@@ -1,0 +1,40 @@
+# Generado por: sdd-orchestrator | Al: iniciar el ciclo
+cycle: 4
+module: infra-hetzner-cloudflare
+phase: observability
+date: 2026-09-01
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Que la plataforma AVISE cuando algo se rompe, en vez de que el operador se entere el dia que
+  necesita el backup. Hoy no hay metricas, ni alertas, ni nadie mirando los logs de cron.
+
+scope:
+  - Fase 8 — chequeo diario de salud del VPS que detecta lo que falla EN SILENCIO
+  - Fase 8 — notificar por el canal que la plataforma YA tiene, sin dependencias nuevas
+  - Fase 8 — decidir y registrar la degradacion de Redis (spec §7.4, hallazgo G)
+  - CA-008 — la decision de RPO ya esta tomada y registrada en docs/infra/rpo-decision.md
+
+out_of_scope:
+  - Integracion de Resend (spec §4, spec aparte). La plataforma hoy no manda un solo mail.
+  - Metricas con Prometheus/Grafana: un segundo servicio para un operador unico no se justifica
+  - APM y tracing distribuido
+
+open_decisions_blocking:
+  - Ninguna.
+
+notes: |
+  Que se monitorea y por que. Cada item corresponde a un modo de falla que ESTE ciclo o los
+  anteriores demostraron que ocurre en silencio:
+    - Backups: el cron corre cada hora y escribe a un log que nadie lee. 24 oportunidades diarias
+      de fallar sin que nadie note.
+    - Certificado: vence 2026-11-30. Si la renovacion falla, el sitio deja de cargar con un error
+      de certificado, sin aviso previo.
+    - Disco: 40 GB que Hetzner NO deja achicar. Paso de 4% a 30% solo con desplegar.
+    - Contenedores: si la API queda unhealthy, nginx sigue en pie y devuelve 502.
+    - Ciclos de agente: un sub-agente que trunca degrada la decision sin ningun error (FIX-014).
+    - Redis: sin el, las colas de Bull dejan de procesar EN SILENCIO (hallazgo G).
+
+  El canal de aviso es la tabla Notification de la propia plataforma, que ya existe y ya se muestra
+  en la UI con su evento WebSocket. Es deliberado: agregar un servicio externo para avisar que un
+  servicio externo fallo suma un punto de falla en vez de restarlo.

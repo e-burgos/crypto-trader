@@ -142,10 +142,18 @@ Uno por fase, tomados literalmente del plan de origen.
 
 ## 7. Decisiones abiertas
 
-1. **RPO.** El esquema de `display-ads` son cuatro backups por día: se pueden perder hasta 6 horas
+1. ~~**RPO.**~~ **RESUELTA 2026-09-01: 1 hora**, contra las 6 de `display-ads`. Razonamiento y
+   descarte del archivado continuo de WAL en
+   [`docs/infra/rpo-decision.md`](../../../docs/infra/rpo-decision.md).
+
+   <details><summary>Planteo original</summary>
+
+   El esquema de `display-ads` son cuatro backups por día: se pueden perder hasta 6 horas
    y no hay recuperación a un punto en el tiempo. Para una plataforma que ejecuta órdenes con
    dinero real hay que decidir si alcanza. La alternativa es archivado continuo de WAL a R2, que
-   es trabajo nuevo. **Se resuelve en cycle-01, porque condiciona el diseño de los backups.**
+   es trabajo nuevo.
+
+   </details>
 2. ~~**Qué cuenta de Cloudflare.**~~ **RESUELTA 2026-08-31: `cryptotradereb@gmail.com`.** Es la
    cuenta por defecto del proyecto. Se usa para **R2 y Pages** (recursos de cuenta, no requieren
    zona). Token `crypto-trader-ops` creado y verificado.
@@ -178,8 +186,12 @@ certificado Let's Encrypt emitido y renovado en el propio servidor** (certbot).
 
 **Cloudflare sigue en el stack** para lo que no necesita zona: **R2** (backups, Fase 3) y **Pages**
 (la SPA, Fase 6, con un `CNAME` desde Hostinger).
-4. **Degradación de Redis.** Si Redis no está, las colas dejan de procesar en silencio (hallazgo
-   G). Decidir si se monitorea o se mitiga. Se resuelve junto con CA-008.
+4. ~~**Degradación de Redis.**~~ **RESUELTA 2026-09-01: se monitorea, no se mitiga.** Un fallback en
+   memoria violaría el aislamiento entre réplicas y haría que los caps de frecuencia dejen de contar
+   lo que realmente pasó. Que el bot se detenga es el comportamiento correcto; lo inaceptable era que
+   se detuviera **sin que nadie se entere**, y eso lo cierran el health check (503 con `redis: down`)
+   y el chequeo diario. Razonamiento completo en
+   [`docs/infra/redis-degradation.md`](../../../docs/infra/redis-degradation.md).
 
 ### DEC-DATOS — La Fase 4 se cancela: se arranca con la base vacía *(2026-09-01)*
 

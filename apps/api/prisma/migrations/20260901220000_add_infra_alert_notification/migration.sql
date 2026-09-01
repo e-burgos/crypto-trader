@@ -1,0 +1,11 @@
+-- spec-e-burgos-008 cycle-04 — canal de aviso para fallas de infraestructura.
+--
+-- Se agrega un valor propio en vez de reusar AGENT_ERROR: un backup que no sube
+-- o un certificado por vencer no son errores de un agente, y mezclarlos haria
+-- que el operador no pueda distinguir "mi bot fallo" de "el servidor se esta
+-- quedando sin disco". Son dos urgencias distintas.
+--
+-- ALTER TYPE ... ADD VALUE es aditivo y no reescribe filas. En PostgreSQL 12+
+-- puede correr dentro de la transaccion de la migracion siempre que el valor
+-- nuevo NO se use en esa misma transaccion, que es el caso.
+ALTER TYPE "NotificationType" ADD VALUE IF NOT EXISTS 'INFRA_ALERT';

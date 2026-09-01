@@ -1,0 +1,87 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 4,
+  "module": "infra-hetzner-cloudflare",
+  "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
+  "apps": [
+    "apps/api"
+  ],
+  "phase": "observability",
+  "flow": "reduced",
+  "objectives": [
+    "Detectar en un chequeo diario los seis modos de falla que este ciclo y los anteriores demostraron que ocurren EN SILENCIO",
+    "Avisar por la tabla Notification que la plataforma ya tiene, sin sumar un servicio externo que a su vez pueda fallar",
+    "Decidir y registrar que hacer con la degradacion de Redis (hallazgo G)",
+    "Cerrar CA-008: RPO decidido y registrado, mas observabilidad minima de la API"
+  ],
+  "status": "completed",
+  "started_at": "2026-09-01",
+  "completed_at": "2026-09-01",
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-04/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "tasks_skipped": 0,
+    "story_points": 0,
+    "files_created": [
+      "infra/scripts/daily-health-check.sh",
+      "infra/scripts/daily-health-check-cron-install.sh",
+      "apps/api/prisma/migrations/20260901220000_add_infra_alert_notification/migration.sql",
+      "docs/infra/redis-degradation.md"
+    ],
+    "files_modified": [
+      "apps/api/prisma/schema.prisma",
+      "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/spec-e-burgos-008-infra-hetzner-cloudflare.spec.md"
+    ],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 320000,
+      "tokens_out": 42000,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/opus": {
+          "tokens_in": 320000,
+          "tokens_out": 42000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [
+    "DETECTADO POR EL PROPIO CHEQUEO en su primera corrida real — 1 respuesta de LLM truncada en 24 h. Era la de minimax-m2.7 en macro_context, anterior al ultimo ajuste de FIX-e-burgos-014. Que el chequeo cazara algo real en su estreno es la mejor evidencia de que mide lo correcto.",
+    "DEUDA — la ventana entre que algo cae y las 08:00 UTC no esta cubierta. El health check lo refleja al instante pero nadie lo consulta sin un monitor externo. Un uptime check gratuito contra /api/health cerraria el hueco.",
+    "DEUDA — el chequeo no mide uso de memoria de Redis. Con noeviction un Redis lleno falla las escrituras con error en vez de descartar jobs, que es lo buscado, pero no se ve venir.",
+    "OBSERVACION — INFRA_ALERT se agrego como valor nuevo del enum en vez de reusar AGENT_ERROR. ALTER TYPE ADD VALUE es aditivo y no reescribe filas; en PostgreSQL 12+ corre dentro de la transaccion de la migracion siempre que el valor nuevo no se use en esa misma transaccion, que es el caso."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-01",
+    "ca_results": {
+      "CA-008": "PASS en sus dos mitades. RPO: decidido en 1 hora y registrado en docs/infra/rpo-decision.md, con el descarte del archivado continuo de WAL argumentado — si el archivado se traba, Postgres retiene los segmentos y en 40 GB eso termina con la base detenida, o sea que el mecanismo que protege pasa a ser el que tumba. OBSERVABILIDAD: daily-health-check.sh cubre los seis modos de falla silenciosa que este proyecto demostro que ocurren, avisa por la tabla Notification con el tipo nuevo INFRA_ALERT y corre por cron a las 08:00 UTC. Verificado de punta a punta contra produccion: la corrida real detecto 1 hallazgo legitimo y la notificacion quedo escrita para el usuario ADMIN, sin leer. Se cierra ademas la ultima decision abierta de la spec (§7.4, degradacion de Redis): se monitorea y no se mitiga, con el razonamiento en docs/infra/redis-degradation.md."
+    },
+    "tests": {
+      "nx test api": "755/755 en 88 suites",
+      "typecheck:api": "OK",
+      "lint api": "0 errores",
+      "sdd:validate": "OK — 23 archivos validos",
+      "chequeo en dry-run": "6 verificaciones ejecutadas contra el VPS: disco 35%, los 5 contenedores corriendo, backup de hace 0 h, certificado a 89 dias, health check en ok, y 1 hallazgo real de truncados",
+      "chequeo real": "La notificacion INFRA_ALERT quedo escrita para cryptotradereb@gmail.com con read=false",
+      "cron idempotente": "Instalado dos veces seguidas deja una sola linea; el crontab queda con los tres: backup horario, renovacion 2x/dia y chequeo diario"
+    },
+    "notes": "APROBADO, y con esto la spec queda sin decisiones abiertas: las cuatro de §7 estan resueltas y registradas. La eleccion de diseno que vale subrayar es el canal de aviso: se uso la tabla Notification que la plataforma YA tiene, con su evento WebSocket, en vez de sumar un servicio externo. Agregar un tercero para avisar que algo fallo suma un punto de falla en vez de restarlo, y este script tiene que funcionar justamente cuando algo esta roto. Los seis chequeos no son una lista generica: cada uno corresponde a un modo de falla que este proyecto demostro empiricamente — el cron del certificado que no habria corrido nunca, el backup que escribe a un log que nadie lee, el disco que paso de 4% a 30% en una tarde, y los sub-agentes truncando que fueron como se colo el fail-open del gate de riesgo. El chequeo cazo un hallazgo legitimo en su primera corrida.",
+    "follow_ups": [
+      "Un uptime check externo contra /api/health cerraria la ventana entre una caida y las 08:00 UTC. Gratuito en cualquier proveedor.",
+      "Sumar uso de memoria de Redis al chequeo: con noeviction un Redis lleno falla escrituras, pero hoy no se ve venir.",
+      "El dueno tiene que borrar el proyecto de Railway (pendiente de cycle-03).",
+      "Cargar las credenciales de las 8 fuentes de datos por el panel de admin."
+    ]
+  }
+}

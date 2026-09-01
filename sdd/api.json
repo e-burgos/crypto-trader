@@ -172,8 +172,8 @@
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
         "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": 1,
-        "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. El cycle-03 suma 2 campos mas del gate determinista pre-LLM: deterministicGateEnabled, gatePriceChangePct. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse. El spec-e-burgos-005 cycle-01 suma 3 campos mas del loop reactivo: reactiveLoopEnabled, maxActionsPerHour, minActionIntervalSec.",
+        "updated_in_cycle": 2,
+        "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. El cycle-03 suma 2 campos mas del gate determinista pre-LLM: deterministicGateEnabled, gatePriceChangePct. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse. El spec-e-burgos-005 cycle-01 suma 3 campos mas del loop reactivo: reactiveLoopEnabled, maxActionsPerHour, minActionIntervalSec. El spec-e-burgos-005 cycle-02 suma 3 campos mas de la entrada descansando: entryOrderMode, entryOrderTtlMinutes, entryTrailingDeltaBips.",
         "path_params": [],
         "required_headers": ["Authorization"],
         "request_body": {
@@ -199,7 +199,10 @@
           "gatePriceChangePct": "number 0.0005..0.05 (default 0.005) — umbral de cambio de precio del gate (cycle-03)",
           "reactiveLoopEnabled": "boolean (default false) — interruptor maestro del loop reactivo (spec-005 cycle-01)",
           "maxActionsPerHour": "integer 1..60 (default 6) — cap de acciones por hora movil del bot (spec-005 cycle-01)",
-          "minActionIntervalSec": "integer 5..3600 (default 60) — cooldown minimo entre acciones ejecutadas (spec-005 cycle-01)"
+          "minActionIntervalSec": "integer 5..3600 (default 60) — cooldown minimo entre acciones ejecutadas (spec-005 cycle-01)",
+          "entryOrderMode": "MARKET | LIMIT_MAKER | OCO (default MARKET) — modo de la orden de entrada. MARKET reproduce la compra a mercado actual; LIMIT_MAKER deja la entrada descansando en el soporte; OCO suma la pierna de ruptura. Se ignora en modo SANDBOX (spec-005 cycle-02)",
+          "entryOrderTtlMinutes": "integer 5..1440 (default 120) — minutos desde placedAt tras los que una entrada sin fill vence, se cancela en el exchange y pasa a EXPIRED (spec-005 cycle-02)",
+          "entryTrailingDeltaBips": "integer 10..2000 | null (default null = pierna en nivel fijo) — trailingDelta en BIPS de la pierna de ruptura del OCO de entrada, 100 = 1%. El rango real lo fija el filtro TRAILING_DELTA del simbolo y el cliente lo revalida antes de firmar (spec-005 cycle-02)"
         },
         "responses": {
           "201": "TradingConfig creada, con los campos nuevos en su valor por default",
@@ -216,6 +219,11 @@
             "cycle": 1,
             "date": "2026-08-30",
             "change": "spec-e-burgos-005 cycle-01: suma reactiveLoopEnabled, maxActionsPerHour y minActionIntervalSec al DTO (loop reactivo y caps de frecuencia; los tres opcionales, los defaults reproducen el comportamiento previo). Declararlos en Create Y Update es obligatorio: con forbidNonWhitelisted un campo no declarado hace fallar el request entero con 400."
+          },
+          {
+            "cycle": 2,
+            "date": "2026-09-01",
+            "change": "spec-e-burgos-005 cycle-02: suma entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips al DTO (entrada descansando en el exchange; los tres opcionales, y el default entryOrderMode=MARKET reproduce el comportamiento previo). Declararlos en Create Y Update es obligatorio: con forbidNonWhitelisted un campo no declarado hace fallar el request entero con 400."
           }
         ]
       },
@@ -227,8 +235,8 @@
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
         "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": 1,
-        "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo. El cycle-03 suma los mismos 2 campos del gate determinista que EP-006. El spec-e-burgos-005 cycle-01 suma los mismos 3 campos del loop reactivo que EP-006.",
+        "updated_in_cycle": 2,
+        "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo. El cycle-03 suma los mismos 2 campos del gate determinista que EP-006. El spec-e-burgos-005 cycle-01 suma los mismos 3 campos del loop reactivo que EP-006. El spec-e-burgos-005 cycle-02 suma los mismos 3 campos de la entrada descansando que EP-006.",
         "path_params": ["id"],
         "required_headers": ["Authorization"],
         "request_body": {
@@ -250,6 +258,11 @@
             "cycle": 1,
             "date": "2026-08-30",
             "change": "spec-e-burgos-005 cycle-01: suma reactiveLoopEnabled, maxActionsPerHour y minActionIntervalSec al DTO (loop reactivo y caps de frecuencia; los tres opcionales, los defaults reproducen el comportamiento previo). Declararlos en Create Y Update es obligatorio: con forbidNonWhitelisted un campo no declarado hace fallar el request entero con 400."
+          },
+          {
+            "cycle": 2,
+            "date": "2026-09-01",
+            "change": "spec-e-burgos-005 cycle-02: suma entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips al DTO (entrada descansando en el exchange; los tres opcionales, y el default entryOrderMode=MARKET reproduce el comportamiento previo). Declararlos en Create Y Update es obligatorio: con forbidNonWhitelisted un campo no declarado hace fallar el request entero con 400."
           }
         ]
       },
@@ -458,6 +471,32 @@
         "request_body": {},
         "responses": {
           "200": "{ items: [{ id, configId, kind, source, outcome, blockedBy, positionId, decisionId, detail, occurredAt }], nextCursor: string|null }",
+          "401": "JWT ausente o invalido"
+        },
+        "changelog": []
+      },
+      {
+        "id": "EP-017",
+        "method": "GET",
+        "path": "/trading/entry-orders",
+        "module": "reactive-execution-loop",
+        "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
+        "status": "defined",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "description": "Registro consultable de las ordenes de entrada descansando en el exchange (tabla entry_orders): cada LIMIT_MAKER suelta u OCO de compra colocada por el bot, con su estado en todo momento (RESTING | FILLED | CANCELLED | EXPIRED | MISSING), el nivel al que descansa, el notional comprometido y, cuando lleno, que pierna lleno y a que precio. Recurso PROPIO, no embebido en EP-008: una entrada descansando no es una posicion (no tiene P&L, ni proteccion, ni exitReason) y embeberla habria roto el paginado de GET /trading/positions o obligado a un array paralelo donde total/page dejan de describir el contenido; ademas apps/web declara su propia interfaz del response de posiciones, asi que todo campo nuevo ahi es una ruptura silenciosa que el typecheck del monorepo no detecta. Paginado por cursor (id, orden placedAt desc), misma forma que EP-016. ListEntryOrdersDto es una clase con decoradores: un @Query() tipado inline desactiva el ValidationPipe global en silencio. Guardado por JwtAuthGuard + RolesGuard con @Roles('TRADER'); scope estricto por entry_orders.userId, no por join contra TradingConfig.",
+        "path_params": [],
+        "required_headers": ["Authorization"],
+        "query_params": {
+          "configId": "Filtrar por configId (TradingConfig) del usuario",
+          "status": "RESTING | FILLED | CANCELLED | EXPIRED | MISSING; omitir para todos",
+          "since": "Solo entradas con placedAt >= esta fecha (ISO-8601)",
+          "limit": "Tamano de pagina, 1..200 (default 50)",
+          "cursor": "Cursor de paginacion: id del ultimo item de la pagina anterior"
+        },
+        "request_body": {},
+        "responses": {
+          "200": "{ items: [{ id, configId, symbol, mode, entryMode, status, quantity, limitPrice, stopPrice, stopLimitPrice, trailingDeltaBips, referencePrice, plannedNotionalUsd, clientOrderId, orderListId, orderId, placedAt, expiresAt, filledLeg, executedPrice, executedQuantity, positionId, cancelReason, settledAt }], nextCursor: string|null }",
           "401": "JWT ausente o invalido"
         },
         "changelog": []

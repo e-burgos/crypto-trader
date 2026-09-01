@@ -245,7 +245,7 @@
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
         "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": 1,
+        "updated_in_cycle": 2,
         "migration_file": "apps/api/prisma/migrations/20260817150000_add_trading_config_risk_tools/migration.sql",
         "columns": {
           "id": {
@@ -443,6 +443,21 @@
             "type": "Int @default(60)",
             "constraints": ["NOT NULL"],
             "notes": "NUEVO spec-005 cycle-01: cooldown minimo entre acciones ejecutadas, por bot. El stop duro nunca puede ser bloqueado por este cap (architect §3.1). DTO: @IsInt() @Min(5) @Max(3600) en Create y Update"
+          },
+          "entry_order_mode": {
+            "type": "EntryOrderMode @default(MARKET)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO spec-005 cycle-02: interruptor de la entrada descansando. Nace en MARKET, que reproduce exactamente el comportamiento previo (CA-001). Se IGNORA en modo SANDBOX. DTO: @IsEnum(EntryOrderModeEnum) @IsOptional() en Create y Update o el request entero responde 400 (forbidNonWhitelisted)"
+          },
+          "entry_order_ttl_minutes": {
+            "type": "Int @default(120)",
+            "constraints": ["NOT NULL"],
+            "notes": "NUEVO spec-005 cycle-02: vida maxima de una entrada RESTING sin fill, contada SIEMPRE desde placedAt. Default 120 = dos velas de 1h, el horizonte en que el soporte/resistencia que origino el nivel sigue siendo contemporaneo del analisis. DTO: @IsInt() @Min(5) @Max(1440) en Create y Update"
+          },
+          "entry_trailing_delta_bips": {
+            "type": "Int?",
+            "constraints": ["NULL"],
+            "notes": "NUEVO spec-005 cycle-02: trailingDelta en BIPS de la pierna de ruptura del OCO de entrada (100 = 1%). Ausente o cero = pierna en nivel fijo, sin el campo en el payload. El rango REAL lo fija el filtro TRAILING_DELTA del simbolo y el cliente lo revalida antes de firmar; el @Min(10)/@Max(2000) del DTO es guarda de usabilidad, no fuente de verdad"
           }
         },
         "indexes": [
@@ -470,6 +485,12 @@
             "date": "2026-08-30",
             "migration": "20260830120100_add_reactive_loop_switch + 20260830120200_add_action_caps_columns",
             "change": "spec-e-burgos-005 cycle-01 (updated_in_cycle vuelve a 1 porque la numeracion de ciclos es por spec, no global): reactiveLoopEnabled, maxActionsPerHour y minActionIntervalSec para el loop reactivo. Los tres nacen sin alterar el comportamiento: el interruptor apagado y los dos caps solo se evaluan con el interruptor encendido"
+          },
+          {
+            "cycle": 2,
+            "date": "2026-09-01",
+            "migration": "20260901230200_add_trading_config_entry_order_columns",
+            "change": "spec-e-burgos-005 cycle-02: entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips para la entrada descansando en el exchange. Los tres nacen sin alterar el comportamiento: entryOrderMode default MARKET reproduce la compra a mercado actual y los otros dos solo se leen cuando el modo es distinto de MARKET"
           }
         ]
       },
@@ -1116,9 +1137,9 @@
       "bot_actions": {
         "module": "reactive-execution-loop",
         "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
-        "status": "migrated",
+        "status": "updated",
         "created_in_cycle": 1,
-        "updated_in_cycle": null,
+        "updated_in_cycle": 2,
         "migration_file": "apps/api/prisma/migrations/20260830120000_add_bot_actions/migration.sql",
         "columns": {
           "id": {
@@ -1141,12 +1162,12 @@
           "kind": {
             "type": "BotActionKind",
             "constraints": ["NOT NULL"],
-            "notes": "BUY | SELL_FULL | SELL_PARTIAL | PROTECTION_REARM. La exposicion (aumenta/reduce/neutra) NO se persiste: se deriva con classifyActionExposure para no tener una segunda fuente de verdad"
+            "notes": "BUY | SELL_FULL | SELL_PARTIAL | PROTECTION_REARM | ENTRY_CANCEL. La exposicion (aumenta/reduce/neutra) NO se persiste: se deriva con classifyActionExposure para no tener una segunda fuente de verdad. ENTRY_CANCEL (spec-005 cycle-02) clasifica REDUCING: cancelar una entrada descansando reduce exposicion comprometida. La colocacion de una entrada y su fill NO tienen kind propio: los dos son BUY y se distinguen por source"
           },
           "source": {
             "type": "BotActionSource",
             "constraints": ["NOT NULL"],
-            "notes": "FAST_PATH | LLM_CYCLE. Los caps se cuentan igual para los dos caminos (CA-004)"
+            "notes": "FAST_PATH | LLM_CYCLE | EXCHANGE_TRIGGER. Los caps se cuentan igual para FAST_PATH y LLM_CYCLE (CA-004). EXCHANGE_TRIGGER (spec-005 cycle-02) audita lo que el exchange YA ejecuto -el fill de una entrada descansando- sin pasar por authorizeAndRun: no hay nada que autorizar ni bloquear. getBotActionCounters excluye EXCHANGE_TRIGGER y ENTRY_CANCEL del conteo de la ventana movil y del cooldown, o una misma decision del bot consumiria el cap dos veces (RN-20)"
           },
           "outcome": {
             "type": "BotActionOutcome",
@@ -1202,8 +1223,212 @@
             "date": "2026-08-30",
             "migration": "20260830120000_add_bot_actions",
             "change": "spec-e-burgos-005 cycle-01: tabla nueva. Ledger compartido de acciones del bot sobre el que se cuentan los tres caps de frecuencia (CA-004) y que garantiza que el conteo sea estado compartido entre replicas y no memoria de proceso (CA-007). Aditiva: ninguna instalacion existente cambia de conducta, el loop reactivo nace apagado"
+          },
+          {
+            "cycle": 2,
+            "date": "2026-09-01",
+            "migration": "20260901230000_add_entry_order_bot_action_values",
+            "change": "spec-e-burgos-005 cycle-02: BotActionSource suma EXCHANGE_TRIGGER y BotActionKind suma ENTRY_CANCEL. Van en una migracion propia porque Postgres no deja usar un valor de enum recien agregado dentro de la misma transaccion que lo agrego, y Prisma corre cada archivo de migracion en una transaccion. La exclusion de ambos valores en getBotActionCounters no puede relajar ningun cap vigente: ninguna fila historica los tiene"
           }
         ]
+      },
+      "entry_orders": {
+        "module": "reactive-execution-loop",
+        "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
+        "status": "defined",
+        "created_in_cycle": 2,
+        "updated_in_cycle": null,
+        "migration_file": "apps/api/prisma/migrations/20260901230100_add_entry_orders/migration.sql",
+        "columns": {
+          "id": {
+            "type": "String @id @default(cuid())",
+            "constraints": ["PRIMARY KEY"]
+          },
+          "user_id": {
+            "type": "String",
+            "constraints": ["NOT NULL", "FK users(id) ON DELETE CASCADE"],
+            "notes": "dato operativo del bot: sin sentido huerfano, por eso si lleva FK con CASCADE (mismo criterio que bot_actions)"
+          },
+          "config_id": {
+            "type": "String",
+            "constraints": [
+              "NOT NULL",
+              "FK trading_configs(id) ON DELETE CASCADE"
+            ],
+            "notes": "idem user_id: FK con CASCADE"
+          },
+          "symbol": {
+            "type": "String",
+            "constraints": ["NOT NULL"],
+            "notes": "BTCUSDT. Redundante con asset+pair a proposito: es la clave con la que se consulta al exchange"
+          },
+          "asset": {
+            "type": "Asset",
+            "constraints": ["NOT NULL"],
+            "notes": "permite contar exposicion comprometida por activo sin parsear el simbolo"
+          },
+          "pair": {
+            "type": "QuoteCurrency",
+            "constraints": ["NOT NULL"]
+          },
+          "mode": {
+            "type": "TradingMode",
+            "constraints": ["NOT NULL"],
+            "notes": "LIVE o TESTNET. Nunca SANDBOX: en SANDBOX el bot compra a mercado y no se crea ninguna fila (RN-22)"
+          },
+          "entry_mode": {
+            "type": "EntryOrderMode",
+            "constraints": ["NOT NULL"],
+            "notes": "LIMIT_MAKER u OCO. Nunca MARKET: el enum se comparte con trading_configs.entryOrderMode por tener una sola fuente de verdad del vocabulario"
+          },
+          "status": {
+            "type": "EntryOrderStatus @default(RESTING)",
+            "constraints": ["NOT NULL"],
+            "notes": "RESTING | FILLED | CANCELLED | EXPIRED | MISSING. RESTING es el unico estado inicial y el unico no terminal; los otros cuatro son absorbentes"
+          },
+          "quantity": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "cantidad colocada, ya ajustada al stepSize del simbolo"
+          },
+          "limit_price": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "pierna de abajo (LIMIT_MAKER), ya ajustada al tickSize con redondeo hacia ABAJO: un LIMIT_MAKER de compra con precio >= mercado es -2010"
+          },
+          "stop_price": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "solo OCO: aboveStopPrice, redondeado hacia ARRIBA"
+          },
+          "stop_limit_price": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "solo OCO: abovePrice = stopPrice * (1 + stopLimitOffsetPct), redondeado hacia ARRIBA"
+          },
+          "trailing_delta_bips": {
+            "type": "Int",
+            "constraints": ["NULL"],
+            "notes": "solo OCO y solo si el trader lo configuro. Viaja como aboveTrailingDelta, siempre combinado con aboveStopPrice"
+          },
+          "reference_price": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "precio de mercado crudo contra el que se resolvieron los niveles: sin el, un EXPIRED no se puede auditar"
+          },
+          "planned_notional_usd": {
+            "type": "Float",
+            "constraints": ["NOT NULL"],
+            "notes": "quantity * max(limit_price, stop_limit_price). Las dos piernas del OCO son mutuamente excluyentes, asi que NO se suman; se toma el peor caso porque un cap calculado con el precio mas barato no es un cap"
+          },
+          "client_order_id": {
+            "type": "String @unique",
+            "constraints": ["NOT NULL", "UNIQUE"],
+            "notes": "prefijo ent- (28 chars, tope de Binance 36). Distinto de prot-: el barrido de huerfanas de entradas es una rutina separada de la de proteccion"
+          },
+          "order_list_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "solo OCO"
+          },
+          "order_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "solo LIMIT_MAKER suelto"
+          },
+          "limit_leg_order_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "solo OCO: permite consultar UNA pierna (peso 4) en vez de lista + dos piernas (peso 12)"
+          },
+          "stop_leg_order_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "idem limit_leg_order_id"
+          },
+          "placed_at": {
+            "type": "DateTime @default(now())",
+            "constraints": ["NOT NULL"],
+            "notes": "origen UNICO del computo del TTL: nunca se cuenta desde la ultima consulta de reconciliacion"
+          },
+          "expires_at": {
+            "type": "DateTime",
+            "constraints": ["NOT NULL"],
+            "notes": "placed_at + entryOrderTtlMinutes, materializado al colocar"
+          },
+          "decision_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "Referencia de auditoria SIN FK a proposito: la fila debe sobrevivir al borrado de lo que referencia (mismo criterio que bot_actions)"
+          },
+          "position_id": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "Referencia de auditoria SIN FK, misma razon. Se setea al FILLED para trazar la Position que la reconciliacion creo"
+          },
+          "filled_leg": {
+            "type": "EntryOrderLeg",
+            "constraints": ["NULL"],
+            "notes": "LIMIT | STOP. Se LEE de la consulta al exchange, nunca se asume cual pierna lleno"
+          },
+          "executed_price": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "cummulativeQuoteQty / executedQty de la pierna que lleno"
+          },
+          "executed_quantity": {
+            "type": "Float",
+            "constraints": ["NULL"],
+            "notes": "cantidad efectivamente ejecutada. En un fill parcial es menor que quantity y el remanente se cancela antes de crear la Position"
+          },
+          "settled_at": {
+            "type": "DateTime",
+            "constraints": ["NULL"],
+            "notes": "momento de la transicion terminal"
+          },
+          "cancel_reason": {
+            "type": "EntryOrderCancelReason",
+            "constraints": ["NULL"],
+            "notes": "motivo de TODO cierre no-FILLED, no solo de una cancelacion emitida por nosotros: TTL_EXPIRED | LATER_DECISION | DAILY_LOSS_DISCARDED | BOT_STOPPED | REPLACED_BY_NEW_ENTRY | PARTIAL_FILL_REMAINDER | ORPHAN_SWEEP | VANISHED_ON_EXCHANGE"
+          },
+          "last_error": {
+            "type": "String",
+            "constraints": ["NULL"],
+            "notes": "error de la cancelacion contra el exchange, truncado a 180. Una cancelacion fallida deja la fila RESTING para reintentar, nunca la marca terminal"
+          },
+          "updated_at": {
+            "type": "DateTime @updatedAt",
+            "constraints": ["NOT NULL"]
+          }
+        },
+        "indexes": [
+          {
+            "name": "pk_entry_orders",
+            "type": "PRIMARY",
+            "columns": ["id"]
+          },
+          {
+            "name": "uk_entry_orders_client_order_id",
+            "type": "UNIQUE",
+            "columns": ["clientOrderId"]
+          },
+          {
+            "name": "idx_entry_orders_config_status",
+            "type": "INDEX",
+            "columns": ["configId", "status"]
+          },
+          {
+            "name": "idx_entry_orders_user_status",
+            "type": "INDEX",
+            "columns": ["userId", "status"]
+          },
+          {
+            "name": "idx_entry_orders_status_expires",
+            "type": "INDEX",
+            "columns": ["status", "expiresAt"]
+          }
+        ],
+        "changelog": []
       }
     }
   }

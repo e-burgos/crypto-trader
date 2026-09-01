@@ -16,6 +16,7 @@ import { EvaluationModule } from '../agents/evaluation/evaluation.module';
 import { AgentDomainModule } from '../agents/domain/agent-domain.module';
 import { ReactiveCoordinationModule } from '../reactive/reactive-coordination.module';
 import { ActionGateService } from './action-gate.service';
+import { EntryOrderService } from './entry-order.service';
 
 @Module({
   imports: [
@@ -38,7 +39,14 @@ import { ActionGateService } from './action-gate.service';
     PositionActionService,
     ReconciliationService,
     ActionGateService,
+    EntryOrderService,
   ],
-  exports: [TradingService, PositionActionService, ActionGateService, BullModule],
+  exports: [
+    TradingService,
+    PositionActionService,
+    ActionGateService,
+    EntryOrderService,
+    BullModule,
+  ],
 })
 export class TradingModule {}

@@ -17,6 +17,7 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       botActionLeaseTtlMs: 30_000,
       degradedNotifyAfterMs: 60_000,
       trailingPersistIntervalMs: 30_000,
+      entryFillProbeDebounceMs: 15_000,
     });
   });
 

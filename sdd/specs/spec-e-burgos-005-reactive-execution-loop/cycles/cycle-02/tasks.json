@@ -523,13 +523,22 @@
       "depends_on": [
         "TASK-015"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/entry-fill-watch.service.ts",
         "apps/api/src/reactive/entry-fill-watch.service.spec.ts",
         "apps/api/src/reactive/reactive-runtime-thresholds.ts",
-        "apps/api/src/reactive/reactive.module.ts"
-      ]
+        "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts",
+        "apps/api/src/reactive/reactive.module.ts",
+        "apps/api/src/reactive/fast-path.service.ts"
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 12000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-020",
@@ -545,11 +554,18 @@
         "TASK-016",
         "TASK-017"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
-        "apps/api/src/trading/entry-order.service.ts",
-        "apps/api/src/gateway/app.gateway.ts"
-      ]
+        "apps/api/src/trading/entry-order.service.spec.ts",
+        "apps/api/src/trading/reconciliation.service.spec.ts"
+      ],
+      "usage": {
+        "tokens_in": 165000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-021",
@@ -610,10 +626,17 @@
         "TASK-018",
         "TASK-022"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.entry-orders.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 4000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-024",

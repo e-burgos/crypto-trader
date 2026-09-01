@@ -160,7 +160,7 @@ export class FastPathService implements OnModuleInit, OnApplicationShutdown {
     return positions;
   }
 
-  private invalidateOpenPositions(configId: string): void {
+  invalidateOpenPositions(configId: string): void {
     this.positionsCache.delete(configId);
   }
 

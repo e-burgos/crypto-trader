@@ -13,6 +13,7 @@ import { TradingModule } from '../trading/trading.module';
 import { TRADING_QUEUE } from '../trading/trading.service';
 import { ActionGateService } from '../trading/action-gate.service';
 import { PositionActionService } from '../trading/position-action.service';
+import { EntryOrderService } from '../trading/entry-order.service';
 import { ReactiveCoordinationModule } from './reactive-coordination.module';
 import { REACTIVE_COORDINATION } from './reactive-coordination.port';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
@@ -27,6 +28,7 @@ import {
 import { StreamHealthService } from './stream-health.service';
 import { StreamHealthController } from './stream-health.controller';
 import { FastPathService } from './fast-path.service';
+import { EntryFillWatchService } from './entry-fill-watch.service';
 import { MaterialEventService } from './material-event.service';
 
 @Module({
@@ -117,6 +119,23 @@ import { MaterialEventService } from './material-event.service';
       inject: [PrismaService, MarketStreamService, ActionGateService, PositionActionService],
     },
     {
+      provide: EntryFillWatchService,
+      useFactory: (
+        prisma: PrismaService,
+        marketStream: MarketStreamService,
+        entryOrderService: EntryOrderService,
+        fastPath: FastPathService,
+      ) =>
+        new EntryFillWatchService(
+          prisma,
+          marketStream,
+          entryOrderService,
+          fastPath,
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        ),
+      inject: [PrismaService, MarketStreamService, EntryOrderService, FastPathService],
+    },
+    {
       provide: MaterialEventService,
       useFactory: (
         prisma: PrismaService,
@@ -145,6 +164,12 @@ import { MaterialEventService } from './material-event.service';
       ],
     },
   ],
-  exports: [MarketStreamService, StreamHealthService, FastPathService, MaterialEventService],
+  exports: [
+    MarketStreamService,
+    StreamHealthService,
+    FastPathService,
+    EntryFillWatchService,
+    MaterialEventService,
+  ],
 })
 export class ReactiveModule {}

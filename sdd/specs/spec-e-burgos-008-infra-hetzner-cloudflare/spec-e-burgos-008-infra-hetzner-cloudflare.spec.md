@@ -81,10 +81,10 @@ desplegable; cada fase conserva su propio "hecho cuando" y ninguna se da por cer
    `TRUST_PROXY_HOPS` real, el **health check convertido en verificación real** de base y Redis
    (hallazgo D), y un **único usuario `ADMIN` provisionado desde el entorno** (DEC-ADMIN, §7).
 
-### Cycle-03 — Frontend y corte *(Fases 6-7)*
+### Cycle-03 — Frontend y corte *(Fases 6-7; la Fase 6 se adelantó a cycle-02)*
 
-6. SPA en Cloudflare Pages, resolviendo la inconsistencia de `VITE_API_URL` (hallazgo E) y con el
-   **WebSocket funcionando detrás de nginx** (hallazgo F).
+6. ~~SPA en Cloudflare Pages.~~ **REEMPLAZADA 2026-09-01 — ver DEC-PAGES (§7).** La SPA se sirve
+   desde el VPS, en el mismo origen que la API. Ejecutado en cycle-02.
 7. Alta del registro `A trader` en Hostinger y emisión del certificado (DEC-DOM reescribe esta
    fase: no hay corte de DNS en Cloudflare), verificación de un ciclo de agente completo contra la
    base nueva, baja de Railway.
@@ -136,7 +136,7 @@ Uno por fase, tomados literalmente del plan de origen.
 | ~~CA-004~~ | 4 | **ANULADO** por DEC-DATOS. La base arranca vacía; las cuentas demo nunca se provisionan en producción (`NODE_ENV=production`). Lo reemplaza CA-004b. |
 | CA-004b | 5 | Existe **exactamente un** usuario `ADMIN`, provisionado desde `ADMIN_USERNAME`/`ADMIN_PASSWORD`, y se puede iniciar sesión con él. |
 | CA-005 | 5 | `/api/health` responde por HTTPS **verificando base y Redis**, y se puede iniciar sesión con una cuenta real. |
-| CA-006 | 6 | La SPA carga, inicia sesión y **el WebSocket conecta**. |
+| CA-006 | 6 | La SPA carga, inicia sesión y **el WebSocket conecta**. *(Servida desde el VPS — DEC-PAGES.)* |
 | CA-007 | 7 | Un ciclo de agente completo corre en Hetzner y queda registrado. |
 | CA-008 | 8 | La decisión de RPO está tomada y registrada, y hay observabilidad mínima de la API. |
 
@@ -234,6 +234,38 @@ concepto en el código. "Superadmin" acá es el único usuario con rol `ADMIN`.
   sin forma de entrar no es un servicio degradado.
 - Si aparecen **otros** usuarios `ADMIN`, se reportan con un warning pero **no se borran**: un seed
   que borra usuarios termina borrando al equivocado.
+
+### DEC-PAGES — La SPA se sirve desde el VPS, no desde Cloudflare Pages *(2026-09-01)*
+
+El plan preveía la SPA en Cloudflare Pages. Se descarta al resolver una pregunta más básica: **qué
+responde `https://trader.estebanburgos.com.ar/`**. Con sólo la API desplegada devolvía 404, porque
+la API tiene prefijo global `api`.
+
+Decisión del dueño: la raíz sirve la web y la API vive en `/api/`. Eso vuelve incompatible a Pages,
+que se quedaría con todo el dominio.
+
+**Servir la SPA desde el mismo nginx del VPS resuelve más de lo que cuesta:**
+
+| Beneficio | Por qué importa acá |
+| --- | --- |
+| **Cero CORS** | Mismo origen: sin preflight y sin una lista de orígenes que se desincronice del despliegue. |
+| **Un solo certificado** | La renovación ya es infraestructura propia (DEC-DOM); dos dominios serían dos cadenas que vigilar. |
+| **WebSocket same-origin** | El handshake de Socket.io deja de ser cross-origin, una cosa menos que pueda fallar (hallazgo F). |
+| **Un solo despliegue** | Front y API salen juntos; no hay ventana donde una SPA nueva hable con una API vieja. |
+
+**Costo asumido:** el VPS sirve los estáticos (carga despreciable) y se pierde la CDN de Pages. Para
+un panel de trading de un solo operador, la latencia del estático no es el problema a optimizar.
+
+**Cloudflare queda en el stack sólo para R2** (backups). Pages y DNS no se usan.
+
+**Lo que destapó implementarlo — el hallazgo E era peor de lo documentado.** `VITE_API_URL` se
+usaba con **dos significados contradictorios**: `lib/api.ts` y `use-chat.ts` la esperan **con** el
+prefijo `/api`; `use-websocket.ts` la esperaba **sin** él. Con un único valor, el cliente negociaba
+el namespace `/api/ws`, que el gateway no sirve, y **el socket conectaba y fallaba en silencio**. Se
+resolvió derivando el origen del WebSocket a partir de la base REST, con `VITE_WS_URL` como escape.
+
+Además, `apps/web/Dockerfile` estaba roto de antes: hacía `COPY apps/web/package.json`, archivo que
+no existe en este monorepo. **Ningún workflow construía esa imagen**, así que nunca se detectó.
 
 ## 8. Riesgos
 

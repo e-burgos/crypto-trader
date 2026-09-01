@@ -39,7 +39,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "infra/scripts/provision.test.sh"
       ]
@@ -56,7 +56,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "docs/infra/hetzner-server.md"
       ]
@@ -166,7 +166,7 @@
       "depends_on": [
         "TASK-009"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "infra/scripts/db-restore.sh",
         "infra/scripts/db-backup.test.sh",

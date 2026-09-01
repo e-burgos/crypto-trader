@@ -329,11 +329,19 @@
         "TASK-010",
         "TASK-011"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/trading/entry-order.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 155000,
+        "tokens_out": 11000,
+        "duration_minutes": 8,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "TASK-013",
@@ -348,11 +356,19 @@
       "depends_on": [
         "TASK-012"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/trading.processor.entry-orders.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 120000,
+        "tokens_out": 12000,
+        "duration_minutes": 6,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "TASK-014",
@@ -396,13 +412,21 @@
         "TASK-012",
         "TASK-014"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/trading/entry-order.service.spec.ts",
         "apps/api/src/trading/reconciliation.service.ts",
         "apps/api/src/trading/reconciliation.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 10000,
+        "duration_minutes": 6,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "TASK-016",
@@ -416,12 +440,20 @@
       "depends_on": [
         "TASK-015"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/reconciliation.service.ts",
         "apps/api/src/trading/reconciliation.service.spec.ts",
         "apps/api/src/trading/entry-order.service.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 85000,
+        "tokens_out": 8000,
+        "duration_minutes": 5,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "TASK-017",
@@ -437,13 +469,21 @@
         "TASK-013",
         "TASK-015"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/trading/trading.service.ts",
         "apps/api/src/trading/trading.processor.entry-cancellation.spec.ts",
         "apps/api/src/trading/entry-order.service.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 110000,
+        "tokens_out": 10000,
+        "duration_minutes": 5,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "TASK-018",
@@ -457,12 +497,20 @@
         "TASK-012",
         "TASK-015"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.processor.ts",
         "apps/api/src/agents/domain/risk-budget.service.ts",
         "apps/api/src/trading/entry-order.service.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 45000,
+        "tokens_out": 3000,
+        "duration_minutes": 2,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "TASK-019",
@@ -475,7 +523,7 @@
       "depends_on": [
         "TASK-015"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/reactive/entry-fill-watch.service.ts",
         "apps/api/src/reactive/entry-fill-watch.service.spec.ts",
@@ -497,7 +545,7 @@
         "TASK-016",
         "TASK-017"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/gateway/app.gateway.ts"
@@ -514,7 +562,7 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.controller.ts",
         "apps/api/src/trading/trading.controller.entry-orders.spec.ts",
@@ -534,7 +582,7 @@
         "TASK-015",
         "TASK-021"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.module.ts",
         "apps/api/src/reactive/reactive.module.ts",
@@ -554,7 +602,7 @@
         "TASK-018",
         "TASK-022"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/trading.processor.entry-orders.spec.ts"
       ]

@@ -1,0 +1,209 @@
+name: Deploy a Hetzner
+
+# spec-e-burgos-008 cycle-02, Fase 5.
+# Construye las dos imagenes, las publica en GHCR y despliega en el VPS.
+# El repo es la fuente de verdad: el compose, el nginx.conf, el SQL de init y
+# los scripts de infra se copian en cada deploy, nunca se editan en el servidor.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/**'
+      - 'libs/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'docker-compose.prod.yml'
+      - 'infra/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+# Un solo deploy a la vez: los pasos escriben el mismo docker-compose.yml en el
+# mismo host, y dos corridas en paralelo lo pisarian a mitad de camino.
+concurrency:
+  group: vps-deploy
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  VPS_HOST: 2.29.24.221
+  VPS_USER: deploy
+  APP_DIR: /opt/crypto-trader
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Las suites de shell corren ANTES de construir nada: si el backup o el
+      # restore estan rotos, no hay deploy. Una suite que nadie ejecuta se pudre
+      # en silencio, y estas cubren justamente el camino que solo se usa el dia
+      # que algo salio mal.
+      - name: Suites de shell de operacion
+        run: |
+          for suite in infra/scripts/*.test.sh; do
+            [ -e "$suite" ] || continue
+            echo "── $suite"
+            bash "$suite"
+          done
+
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build y push de la imagen de la API
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/crypto-trader-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build y push de la imagen de la SPA
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          # /api relativo: la SPA y la API comparten origen detras del mismo
+          # nginx, asi que no hay CORS ni un host que mantener sincronizado.
+          build-args: |
+            VITE_API_URL=/api
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/crypto-trader-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Copiar compose, nginx, SQL de init y scripts al VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: ${{ env.VPS_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          source: 'docker-compose.prod.yml,infra/nginx/nginx.conf,infra/db/initdb/00-init.sql,infra/scripts/*.sh'
+          target: ${{ env.APP_DIR }}/staging
+          overwrite: true
+
+      - name: Desplegar
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          APP_DIR: ${{ env.APP_DIR }}
+          API_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/crypto-trader-api:latest
+          WEB_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/crypto-trader-web:latest
+          # Base de datos
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+          # Las cuatro que la API exige para arrancar: sin una sola de ellas el
+          # contenedor no levanta. No hay secreto de reserva.
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          # Exactamente 32 caracteres, o encryption.util.ts lanza al cifrar.
+          BINANCE_KEY_ENCRYPTION_KEY: ${{ secrets.BINANCE_KEY_ENCRYPTION_KEY }}
+          # Unico usuario ADMIN (DEC-ADMIN). El seed es fail-closed en produccion:
+          # sin estas dos, el contenedor no arranca.
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          # Backups. Sin las de R2 el backup corre igual pero queda SOLO local.
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+          BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+        with:
+          host: ${{ env.VPS_HOST }}
+          username: ${{ env.VPS_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          envs: APP_DIR,API_IMAGE,WEB_IMAGE,POSTGRES_PASSWORD,APP_DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,BINANCE_KEY_ENCRYPTION_KEY,ADMIN_USERNAME,ADMIN_PASSWORD,CLOUDFLARE_ACCOUNT_ID,BACKUP_R2_ACCESS_KEY_ID,BACKUP_R2_SECRET_ACCESS_KEY,VOYAGE_API_KEY
+          script: |
+            set -euo pipefail
+            cd "$APP_DIR"
+
+            # El repo es la fuente de verdad: lo copiado en staging/ reemplaza lo
+            # que haya en el servidor, nunca al reves.
+            mv staging/docker-compose.prod.yml docker-compose.yml
+            mkdir -p nginx db/initdb
+            mv staging/infra/nginx/nginx.conf nginx/nginx.conf
+            mv staging/infra/db/initdb/00-init.sql db/initdb/00-init.sql
+            mv staging/infra/scripts/*.sh ./
+            chmod +x ./*.sh
+            rm -rf staging
+
+            umask 077
+            cat > .env.db <<EOF
+            POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            APP_DB_PASSWORD=${APP_DB_PASSWORD}
+            EOF
+
+            cat > .env.production <<EOF
+            NODE_ENV=production
+            PORT=3000
+            DATABASE_URL=postgresql://crypto_trader_app:${APP_DB_PASSWORD}@postgres:5432/crypto_trader?schema=public
+            REDIS_URL=redis://redis:6379
+            JWT_SECRET=${JWT_SECRET}
+            JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+            JWT_EXPIRES_IN=15m
+            JWT_REFRESH_EXPIRES_IN=7d
+            BINANCE_KEY_ENCRYPTION_KEY=${BINANCE_KEY_ENCRYPTION_KEY}
+            ADMIN_USERNAME=${ADMIN_USERNAME}
+            ADMIN_PASSWORD=${ADMIN_PASSWORD}
+            SEED_DEMO_ACCOUNTS=false
+            CORS_ORIGIN=https://trader.estebanburgos.com.ar
+            TRUST_PROXY_HOPS=1
+            BINANCE_PUBLIC_URL=https://api.binance.com
+            BINANCE_BASE_URL=https://api.binance.com
+            VOYAGE_API_KEY=${VOYAGE_API_KEY}
+            EOF
+
+            cat > .env.backup <<EOF
+            BACKUP_R2_BUCKET=crypto-trader-db-backups
+            BACKUP_R2_ACCESS_KEY_ID=${BACKUP_R2_ACCESS_KEY_ID}
+            BACKUP_R2_SECRET_ACCESS_KEY=${BACKUP_R2_SECRET_ACCESS_KEY}
+            CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+            EOF
+
+            chmod 600 .env.db .env.production .env.backup
+
+            # API_IMAGE y WEB_IMAGE los lee el compose por interpolacion.
+            export API_IMAGE WEB_IMAGE
+            docker compose pull api web
+            docker compose up -d --remove-orphans
+
+            # El healthcheck de api exige "status":"ok", o sea base Y Redis
+            # respondiendo. Un deploy que deja la API arriba pero sin base no
+            # puede reportarse como exitoso.
+            for i in $(seq 1 40); do
+              estado="$(docker inspect -f '{{.State.Health.Status}}' crypto-trader-api-1 2>/dev/null || echo starting)"
+              [ "$estado" = healthy ] && break
+              sleep 5
+            done
+            [ "$estado" = healthy ] || {
+              echo "FATAL: la API no quedo healthy tras el deploy"
+              docker compose logs api --tail 50
+              exit 1
+            }
+
+            docker image prune -f >/dev/null 2>&1 || true
+            echo "deploy OK — api healthy"
+
+      - name: Verificar desde internet
+        run: |
+          set -euo pipefail
+          cuerpo="$(curl -fsS --max-time 30 https://trader.estebanburgos.com.ar/api/health)"
+          echo "$cuerpo"
+          echo "$cuerpo" | grep -q '"status":"ok"'
+          echo "$cuerpo" | grep -q '"database":"up"'
+          echo "$cuerpo" | grep -q '"redis":"up"'
+          curl -fsS -o /dev/null --max-time 30 https://trader.estebanburgos.com.ar/
+          echo "verificacion externa OK: la SPA responde y el health check reporta todo arriba"

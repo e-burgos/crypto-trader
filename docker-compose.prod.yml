@@ -98,7 +98,10 @@ services:
   # arrancar, así que las migraciones y el usuario ADMIN se aplican solos y NO
   # hay que duplicarlos en el workflow de deploy.
   api:
-    image: crypto-trader-api:latest
+    # El workflow de deploy fija API_IMAGE al tag de GHCR. El default local
+    # existe para que el compose siga siendo ejecutable a mano en el VPS sin
+    # depender del registry — util para diagnosticar con la red del registry caida.
+    image: ${API_IMAGE:-crypto-trader-api:latest}
     restart: unless-stopped
     env_file: .env.production
     depends_on:
@@ -127,7 +130,7 @@ services:
   # same-origin por la misma razon.
   # SIN `ports:`: solo el nginx de borde la alcanza.
   web:
-    image: crypto-trader-web:latest
+    image: ${WEB_IMAGE:-crypto-trader-web:latest}
     restart: unless-stopped
     logging:
       driver: json-file

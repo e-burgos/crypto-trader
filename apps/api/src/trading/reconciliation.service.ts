@@ -5,6 +5,11 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import type { OrderExecutorPort } from '@crypto-trader/trading-engine';
 import { placeProtectionWithRetry } from './protection-retry';
+import {
+  EntryOrderService,
+  entryOrderRefOf,
+  type RestingEntryOrder,
+} from './entry-order.service';
 
 export interface ReconciliationOutcome {
   checked: number;
@@ -12,6 +17,7 @@ export interface ReconciliationOutcome {
   reprotected: number;
   stillUnprotected: number;
   orphanOrdersCancelled: number;
+  entryOrdersSettled: number;
 }
 
 interface ReconciliationConfig {
@@ -22,6 +28,8 @@ interface ReconciliationConfig {
   stopLossPct: number;
   takeProfitPct: number;
   stopLimitOffsetPct: number;
+  nativeProtectionEnabled?: boolean;
+  closeOnProtectionFailure?: boolean;
 }
 
 interface ReconciliationInput {
@@ -56,6 +64,7 @@ export class ReconciliationService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly gateway: AppGateway,
+    private readonly entryOrders: EntryOrderService,
   ) {}
 
   async reconcile(input: ReconciliationInput): Promise<ReconciliationOutcome> {
@@ -65,6 +74,7 @@ export class ReconciliationService {
       reprotected: 0,
       stillUnprotected: 0,
       orphanOrdersCancelled: 0,
+      entryOrdersSettled: 0,
     };
 
     const openPositions = (await this.prisma.position.findMany({
@@ -101,6 +111,8 @@ export class ReconciliationService {
       // NONE — bot without native protection, unaffected by this cycle.
     }
 
+    await this.reconcileEntryOrders(input, outcome);
+
     await this.addExternalLiveOrderIds(input, liveOrderListIds);
     outcome.orphanOrdersCancelled = await this.sweepOrphanOrders(
       input,
@@ -108,6 +120,45 @@ export class ReconciliationService {
     );
 
     return outcome;
+  }
+
+  private async reconcileEntryOrders(
+    input: ReconciliationInput,
+    outcome: ReconciliationOutcome,
+  ): Promise<void> {
+    const resting = await this.entryOrders.findResting(
+      input.config.id,
+      input.symbol,
+    );
+    if (resting.length === 0) return;
+
+    for (const order of resting) {
+      await this.reconcileEntryOrder(input, order, outcome);
+    }
+  }
+
+  private async reconcileEntryOrder(
+    input: ReconciliationInput,
+    order: RestingEntryOrder,
+    outcome: ReconciliationOutcome,
+  ): Promise<void> {
+    const status = await input.executor.getEntryOrderStatus(
+      order.symbol,
+      entryOrderRefOf(order),
+    );
+
+    if (status.state === 'FILLED') {
+      const settled = await this.entryOrders.settleFill({
+        userId: input.userId,
+        config: input.config,
+        symbol: order.symbol,
+        mode: order.mode as any,
+        executor: input.executor,
+        order,
+        status,
+      });
+      if (settled === 'SETTLED') outcome.entryOrdersSettled++;
+    }
   }
 
   private async reconcileProtected(

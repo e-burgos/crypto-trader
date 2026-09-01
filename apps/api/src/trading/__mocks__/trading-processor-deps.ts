@@ -1,5 +1,6 @@
 import { PositionActionService } from '../position-action.service';
 import { ActionGateService } from '../action-gate.service';
+import { EntryOrderService } from '../entry-order.service';
 import { DisabledReactiveCoordination } from '../../reactive/disabled-reactive-coordination.service';
 import type { ReactiveCoordinationPort } from '../../reactive/reactive-coordination.port';
 
@@ -32,12 +33,14 @@ export interface TradingProcessorCollaboratorOverrides {
   aggregateRiskService?: any;
   coordination?: ReactiveCoordinationPort;
   actionGate?: ActionGateService;
+  entryOrders?: EntryOrderService;
 }
 
 export type TradingProcessorCollaborators = [
   PositionActionService,
   ReactiveCoordinationPort,
   ActionGateService,
+  EntryOrderService,
 ];
 
 export function createTradingProcessorCollaborators(
@@ -58,5 +61,14 @@ export function createTradingProcessorCollaborators(
     overrides.actionGate ??
     new ActionGateService(prisma, gateway, aggregateRiskService, coordination);
 
-  return [positionAction, coordination, actionGate];
+  const entryOrders =
+    overrides.entryOrders ??
+    new EntryOrderService(
+      prisma,
+      notificationsService,
+      gateway,
+      positionAction,
+    );
+
+  return [positionAction, coordination, actionGate, entryOrders];
 }

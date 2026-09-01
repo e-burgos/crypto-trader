@@ -21,6 +21,7 @@ import {
   ActionGateService,
   type ActionRequest,
 } from './action-gate.service';
+import { EntryOrderService } from './entry-order.service';
 import {
   REACTIVE_COORDINATION,
   type ReactiveCoordinationPort,
@@ -85,6 +86,7 @@ export class TradingProcessor {
     @Inject(REACTIVE_COORDINATION)
     private readonly coordination: ReactiveCoordinationPort,
     private readonly actionGate: ActionGateService,
+    private readonly entryOrders: EntryOrderService,
   ) {}
 
   private buildActionRequest(params: {

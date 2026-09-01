@@ -1,4 +1,6 @@
 import { ReconciliationService } from './reconciliation.service';
+import { EntryOrderService } from './entry-order.service';
+import { PositionActionService } from './position-action.service';
 
 describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
   const gatewayMock = { emitToUser: jest.fn() };
@@ -32,25 +34,49 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
     };
   }
 
-  function makePrisma(positions: any[]) {
+  function makePrisma(positions: any[], entryOrders: any[] = []) {
     return {
       position: {
         findMany: jest.fn().mockImplementation(({ where }: any) => {
           if (where.configId && where.configId.not) return Promise.resolve([]);
           return Promise.resolve(positions);
         }),
+        create: jest
+          .fn()
+          .mockImplementation(({ data }: any) =>
+            Promise.resolve({ id: 'pos-new', ...data }),
+          ),
         update: jest.fn().mockResolvedValue({}),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       trade: { create: jest.fn().mockResolvedValue({}) },
+      botAction: { create: jest.fn().mockResolvedValue({}) },
+      entryOrder: {
+        findMany: jest.fn().mockResolvedValue(entryOrders),
+        create: jest.fn().mockResolvedValue({}),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
   }
 
   function buildService(prisma: any) {
+    const positionAction = new PositionActionService(
+      prisma,
+      gatewayMock as any,
+      notificationsMock as any,
+    );
     return new ReconciliationService(
       prisma,
       notificationsMock as any,
       gatewayMock as any,
+      new EntryOrderService(
+        prisma,
+        notificationsMock as any,
+        gatewayMock as any,
+        positionAction,
+      ),
     );
   }
 
@@ -377,5 +403,111 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
     expect(executor.getProtectionOrderStatus).not.toHaveBeenCalled();
     expect(executor.placeProtectionOrder).not.toHaveBeenCalled();
     expect(outcome).toMatchObject({ checked: 1, closedByExchange: 0, reprotected: 0, stillUnprotected: 0 });
+  });
+  const restingEntry = {
+    id: 'entry-1',
+    userId: 'user-1',
+    configId: 'config-1',
+    symbol: 'BTCUSDT',
+    asset: 'BTC',
+    pair: 'USDT',
+    mode: 'LIVE',
+    entryMode: 'LIMIT_MAKER',
+    quantity: 0.02,
+    limitPrice: 63_000,
+    stopPrice: null,
+    stopLimitPrice: null,
+    trailingDeltaBips: null,
+    referencePrice: 65_000,
+    plannedNotionalUsd: 1_260,
+    clientOrderId: 'ent-aaaa',
+    orderListId: null,
+    orderId: 'oid-1',
+    limitLegOrderId: null,
+    stopLegOrderId: null,
+    placedAt: new Date('2026-09-01T10:00:00Z'),
+    expiresAt: new Date('2026-09-01T12:00:00Z'),
+    decisionId: 'decision-1',
+  };
+
+  it('entry step — no RESTING rows means zero entry calls to the exchange (CA-001)', async () => {
+    const prisma = makePrisma([]);
+    const executor = makeExecutor();
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: baseConfig,
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(executor.getEntryOrderStatus).not.toHaveBeenCalled();
+    expect(executor.cancelEntryOrder).not.toHaveBeenCalled();
+    expect(outcome.entryOrdersSettled).toBe(0);
+  });
+
+  it('entry step — a confirmed fill creates the Position and settles the row', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest.fn().mockResolvedValue({
+        state: 'FILLED',
+        filledLeg: 'LIMIT',
+        executedPrice: 63_000,
+        executedQuantity: 0.02,
+        remainingQuantity: 0,
+        partial: false,
+        orderId: 'oid-1',
+      }),
+    });
+
+    const outcome = await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: { ...baseConfig, nativeProtectionEnabled: false },
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(executor.getEntryOrderStatus).toHaveBeenCalledWith('BTCUSDT', {
+      orderListId: null,
+      orderId: 'oid-1',
+      limitLegOrderId: null,
+      stopLegOrderId: null,
+    });
+    expect(prisma.entryOrder.updateMany.mock.calls[0][0].data.status).toBe(
+      'FILLED',
+    );
+    expect(prisma.position.create).toHaveBeenCalledTimes(1);
+    expect(prisma.trade.create.mock.calls[0][0].data.decisionId).toBeNull();
+    expect(prisma.botAction.create.mock.calls[0][0].data).toMatchObject({
+      source: 'EXCHANGE_TRIGGER',
+      kind: 'BUY',
+    });
+    expect(outcome.entryOrdersSettled).toBe(1);
+  });
+
+  it('entry step — the exchange query runs before the orphan sweep so a fill is never swept', async () => {
+    const prisma = makePrisma([], [restingEntry]);
+    const executor = makeExecutor({
+      getEntryOrderStatus: jest.fn().mockResolvedValue({
+        state: 'FILLED',
+        filledLeg: 'LIMIT',
+        executedPrice: 63_000,
+        executedQuantity: 0.02,
+        remainingQuantity: 0,
+        partial: false,
+        orderId: 'oid-1',
+      }),
+    });
+
+    await buildService(prisma).reconcile({
+      userId: 'user-1',
+      config: { ...baseConfig, nativeProtectionEnabled: false },
+      symbol: 'BTCUSDT',
+      executor: executor as any,
+    });
+
+    expect(
+      executor.getEntryOrderStatus.mock.invocationCallOrder[0],
+    ).toBeLessThan(executor.getOpenOrders.mock.invocationCallOrder[0]);
   });
 });

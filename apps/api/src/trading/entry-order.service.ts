@@ -1,11 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { NotificationType } from '@crypto-trader/shared';
+import { TRADE_FEE_PCT, TradeType } from '@crypto-trader/shared';
 import type {
+  EntryOrderExchangeStatus,
+  EntryOrderLeg,
   EntryOrderRef,
   RestingEntryMode,
   TradingMode,
 } from '@crypto-trader/shared';
+import { PositionManager } from '@crypto-trader/trading-engine';
 import type {
   EntryLevelPlan,
   OrderExecutorPort,
@@ -13,6 +17,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PositionActionService } from './position-action.service';
 import type { BotActionSource } from './action-gate.service';
 
 export const ENTRY_CLIENT_ORDER_ID_PREFIX = 'ent-';
@@ -101,6 +106,21 @@ export interface CancelRestingOutcome {
   failed: string[];
 }
 
+export interface SettleFillParams {
+  userId: string;
+  config: any;
+  symbol: string;
+  mode: TradingMode;
+  executor: OrderExecutorPort;
+  order: RestingEntryOrder;
+  status: EntryOrderExchangeStatus;
+}
+
+export type SettleFillOutcome =
+  | 'SETTLED'
+  | 'ALREADY_SETTLED'
+  | 'REMAINDER_CANCEL_FAILED';
+
 export interface MarkSkippedParams {
   userId: string;
   configId: string;
@@ -131,11 +151,13 @@ export function entryOrderRefOf(order: {
 @Injectable()
 export class EntryOrderService {
   private readonly logger = new Logger(EntryOrderService.name);
+  private readonly positionManager = new PositionManager();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly gateway: AppGateway,
+    private readonly positionAction: PositionActionService,
   ) {}
 
   async placeResting(params: PlaceRestingParams): Promise<RestingEntryOrder> {
@@ -221,6 +243,131 @@ export class EntryOrderService {
     });
 
     return created;
+  }
+
+  async settleFill(params: SettleFillParams): Promise<SettleFillOutcome> {
+    const { order, status } = params;
+
+    if (status.partial) {
+      const remainderCancelled = await this.cancelOnExchange(
+        params.executor,
+        order,
+      );
+      if (!remainderCancelled) return 'REMAINDER_CANCEL_FAILED';
+    }
+
+    const filledLeg: EntryOrderLeg = status.filledLeg ?? 'LIMIT';
+    const executedPrice = status.executedPrice ?? order.limitPrice;
+    const executedQuantity = status.executedQuantity ?? order.quantity;
+
+    const claimed = await this.prisma.entryOrder.updateMany({
+      where: { id: order.id, status: 'RESTING' },
+      data: {
+        status: 'FILLED',
+        filledLeg,
+        executedPrice,
+        executedQuantity,
+        settledAt: new Date(),
+        ...(status.partial ? { cancelReason: 'PARTIAL_FILL_REMAINDER' } : {}),
+      } as any,
+    });
+    if (claimed.count === 0) return 'ALREADY_SETTLED';
+
+    const nativeProtectionEnabled = !!params.config.nativeProtectionEnabled;
+    const positionData = this.positionManager.openPosition({
+      userId: params.userId,
+      configId: order.configId,
+      asset: params.config.asset,
+      pair: params.config.pair,
+      mode: params.mode,
+      entryPrice: executedPrice,
+      quantity: executedQuantity,
+    });
+
+    const savedPosition = await this.prisma.position.create({
+      data: nativeProtectionEnabled
+        ? ({
+            ...positionData,
+            protectionStatus: 'PENDING',
+            stopPrice: executedPrice * (1 - params.config.stopLossPct),
+            takeProfitPrice: executedPrice * (1 + params.config.takeProfitPct),
+            highWaterPrice: executedPrice,
+            initialQuantity: executedQuantity,
+          } as any)
+        : (positionData as any),
+    });
+
+    await this.prisma.trade.create({
+      data: {
+        userId: params.userId,
+        positionId: savedPosition.id,
+        type: TradeType.BUY,
+        price: executedPrice,
+        quantity: executedQuantity,
+        fee: executedPrice * executedQuantity * TRADE_FEE_PCT,
+        mode: params.mode,
+        binanceOrderId: status.orderId ?? undefined,
+        decisionId: null,
+      } as any,
+    });
+
+    await this.prisma.entryOrder.update({
+      where: { id: order.id },
+      data: { positionId: savedPosition.id },
+    });
+
+    await this.prisma.botAction.create({
+      data: {
+        userId: params.userId,
+        configId: order.configId,
+        kind: 'BUY',
+        source: 'EXCHANGE_TRIGGER',
+        outcome: 'EXECUTED',
+        blockedBy: null,
+        positionId: savedPosition.id,
+        decisionId: order.decisionId,
+        detail: `ENTRY_FILLED_${filledLeg}`,
+      } as any,
+    });
+
+    if (nativeProtectionEnabled) {
+      await this.positionAction.placeInitialProtection({
+        userId: params.userId,
+        config: params.config,
+        symbol: params.symbol,
+        mode: params.mode,
+        executor: params.executor,
+        position: savedPosition,
+        order: { price: executedPrice, quantity: executedQuantity },
+      });
+    }
+
+    await this.notificationsService
+      .create(
+        params.userId,
+        NotificationType.TRADE_EXECUTED,
+        JSON.stringify({
+          key: 'entryOrderFilled',
+          qty: executedQuantity.toString(),
+          asset: params.config.asset,
+          price: executedPrice.toFixed(2),
+          mode: params.mode,
+        }),
+      )
+      .catch(() => null);
+
+    this.gateway.emitToUser(params.userId, 'entry-order:filled', {
+      configId: order.configId,
+      entryOrderId: order.id,
+      symbol: params.symbol,
+      positionId: savedPosition.id,
+      filledLeg,
+      executedPrice,
+      executedQuantity,
+      partial: status.partial,
+    });
+
+    return 'SETTLED';
   }
 
   markSkipped(params: MarkSkippedParams): void {

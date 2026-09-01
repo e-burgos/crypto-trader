@@ -278,6 +278,53 @@ export interface ExchangeOrderStatus {
   orderId: string | null;
 }
 
+export type EntryOrderMode = 'MARKET' | 'LIMIT_MAKER' | 'OCO';
+
+export type RestingEntryMode = Exclude<EntryOrderMode, 'MARKET'>;
+
+export type EntryOrderLeg = 'LIMIT' | 'STOP';
+
+export interface EntryOrderRequest {
+  mode: RestingEntryMode;
+  symbol: string;
+  quantity: number;
+  limitPrice: number;
+  referencePrice: number;
+  stopPrice: number | null;
+  stopLimitPrice: number | null;
+  trailingDeltaBips: number | null;
+  clientOrderId: string;
+}
+
+export interface EntryOrderRef {
+  orderListId: string | null;
+  orderId: string | null;
+  limitLegOrderId: string | null;
+  stopLegOrderId: string | null;
+}
+
+export interface EntryOrderResult {
+  mode: RestingEntryMode;
+  orderListId: string | null;
+  orderId: string | null;
+  limitLegOrderId: string | null;
+  stopLegOrderId: string | null;
+  clientOrderId: string;
+  placedAt: Date;
+}
+
+export type EntryOrderExchangeState = 'RESTING' | 'FILLED' | 'CANCELLED' | 'MISSING';
+
+export interface EntryOrderExchangeStatus {
+  state: EntryOrderExchangeState;
+  filledLeg: EntryOrderLeg | null;
+  executedPrice: number | null;
+  executedQuantity: number | null;
+  remainingQuantity: number | null;
+  partial: boolean;
+  orderId: string | null;
+}
+
 // ── WebSocket Events ─────────────────────────────────────
 export interface WsTradeExecuted {
   trade: TradeRecord;

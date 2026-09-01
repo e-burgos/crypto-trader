@@ -120,12 +120,17 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
           BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+          # Embeddings del RAG. El proveedor se elige EXPLICITAMENTE: no hay
+          # fallback automatico porque vectores de modelos distintos viven en
+          # espacios distintos y volverian incomparable el indice ya guardado.
+          OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           host: ${{ env.VPS_HOST }}
           username: ${{ env.VPS_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: APP_DIR,API_IMAGE,WEB_IMAGE,POSTGRES_PASSWORD,APP_DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,BINANCE_KEY_ENCRYPTION_KEY,ADMIN_USERNAME,ADMIN_PASSWORD,CLOUDFLARE_ACCOUNT_ID,BACKUP_R2_ACCESS_KEY_ID,BACKUP_R2_SECRET_ACCESS_KEY,VOYAGE_API_KEY
+          envs: APP_DIR,API_IMAGE,WEB_IMAGE,POSTGRES_PASSWORD,APP_DB_PASSWORD,JWT_SECRET,JWT_REFRESH_SECRET,BINANCE_KEY_ENCRYPTION_KEY,ADMIN_USERNAME,ADMIN_PASSWORD,CLOUDFLARE_ACCOUNT_ID,BACKUP_R2_ACCESS_KEY_ID,BACKUP_R2_SECRET_ACCESS_KEY,VOYAGE_API_KEY,OPEN_ROUTER_API_KEY,OPENAI_API_KEY
           script: |
             set -euo pipefail
             cd "$APP_DIR"
@@ -163,7 +168,11 @@ jobs:
             TRUST_PROXY_HOPS=1
             BINANCE_PUBLIC_URL=https://api.binance.com
             BINANCE_BASE_URL=https://api.binance.com
+            EMBEDDING_PROVIDER=openrouter
+            EMBEDDING_MODEL=openai/text-embedding-3-small
+            OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY}
             VOYAGE_API_KEY=${VOYAGE_API_KEY}
+            OPENAI_API_KEY=${OPENAI_API_KEY}
             EOF
 
             cat > .env.backup <<EOF

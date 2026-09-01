@@ -54,8 +54,8 @@
         "apps/api",
         "apps/web"
       ],
-      "description": "Migracion de Railway + GitHub Pages a Hetzner + Cloudflare: VPS CX23 con Postgres pgvector y Redis autoalojados sin puerto publico, backups a Cloudflare R2 con restore verificado, imagen en GHCR, nginx con Origin Certificate y SPA en Cloudflare Pages. Los ciclos agrupan las 8 fases del plan docs/infra/migration-hetzner-cloudflare.md; cada fase conserva su criterio de hecho como CA de la spec. cycle-01 en curso (Fases 1-3): la Fase 1 quedo cerrada el 2026-08-31",
-      "cycles_completed": 0
+      "description": "Migracion de Railway + GitHub Pages a Hetzner + Cloudflare. cycle-01 y cycle-02 cerrados 2026-09-01: VPS CX23 con Postgres pgvector y Redis autoalojados sin puerto publico, backups horarios a R2 con restore verificado, API y SPA en el mismo origen detras de nginx con Let's Encrypt renovado por cron, y workflow de deploy a GHCR. La Fase 4 (migrar datos) quedo CANCELADA por DEC-DATOS: el trial de Railway vencio y no habia via tecnica de extraccion, asi que la base arranca vacia. La Fase 6 se adelanto a cycle-02 por DEC-PAGES: la SPA se sirve del VPS y no de Cloudflare Pages. Queda abierto cycle-03 (Fase 7, baja de Railway) y cycle-04 (Fase 8, observabilidad), que es lo unico serio pendiente ahora que hay claves LIVE conectadas",
+      "cycles_completed": 2
     }
   ],
   "pending_modules": [],

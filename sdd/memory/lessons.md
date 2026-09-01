@@ -1,7 +1,7 @@
 # 🧠 Memoria del proyecto — lecciones destiladas
 
-> Versión 1.1 | Última destilación: 2026-08-29 — 5 entradas (spec-e-burgos-001 cycles 01-03,
-> spec-e-burgos-004 cycle-01, FIX-e-burgos-002)
+> Versión 1.2 | Última destilación: 2026-09-01 — 6 entradas (spec-e-burgos-005 cycle-01,
+> spec-e-burgos-008 cycle-02, FIX-e-burgos-004, -005-001, -010)
 > **Cap duro: 120 líneas.** Este archivo se lee COMPLETO al inicio de cada sesión de agente —
 > cada línea acá cuesta tokens en todas las sesiones futuras. Si al destilar se supera el cap,
 > primero podar lecciones obsoletas o absorbidas por constitutions/skills.
@@ -17,6 +17,18 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
   contexto; acá van las transversales al repo o al proceso.
 
 ## Proceso (cómo trabajan los agentes en este repo)
+
+- **Un ciclo real encuentra en minutos lo que leer código no encuentra en horas.** Cuando una spec
+  anota un riesgo como "teórico", ejecutarlo sale más barato que razonarlo: dos defectos críticos
+  (gate de riesgo fallando abierto, índice vectorial inexistente) aparecieron en 90 segundos de
+  corrida real y eran invisibles en el código.
+- **Un comentario o un test que afirma un invariante NO es evidencia.** Los dos defectos anteriores
+  estaban uno *afirmado por un test* y el otro *contradicho por un comentario*. Verificar contra el
+  sistema vivo, no contra lo que el repo dice de sí mismo.
+- **Antes de reportar un bug en una SPA, esperar a que la consulta resuelva.** Un estado de carga
+  leído a destiempo se parece exactamente a un dato faltante.
+- **Antes de operar con `gh`, cambiar a la cuenta `e-burgos` y volver a la original al terminar.**
+  Un `403` de `gh` es cuenta equivocada hasta que se demuestre lo contrario, no falta de permisos.
 
 - **Verificar con `ls` todo invariante que el arnés declare por nombre de archivo** antes de
   darlo por cumplido: los pasos "opcionales" del INSTALL son la fuente típica de gates que
@@ -34,6 +46,26 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
   esconde un caso regresionado.
 
 ## Técnica (stack, herramientas, gotchas transversales)
+
+- **Un `@Body()` que no apunta a una clase con decoradores desactiva el `ValidationPipe` global en
+  silencio**: el pipe hace short-circuit cuando el metatype es `Object`. DTO es clase, o no hay
+  validación. `body-dto-validation.spec.ts` lo vigila.
+- **Una dependencia opcional en un constructor de Nest suele ser la cicatriz de una instancia
+  construida a mano.** Antes de agregar el `?`, mover el controller al módulo que ya provee el
+  servicio; y un módulo dinámico que otro necesita se **re-exporta**, nunca se vuelve a registrar.
+- **Al planificar tasks en paralelo por carril de archivos, dar dueño explícito al composition
+  root** (`app.module.ts`): lo que no es carril de nadie queda huérfano y los tests no lo detectan.
+- **Una columna creada por SQL crudo que no está en `schema.prisma` la borra el próximo diff
+  autogenerado.** Declararla como `Unsupported("tipo")` es lo único que lo impide.
+- **Los modelos de razonamiento gastan `max_tokens` pensando y devuelven contenido vacío**, que el
+  llamador sólo puede leer como truncado. `reasoning: { enabled: false }` lo resuelve;
+  `exclude: true` NO — sólo oculta el pensamiento, se genera y se cobra igual. Algunos endpoints lo
+  exigen y responden 400: hay que reintentar sin el flag.
+- **Los embeddings de modelos distintos no son comparables** aunque midan lo mismo. Un fallback
+  automático entre proveedores corrompe el índice en silencio: el proveedor se elige explícito y
+  cambiarlo obliga a re-embeber.
+- **Al corregir una constante que se nombra a sí misma** (`...-exactly-32-chars`), grepear ese
+  literal: suele estar copiado en tests y fixtures que quedan mintiendo.
 
 - **Presencia en el contenedor de DI no es evidencia de ejecución**: antes de rescatar,
   refactorizar o confiar en un subsistema, verificar callers reales con grep. Un cast a
@@ -58,6 +90,10 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
   sobre comportamiento observable o sobre un símbolo concreto.
 
 ## Costo (qué gastó tokens/tiempo de más y cómo evitarlo)
+
+- **Verificar antes de afirmar.** Tres hipótesis afirmadas con demasiada seguridad y desmentidas
+  después (IP allowlist de Binance, OpenRouter "no soporta embeddings", tres falsos positivos por
+  estado de carga) costaron más vueltas que comprobarlas de entrada.
 
 - **Verificar el mínimo de prefijo cacheable del proveedor contra el tamaño real del prompt
   antes de presupuestar ahorro por prompt caching**: Anthropic exige 1024 tokens (2048 en

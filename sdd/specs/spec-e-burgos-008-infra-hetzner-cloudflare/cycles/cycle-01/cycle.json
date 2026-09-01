@@ -16,9 +16,9 @@
     "Cerrar la cadena de backup restaurando en una base descartable: un backup que nunca se restauro no es un backup",
     "Resolver la decision de RPO, que condiciona el cron y las reglas de lifecycle del bucket"
   ],
-  "status": "in-progress",
+  "status": "completed",
   "started_at": "2026-08-31",
-  "completed_at": null,
+  "completed_at": "2026-09-01",
   "documents": {
     "brief": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/brief.yaml",
     "functional": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/functional.md",
@@ -27,10 +27,79 @@
     "tasks": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-01/tasks.json"
   },
   "artifacts": [],
-  "metrics": null,
+  "metrics": {
+    "tasks_total": 12,
+    "tasks_completed": 12,
+    "tasks_skipped": 0,
+    "story_points": 63,
+    "files_created": [
+      "infra/scripts/provision-01-base.sh",
+      "infra/scripts/provision-02-sshd.sh",
+      "infra/scripts/provision-03-firewall.sh",
+      "infra/scripts/provision.test.sh",
+      "infra/scripts/db-backup.sh",
+      "infra/scripts/db-backup.test.sh",
+      "infra/scripts/db-restore.sh",
+      "infra/scripts/db-restore.test.sh",
+      "infra/scripts/db-backup-cron-install.sh",
+      "infra/scripts/db-migrate.sh",
+      "infra/scripts/verify-network-isolation.sh",
+      "infra/db/initdb/00-init.sql",
+      "docker-compose.prod.yml",
+      "docs/infra/rpo-decision.md",
+      "docs/infra/hetzner-server.md"
+    ],
+    "files_modified": [],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 1450000,
+      "tokens_out": 180000,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/opus": {
+          "tokens_in": 1450000,
+          "tokens_out": 180000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
   "tables_created": [],
   "endpoints_implemented": [],
   "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "issues_found": [
+    "RESUELTO durante el ciclo — provision-03-firewall.sh usaba un f-string de Python con comillas escapadas dentro de comillas simples de shell, que es SyntaxError. Lo detecto la segunda corrida de la prueba de idempotencia, no la lectura del codigo. Reescrito con .format().",
+    "RESUELTO durante el ciclo — db-restore.sh imprimia '(--force-production)' en SIEMPRE, porque ${FORCE_PROD:+...} expande tambien con \"0\", que es no-vacio. Un log que dice que se forzo sobre produccion cuando no se forzo es peor que no loguear: se reemplazo por un if explicito y hay un test que lo cubre.",
+    "RESUELTO durante el ciclo — el cron de renovacion del certificado NUNCA habria corrido: su log apuntaba a certbot/, que es de root, y el cron corre como deploy. Una redireccion que falla aborta la linea entera ANTES de ejecutar nada, asi que el certificado se habria vencido el 2026-11-30 sin que ninguna corrida llegara a intentarse, y con el log vacio no habria habido pista. El log paso a logs/ y el instalador ahora hace touch y falla ruidosamente si no puede escribir.",
+    "DEUDA — el firewall restringe SSH a la IP del operador, que es residencial y cambia. Cuando eso pase, el 22 deja de responder y hay que editar la regla desde el panel de Hetzner. Es el precio de no usar ufw, y es el correcto: una regla de ufw mal puesta seria un servidor perdido.",
+    "DEUDA — el disco de 40 GB paso de 4% a 30% usado solo con desplegar (imagenes 3,26 GB). Hetzner no permite achicar. Los dumps horarios con KEEP_LOCAL=2 y los embeddings de pgvector crecen sobre eso; docs/infra/hetzner-server.md deja la linea de base para poder medir la deriva.",
+    "OBSERVACION — display-ads tiene el firewall como PENDIENTE en su propio checklist de seguridad §13, con la advertencia escrita de que sin el el VPS acepta conexiones directas. No habia nada que portar: la Fase 1 se escribio de cero y aca si quedo aplicado."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-01",
+    "ca_results": {
+      "CA-001": "PASS — verificado por los cinco chequeos del criterio de hecho, ejecutados contra el servidor: SSH por clave como root y como deploy; auth por contrasena DESHABILITADA (un intento forzando password devuelve 'Permission denied (publickey)' sin ofrecer el metodo); docker run hello-world OK desde el usuario no-root sin sudo; firewall crypto-trader-prod id 11552165 en estado 'applied' via API de Hetzner. Ademas se agrego swap de 2 GiB que el servidor no tenia (venia con swap 0 y 3,7 GiB de RAM) y unattended-upgrades, ninguno de los dos en el plan original.",
+      "CA-002": "PASS — 'All migrations have been successfully applied' y 'Database schema is up to date!' con las 37 migraciones; 30 tablas en public; extension vector 0.8.6 presente; datacl = {crypto_trader_app=CTc/crypto_trader_app}, o sea PUBLIC revocado; el rol de aplicacion con super=f createdb=f createrole=f. El aislamiento se verifico POR EVIDENCIA y no por lectura del compose: escaneo desde fuera del VPS con 5432, 6379 y 3000 sin responder, y ss en el host mostrando solo el 22 escuchando.",
+      "CA-003": "PASS, y cerrado como corresponde: restaurando. Se bajo un dump de r2:daily/, se verifico su checksum sha256, se valido con pg_restore --list (186 objetos) y se restauro en la base descartable crypto_trader_restore_test, que quedo con 30 tablas, _prisma_migrations con 37 aplicadas y 37 finalizadas, y vector 0.8.6. Origen 30 tablas == restaurada 30 tablas. La base descartable se elimino despues de verificar. El cron horario corrio desatendido a las 14:00 y 15:00 subiendo a R2 y podando la copia vieja segun KEEP_LOCAL=2."
+    },
+    "tests": {
+      "sdd:validate": "OK — 21 archivos validos, cross-checks pasados",
+      "infra/scripts/db-backup.test.sh": "16 OK, 0 fallas",
+      "infra/scripts/db-restore.test.sh": "12 OK, 0 fallas",
+      "infra/scripts/provision.test.sh": "21 OK, 0 fallas",
+      "idempotencia real": "Los tres scripts de provisioning corridos DOS VECES contra el servidor real sin cambios en la segunda pasada. Esa corrida encontro el SyntaxError del script de firewall.",
+      "verificacion externa": "HOST=2.29.24.221 verify-network-isolation.sh: 5432, 6379 y 3000 no responden desde internet",
+      "renovacion del certificado": "certbot renew --webroot --dry-run --force-renewal: 'Congratulations, all simulated renewals succeeded'"
+    },
+    "notes": "APROBADO. Los tres CA se cerraron por evidencia ejecutada, nunca por lectura de configuracion, que es lo que RN-04 del funcional exige. El ciclo tuvo una particularidad: la Fase 1 se ejecuto ANTES de abrir la spec, porque no escribia nada en el repo; TASK-001 a TASK-003 la versionaron para volverla reproducible, y esa reproduccion es la que encontro el primer bug. Los 49 asserts de las tres suites de shell corren en el runner de CI antes de construir cualquier imagen: una suite que nadie ejecuta se pudre en silencio, y estas cubren el camino que solo se usa el dia que algo salio mal. Tres decisiones quedaron registradas en la spec durante el ciclo: DEC-DOM (el subdominio no va detras del proxy de Cloudflare, verificado con error 1116 de Cloudflare al intentar la zona de subdominio), la decision de RPO en 1 hora contra las 6 de display-ads, y la de NO usar backups de Hetzner, que es la que obliga a que todo el provisioning este versionado.",
+    "follow_ups": [
+      "La IP del operador es residencial: cuando cambie, el SSH deja de responder hasta editar la regla en el panel de Hetzner.",
+      "Vigilar el disco de 40 GB. Linea de base en docs/infra/hetzner-server.md: 30% usado tras desplegar, imagenes 3,26 GB.",
+      "Un backup que falla debe ser visible. Con RPO de 1 hora hay 24 oportunidades diarias de fallar en silencio; la alerta entra en el alcance de CA-008 (observabilidad).",
+      "Evaluar archivado continuo de WAL en cycle-04 si el volumen de operacion crece hasta que perder una hora sea material (docs/infra/rpo-decision.md)."
+    ]
+  }
 }

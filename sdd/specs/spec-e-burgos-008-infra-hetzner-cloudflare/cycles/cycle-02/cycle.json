@@ -3,7 +3,10 @@
   "cycle": 2,
   "module": "infra-hetzner-cloudflare",
   "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
-  "apps": ["apps/api"],
+  "apps": [
+    "apps/api",
+    "apps/web"
+  ],
   "phase": "api-in-production",
   "flow": "full",
   "objectives": [
@@ -15,17 +18,103 @@
     "Fijar TRUST_PROXY_HOPS al numero real de saltos detras de nginx, o el rate limiting de auth agrupa todo el trafico en un solo bucket (hallazgo B)",
     "Dejar el WebSocket funcionando detras de nginx: Socket.io con salas por usuario exige Upgrade/Connection y timeouts largos, y display-ads no tiene WebSocket del cual copiar (hallazgo F)"
   ],
-  "status": "in-progress",
+  "status": "completed",
   "started_at": "2026-09-01",
-  "completed_at": null,
+  "completed_at": "2026-09-01",
   "documents": {
     "brief": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-02/brief.yaml"
   },
   "artifacts": [],
-  "metrics": null,
+  "metrics": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "tasks_skipped": 0,
+    "story_points": 0,
+    "files_created": [
+      "apps/api/src/app/health.service.ts",
+      "apps/api/src/app/health.service.spec.ts",
+      "apps/api/src/app/app.controller.spec.ts",
+      "infra/nginx/nginx.conf",
+      "infra/scripts/cert-renew.sh",
+      "infra/scripts/cert-renew-cron-install.sh",
+      "infra/scripts/github-secrets-sync.sh",
+      "infra/scripts/verify-pgvector-index.sh",
+      "apps/api/prisma/migrations/20260901180000_restore_pgvector_column/migration.sql",
+      "apps/api/src/orchestrator/embedding.service.spec.ts",
+      "apps/web/src/hooks/use-websocket.spec.ts",
+      ".github/workflows/deploy.yml"
+    ],
+    "files_modified": [
+      "apps/api/prisma/seed.ts",
+      "apps/api/prisma/schema.prisma",
+      "apps/api/src/app/app.controller.ts",
+      "apps/api/src/app/app.module.ts",
+      "apps/api/src/orchestrator/embedding.service.ts",
+      "apps/api/src/orchestrator/agent-task-limits.ts",
+      "apps/api/src/orchestrator/dto/aegis-verdict.schema.ts",
+      "libs/analysis/src/lib/llm/openrouter.provider.ts",
+      "apps/web/src/hooks/use-websocket.ts",
+      "apps/web/Dockerfile",
+      "docker-compose.prod.yml",
+      ".env.example"
+    ],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 2100000,
+      "tokens_out": 260000,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/opus": {
+          "tokens_in": 2100000,
+          "tokens_out": 260000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
   "tables_created": [],
   "endpoints_implemented": [],
   "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "issues_found": [
+    "RESUELTO — hallazgo E era PEOR que lo documentado. VITE_API_URL se usaba con DOS significados: lib/api.ts y use-chat.ts la esperan CON el prefijo /api, use-websocket.ts SIN el. Con un unico valor el cliente negociaba el namespace /api/ws, que el gateway no sirve, y el socket conectaba y fallaba EN SILENCIO. El hook ahora deriva el origen quitando el sufijo, con VITE_WS_URL como escape.",
+    "RESUELTO — apps/web/Dockerfile estaba roto de antes: hacia COPY de apps/web/package.json, archivo que no existe en este monorepo. Ningun workflow construia esa imagen, por eso nunca se detecto.",
+    "RESUELTO — el cron de renovacion del certificado nunca habria corrido: log en un directorio de root con el cron corriendo como deploy. Una redireccion que falla aborta la linea del cron ANTES de ejecutar nada.",
+    "RESUELTO por FIX-e-burgos-013 — la columna pgvector del RAG no existia: la migracion 20260413184109 la borro como dano colateral de un diff autogenerado por Prisma, y rag.service.ts venia cayendo a coseno en memoria sin avisar. Se restauro y se declaro como Unsupported(\"vector(1024)\") en schema.prisma, que es lo que impide que Prisma la vuelva a borrar.",
+    "RESUELTO por FIX-e-burgos-014 (CRITICO) — el gate de riesgo AEGIS fallaba ABIERTO: .catch('PASS') con multiplicador 1 ante respuesta ilegible. Reproducido en un ciclo real con los 4 sub-agentes truncando y la decision produciendose igual. Ademas un test consagraba ese comportamiento como deseado.",
+    "OBSERVACION — apps/api/src/auth/auth.service.spec.ts es FLAKY: aislado pasa 9/9 en ~5s, pero bajo la carga de las 87 suites en paralelo supera el timeout (medido en 20-29s). bcrypt con 12 rondas compite por CPU. Nx ya lo marca como flaky. No se investigo a fondo ni se registro como fix.",
+    "DEUDA — las 8 fuentes de datos estan activas pero sin credenciales cargadas, asi que el panel reporta 'Issues detected' y altfins devuelve 401 en cada ciclo. Las claves viven cifradas en la base y se cargan por el panel de admin, no por env.",
+    "DEUDA — el modelo de embeddings quedo fijado a 1024 dimensiones, pero NADA en la base lo valida: la columna embedding es jsonb y acepta cualquier largo. assertShape() del EmbeddingService es la unica defensa contra un indice de vectores mezclados."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-01",
+    "ca_results": {
+      "CA-004b": "PASS — existe EXACTAMENTE un usuario ADMIN, provisionado desde ADMIN_USERNAME/ADMIN_PASSWORD, y se inicia sesion con el. Verificado en la base (1 admin, 0 cuentas demo) y por API (POST /api/auth/login devuelve accessToken y refreshToken con rol ADMIN). El seed es fail-closed en produccion: sin esas variables lanza, y como el CMD del Dockerfile corre db seed antes de arrancar, el contenedor no levanta.",
+      "CA-005": "PASS — GET https://trader.estebanburgos.com.ar/api/health responde 200 con {status:ok, database:up, redis:up}. El health check dejo de devolver {status:'ok'} fijo: consulta Postgres con SELECT 1, hace PING a Redis y responde 503 si alguna esta caida, con timeout de 2s por sonda para que una dependencia colgada no cuelgue el chequeo. Certificado Let's Encrypt emitido en el servidor, http redirige 301 a https, y TRUST_PROXY_HOPS=1 refleja el unico salto real.",
+      "CA-006": "PASS — verificado en un navegador real con sesion de TRADER. La SPA carga en / y la API en /api del MISMO origen, lo que elimina CORS. El WebSocket conecta autenticado a traves de nginx: el log del servidor muestra '[AppGateway] Client connected: qJSRk4WQAMP-ywmnAAA8 (user: cmtj1ic78000101qgux3k8qds)', que es el id del usuario trader. A nivel protocolo el upgrade con HTTP/1.1 devuelve 101 Switching Protocols con Sec-WebSocket-Accept. Era la pieza sin precedente en display-ads y quedo probada de punta a punta."
+    },
+    "tests": {
+      "nx test api": "751/751 en 87 suites",
+      "nx test analysis": "161/161 en 16 archivos",
+      "typecheck:api": "OK",
+      "lint api + analysis": "0 errores",
+      "sdd:validate": "OK — 21 archivos validos",
+      "barrido de la API": "55 endpoints GET con las dos cuentas: CERO 5xx. 33 responden 200 a ambos roles, 11 son solo-trader y 10 solo-admin, con 403 en el rol equivocado. La autorizacion funciona en las dos direcciones.",
+      "recorrido del panel admin": "8 secciones en navegador con sesion real, sin errores de consola. Las metricas coinciden con la base (Total Users 1) y el Audit Log muestra las 2 entradas reales de DATA_SOURCE_ENABLED.",
+      "recorrido del panel trader": "Overview, Market, Positions, Trade History, Agent Log, News y Exchange. Market trae datos reales de Binance (BTC $77.323,38, spread $0,01, 3.565.666 trades) y News titulares reales por RSS.",
+      "ciclo real del agente": "Ejecutado en SANDBOX de punta a punta: cola de Bull, data-fetcher (5 de 6 fuentes OK), indicadores, LLM por OpenRouter, motor, base y WebSocket. Es lo que destapo FIX-e-burgos-014.",
+      "pipeline RAG": "Documento subido por POST /admin/agents/market/documents, procesado a READY con 2 chunks, embeddings de 1024 dims via OpenRouter y coseno nativo de pgvector devolviendo 0.4720 entre chunks.",
+      "binance desde Hetzner": "TESTNET devuelve 10.000 USDT + 10.000 USDC y LIVE 75,19 USDT reales. La incognita de si Binance aceptaria conexiones desde Helsinki queda despejada: no hizo falta tocar ninguna IP allowlist."
+    },
+    "notes": "APROBADO. Los tres CA se verificaron por evidencia ejecutada contra produccion, incluido un navegador real con sesiones de admin y de trader. El ciclo cambio de alcance dos veces por decision del dueno, y las dos quedaron registradas en la spec: DEC-DATOS cancela la Fase 4 entera (el trial de Railway vencio y no habia via tecnica para extraer los datos sin levantar el servicio; se decidio arrancar con la base vacia) y DEC-PAGES reemplaza Cloudflare Pages por la SPA servida desde el mismo nginx, que es lo que permite el mismo origen y elimina CORS. El hallazgo mas importante no estaba planificado: correr un ciclo real del agente destapo que el gate de riesgo fallaba ABIERTO, con los 4 sub-agentes truncando y la decision produciendose igual. Se cerro por FIX GATE como HOTFIX critico, y la verificacion fue en produccion: de 4 sub-agentes fallados a 0, con la confianza de la decision subiendo de 0.72 a 0.88. Vale registrar que el fail-open estaba consagrado en un test ('degrades unparsable text to a neutral PASS verdict'): no era un descuido sino una decision escrita, y por eso ninguna suite lo detectaba.",
+    "follow_ups": [
+      "auth.service.spec.ts es flaky bajo carga paralela (bcrypt con 12 rondas). Aislado pasa en 5s, en la suite completa llega a 29s y a veces supera el timeout. Merece su propio fix.",
+      "Cargar las credenciales de las 8 fuentes de datos por el panel de admin: hoy altfins devuelve 401 en cada ciclo y el panel reporta 'Issues detected'.",
+      "El indice del RAG no tiene nada que validar la dimension a nivel base (la columna embedding es jsonb). Evaluar mover el almacenamiento a embedding_vec ahora que la columna existe.",
+      "Fase 8, observabilidad: hoy no hay metricas ni alertas. Con claves LIVE conectadas, un backup que no sube o un ciclo que falla no avisan a nadie.",
+      "Los modelos con razonamiento obligatorio (minimax-m2.7) no son buenos candidatos para tareas de JSON estructurado con presupuesto acotado: conviene revisarlos en el panel de Agent Models."
+    ]
+  }
 }

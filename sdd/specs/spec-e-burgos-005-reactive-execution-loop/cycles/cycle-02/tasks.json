@@ -715,10 +715,19 @@
         "TASK-022",
         "TASK-023"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
-        "sdd/context/apps/api/updates/2026-09-01-spec-e-burgos-005-cycle-02.md"
-      ]
+        "sdd/context/apps/api/updates/2026-09-01-spec-e-burgos-005-cycle-02.md",
+        "sdd/memory/journal/2026-09-01-spec-e-burgos-005-cycle-02.md"
+      ],
+      "usage": {
+        "tokens_in": 25000,
+        "tokens_out": 6000,
+        "duration_minutes": 6,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     }
   ]
 }

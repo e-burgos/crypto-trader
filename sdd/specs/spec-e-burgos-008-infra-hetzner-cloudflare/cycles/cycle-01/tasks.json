@@ -166,7 +166,7 @@
       "depends_on": [
         "TASK-009"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "infra/scripts/db-restore.sh",
         "infra/scripts/db-backup.test.sh",
@@ -186,7 +186,7 @@
         "TASK-008",
         "TASK-010"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "infra/scripts/db-backup-cron-install.sh",
         "docs/infra/r2-backups.md"
@@ -203,7 +203,7 @@
       "depends_on": [
         "TASK-011"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "docs/infra/db-backup-restore-runbook.md"
       ]

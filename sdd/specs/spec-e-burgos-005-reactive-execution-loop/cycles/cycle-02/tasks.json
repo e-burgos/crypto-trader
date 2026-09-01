@@ -315,12 +315,20 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/bot-action-counters.ts",
         "apps/api/src/trading/bot-action-counters.spec.ts",
         "apps/api/src/trading/action-gate.service.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 9000,
+        "duration_minutes": 5.5,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-015",

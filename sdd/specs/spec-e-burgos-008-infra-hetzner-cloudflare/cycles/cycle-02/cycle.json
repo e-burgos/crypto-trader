@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 2,
+  "module": "infra-hetzner-cloudflare",
+  "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
+  "apps": ["apps/api"],
+  "phase": "api-in-production",
+  "flow": "full",
+  "objectives": [
+    "Provisionar un unico usuario ADMIN desde ADMIN_USERNAME/ADMIN_PASSWORD, fail-closed en produccion: el CMD del Dockerfile corre db seed antes de arrancar, asi que sin admin el contenedor no levanta (DEC-ADMIN)",
+    "Convertir el health check en verificacion real de base y Redis: hoy devuelve {status:'ok'} fijo sin mirar nada, y en el VPS ese endpoint decide si un contenedor reiniciado esta sano (hallazgo D)",
+    "Construir la imagen de la API y publicarla en GHCR",
+    "Levantar api y nginx en el compose del VPS con .env.production generado desde GitHub Secrets, sin secretos en el repo",
+    "Emitir el certificado Let's Encrypt en el propio servidor para trader.estebanburgos.com.ar y dar de alta el registro A en Hostinger (DEC-DOM: no hay proxy de Cloudflare)",
+    "Fijar TRUST_PROXY_HOPS al numero real de saltos detras de nginx, o el rate limiting de auth agrupa todo el trafico en un solo bucket (hallazgo B)",
+    "Dejar el WebSocket funcionando detras de nginx: Socket.io con salas por usuario exige Upgrade/Connection y timeouts largos, y display-ads no tiene WebSocket del cual copiar (hallazgo F)"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-09-01",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-02/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

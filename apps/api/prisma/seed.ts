@@ -3,7 +3,7 @@ import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 import { AGENT_SEEDS } from './seed/agents';
-import { AgentId, LLMProvider } from '../generated/prisma/enums';
+import { AgentId, LLMProvider, UserRole } from '../generated/prisma/enums';
 
 // Inlined from src/agents/agent-presets.ts to avoid importing src/ in production seed
 const PRESET_FREE: Partial<
@@ -49,6 +49,50 @@ function demoAccountSeedingAllowed(): boolean {
   // Demo credentials are readable in the repository, so production never provisions them
   if (process.env.NODE_ENV === 'production') return false;
   return process.env.SEED_DEMO_ACCOUNTS !== 'false';
+}
+
+async function seedSuperAdmin(prisma: PrismaClient) {
+  const email = process.env.ADMIN_USERNAME?.trim();
+  const password = process.env.ADMIN_PASSWORD;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!email || !password) {
+    // The Dockerfile CMD runs this seed before starting the API, so failing here
+    // stops the container: an API in production nobody can sign in to is not a
+    // degraded service (spec-e-burgos-008, DEC-ADMIN).
+    if (isProduction) {
+      throw new Error(
+        'ADMIN_USERNAME and ADMIN_PASSWORD are required in production: without them no account can sign in.',
+      );
+    }
+    console.log(
+      'Super admin skipped — ADMIN_USERNAME/ADMIN_PASSWORD not set (non-production)',
+    );
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+  const admin = await prisma.user.upsert({
+    where: { email },
+    // Converges on every run: rotating the password means changing the secret
+    // and redeploying, the same contract as the application role in 00-init.sql.
+    update: { passwordHash, role: UserRole.ADMIN, isActive: true },
+    create: { email, passwordHash, role: UserRole.ADMIN, isActive: true },
+  });
+  console.log(`Super admin ready: ${admin.email}`);
+
+  const otherAdmins = await prisma.user.findMany({
+    where: { role: UserRole.ADMIN, email: { not: email } },
+    select: { email: true },
+  });
+  if (otherAdmins.length > 0) {
+    // Reported, never deleted: a seed that deletes users eventually deletes the wrong one.
+    console.warn(
+      `WARNING: ${otherAdmins.length} other ADMIN account(s) exist and were NOT removed: ${otherAdmins
+        .map((u) => u.email)
+        .join(', ')}`,
+    );
+  }
 }
 
 async function seedDemoAccounts(prisma: PrismaClient) {
@@ -349,6 +393,7 @@ async function main() {
 
   try {
     await seedReferenceData(prisma);
+    await seedSuperAdmin(prisma);
 
     if (demoAccountSeedingAllowed()) {
       await seedDemoAccounts(prisma);

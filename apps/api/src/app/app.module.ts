@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { HealthService } from './health.service';
 import { PrismaModule } from '../prisma';
 import { AuthModule } from '../auth/auth.module';
 import { AUTH_THROTTLER, LOGIN_RATE_LIMIT } from '../auth/auth.controller';
@@ -47,6 +48,6 @@ import { ReactiveModule } from '../reactive/reactive.module';
     ReactiveModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, HealthService],
 })
 export class AppModule {}

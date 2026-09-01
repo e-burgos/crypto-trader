@@ -73,14 +73,13 @@ desplegable; cada fase conserva su propio "hecho cuando" y ninguna se da por cer
 > backup que nunca se restauró no es un backup: el criterio de cierre exige haber restaurado en
 > una base descartable, no haber corrido el script.
 
-### Cycle-02 — La plataforma en el aire *(Fases 4-5)*
+### Cycle-02 — La plataforma en el aire *(Fase 5; la Fase 4 queda cancelada)*
 
-4. Migración de datos desde Railway con verificación de conteos, y **borrado de las cuatro cuentas
-   de la semilla** (hallazgo H).
+4. ~~Migración de datos desde Railway.~~ **CANCELADA 2026-09-01 — ver DEC-DATOS (§7).**
 5. API en producción: imagen en GHCR, compose en el VPS, nginx con **certificado Let's Encrypt
    emitido en el propio servidor** (DEC-DOM, no un Origin Certificate de Cloudflare),
-   `TRUST_PROXY_HOPS` real, y el **health check convertido en verificación real** de base y Redis
-   (hallazgo D).
+   `TRUST_PROXY_HOPS` real, el **health check convertido en verificación real** de base y Redis
+   (hallazgo D), y un **único usuario `ADMIN` provisionado desde el entorno** (DEC-ADMIN, §7).
 
 ### Cycle-03 — Frontend y corte *(Fases 6-7)*
 
@@ -120,8 +119,7 @@ desplegable; cada fase conserva su propio "hecho cuando" y ninguna se da por cer
   servidor perdido.
 - **Un backup no restaurado no cuenta.** Ningún criterio de backup se cierra corriendo el script;
   se cierra restaurando en una base descartable y verificando.
-- **La migración de datos se verifica por conteos**, no por ausencia de error: usuarios, configs,
-  posiciones (91), trades y decisiones.
+- ~~La migración de datos se verifica por conteos.~~ Sin objeto tras DEC-DATOS.
 - **El disco es 40 GB y no se puede achicar.** Hetzner escala solo hacia arriba. Los dumps se
   escriben en disco antes de subir a R2 y los embeddings del RAG crecen: es el número a vigilar
   desde el día uno.
@@ -135,7 +133,8 @@ Uno por fase, tomados literalmente del plan de origen.
 | CA-001 | 1 | Se entra por SSH sin contraseña y `docker run hello-world` corre. |
 | CA-002 | 2 | `prisma migrate status` dice que está al día y `CREATE EXTENSION vector` no falló. |
 | CA-003 | 3 | Se corrió un backup, se bajó y se **restauró en una base descartable**. |
-| CA-004 | 4 | Los conteos coinciden con Railway y las cuatro cuentas demo no están. |
+| ~~CA-004~~ | 4 | **ANULADO** por DEC-DATOS. La base arranca vacía; las cuentas demo nunca se provisionan en producción (`NODE_ENV=production`). Lo reemplaza CA-004b. |
+| CA-004b | 5 | Existe **exactamente un** usuario `ADMIN`, provisionado desde `ADMIN_USERNAME`/`ADMIN_PASSWORD`, y se puede iniciar sesión con él. |
 | CA-005 | 5 | `/api/health` responde por HTTPS **verificando base y Redis**, y se puede iniciar sesión con una cuenta real. |
 | CA-006 | 6 | La SPA carga, inicia sesión y **el WebSocket conecta**. |
 | CA-007 | 7 | Un ciclo de agente completo corre en Hetzner y queda registrado. |
@@ -182,11 +181,65 @@ certificado Let's Encrypt emitido y renovado en el propio servidor** (certbot).
 4. **Degradación de Redis.** Si Redis no está, las colas dejan de procesar en silencio (hallazgo
    G). Decidir si se monitorea o se mitiga. Se resuelve junto con CA-008.
 
+### DEC-DATOS — La Fase 4 se cancela: se arranca con la base vacía *(2026-09-01)*
+
+Railway quedó inaccesible. Verificado, no asumido: el CLI y la mutación `serviceInstanceRedeploy`
+de la API GraphQL devuelven **`"Your trial has expired. Please select a plan to continue using
+Railway."`** — no es una factura impaga sino el trial vencido, y bloquea todo despliegue.
+
+Estado comprobado del proyecto en Railway:
+
+| Hecho | Valor |
+| --- | --- |
+| Proyecto | `deletedAt: null` — no fue eliminado |
+| Volumen `postgres-volume` | `READY`, 362 MB — **los datos están intactos** |
+| Deployments de Postgres | todos `REMOVED` |
+| PITR (backups continuos) | **deshabilitado**, sin bucket conectado |
+| Backups de volumen | 2, automáticos de Railway (2026-08-06 y 2026-08-23) |
+
+**No existe vía técnica para extraer los datos sin levantar el Postgres**, y no se puede levantar
+sin elegir un plan. Los backups de volumen **no** sirven como exportación: `volumeInstanceBackupRestore`
+restaura *dentro del mismo volumen* pisando su contenido, no entrega un archivo — y aun restaurado,
+haría falta un Postgres corriendo para leerlo.
+
+**Decisión del dueño (2026-09-01): los datos eran de prueba y no se rescatan.** La plataforma
+arranca con la base vacía en Hetzner, que ya tiene las 37 migraciones aplicadas y `vector` instalada.
+
+**Consecuencias:**
+
+- **CA-004 queda anulado** y lo reemplaza CA-004b (el usuario `ADMIN` desde el entorno).
+- Desaparece el paso irreversible del plan, y con él su riesgo. El corte de la Fase 7 deja de ser
+  una ventana con el bot detenido y pasa a ser un cambio de DNS.
+- El hallazgo H (cuatro cuentas de la semilla vivas en producción) **se resuelve solo**: la base
+  nace vacía y `seedDemoAccounts` no corre con `NODE_ENV=production`.
+- Se pierde el historial de `AgentDecision` y sus evaluaciones, o sea la materia prima del
+  scorecard. Los agentes arrancan sin historial contra el cual comparar. Asumido a conciencia.
+
+> **Esto es el argumento de la migración, no una nota al pie.** La plataforma quedó inaccesible por
+> una condición comercial, no por un fallo técnico — el mismo patrón que el incidente de Neon que
+> tumbó a `display-ads` seis días. En Hetzner la base corre en un servidor propio y los dumps van
+> cada hora a un bucket propio, con un restore ya verificado (CA-003).
+
+### DEC-ADMIN — Un único `ADMIN` provisionado desde el entorno *(2026-09-01)*
+
+`UserRole` sólo tiene `TRADER | ADMIN`: **no existe un rol `SUPERADMIN`** en el esquema ni el
+concepto en el código. "Superadmin" acá es el único usuario con rol `ADMIN`.
+
+- Se provisiona desde `ADMIN_USERNAME` (un email; `LoginDto` valida con `@IsEmail()`) y
+  `ADMIN_PASSWORD`, con hash bcrypt de 12 rondas, igual que el resto de la semilla.
+- **Converge en cada corrida**: rotar la contraseña es cambiar el secret y redesplegar — mismo
+  patrón que el rol de aplicación en `00-init.sql`.
+- **Fail-closed en producción**: sin esas variables la semilla aborta. El `CMD` del Dockerfile corre
+  `prisma db seed` antes de arrancar la API, así que el contenedor no levanta. Una API en producción
+  sin forma de entrar no es un servicio degradado.
+- Si aparecen **otros** usuarios `ADMIN`, se reportan con un warning pero **no se borran**: un seed
+  que borra usuarios termina borrando al equivocado.
+
 ## 8. Riesgos
 
 | Riesgo | Por qué |
 | --- | --- |
-| **La migración de datos** | Es el paso irreversible. Por eso los backups van antes. |
+| ~~La migración de datos~~ | Eliminado: la Fase 4 quedó cancelada (DEC-DATOS). El riesgo del paso irreversible desaparece con ella. |
 | **Disco de 40 GB** | Dumps transitorios + embeddings crecientes, sin posibilidad de achicar. |
 | **WebSocket tras nginx** | Sin configuración explícita de upgrade, el frontend conecta y se cae en silencio. Sin referencia en `display-ads`. |
 | **Renovación del certificado** | Let's Encrypt dura 90 días (DEC-DOM). Si la renovación automática falla y nadie mira, el sitio deja de cargar. Un Origin Certificate de Cloudflare habría durado años. |

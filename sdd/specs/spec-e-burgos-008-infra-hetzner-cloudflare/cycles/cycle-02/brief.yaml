@@ -1,0 +1,70 @@
+# sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-02/brief.yaml
+# Generado por: sdd-orchestrator | Al: iniciar el ciclo
+
+cycle: 2
+module: infra-hetzner-cloudflare
+phase: api-in-production
+date: 2026-09-01
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Dejar la API de crypto-trader corriendo en el VPS de Hetzner, accesible por HTTPS en
+  trader.estebanburgos.com.ar, con un unico usuario ADMIN provisionado desde el entorno y un
+  health check que verifique de verdad la base y Redis.
+
+scope:
+  - Fase 5 — seedSuperAdmin() desde ADMIN_USERNAME/ADMIN_PASSWORD, fail-closed en produccion
+  - Fase 5 — health check real contra Postgres y Redis (hoy es {status:'ok'} fijo)
+  - Fase 5 — imagen de la API en GHCR y workflow de deploy
+  - Fase 5 — servicios api y nginx en docker-compose.prod.yml
+  - Fase 5 — .env.production generado desde GitHub Secrets, nunca versionado
+  - Fase 5 — registro A trader.estebanburgos.com.ar en Hostinger + certbot en el VPS
+  - Fase 5 — TRUST_PROXY_HOPS real y WebSocket detras de nginx
+
+out_of_scope:
+  - Migrar datos desde Railway — CANCELADO, ver DEC-DATOS de la spec
+  - Frontend en Cloudflare Pages (Fase 6, cycle-03)
+  - Observabilidad y decision de degradacion de Redis (Fase 8, cycle-04)
+  - Integracion de Resend (spec aparte)
+  - Las 3 tasks abiertas de cycle-01 (suites de shell y doc del servidor): se cierran en su ciclo
+
+dependencies_required:
+  - cycle-01 en pie — Postgres, Redis y backups verificados. NO hace falta que este cerrado.
+
+open_decisions_blocking:
+  - Ninguna. Dominio, cuenta de Cloudflare y RPO ya resueltos en la spec.
+
+agent_contexts:
+  functional:
+    goal: >
+      Historias verificables sobre lo que el operador y el trader necesitan de una API en el aire:
+      poder entrar, y que un contenedor que reinicia se declare sano solo si de verdad lo esta.
+    relevant_spec_sections: ["§6 CA-004b, CA-005", "§7 DEC-DOM, DEC-ADMIN", "§1 hallazgos B, D, F"]
+
+  architect:
+    goal: >
+      Contrato del health check (que consulta y con que timeout), forma de nginx para HTTP y
+      WebSocket, cadena del certificado, y el mapa de GitHub Secrets a .env.production.
+    existing_tables: []
+    existing_endpoints: ["EP-health"]
+
+  implementor_back:
+    goal: Implementar la semilla del ADMIN y el health check. Es el unico codigo de src/ del ciclo.
+    app: apps/api
+    app_context: sdd/context/apps/api/context_prompt.md
+
+  reviewer:
+    goal: Verificar CA-004b y CA-005 por evidencia — iniciar sesion de verdad, no leer configuracion
+
+notes: |
+  Contexto heredado de cycle-01, verificado:
+    - VPS 2.29.24.221, Ubuntu 26.04.1, Docker 29.7.2 + Compose 5.5.0, usuario deploy
+    - Postgres pgvector:pg16 y Redis (noeviction + AOF) sin puertos publicados, healthy
+    - Base crypto_trader con las 37 migraciones y vector 0.8.6; rol crypto_trader_app sin superuser
+    - Backups horarios a R2 con restore verificado en base descartable
+    - Firewall Hetzner: solo TCP/22 desde la IP del dev. 80/443 HAY QUE ABRIRLOS en este ciclo
+      a 0.0.0.0/0 (DEC-DOM: sin proxy de Cloudflare no hay rango que acotar), y el 80 ademas lo
+      necesita el desafio HTTP-01 de Let's Encrypt.
+    - El CMD del Dockerfile ya corre `prisma migrate deploy && prisma db seed` antes de arrancar:
+      las migraciones se aplican solas y NO hay que duplicarlas en el workflow.
+    - Prisma 7 toma la URL de prisma.config.ts, no del schema.

@@ -24,6 +24,7 @@ import {
   UserRiskPolicyResponse,
 } from './dto/user-risk-policy.dto';
 import { ListBotActionsDto } from './dto/list-bot-actions.dto';
+import { ListEntryOrdersDto } from './dto/list-entry-orders.dto';
 // eslint-disable-next-line @nx/enforce-module-boundaries
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 // eslint-disable-next-line @nx/enforce-module-boundaries
@@ -746,6 +747,58 @@ export class TradingService implements OnModuleInit {
         decisionId: true,
         detail: true,
         occurredAt: true,
+      },
+    });
+
+    const hasMore = items.length > limit;
+    const page = hasMore ? items.slice(0, limit) : items;
+
+    return {
+      items: page,
+      nextCursor: hasMore ? page[page.length - 1].id : null,
+    };
+  }
+
+  // ── Entry order ledger ────────────────────────────────────────────────────
+
+  async listEntryOrders(userId: string, query: ListEntryOrdersDto) {
+    const limit = query.limit ?? 50;
+
+    const items = await this.prisma.entryOrder.findMany({
+      where: {
+        userId,
+        ...(query.configId ? { configId: query.configId } : {}),
+        ...(query.status ? { status: query.status } : {}),
+        ...(query.since ? { placedAt: { gte: new Date(query.since) } } : {}),
+      },
+      orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        configId: true,
+        symbol: true,
+        mode: true,
+        entryMode: true,
+        status: true,
+        quantity: true,
+        limitPrice: true,
+        stopPrice: true,
+        stopLimitPrice: true,
+        trailingDeltaBips: true,
+        referencePrice: true,
+        plannedNotionalUsd: true,
+        clientOrderId: true,
+        orderListId: true,
+        orderId: true,
+        placedAt: true,
+        expiresAt: true,
+        filledLeg: true,
+        executedPrice: true,
+        executedQuantity: true,
+        positionId: true,
+        cancelReason: true,
+        settledAt: true,
       },
     });
 

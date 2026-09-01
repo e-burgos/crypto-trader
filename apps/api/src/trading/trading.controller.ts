@@ -32,6 +32,7 @@ import {
 } from './dto/trading-config.dto';
 import { UpdateUserRiskPolicyDto } from './dto/user-risk-policy.dto';
 import { ListBotActionsDto } from './dto/list-bot-actions.dto';
+import { ListEntryOrdersDto } from './dto/list-entry-orders.dto';
 import { generateAgentName } from './trading-agent-utils';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -259,6 +260,35 @@ export class TradingController {
     @Query() query: ListBotActionsDto,
   ) {
     return this.tradingService.getBotActions(user.userId, query);
+  }
+
+  @Get('entry-orders')
+  @ApiOperation({
+    summary: 'Ledger consultable de entry_orders (paginado, filtrable)',
+  })
+  @ApiQuery({ name: 'configId', required: false, type: String })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['RESTING', 'FILLED', 'CANCELLED', 'EXPIRED', 'MISSING'],
+  })
+  @ApiQuery({
+    name: 'since',
+    required: false,
+    type: String,
+    example: '2026-08-01T00:00:00Z',
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 50 })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Ciclo de vida observable de las entradas de un bot',
+  })
+  getEntryOrders(
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListEntryOrdersDto,
+  ) {
+    return this.tradingService.listEntryOrders(user.userId, query);
   }
 
   // ── Positions ─────────────────────────────────────────────────────────────

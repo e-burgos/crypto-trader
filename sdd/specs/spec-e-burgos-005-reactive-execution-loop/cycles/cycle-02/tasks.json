@@ -562,12 +562,20 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/src/trading/trading.controller.ts",
         "apps/api/src/trading/trading.controller.entry-orders.spec.ts",
-        "apps/api/src/trading/trading.service.ts"
-      ]
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/dto/list-entry-orders.dto.ts"
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 6500,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-022",

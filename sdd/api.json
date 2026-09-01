@@ -481,7 +481,7 @@
         "path": "/trading/entry-orders",
         "module": "reactive-execution-loop",
         "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
-        "status": "defined",
+        "status": "implemented",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "description": "Registro consultable de las ordenes de entrada descansando en el exchange (tabla entry_orders): cada LIMIT_MAKER suelta u OCO de compra colocada por el bot, con su estado en todo momento (RESTING | FILLED | CANCELLED | EXPIRED | MISSING), el nivel al que descansa, el notional comprometido y, cuando lleno, que pierna lleno y a que precio. Recurso PROPIO, no embebido en EP-008: una entrada descansando no es una posicion (no tiene P&L, ni proteccion, ni exitReason) y embeberla habria roto el paginado de GET /trading/positions o obligado a un array paralelo donde total/page dejan de describir el contenido; ademas apps/web declara su propia interfaz del response de posiciones, asi que todo campo nuevo ahi es una ruptura silenciosa que el typecheck del monorepo no detecta. Paginado por cursor (id, orden placedAt desc), misma forma que EP-016. ListEntryOrdersDto es una clase con decoradores: un @Query() tipado inline desactiva el ValidationPipe global en silencio. Guardado por JwtAuthGuard + RolesGuard con @Roles('TRADER'); scope estricto por entry_orders.userId, no por join contra TradingConfig.",

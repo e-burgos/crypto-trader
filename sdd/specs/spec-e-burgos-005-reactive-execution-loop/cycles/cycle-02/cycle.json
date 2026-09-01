@@ -3,7 +3,12 @@
   "cycle": 2,
   "module": "reactive-execution-loop",
   "spec": "spec-e-burgos-005-reactive-execution-loop",
-  "apps": ["apps/api", "libs/data-fetcher", "libs/trading-engine", "libs/shared"],
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/trading-engine",
+    "libs/shared"
+  ],
   "phase": "exchange-resting-entries",
   "flow": "full",
   "objectives": [
@@ -19,7 +24,9 @@
   "documents": {
     "brief": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/brief.yaml"
   },
-  "artifacts": [],
+  "artifacts": [
+    "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/artifacts/testnet-write-probe.md"
+  ],
   "metrics": null,
   "tables_created": [],
   "endpoints_implemented": [],

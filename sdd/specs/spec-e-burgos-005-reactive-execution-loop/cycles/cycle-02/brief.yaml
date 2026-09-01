@@ -186,6 +186,11 @@ verified_facts:
        PRICE_FILTER tickSize 0.01, LOT_SIZE stepSize 0.00001 minQty 0.00001, NOTIONAL minNotional 5,
        TRAILING_DELTA min/max Above y Below = 10/2000 BIPS. Balances: 10000 USDT, 10000 USDC, 1 BTC.
        0 órdenes abiertas en BTCUSDT. Latencia: exchangeInfo ~950 ms, account ~300 ms."
+    - "Probe de ESCRITURA ejecutado 2026-09-01 (ver artifacts/testnet-write-probe.md): LIMIT_MAKER BUY,
+       STOP_LOSS_LIMIT BUY con trailingDelta (con y sin stopPrice) y OCO BUY (belowType LIMIT_MAKER +
+       aboveType STOP_LOSS_LIMIT, con aboveTrailingDelta) se colocan, consultan y cancelan en testnet.
+       trailingDelta=5 => -1013 'Filter failure: TRAILING_DELTA'. LIMIT_MAKER BUY sobre el mercado =>
+       -2010 'Order would immediately match and take.' Pesos medidos = ENDPOINT_WEIGHTS vigentes."
     - "Producción se redeploya con cada push a main. El trabajo va en la rama feat/spec-005-cycle-02
        y se mergea después del cierre del reviewer, con el interruptor apagado."
 

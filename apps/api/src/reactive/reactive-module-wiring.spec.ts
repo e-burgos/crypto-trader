@@ -9,7 +9,9 @@ import { MarketStreamService } from './market-stream.service';
 import { StreamHealthService } from './stream-health.service';
 import { StreamHealthController } from './stream-health.controller';
 import { FastPathService } from './fast-path.service';
+import { EntryFillWatchService } from './entry-fill-watch.service';
 import { MaterialEventService } from './material-event.service';
+import { EntryOrderService } from '../trading/entry-order.service';
 
 function mockQueue() {
   return {
@@ -38,6 +40,8 @@ describe('ReactiveModule wiring in AppModule', () => {
     expect(moduleRef.get(MarketStreamService)).toBeInstanceOf(MarketStreamService);
     expect(moduleRef.get(StreamHealthService)).toBeInstanceOf(StreamHealthService);
     expect(moduleRef.get(FastPathService)).toBeInstanceOf(FastPathService);
+    expect(moduleRef.get(EntryFillWatchService)).toBeInstanceOf(EntryFillWatchService);
+    expect(moduleRef.get(EntryOrderService)).toBeInstanceOf(EntryOrderService);
     expect(moduleRef.get(MaterialEventService)).toBeInstanceOf(MaterialEventService);
 
     const controller = moduleRef.get(StreamHealthController);

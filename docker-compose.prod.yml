@@ -1,8 +1,8 @@
 # Compose de producción del VPS Hetzner (/opt/crypto-trader/docker-compose.yml).
 # Contrato: spec-e-burgos-008 cycle-01, architect §1-2. Cubre US-01-003.
 #
-# En este ciclo sólo existen postgres y redis. nginx y api llegan en la Fase 5;
-# hasta entonces el servidor no expone nada más que SSH.
+# nginx es el ÚNICO servicio que publica puertos. api, postgres y redis viven
+# sólo en la red interna del compose.
 #
 # ⛔ NUNCA `docker compose down -v`: el flag -v borra los volúmenes con nombre y
 #    se lleva la base entera.
@@ -88,6 +88,51 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  # ── API NestJS ─────────────────────────────────────────────────────────────
+  # SIN `ports:`: sólo nginx la alcanza, por la red interna.
+  # El CMD de la imagen corre `prisma migrate deploy && prisma db seed` antes de
+  # arrancar, así que las migraciones y el usuario ADMIN se aplican solos y NO
+  # hay que duplicarlos en el workflow de deploy.
+  api:
+    image: crypto-trader-api:latest
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      # Consulta el health check real (base + Redis), que responde 503 si alguna
+      # está caída. Un `wget` a secas contra un endpoint que devuelve 200 fijo
+      # no distinguiría un contenedor sano de uno sin base.
+      test:
+        - CMD-SHELL
+        - >-
+          wget -qO- http://127.0.0.1:3000/api/health | grep -q '"status":"ok"'
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  # ── nginx — el único con puertos publicados ────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - api
     logging:
       driver: json-file
       options: { max-size: '10m', max-file: '3' }

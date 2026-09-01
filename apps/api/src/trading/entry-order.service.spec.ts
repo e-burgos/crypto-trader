@@ -1,3 +1,4 @@
+import { NotificationType } from '@crypto-trader/shared';
 import {
   ENTRY_CLIENT_ORDER_ID_PREFIX,
   EntryOrderService,
@@ -171,13 +172,24 @@ describe('EntryOrderService — placement and cancellation (TASK-012)', () => {
       120 * 60_000,
     );
     expect(created.id).toBe('entry-1');
-    expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
+    expect(gatewayMock.emitToUser).toHaveBeenCalledWith('user-1', 'entry-order:placed', {
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      symbol: 'BTCUSDT',
+      entryMode: 'LIMIT_MAKER',
+      limitPrice: 63_000,
+      stopPrice: null,
+      stopLimitPrice: null,
+      trailingDeltaBips: null,
+      quantity: 0.01,
+      plannedNotionalUsd: 630,
+      placedAt: created.placedAt,
+      expiresAt: created.expiresAt,
+    });
+    expect(notificationsMock.create).toHaveBeenCalledWith(
       'user-1',
-      'entry-order:placed',
-      expect.objectContaining({ entryOrderId: 'entry-1', entryMode: 'LIMIT_MAKER' }),
-    );
-    expect(notificationsMock.create.mock.calls[0][2]).toContain(
-      'entryOrderPlaced',
+      NotificationType.TRADE_EXECUTED,
+      expect.stringContaining('entryOrderPlaced'),
     );
   });
 
@@ -312,11 +324,12 @@ describe('EntryOrderService — placement and cancellation (TASK-012)', () => {
         cancelReason: reason,
       });
       expect(outcome).toEqual({ cancelled: ['entry-1'], failed: [] });
-      expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
-        'user-1',
-        'entry-order:cancelled',
-        expect.objectContaining({ entryOrderId: 'entry-1', cancelReason: reason }),
-      );
+      expect(gatewayMock.emitToUser).toHaveBeenCalledWith('user-1', 'entry-order:cancelled', {
+        configId: 'config-1',
+        entryOrderId: 'entry-1',
+        symbol: 'BTCUSDT',
+        cancelReason: reason,
+      });
       expect(prisma.botAction.create.mock.calls[0][0].data).toMatchObject({
         kind: 'ENTRY_CANCEL',
         source: 'LLM_CYCLE',
@@ -389,11 +402,13 @@ describe('EntryOrderService — placement and cancellation (TASK-012)', () => {
       status: 'EXPIRED',
       cancelReason: 'TTL_EXPIRED',
     });
-    expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
-      'user-1',
-      'entry-order:expired',
-      expect.objectContaining({ entryOrderId: 'entry-1' }),
-    );
+    expect(gatewayMock.emitToUser).toHaveBeenCalledWith('user-1', 'entry-order:expired', {
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      symbol: 'BTCUSDT',
+      placedAt: restingRow.placedAt,
+      expiresAt: restingRow.expiresAt,
+    });
   });
 
   it('reaffirms only an identical, unexpired resting order', () => {
@@ -619,19 +634,21 @@ describe('EntryOrderService.settleFill (TASK-015)', () => {
     });
 
     expect(positionAction.placeInitialProtection).toHaveBeenCalledTimes(1);
-    expect(notificationsMock.create.mock.calls[0][2]).toContain(
-      'entryOrderFilled',
-    );
-    expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
+    expect(notificationsMock.create).toHaveBeenCalledWith(
       'user-1',
-      'entry-order:filled',
-      expect.objectContaining({
-        entryOrderId: 'entry-1',
-        positionId: 'pos-new',
-        filledLeg: 'LIMIT',
-        partial: false,
-      }),
+      NotificationType.TRADE_EXECUTED,
+      expect.stringContaining('entryOrderFilled'),
     );
+    expect(gatewayMock.emitToUser).toHaveBeenCalledWith('user-1', 'entry-order:filled', {
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      symbol: 'BTCUSDT',
+      positionId: 'pos-new',
+      filledLeg: 'LIMIT',
+      executedPrice: 63_000,
+      executedQuantity: 0.02,
+      partial: false,
+    });
   });
 
   it('settles the STOP leg of an OCO exactly like the LIMIT leg, reading the leg from the exchange', async () => {

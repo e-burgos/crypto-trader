@@ -1,3 +1,4 @@
+import { NotificationType } from '@crypto-trader/shared';
 import { ReconciliationService } from './reconciliation.service';
 import { EntryOrderService } from './entry-order.service';
 import { PositionActionService } from './position-action.service';
@@ -703,16 +704,18 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
       cancelReason: 'VANISHED_ON_EXCHANGE',
     });
     expect((prisma.entryOrder as any).delete).toBeUndefined();
-    expect(
-      notificationsMock.create.mock.calls.some((call: any) =>
-        call[2].includes('entryOrderMissing'),
-      ),
-    ).toBe(true);
-    expect(gatewayMock.emitToUser).toHaveBeenCalledWith(
+    expect(notificationsMock.create).toHaveBeenCalledWith(
       'user-1',
-      'entry-order:missing',
-      expect.objectContaining({ entryOrderId: 'entry-1' }),
+      NotificationType.AGENT_ERROR,
+      expect.stringContaining('entryOrderMissing'),
     );
+    expect(gatewayMock.emitToUser).toHaveBeenCalledWith('user-1', 'entry-order:missing', {
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      symbol: 'BTCUSDT',
+      orderListId: null,
+      orderId: 'oid-1',
+    });
   });
 
   it('orphan sweep — one getOpenOrders call feeds both sweeps and each keeps to its own prefix', async () => {

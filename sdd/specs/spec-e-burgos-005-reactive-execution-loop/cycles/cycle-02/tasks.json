@@ -1,0 +1,279 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-005-reactive-execution-loop",
+  "cycle": 2,
+  "module": "reactive-execution-loop",
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/trading-engine",
+    "libs/shared"
+  ],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": {
+    "tasks_generated": true
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Vocabulario de tipos de entrada + filtro TRAILING_DELTA en libs/shared",
+      "user_stories": ["US-2-002", "US-2-003", "US-2-004", "US-2-006", "US-2-007"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-002",
+      "title": "getSymbolFilters lee el filtro TRAILING_DELTA",
+      "user_stories": ["US-2-004", "US-2-006"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-003",
+      "title": "Validación local de filtros para órdenes de entrada (LOT_SIZE/PRICE_FILTER/NOTIONAL/TRAILING_DELTA)",
+      "user_stories": ["US-2-004", "US-2-006"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-002"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-004",
+      "title": "placeLimitMakerBuy — entrada suelta en el soporte",
+      "user_stories": ["US-2-002", "US-2-006"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-003"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-005",
+      "title": "placeOcoBuyOrder — OCO de entrada con trailingDelta opcional",
+      "user_stories": ["US-2-003", "US-2-004", "US-2-006"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-003"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-006",
+      "title": "Consulta y cancelación de entradas — reúso de getOrderStatus/getOcoStatus/cancelOrder/cancelOcoOrderList",
+      "user_stories": ["US-2-003", "US-2-007"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-004", "TASK-005"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-007",
+      "title": "Resolver puro del nivel de entrada (supportResistance + fallback)",
+      "user_stories": ["US-2-002", "US-2-003"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-008",
+      "title": "OrderExecutorPort extendido + SandboxOrderExecutor (contrato en memoria)",
+      "user_stories": ["US-2-002", "US-2-003", "US-2-004", "US-2-005", "US-2-006", "US-2-007"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-001", "TASK-007"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-009",
+      "title": "LiveOrderExecutor — delegación estructural a las órdenes de entrada",
+      "user_stories": ["US-2-002", "US-2-003", "US-2-004", "US-2-006", "US-2-007"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-006", "TASK-008"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-010",
+      "title": "schema.prisma — tabla entry_orders, columnas de TradingConfig, EXCHANGE_TRIGGER",
+      "user_stories": ["US-2-001", "US-2-007"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-011",
+      "title": "DTOs — entryOrderMode, TTL y trailingDelta en Create/Update",
+      "user_stories": ["US-2-001"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-010"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-012",
+      "title": "EntryOrderService — colocación y persistencia",
+      "user_stories": ["US-2-002", "US-2-003", "US-2-004", "US-2-006"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-007", "TASK-009", "TASK-010", "TASK-011"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-013",
+      "title": "Camino de BUY del processor — entrada descansando vía authorizeAndRun",
+      "user_stories": ["US-2-001", "US-2-005", "US-2-017"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-012"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-014",
+      "title": "bot_actions — excluir EXCHANGE_TRIGGER del conteo de caps por hora",
+      "user_stories": ["US-2-014"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": ["TASK-010"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-015",
+      "title": "Reconciliación — fill de una entrada crea Position + Trade + protección",
+      "user_stories": ["US-2-007", "US-2-012", "US-2-013", "US-2-014"],
+      "estimation_hours": 7,
+      "story_points": 8,
+      "depends_on": ["TASK-009", "TASK-012", "TASK-014"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-016",
+      "title": "Reconciliación — vencimiento (TTL), MISSING y barrido de huérfanas propio",
+      "user_stories": ["US-2-007", "US-2-008"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-015"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-017",
+      "title": "Cancelación de entradas — decisión posterior, cap diario DISCARDED, stop del bot",
+      "user_stories": ["US-2-009", "US-2-010", "US-2-011"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-013", "TASK-015"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-018",
+      "title": "Concurrencia y notional planificado de una entrada RESTING",
+      "user_stories": ["US-2-015"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-012", "TASK-015"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-019",
+      "title": "Detección de fill fuera del ciclo del processor (D6)",
+      "user_stories": ["US-2-012"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-015"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-020",
+      "title": "Eventos WS y notificaciones por etapa de una entrada",
+      "user_stories": ["US-2-016"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-013", "TASK-015", "TASK-016", "TASK-017"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-021",
+      "title": "Endpoint de listado de entry_orders",
+      "user_stories": ["US-2-007"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-010"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-022",
+      "title": "Module wiring — dueño explícito de los servicios nuevos",
+      "user_stories": ["US-2-001"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-012", "TASK-015", "TASK-021"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-023",
+      "title": "Test de equivalencia CA-001 — entryOrderMode = MARKET es idéntico al comportamiento pre-ciclo",
+      "user_stories": ["US-2-001"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-013", "TASK-018", "TASK-022"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-024",
+      "title": "Harness Jest contra Binance TESTNET (D9)",
+      "user_stories": ["US-2-018"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-004", "TASK-005", "TASK-006"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-025",
+      "title": "Fragmento de contexto aditivo — libs/shared, libs/data-fetcher, libs/trading-engine",
+      "user_stories": ["US-2-002", "US-2-003", "US-2-004", "US-2-006", "US-2-007", "US-2-018"],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": ["TASK-009", "TASK-024"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-026",
+      "title": "Fragmento de contexto aditivo apps/api + journal (si aplica) + usage consolidado",
+      "user_stories": ["US-2-001"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": ["TASK-020", "TASK-021", "TASK-022", "TASK-023"],
+      "status": "pending",
+      "files": []
+    }
+  ]
+}

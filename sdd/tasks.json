@@ -77,6 +77,19 @@
           "status": "completed",
           "tasks_total": 38,
           "tasks_done": 34
+        },
+        "cycle-02": {
+          "file": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/tasks.json",
+          "module": "reactive-execution-loop",
+          "apps": [
+            "apps/api",
+            "libs/data-fetcher",
+            "libs/trading-engine",
+            "libs/shared"
+          ],
+          "status": "in-progress",
+          "tasks_total": 26,
+          "tasks_done": 0
         }
       }
     },

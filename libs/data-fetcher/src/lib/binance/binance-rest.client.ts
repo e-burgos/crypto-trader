@@ -479,6 +479,33 @@ export class BinanceRestClient {
     }
   }
 
+  private validateTrailingDelta(
+    bips: number,
+    filter: TrailingDeltaFilter | undefined,
+  ): void {
+    if (!filter) {
+      throw new OrderValidationError(
+        'TRAILING_DELTA',
+        `trailingDelta ${bips} was requested but the symbol does not declare a TRAILING_DELTA filter`,
+      );
+    }
+    if (
+      bips < filter.minTrailingAboveDelta ||
+      bips > filter.maxTrailingAboveDelta
+    ) {
+      throw new OrderValidationError(
+        'TRAILING_DELTA',
+        `trailingDelta ${bips} is outside [${filter.minTrailingAboveDelta}, ${filter.maxTrailingAboveDelta}]`,
+      );
+    }
+  }
+
+  private assertBuyPriceCrossesMarket(condition: boolean, message: string): void {
+    if (!condition) {
+      throw new OrderValidationError('PRICE_CROSSES_MARKET', message);
+    }
+  }
+
   private toOrderResult(data: BinanceOrderResponse): OrderResult {
     const executedQty = parseFloat(data.executedQty ?? '0');
     const quoteQty = parseFloat(data.cummulativeQuoteQty ?? '0');
@@ -576,16 +603,17 @@ export class BinanceRestClient {
     opts?: { clientOrderId?: string },
   ): Promise<OrderResult> {
     const filters = await this.getSymbolFilters(symbol);
+    const rounding = side === 'BUY' ? 'up' : 'down';
     const adjustedQty = this.validateQuantity(quantity, filters.lotSize);
     const adjustedStopPrice = this.validatePrice(
       stopPrice,
       filters.price,
-      'down',
+      rounding,
     );
     const adjustedLimitPrice = this.validatePrice(
       limitPrice,
       filters.price,
-      'down',
+      rounding,
     );
     this.validateNotional(adjustedLimitPrice, adjustedQty, filters.notional);
 

@@ -543,6 +543,69 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
       ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
       expect(getMockClient().request).not.toHaveBeenCalled();
     });
+
+    it('rounds BUY-side stop and limit prices up to the tick (§2.5 corollary)', async () => {
+      mockExchangeInfo('SLLUSDT3', {
+        priceFilter: { minPrice: '0.1', maxPrice: '999999', tickSize: '0.1' },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 201,
+          symbol: 'SLLUSDT3',
+          side: 'BUY',
+          status: 'NEW',
+          price: '108310.1',
+          origQty: '0.20000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeStopLossLimitOrder(
+        'SLLUSDT3',
+        'BUY',
+        0.2,
+        108210.03,
+        108310.04,
+      );
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.side).toBe('BUY');
+      expect(call.params.stopPrice).toBe('108210.1');
+      expect(call.params.price).toBe('108310.1');
+    });
+
+    it('still rounds SELL-side stop and limit prices down to the tick (regression)', async () => {
+      mockExchangeInfo('SLLUSDT4', {
+        priceFilter: { minPrice: '0.1', maxPrice: '999999', tickSize: '0.1' },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 202,
+          symbol: 'SLLUSDT4',
+          side: 'SELL',
+          status: 'NEW',
+          price: '108310.0',
+          origQty: '0.20000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeStopLossLimitOrder(
+        'SLLUSDT4',
+        'SELL',
+        0.2,
+        108210.03,
+        108310.04,
+      );
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.stopPrice).toBe('108210.0');
+      expect(call.params.price).toBe('108310.0');
+    });
   });
 
   describe('placeOcoSellOrder', () => {

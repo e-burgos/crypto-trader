@@ -173,6 +173,10 @@ export class BinanceRestClient {
   >();
   private static readonly PRICE_CACHE_TTL_MS = 8_000; // 8 seconds
 
+  getBaseUrl(): string {
+    return this.client.defaults.baseURL ?? '';
+  }
+
   constructor(config: BinanceRestConfig = {}) {
     this.apiKey = config.apiKey;
     this.apiSecret = config.apiSecret;

@@ -1,0 +1,97 @@
+# Compose de producción del VPS Hetzner (/opt/crypto-trader/docker-compose.yml).
+# Contrato: spec-e-burgos-008 cycle-01, architect §1-2. Cubre US-01-003.
+#
+# En este ciclo sólo existen postgres y redis. nginx y api llegan en la Fase 5;
+# hasta entonces el servidor no expone nada más que SSH.
+#
+# ⛔ NUNCA `docker compose down -v`: el flag -v borra los volúmenes con nombre y
+#    se lleva la base entera.
+services:
+  # ── Postgres autoalojado ───────────────────────────────────────────────────
+  # SIN `ports:` — architect DEC-03. NUNCA agregar `ports:`, ni siquiera
+  # bindeado a 127.0.0.1 "para debuggear": para eso está
+  # `docker compose exec postgres psql` desde el propio VPS por SSH.
+  postgres:
+    image: pgvector/pgvector:pg16 # la migración del RAG hace CREATE EXTENSION vector; postgres:16 pelado muere con P3018
+    restart: unless-stopped
+    env_file: .env.db # POSTGRES_PASSWORD y APP_DB_PASSWORD; lo escribe el deploy desde GitHub Secrets
+    environment:
+      TZ: UTC
+      PGTZ: UTC
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres # la base real la crea 00-init.sql con su owner correcto
+      POSTGRES_INITDB_ARGS: '--data-checksums --auth-host=scram-sha-256'
+    command: >
+      postgres
+      -c timezone=UTC
+      -c log_timezone=UTC
+      -c max_connections=60
+      -c superuser_reserved_connections=3
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c work_mem=8MB
+      -c maintenance_work_mem=128MB
+      -c max_wal_size=1GB
+      -c min_wal_size=128MB
+      -c checkpoint_completion_target=0.9
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c max_worker_processes=2
+      -c max_parallel_workers=2
+      -c max_parallel_workers_per_gather=0
+      -c idle_in_transaction_session_timeout=60000
+      -c log_min_duration_statement=1000
+      -c log_lock_waits=on
+      -c log_line_prefix='%m [%p] %u@%d '
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/initdb:/docker-entrypoint-initdb.d:ro
+    shm_size: '256mb'
+    healthcheck:
+      # Consulta la base REAL, no pg_isready: un pg_isready genérico da falso
+      # verde durante initdb, cuando Postgres levanta un servidor temporal en
+      # socket unix. architect DEC-04.
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD="$$POSTGRES_PASSWORD" psql -h 127.0.0.1 -p 5432 -U "$$POSTGRES_USER" -d crypto_trader -c "SELECT 1" >/dev/null 2>&1',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    logging: # el disco son 40 GB y no se puede achicar; este contenedor loguea queries lentas
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  # ── Redis — colas de Bull y leases del loop reactivo ───────────────────────
+  # NO se copia el `--maxmemory-policy allkeys-lru` de display-ads. Allá Redis
+  # es cache y desalojar una clave vieja es correcto; acá sostiene los ciclos de
+  # agentes encolados y los leases rx:v1:* del loop reactivo, y un desalojo bajo
+  # presión de memoria descarta jobs y leases EN SILENCIO. architect DEC-02.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy noeviction
+      --save 900 1
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+volumes:
+  postgres_data:
+  redis_data:

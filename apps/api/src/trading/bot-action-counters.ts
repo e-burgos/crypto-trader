@@ -23,6 +23,8 @@ export async function getBotActionCounters(
       configId: input.configId,
       outcome: 'EXECUTED',
       occurredAt: { gte: windowStart },
+      source: { not: 'EXCHANGE_TRIGGER' },
+      kind: { not: 'ENTRY_CANCEL' },
     },
     _count: { _all: true },
     _max: { occurredAt: true },

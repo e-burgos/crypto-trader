@@ -16,7 +16,7 @@ import {
 import { DEFAULT_REACTIVE_RUNTIME_THRESHOLDS } from '../reactive/reactive-runtime-thresholds';
 import { getBotActionCounters } from './bot-action-counters';
 
-export type BotActionSource = 'FAST_PATH' | 'LLM_CYCLE';
+export type BotActionSource = 'FAST_PATH' | 'LLM_CYCLE' | 'EXCHANGE_TRIGGER';
 
 export type ActionOutcome = 'EXECUTED' | 'BLOCKED' | 'DEFERRED' | 'SUPERSEDED';
 

@@ -659,6 +659,40 @@
         "source": "declared-estimate",
         "model_tier": "claude/opus"
       }
+    },
+    {
+      "id": "FIX-e-burgos-013",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-013.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-09-01",
+      "resolved_at": "2026-09-01",
+      "validated_at": null,
+      "title": "El indice vectorial del RAG no existe: una migracion de Prisma borro la columna pgvector",
+      "estimation_hours": 3,
+      "description": "La migracion 20260413130000_add_agent_definitions_rag creo por SQL crudo la columna agent_document_chunks.embedding_vec vector(1024) y su indice ivfflat. La migracion siguiente, 20260413184109_add_platform_operation_mode, las BORRO a las dos: su cabecera lo declara ('You are about to drop the column embedding_vec ... All the data in the column will be lost') y su cuerpo hace DROP INDEX mas ALTER TABLE DROP COLUMN. Fue dano colateral de una migracion autogenerada: Prisma no conocia esa columna porque la creo SQL crudo y no estaba en schema.prisma, asi que al regenerar el diff la elimino. El nombre de la migracion no menciona embeddings. Verificado contra la base de produccion: information_schema devuelve solo 'embedding :: jsonb' y pg_indexes no lista ningun indice vectorial. rag.service.ts intenta pgvector y cae a coseno EN MEMORIA sobre los embeddings en JSON, camino por el que viene corriendo en silencio desde entonces. El comentario del modelo Prisma sigue afirmando 'pgvector column added via raw migration', que es lo que impidio detectarlo.",
+      "justification": "Va por FIX GATE y no por ciclo SDD: son 3 archivos (una migracion, schema.prisma y un script de verificacion), sin endpoints nuevos, sin entidades nuevas, y agent_document_chunks NO esta registrada en sdd/schema.json. No puede esperar un ciclo porque la busqueda semantica carga TODOS los chunks en memoria en cada consulta: hoy hay 2 y no se nota, pero el costo crece linealmente con el corpus y el momento barato de arreglarlo es ahora, con el indice practicamente vacio y sin nada que re-embeber.",
+      "related_modules": [
+        "rag",
+        "orchestrator"
+      ],
+      "affected_files": [
+        "apps/api/prisma/migrations/20260901180000_restore_pgvector_column/migration.sql",
+        "apps/api/prisma/schema.prisma",
+        "infra/scripts/verify-pgvector-index.sh"
+      ],
+      "test_reference": "Verificado contra la base de produccion, no en local. Antes del fix: information_schema devolvia solo 'embedding :: jsonb' y pg_indexes no listaba ningun indice vectorial. Despues: verify-pgvector-index.sh pasa sus 5 chequeos (extension instalada, columna presente, tipo exacto vector(1024), indice ivfflat existente y cero chunks con embedding pero sin vector). Con 2 chunks reales indexados desde OpenRouter se midio vector_dims=1024, vector_norm=1.0001 y la consulta nativa de coseno (1 - (a.embedding_vec <=> b.embedding_vec)) devolvio 0.4720, o sea que el operador de pgvector opera sobre datos reales y no sobre NULLs. El backfill desde el jsonb poblo las 2 filas preexistentes. El verificador vuelve a pasar con la tabla vacia tras limpiar el documento de prueba. prisma generate sigue funcionando con la columna Unsupported.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 12000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

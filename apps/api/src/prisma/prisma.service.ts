@@ -103,6 +103,9 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get botAction() {
     return this._client.botAction;
   }
+  get entryOrder() {
+    return this._client.entryOrder;
+  }
 
   $queryRaw<T = unknown>(
     ...args: Parameters<PrismaClientInstance['$queryRaw']>

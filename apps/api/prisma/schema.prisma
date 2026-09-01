@@ -185,11 +185,43 @@ enum BotActionKind {
   SELL_FULL
   SELL_PARTIAL
   PROTECTION_REARM
+  ENTRY_CANCEL
 }
 
 enum BotActionSource {
   FAST_PATH
   LLM_CYCLE
+  EXCHANGE_TRIGGER
+}
+
+enum EntryOrderMode {
+  MARKET
+  LIMIT_MAKER
+  OCO
+}
+
+enum EntryOrderStatus {
+  RESTING
+  FILLED
+  CANCELLED
+  EXPIRED
+  MISSING
+}
+
+enum EntryOrderLeg {
+  LIMIT
+  STOP
+}
+
+enum EntryOrderCancelReason {
+  TTL_EXPIRED
+  LATER_DECISION
+  DAILY_LOSS_DISCARDED
+  BOT_STOPPED
+  REPLACED_BY_NEW_ENTRY
+  PARTIAL_FILL_REMAINDER
+  ORPHAN_SWEEP
+  VANISHED_ON_EXCHANGE
 }
 
 enum BotActionOutcome {
@@ -238,6 +270,7 @@ model User {
   decisionEvaluations AgentDecisionEvaluation[]
   riskPolicy        UserRiskPolicy?
   botActions        BotAction[]
+  entryOrders       EntryOrder[]
 
   @@map("users")
 }
@@ -335,12 +368,16 @@ model TradingConfig {
   reactiveLoopEnabled             Boolean @default(false)
   maxActionsPerHour               Int     @default(6)
   minActionIntervalSec            Int     @default(60)
+  entryOrderMode                  EntryOrderMode @default(MARKET)
+  entryOrderTtlMinutes            Int     @default(120)
+  entryTrailingDeltaBips          Int?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  positions Position[]
-  botActions BotAction[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positions   Position[]
+  botActions  BotAction[]
+  entryOrders EntryOrder[]
 
   @@map("trading_configs")
 }
@@ -845,4 +882,49 @@ model BotAction {
   @@index([configId, occurredAt])
   @@index([userId, occurredAt])
   @@map("bot_actions")
+}
+
+model EntryOrder {
+  id                 String                  @id @default(cuid())
+  userId             String
+  configId           String
+  symbol             String
+  asset              Asset
+  pair               QuoteCurrency
+  mode               TradingMode
+  entryMode          EntryOrderMode
+  status             EntryOrderStatus        @default(RESTING)
+  quantity           Float
+  limitPrice         Float
+  stopPrice          Float?
+  stopLimitPrice     Float?
+  trailingDeltaBips  Int?
+  referencePrice     Float
+  plannedNotionalUsd Float
+  clientOrderId      String                  @unique
+  orderListId        String?
+  orderId            String?
+  limitLegOrderId    String?
+  stopLegOrderId     String?
+  placedAt           DateTime                @default(now())
+  expiresAt          DateTime
+  /// Referencia de auditoría, sin FK a propósito (ver nota)
+  decisionId         String?
+  /// Referencia de auditoría, sin FK a propósito (ver nota)
+  positionId         String?
+  filledLeg          EntryOrderLeg?
+  executedPrice      Float?
+  executedQuantity   Float?
+  settledAt          DateTime?
+  cancelReason       EntryOrderCancelReason?
+  lastError          String?
+  updatedAt          DateTime                @updatedAt
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config TradingConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@index([configId, status])
+  @@index([userId, status])
+  @@index([status, expiresAt])
+  @@map("entry_orders")
 }

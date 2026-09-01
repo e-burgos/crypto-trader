@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "BotActionSource" ADD VALUE 'EXCHANGE_TRIGGER';
+ALTER TYPE "BotActionKind" ADD VALUE 'ENTRY_CANCEL';

@@ -618,4 +618,35 @@ describe('TradingProcessor — resting entry placement (TASK-013)', () => {
       detail: 'BUY',
     });
   });
+  it('the concurrency reader counts RESTING entries on the MARKET path too (TASK-018)', async () => {
+    const placeMarketOrder = jest.spyOn(
+      BinanceRestClient.prototype,
+      'placeMarketOrder',
+    );
+    const actionGate = { authorizeAndRun: jest.fn() };
+    const entryOrderCount = jest.fn().mockResolvedValue(1);
+    const prisma = makePrismaMock({
+      count: entryOrderCount,
+      aggregate: jest
+        .fn()
+        .mockResolvedValue({ _sum: { plannedNotionalUsd: null } }),
+      findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn(),
+    });
+    prisma.position.count = jest.fn().mockResolvedValue(1);
+    const { processor } = buildProcessor(prisma, actionGate);
+
+    await runBuy(processor, { ...baseConfig, entryOrderMode: 'MARKET' });
+
+    expect(entryOrderCount).toHaveBeenCalledWith({
+      where: {
+        configId: 'config-1',
+        asset: 'BTC',
+        mode: 'LIVE',
+        status: 'RESTING',
+      },
+    });
+    expect(placeMarketOrder).not.toHaveBeenCalled();
+    expect(actionGate.authorizeAndRun).not.toHaveBeenCalled();
+  });
 });

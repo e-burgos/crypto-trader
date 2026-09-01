@@ -98,13 +98,12 @@ export class RiskBudgetService {
     userId: string,
     configId?: string,
   ): Promise<number> {
-    return this.prisma.position.count({
-      where: {
-        userId,
-        status: 'OPEN',
-        ...(configId ? { configId } : {}),
-      },
-    });
+    const scope = { userId, ...(configId ? { configId } : {}) };
+    const [open, resting] = await Promise.all([
+      this.prisma.position.count({ where: { ...scope, status: 'OPEN' } }),
+      this.prisma.entryOrder.count({ where: { ...scope, status: 'RESTING' } }),
+    ]);
+    return open + resting;
   }
 
   private async resolveMaxConcurrentPositions(

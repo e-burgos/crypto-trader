@@ -9,6 +9,9 @@ function createMockPrisma(overrides: Record<string, unknown> = {}) {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    entryOrder: {
+      count: jest.fn().mockResolvedValue(0),
+    },
     tradingConfig: {
       findUnique: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
@@ -175,6 +178,57 @@ describe('RiskBudgetService', () => {
       expect(result.maxConcurrentPositions).toBe(0);
       expect(result.blockedBy).toBe('MAX_POSITIONS');
     });
+
+    it('a RESTING entry occupies a concurrency slot exactly like an open position (TASK-018)', async () => {
+      const entryOrderCount = jest.fn().mockResolvedValue(1);
+      const prisma = createMockPrisma({
+        position: {
+          count: jest.fn().mockResolvedValue(1),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        entryOrder: { count: entryOrderCount },
+        tradingConfig: {
+          findUnique: jest.fn().mockResolvedValue({ maxConcurrentPositions: 2 }),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+      });
+      const { service } = buildService(prisma);
+
+      const result = await service.assess({
+        userId: 'user-1',
+        configId: 'cfg-1',
+      });
+
+      expect(entryOrderCount).toHaveBeenCalledWith({
+        where: { userId: 'user-1', configId: 'cfg-1', status: 'RESTING' },
+      });
+      expect(result.openPositionCount).toBe(2);
+      expect(result.blockedBy).toBe('MAX_POSITIONS');
+    });
+
+    it('an entry that left RESTING stops occupying its slot (TASK-018)', async () => {
+      const prisma = createMockPrisma({
+        position: {
+          count: jest.fn().mockResolvedValue(1),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+        entryOrder: { count: jest.fn().mockResolvedValue(0) },
+        tradingConfig: {
+          findUnique: jest.fn().mockResolvedValue({ maxConcurrentPositions: 2 }),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+      });
+      const { service } = buildService(prisma);
+
+      const result = await service.assess({
+        userId: 'user-1',
+        configId: 'cfg-1',
+      });
+
+      expect(result.openPositionCount).toBe(1);
+      expect(result.canTrade).toBe(true);
+    });
+
   });
 
   describe('assessAggregate', () => {

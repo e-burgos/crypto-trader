@@ -25,7 +25,8 @@
     "brief": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/brief.yaml"
   },
   "artifacts": [
-    "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/artifacts/testnet-write-probe.md"
+    "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/artifacts/testnet-write-probe.md",
+    "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/artifacts/testnet-integration-run.md"
   ],
   "metrics": null,
   "tables_created": [],

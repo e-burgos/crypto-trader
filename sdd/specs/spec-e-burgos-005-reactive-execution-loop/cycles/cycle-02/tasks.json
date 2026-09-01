@@ -213,7 +213,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "apps/api/prisma/schema.prisma",
         "apps/api/prisma/migrations/20260901230000_add_entry_order_bot_action_values/migration.sql",
@@ -221,7 +221,15 @@
         "apps/api/prisma/migrations/20260901230200_add_trading_config_entry_order_columns/migration.sql",
         "apps/api/src/prisma/prisma.service.ts",
         "apps/api/src/__mocks__/generated-prisma.ts"
-      ]
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 6500,
+        "duration_minutes": 4,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-011",
@@ -234,7 +242,7 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/dto/trading-config.dto.ts",
         "apps/api/src/trading/dto/trading-config.dto.spec.ts"
@@ -293,7 +301,7 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "apps/api/src/trading/bot-action-counters.ts",
         "apps/api/src/trading/bot-action-counters.spec.ts",

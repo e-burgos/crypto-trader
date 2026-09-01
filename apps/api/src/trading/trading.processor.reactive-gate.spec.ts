@@ -604,8 +604,9 @@ describe('TradingProcessor — wiring of the LLM_CYCLE path to actionGate.author
 
       // Every point of execution the architect's §3.5 enumerates (executeBuy x2 branches,
       // executeLLMSell, closePositionAtMarket, the partial-TP wrap, ensureNativeProtection)
-      // opens its own authorizeAndRun call.
-      expect(gateCallLines).toHaveLength(6);
+      // opens its own authorizeAndRun call, plus the two of the resting-entry path of
+      // cycle-02 §7.1/§7.3 (placement and bot-decided cancellation).
+      expect(gateCallLines).toHaveLength(8);
       // Each of the 5 PositionActionService methods the LLM path uses is invoked exactly once,
       // always as the execute() callback of the nearest preceding gate call.
       expect(positionActionCallLines).toHaveLength(5);

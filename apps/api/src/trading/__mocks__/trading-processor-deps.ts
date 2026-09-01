@@ -14,7 +14,7 @@ const REACTIVE_LOOP_DISABLED_CONFIG = {
 export function createTradingPrismaMock(
   models: Record<string, any> = {},
 ): any {
-  const { tradingConfig, ...otherModels } = models;
+  const { tradingConfig, entryOrder, ...otherModels } = models;
   return {
     ...otherModels,
     tradingConfig: {
@@ -22,6 +22,17 @@ export function createTradingPrismaMock(
         .fn()
         .mockResolvedValue({ ...REACTIVE_LOOP_DISABLED_CONFIG }),
       ...tradingConfig,
+    },
+    entryOrder: {
+      count: jest.fn().mockResolvedValue(0),
+      aggregate: jest
+        .fn()
+        .mockResolvedValue({ _sum: { plannedNotionalUsd: null } }),
+      findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({ id: 'entry-1' }),
+      update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      ...entryOrder,
     },
   };
 }

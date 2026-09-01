@@ -21,7 +21,11 @@ import {
   ActionGateService,
   type ActionRequest,
 } from './action-gate.service';
-import { EntryOrderService } from './entry-order.service';
+import {
+  EntryOrderService,
+  type EntryOrderCancelReason,
+  type RestingEntryOrder,
+} from './entry-order.service';
 import {
   REACTIVE_COORDINATION,
   type ReactiveCoordinationPort,
@@ -41,11 +45,13 @@ import {
   shouldExitByTime,
   resolvePartialTakeProfit,
   resolveProtectionRearm,
+  resolveEntryLevels,
 } from '@crypto-trader/trading-engine';
 import type {
   TrailingConfig,
   PartialTakeProfitResult,
   BotActionKind,
+  EntryLevelPlan,
   OrderExecutorPort,
 } from '@crypto-trader/trading-engine';
 
@@ -57,6 +63,10 @@ import {
 } from '@crypto-trader/shared';
 import { SUPPORTED_PAIRS, TRADE_FEE_PCT } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
+import type {
+  RestingEntryMode,
+  SupportResistance,
+} from '@crypto-trader/shared';
 import type { AgentHealthReport } from '../agents/agent-config-resolver.service';
 import type { DecisionPayload } from '../orchestrator/dto/decision-synthesis.dto';
 
@@ -607,6 +617,7 @@ export class TradingProcessor {
             binanceSecret,
             cachedMarketPrice,
             decisionContext,
+            indicatorSnapshot.supportResistance,
           );
         } catch (orderErr) {
           const axiosData = (orderErr as any)?.response?.data;
@@ -883,17 +894,25 @@ export class TradingProcessor {
     apiSecret?: string,
     cachedPrice?: number,
     decisionContext?: DecisionExecutionContext,
+    levels?: SupportResistance,
   ) {
-    const openCount = await this.prisma.position.count({
-      where: {
-        userId,
+    const [openCount, restingCount] = await Promise.all([
+      this.prisma.position.count({
+        where: {
+          userId,
+          configId: config.id,
+          status: 'OPEN',
+          asset: config.asset,
+          mode: config.mode,
+        },
+      }),
+      this.entryOrders.countResting({
         configId: config.id,
-        status: 'OPEN',
         asset: config.asset,
         mode: config.mode,
-      },
-    });
-    if (openCount >= config.maxConcurrentPositions) {
+      }),
+    ]);
+    if (openCount + restingCount >= config.maxConcurrentPositions) {
       this.logger.log(`Max positions reached for user ${userId}`);
       return;
     }
@@ -1036,6 +1055,21 @@ export class TradingProcessor {
     // TESTNET: use cached kline-close price to avoid calling testnet.binance.vision
     // (unreliable, aggressive rate limits). LIVE: always fetch real-time price.
     const currentPrice = cachedPrice ?? (await executor.getPrice(symbol));
+
+    if (config.entryOrderMode && config.entryOrderMode !== 'MARKET') {
+      await this.placeRestingEntry({
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        currentPrice,
+        levels,
+        decisionContext,
+      });
+      return;
+    }
+
     // Apply offset to the reference price used for quantity calculation
     const liveOffsetPct: number = config.orderPriceOffsetPct ?? 0;
     const referencePrice = currentPrice * (1 + liveOffsetPct);
@@ -1162,6 +1196,235 @@ export class TradingProcessor {
         });
       }
     });
+  }
+
+  private async cancelRestingEntriesThroughGate(params: {
+    userId: string;
+    config: any;
+    symbol: string;
+    mode: TradingMode;
+    executor: OrderExecutorPort;
+    reason: EntryOrderCancelReason;
+    decisionId: string | null;
+    rows?: RestingEntryOrder[];
+  }) {
+    const request = this.buildActionRequest({
+      userId: params.userId,
+      config: params.config,
+      symbol: params.symbol,
+      mode: params.mode,
+      kind: 'ENTRY_CANCEL',
+      positionId: null,
+      decisionId: params.decisionId,
+      expected: null,
+      detail: params.reason,
+    });
+
+    return this.actionGate.authorizeAndRun(request, () =>
+      this.entryOrders.cancelResting({
+        userId: params.userId,
+        configId: params.config.id,
+        symbol: params.symbol,
+        executor: params.executor,
+        reason: params.reason,
+        rows: params.rows,
+        recordAction: false,
+        decisionId: params.decisionId,
+      }),
+    );
+  }
+
+  private async placeRestingEntry(params: {
+    userId: string;
+    config: any;
+    symbol: string;
+    mode: TradingMode;
+    executor: OrderExecutorPort;
+    currentPrice: number;
+    levels?: SupportResistance;
+    decisionContext?: DecisionExecutionContext;
+  }): Promise<void> {
+    const { userId, config, symbol, mode, executor, currentPrice } = params;
+    const entryMode = config.entryOrderMode as RestingEntryMode;
+    const decisionId = params.decisionContext?.decisionId ?? null;
+
+    const plan = resolveEntryLevels({
+      mode: entryMode,
+      referencePrice: currentPrice,
+      support: params.levels?.support ?? [],
+      resistance: params.levels?.resistance ?? [],
+      orderPriceOffsetPct: config.orderPriceOffsetPct ?? 0,
+    });
+    if (!plan) {
+      this.entryOrders.markSkipped({
+        userId,
+        configId: config.id,
+        symbol,
+        entryMode,
+      });
+      return;
+    }
+
+    const stopLimitPrice =
+      plan.stopPrice != null
+        ? plan.stopPrice * (1 + (config.stopLimitOffsetPct ?? 0.002))
+        : null;
+    const worstCasePrice = Math.max(
+      plan.limitPrice,
+      stopLimitPrice ?? plan.limitPrice,
+    );
+
+    const quoteBalance = await executor.getBalance(config.pair);
+    const sizing = this.resolveBuySizing(
+      quoteBalance.free,
+      worstCasePrice,
+      config,
+      params.decisionContext,
+    );
+    if (sizing.blockedBy) {
+      this.logger.log(
+        `Entry order sizing blocked for user ${userId}: ${sizing.blockedBy}`,
+      );
+      return;
+    }
+    const quantity = sizing.quantity;
+    if (quantity <= 0) return;
+
+    const replaced = await this.replaceOrReaffirmResting({
+      userId,
+      config,
+      symbol,
+      mode,
+      executor,
+      plan,
+      decisionId,
+    });
+    if (replaced !== 'PROCEED') return;
+
+    const restingNotionalUsd =
+      await this.entryOrders.sumRestingPlannedNotionalUsd({
+        userId,
+        asset: config.asset,
+        mode: config.mode,
+      });
+    const plannedNotionalUsd = quantity * worstCasePrice + restingNotionalUsd;
+
+    const aggregateVerdict = await this.aggregateRiskService.assertBuyAllowed({
+      userId,
+      asset: config.asset,
+      mode: config.mode,
+      plannedNotionalUsd,
+    });
+    if (!aggregateVerdict.allowed) {
+      this.logger.log(
+        `Entry order blocked by aggregate risk for user ${userId}: ${aggregateVerdict.blockedBy}`,
+      );
+      await this.notificationsService
+        .create(
+          userId,
+          NotificationType.AGENT_ERROR,
+          JSON.stringify({
+            key: 'aggregateRiskBlocked',
+            blockedBy: aggregateVerdict.blockedBy ?? '',
+          }),
+        )
+        .catch(() => null);
+      return;
+    }
+
+    const request = this.buildActionRequest({
+      userId,
+      config,
+      symbol,
+      mode,
+      kind: 'BUY',
+      positionId: null,
+      decisionId,
+      expected: null,
+      detail: `ENTRY_PLACED_${plan.mode}`,
+    });
+
+    const result = await this.actionGate.authorizeAndRun(request, () =>
+      this.entryOrders.placeResting({
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        plan,
+        stopLimitPrice,
+        quantity,
+        referencePrice: currentPrice,
+        plannedNotionalUsd: quantity * worstCasePrice,
+        decisionId,
+      }),
+    );
+
+    if (result.outcome === 'BLOCKED' && result.blockedBy === 'DAILY_LOSS') {
+      await this.cancelRestingEntriesThroughGate({
+        userId,
+        config,
+        symbol,
+        mode,
+        executor,
+        reason: 'DAILY_LOSS_DISCARDED',
+        decisionId,
+      });
+      return;
+    }
+
+    if (result.outcome !== 'EXECUTED') {
+      this.logger.log(
+        `Entry order for config ${config.id} was ${result.outcome.toLowerCase()}: ${result.detail}`,
+      );
+    }
+  }
+
+  private async replaceOrReaffirmResting(params: {
+    userId: string;
+    config: any;
+    symbol: string;
+    mode: TradingMode;
+    executor: OrderExecutorPort;
+    plan: EntryLevelPlan;
+    decisionId: string | null;
+  }): Promise<'PROCEED' | 'STOP'> {
+    const existing = await this.entryOrders.findResting(
+      params.config.id,
+      params.symbol,
+    );
+    if (existing.length === 0) return 'PROCEED';
+
+    const now = new Date();
+    if (
+      existing.some((order) =>
+        this.entryOrders.reaffirms(order, params.plan, now),
+      )
+    ) {
+      return 'STOP';
+    }
+
+    const cancellation = await this.cancelRestingEntriesThroughGate({
+      userId: params.userId,
+      config: params.config,
+      symbol: params.symbol,
+      mode: params.mode,
+      executor: params.executor,
+      reason: 'REPLACED_BY_NEW_ENTRY',
+      decisionId: params.decisionId,
+      rows: existing,
+    });
+
+    if (
+      cancellation.outcome !== 'EXECUTED' ||
+      (cancellation.value?.failed.length ?? 1) > 0
+    ) {
+      this.logger.warn(
+        `Aborting entry placement for config ${params.config.id}: could not confirm the cancellation of the previous resting entry`,
+      );
+      return 'STOP';
+    }
+    return 'PROCEED';
   }
 
   private async executeLLMSell(

@@ -11,6 +11,8 @@ describe('TradingService — getPositions (EP-008 cycle-03 extended select)', ()
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
   }
 

@@ -603,6 +603,30 @@ export class TradingProcessor {
         sizing: decision.sizing,
       };
 
+      const willPlaceEntry =
+        decision.decision === Decision.BUY &&
+        confidencePct >= config.buyThreshold;
+      if (
+        !willPlaceEntry &&
+        (isLiveMode || isTestnetMode) &&
+        binanceApiKey &&
+        binanceSecret
+      ) {
+        await this.cancelRestingEntriesAfterDecision({
+          userId,
+          config,
+          symbol: pair.symbol,
+          mode: config.mode as TradingMode,
+          apiKey: binanceApiKey,
+          apiSecret: binanceSecret,
+          decisionId: savedDecision.id,
+        }).catch((err) =>
+          this.logger.warn(
+            `Could not cancel resting entries after decision for config ${configId}: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
+      }
+
       if (
         decision.decision === Decision.BUY &&
         confidencePct >= config.buyThreshold
@@ -1232,6 +1256,39 @@ export class TradingProcessor {
         decisionId: params.decisionId,
       }),
     );
+  }
+
+  private async cancelRestingEntriesAfterDecision(params: {
+    userId: string;
+    config: any;
+    symbol: string;
+    mode: TradingMode;
+    apiKey: string;
+    apiSecret: string;
+    decisionId: string | null;
+  }): Promise<void> {
+    const rows = await this.entryOrders.findResting(
+      params.config.id,
+      params.symbol,
+    );
+    if (rows.length === 0) return;
+
+    await this.cancelRestingEntriesThroughGate({
+      userId: params.userId,
+      config: params.config,
+      symbol: params.symbol,
+      mode: params.mode,
+      executor: new LiveOrderExecutor(
+        new BinanceRestClient({
+          apiKey: params.apiKey,
+          apiSecret: params.apiSecret,
+          testnet: params.mode === TradingMode.TESTNET,
+        }),
+      ),
+      reason: 'LATER_DECISION',
+      decisionId: params.decisionId,
+      rows,
+    });
   }
 
   private async placeRestingEntry(params: {

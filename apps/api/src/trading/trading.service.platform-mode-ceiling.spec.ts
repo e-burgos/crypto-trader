@@ -12,6 +12,8 @@ describe('TradingService — platform operation mode ceiling (FIX-e-burgos-011)'
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
   }
 

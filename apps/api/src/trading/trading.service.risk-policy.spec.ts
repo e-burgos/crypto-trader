@@ -11,6 +11,8 @@ describe('TradingService — aggregate risk policy CRUD (EP-004 / EP-005)', () =
       {} as any,
       {} as any,
       {} as any,
+      {} as any,
+      {} as any,
     );
   }
 

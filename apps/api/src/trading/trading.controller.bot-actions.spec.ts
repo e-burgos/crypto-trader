@@ -49,6 +49,8 @@ describe('TradingController.getBotActions', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as any,
+      {} as any,
     );
 
     const controller = new TradingController(tradingService);

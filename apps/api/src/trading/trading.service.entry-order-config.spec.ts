@@ -10,6 +10,8 @@ function buildService(prisma: any, queue: any = { add: jest.fn() }) {
     {} as any,
     {} as any,
     {} as any,
+    {} as any,
+    {} as any,
   );
 }
 

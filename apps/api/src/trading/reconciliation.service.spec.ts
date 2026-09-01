@@ -5,6 +5,17 @@ import { PositionActionService } from './position-action.service';
 describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
   const gatewayMock = { emitToUser: jest.fn() };
   const notificationsMock = { create: jest.fn().mockResolvedValue({}) };
+  const aggregateRiskMock = {
+    evaluateDailyLoss: jest.fn().mockResolvedValue({ reached: false }),
+  };
+  const actionGateStub = {
+    authorizeAndRun: jest.fn().mockImplementation(async (_req: any, execute: any) => ({
+      outcome: 'EXECUTED',
+      blockedBy: null,
+      detail: 'ok',
+      value: await execute(),
+    })),
+  };
 
   const baseConfig = {
     id: 'config-1',
@@ -77,6 +88,8 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
         gatewayMock as any,
         positionAction,
       ),
+      aggregateRiskMock as any,
+      actionGateStub as any,
     );
   }
 
@@ -97,6 +110,9 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
   beforeEach(() => {
     gatewayMock.emitToUser.mockClear();
     notificationsMock.create.mockClear();
+    actionGateStub.authorizeAndRun.mockClear();
+    aggregateRiskMock.evaluateDailyLoss.mockClear();
+    aggregateRiskMock.evaluateDailyLoss.mockResolvedValue({ reached: false });
   });
 
   it('case 1 — PROTECTED + ACTIVE is a no-op', async () => {

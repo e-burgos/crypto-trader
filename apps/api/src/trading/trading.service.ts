@@ -45,6 +45,11 @@ import {
 } from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 import { assertModeWithinPlatformCeiling } from '../common/platform-operation-mode';
+import { ActionGateService } from './action-gate.service';
+import {
+  EntryOrderService,
+  type EntryOrderCancelReason,
+} from './entry-order.service';
 
 const DEFAULTS = {
   buyThreshold: 70,
@@ -116,6 +121,8 @@ export class TradingService implements OnModuleInit {
     private readonly orchestratorService: OrchestratorService,
     private readonly agentConfigResolver: AgentConfigResolverService,
     private readonly evaluationService: EvaluationService,
+    private readonly entryOrders: EntryOrderService,
+    private readonly actionGate: ActionGateService,
   ) {}
 
   /**
@@ -349,6 +356,8 @@ export class TradingService implements OnModuleInit {
       await this.stopAgentById(userId, configId);
     }
 
+    await this.cancelRestingEntriesForConfig(userId, config, 'BOT_STOPPED');
+
     await this.prisma.tradingConfig.delete({ where: { id: configId } });
     return { deleted: true, configId };
   }
@@ -411,6 +420,93 @@ export class TradingService implements OnModuleInit {
     return this.stopAgentById(userId, configId);
   }
 
+  private async cancelRestingEntriesForConfigs(configs: any[]): Promise<void> {
+    for (const config of configs) {
+      await this.cancelRestingEntriesForConfig(
+        config.userId,
+        config,
+        'BOT_STOPPED',
+      );
+    }
+  }
+
+  private async cancelRestingEntriesForConfig(
+    userId: string,
+    config: any,
+    reason: EntryOrderCancelReason,
+  ): Promise<void> {
+    if (
+      config.mode !== TradingMode.LIVE &&
+      config.mode !== TradingMode.TESTNET
+    ) {
+      return;
+    }
+    const pair = SUPPORTED_PAIRS.find(
+      (p) => p.asset === config.asset && p.quote === config.pair,
+    );
+    if (!pair) return;
+
+    try {
+      const resting = await this.entryOrders.findResting(
+        config.id,
+        pair.symbol,
+      );
+      if (resting.length === 0) return;
+
+      const executor = await this.buildEntryExecutor(userId, config.mode);
+      if (!executor) {
+        this.logger.warn(
+          `No Binance credentials to cancel the resting entries of config ${config.id} — they stay RESTING for the next reconciliation`,
+        );
+        return;
+      }
+
+      await this.actionGate.authorizeAndRun(
+        {
+          userId,
+          configId: config.id,
+          symbol: pair.symbol,
+          mode: config.mode as TradingMode,
+          kind: 'ENTRY_CANCEL',
+          source: 'LLM_CYCLE',
+          positionId: null,
+          decisionId: null,
+          expected: null,
+          detail: reason,
+        },
+        () =>
+          this.entryOrders.cancelResting({
+            userId,
+            configId: config.id,
+            symbol: pair.symbol,
+            executor,
+            reason,
+            rows: resting,
+            recordAction: false,
+          }),
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Failed to cancel the resting entries of config ${config.id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
+  private async buildEntryExecutor(userId: string, mode: string) {
+    const isTestnet = mode === TradingMode.TESTNET;
+    const credential = await this.prisma.binanceCredential.findUnique({
+      where: { userId_isTestnet: { userId, isTestnet } },
+    });
+    if (!credential) return null;
+    return new LiveOrderExecutor(
+      new BinanceRestClient({
+        apiKey: decrypt(credential.apiKeyEncrypted, credential.apiKeyIv),
+        apiSecret: decrypt(credential.secretEncrypted, credential.secretIv),
+        testnet: isTestnet,
+      }),
+    );
+  }
+
   async stopAgentById(userId: string, configId: string) {
     const config = await this.prisma.tradingConfig.findFirst({
       where: { id: configId, userId },
@@ -423,6 +519,8 @@ export class TradingService implements OnModuleInit {
       where: { id: config.id },
       data: { isRunning: false },
     });
+
+    await this.cancelRestingEntriesForConfig(userId, config, 'BOT_STOPPED');
 
     // Remove both the initial static-ID job and any auto-ID delayed jobs
     const jobId = `agent-${userId}-${config.id}`;
@@ -457,6 +555,8 @@ export class TradingService implements OnModuleInit {
       data: { isRunning: false },
     });
 
+    await this.cancelRestingEntriesForConfigs(runningConfigs);
+
     const configIds = new Set(runningConfigs.map((c) => c.id));
     const [waitingJobs, delayedJobs] = await Promise.all([
       this.tradingQueue.getWaiting(),
@@ -484,6 +584,8 @@ export class TradingService implements OnModuleInit {
       where: { userId, isRunning: true },
       data: { isRunning: false },
     });
+
+    await this.cancelRestingEntriesForConfigs(runningConfigs);
 
     const configIds = new Set(runningConfigs.map((c) => c.id));
     const [waitingJobs, delayedJobs] = await Promise.all([
@@ -527,6 +629,8 @@ export class TradingService implements OnModuleInit {
       where: { isRunning: true },
       data: { isRunning: false },
     });
+
+    await this.cancelRestingEntriesForConfigs(runningConfigs);
 
     const configIds = new Set(runningConfigs.map((c) => c.id));
     const [waitingJobs, delayedJobs] = await Promise.all([

@@ -3,10 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType, TRADE_FEE_PCT } from '@crypto-trader/shared';
+import type { TradingMode } from '@crypto-trader/shared';
 import type {
   OpenOrderSummary,
   OrderExecutorPort,
 } from '@crypto-trader/trading-engine';
+import { AggregateRiskService } from '../agents/domain/aggregate-risk.service';
+import { ActionGateService } from './action-gate.service';
 import { placeProtectionWithRetry } from './protection-retry';
 import {
   ENTRY_CLIENT_ORDER_ID_PREFIX,
@@ -25,6 +28,7 @@ export interface ReconciliationOutcome {
   entryOrdersSettled: number;
   entryOrdersExpired: number;
   entryOrphansCancelled: number;
+  entryOrdersDiscarded: number;
 }
 
 interface ReconciliationConfig {
@@ -73,6 +77,8 @@ export class ReconciliationService {
     private readonly notificationsService: NotificationsService,
     private readonly gateway: AppGateway,
     private readonly entryOrders: EntryOrderService,
+    private readonly aggregateRisk: AggregateRiskService,
+    private readonly actionGate: ActionGateService,
   ) {}
 
   async reconcile(input: ReconciliationInput): Promise<ReconciliationOutcome> {
@@ -85,6 +91,7 @@ export class ReconciliationService {
       entryOrdersSettled: 0,
       entryOrdersExpired: 0,
       entryOrphansCancelled: 0,
+      entryOrdersDiscarded: 0,
     };
 
     const openPositions = (await this.prisma.position.findMany({
@@ -153,9 +160,54 @@ export class ReconciliationService {
       input.config.id,
       input.symbol,
     );
+    if (resting.length === 0) return;
+
+    const dailyLoss = await this.aggregateRisk.evaluateDailyLoss({
+      userId: input.userId,
+      mode: input.config.mode as TradingMode,
+    });
+    if (dailyLoss.reached) {
+      outcome.entryOrdersDiscarded = await this.discardOnDailyLoss(
+        input,
+        resting,
+      );
+      return;
+    }
+
     for (const order of resting) {
       await this.reconcileEntryOrder(input, order, outcome);
     }
+  }
+
+  private async discardOnDailyLoss(
+    input: ReconciliationInput,
+    resting: RestingEntryOrder[],
+  ): Promise<number> {
+    const result = await this.actionGate.authorizeAndRun(
+      {
+        userId: input.userId,
+        configId: input.config.id,
+        symbol: input.symbol,
+        mode: input.config.mode as TradingMode,
+        kind: 'ENTRY_CANCEL',
+        source: 'LLM_CYCLE',
+        positionId: null,
+        decisionId: null,
+        expected: null,
+        detail: 'DAILY_LOSS_DISCARDED',
+      },
+      () =>
+        this.entryOrders.cancelResting({
+          userId: input.userId,
+          configId: input.config.id,
+          symbol: input.symbol,
+          executor: input.executor,
+          reason: 'DAILY_LOSS_DISCARDED',
+          rows: resting,
+          recordAction: false,
+        }),
+    );
+    return result.value?.cancelled.length ?? 0;
   }
 
   private async reconcileEntryOrder(

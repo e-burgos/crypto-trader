@@ -54,12 +54,19 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
-        "libs/data-fetcher/src/index.ts"
-      ]
+        "libs/data-fetcher/src/lib/binance/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 3500,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-003",
@@ -147,12 +154,19 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/trading-engine/src/lib/entry-levels.ts",
         "libs/trading-engine/src/lib/entry-levels.spec.ts",
-        "libs/trading-engine/src/index.ts"
-      ]
+        "libs/trading-engine/src/lib/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 6000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-008",

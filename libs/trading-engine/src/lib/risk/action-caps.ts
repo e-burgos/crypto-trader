@@ -1,4 +1,9 @@
-export type BotActionKind = 'BUY' | 'SELL_FULL' | 'SELL_PARTIAL' | 'PROTECTION_REARM';
+export type BotActionKind =
+  | 'BUY'
+  | 'SELL_FULL'
+  | 'SELL_PARTIAL'
+  | 'PROTECTION_REARM'
+  | 'ENTRY_CANCEL';
 
 export type ActionExposure = 'INCREASING' | 'REDUCING' | 'NEUTRAL';
 
@@ -23,6 +28,7 @@ const EXPOSURE_BY_KIND: Readonly<Record<BotActionKind, ActionExposure>> = {
   SELL_FULL: 'REDUCING',
   SELL_PARTIAL: 'REDUCING',
   PROTECTION_REARM: 'NEUTRAL',
+  ENTRY_CANCEL: 'REDUCING',
 };
 
 export function classifyActionExposure(kind: BotActionKind): ActionExposure {

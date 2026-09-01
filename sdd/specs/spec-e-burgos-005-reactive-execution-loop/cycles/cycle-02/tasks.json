@@ -185,13 +185,21 @@
         "TASK-001",
         "TASK-007"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/trading-engine/src/lib/order-executor.ts",
         "libs/trading-engine/src/lib/order-executor.spec.ts",
         "libs/trading-engine/src/lib/risk/action-caps.ts",
-        "libs/trading-engine/src/lib/risk/action-caps.spec.ts"
-      ]
+        "libs/trading-engine/src/lib/risk/action-caps.spec.ts",
+        "apps/api/src/trading/reconciliation.service.spec.ts"
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 9000,
+        "model_tier": "claude/sonnet",
+        "approx": true,
+        "source": "declared-estimate"
+      }
     },
     {
       "id": "TASK-009",

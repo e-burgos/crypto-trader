@@ -25,6 +25,9 @@ describe('ReconciliationService — 6-case matrix (TASK-013)', () => {
       getProtectionOrderStatus: jest.fn(),
       cancelProtectionOrder: jest.fn().mockResolvedValue(undefined),
       getOpenOrders: jest.fn().mockResolvedValue([]),
+      placeEntryOrder: jest.fn(),
+      getEntryOrderStatus: jest.fn(),
+      cancelEntryOrder: jest.fn().mockResolvedValue(undefined),
       ...overrides,
     };
   }

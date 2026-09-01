@@ -281,6 +281,130 @@ describe('SandboxOrderExecutor', () => {
       expect(await executor.getOpenOrders('ETHUSDT')).toEqual([]);
     });
   });
+
+  describe('entry order lifecycle', () => {
+    it('placeEntryOrder returns an orderId for LIMIT_MAKER and resting status until the price crosses the limit', async () => {
+      const placed = await executor.placeEntryOrder({
+        mode: 'LIMIT_MAKER',
+        symbol: 'BTCUSDT',
+        quantity: 0.1,
+        limitPrice: 64_000,
+        referencePrice: 65_000,
+        stopPrice: null,
+        stopLimitPrice: null,
+        trailingDeltaBips: null,
+        clientOrderId: 'ent-pos-1',
+      });
+
+      expect(placed.mode).toBe('LIMIT_MAKER');
+      expect(placed.orderId).toMatch(/^sandbox-entry-\d+$/);
+      expect(placed.orderListId).toBeNull();
+      expect(placed.limitLegOrderId).toBeNull();
+      expect(placed.stopLegOrderId).toBeNull();
+      expect(placed.clientOrderId).toBe('ent-pos-1');
+
+      const ref = {
+        orderListId: placed.orderListId,
+        orderId: placed.orderId,
+        limitLegOrderId: placed.limitLegOrderId,
+        stopLegOrderId: placed.stopLegOrderId,
+      };
+
+      const resting = await executor.getEntryOrderStatus('BTCUSDT', ref);
+      expect(resting.state).toBe('RESTING');
+
+      executor.setPrice('BTCUSDT', 64_000);
+      const filled = await executor.getEntryOrderStatus('BTCUSDT', ref);
+      expect(filled).toEqual({
+        state: 'FILLED',
+        filledLeg: 'LIMIT',
+        executedPrice: 64_000,
+        executedQuantity: 0.1,
+        remainingQuantity: 0,
+        partial: false,
+        orderId: placed.orderId,
+      });
+    });
+
+    it('placeEntryOrder returns orderListId plus synthetic leg ids for OCO and fills the STOP leg when price rises to the stop', async () => {
+      const placed = await executor.placeEntryOrder({
+        mode: 'OCO',
+        symbol: 'BTCUSDT',
+        quantity: 0.2,
+        limitPrice: 64_000,
+        referencePrice: 65_000,
+        stopPrice: 66_000,
+        stopLimitPrice: 66_100,
+        trailingDeltaBips: null,
+        clientOrderId: 'ent-pos-2',
+      });
+
+      expect(placed.mode).toBe('OCO');
+      expect(placed.orderId).toBeNull();
+      expect(placed.orderListId).toMatch(/^sandbox-entry-\d+$/);
+      expect(placed.limitLegOrderId).toBe(`${placed.orderListId}-limit`);
+      expect(placed.stopLegOrderId).toBe(`${placed.orderListId}-stop`);
+
+      const ref = {
+        orderListId: placed.orderListId,
+        orderId: placed.orderId,
+        limitLegOrderId: placed.limitLegOrderId,
+        stopLegOrderId: placed.stopLegOrderId,
+      };
+
+      executor.setPrice('BTCUSDT', 66_000);
+      const filled = await executor.getEntryOrderStatus('BTCUSDT', ref);
+      expect(filled).toEqual({
+        state: 'FILLED',
+        filledLeg: 'STOP',
+        executedPrice: 66_100,
+        executedQuantity: 0.2,
+        remainingQuantity: 0,
+        partial: false,
+        orderId: placed.orderListId,
+      });
+    });
+
+    it('getEntryOrderStatus reports MISSING for an unknown ref', async () => {
+      const status = await executor.getEntryOrderStatus('BTCUSDT', {
+        orderListId: null,
+        orderId: 'does-not-exist',
+        limitLegOrderId: null,
+        stopLegOrderId: null,
+      });
+      expect(status.state).toBe('MISSING');
+    });
+
+    it('cancelEntryOrder deletes the entry and is idempotent', async () => {
+      const placed = await executor.placeEntryOrder({
+        mode: 'LIMIT_MAKER',
+        symbol: 'BTCUSDT',
+        quantity: 0.1,
+        limitPrice: 64_000,
+        referencePrice: 65_000,
+        stopPrice: null,
+        stopLimitPrice: null,
+        trailingDeltaBips: null,
+        clientOrderId: 'ent-pos-3',
+      });
+
+      const ref = {
+        orderListId: placed.orderListId,
+        orderId: placed.orderId,
+        limitLegOrderId: placed.limitLegOrderId,
+        stopLegOrderId: placed.stopLegOrderId,
+      };
+
+      await executor.cancelEntryOrder('BTCUSDT', ref);
+      expect((await executor.getEntryOrderStatus('BTCUSDT', ref)).state).toBe(
+        'MISSING',
+      );
+
+      await expect(
+        executor.cancelEntryOrder('BTCUSDT', ref),
+      ).resolves.toBeUndefined();
+    });
+  });
 });
 
 describe('LiveOrderExecutor', () => {
@@ -295,6 +419,10 @@ describe('LiveOrderExecutor', () => {
       getOcoStatus: vi.fn(),
       cancelOcoOrderList: vi.fn(),
       getOpenOrders: vi.fn(),
+      placeLimitMakerBuyOrder: vi.fn(),
+      placeOcoBuyOrder: vi.fn(),
+      getEntryOrderStatus: vi.fn(),
+      cancelEntryOrder: vi.fn(),
     };
   }
 
@@ -474,6 +602,142 @@ describe('LiveOrderExecutor', () => {
       locked: 0,
     });
     expect(await executor.getPrice('BTCUSDT')).toBe(65000);
+  });
+
+  describe('entry order delegation', () => {
+    it('placeEntryOrder delegates a LIMIT_MAKER request to placeLimitMakerBuyOrder and maps the result', async () => {
+      const binance = createBinanceMock();
+      const placedAt = new Date();
+      binance.placeLimitMakerBuyOrder.mockResolvedValue({
+        orderId: 'lm-1',
+        clientOrderId: 'ent-1',
+        placedAt,
+      });
+      const executor = new LiveOrderExecutor(binance);
+
+      const result = await executor.placeEntryOrder({
+        mode: 'LIMIT_MAKER',
+        symbol: 'BTCUSDT',
+        quantity: 0.1,
+        limitPrice: 64_000,
+        referencePrice: 65_000,
+        stopPrice: null,
+        stopLimitPrice: null,
+        trailingDeltaBips: null,
+        clientOrderId: 'ent-1',
+      });
+
+      expect(binance.placeLimitMakerBuyOrder).toHaveBeenCalledWith('BTCUSDT', {
+        quantity: 0.1,
+        price: 64_000,
+        referencePrice: 65_000,
+        clientOrderId: 'ent-1',
+      });
+      expect(binance.placeOcoBuyOrder).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        mode: 'LIMIT_MAKER',
+        orderListId: null,
+        orderId: 'lm-1',
+        limitLegOrderId: null,
+        stopLegOrderId: null,
+        clientOrderId: 'ent-1',
+        placedAt,
+      });
+    });
+
+    it('placeEntryOrder delegates an OCO request to placeOcoBuyOrder with the mapped leg params and maps the result', async () => {
+      const binance = createBinanceMock();
+      const placedAt = new Date();
+      binance.placeOcoBuyOrder.mockResolvedValue({
+        orderListId: 'ol-1',
+        listClientOrderId: 'ent-2',
+        stopOrderId: 'so-1',
+        limitOrderId: 'lo-1',
+        placedAt,
+      });
+      const executor = new LiveOrderExecutor(binance);
+
+      const result = await executor.placeEntryOrder({
+        mode: 'OCO',
+        symbol: 'BTCUSDT',
+        quantity: 0.2,
+        limitPrice: 64_000,
+        referencePrice: 65_000,
+        stopPrice: 66_000,
+        stopLimitPrice: 66_100,
+        trailingDeltaBips: 50,
+        clientOrderId: 'ent-2',
+      });
+
+      expect(binance.placeOcoBuyOrder).toHaveBeenCalledWith('BTCUSDT', {
+        quantity: 0.2,
+        belowPrice: 64_000,
+        aboveStopPrice: 66_000,
+        abovePrice: 66_100,
+        aboveTrailingDeltaBips: 50,
+        referencePrice: 65_000,
+        listClientOrderId: 'ent-2',
+        belowClientOrderId: 'ent-2-l',
+        aboveClientOrderId: 'ent-2-s',
+      });
+      expect(binance.placeLimitMakerBuyOrder).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        mode: 'OCO',
+        orderListId: 'ol-1',
+        orderId: null,
+        limitLegOrderId: 'lo-1',
+        stopLegOrderId: 'so-1',
+        clientOrderId: 'ent-2',
+        placedAt,
+      });
+    });
+
+    it('getEntryOrderStatus delegates to the binance client with the opts leg discriminant', async () => {
+      const binance = createBinanceMock();
+      const status = {
+        state: 'RESTING' as const,
+        filledLeg: null,
+        executedPrice: null,
+        executedQuantity: null,
+        remainingQuantity: 0.2,
+        partial: false,
+        orderId: 'ol-1',
+      };
+      binance.getEntryOrderStatus.mockResolvedValue(status);
+      const executor = new LiveOrderExecutor(binance);
+
+      const ref = {
+        orderListId: 'ol-1',
+        orderId: null,
+        limitLegOrderId: 'lo-1',
+        stopLegOrderId: 'so-1',
+      };
+      const result = await executor.getEntryOrderStatus('BTCUSDT', ref, {
+        leg: 'STOP',
+      });
+
+      expect(result).toBe(status);
+      expect(binance.getEntryOrderStatus).toHaveBeenCalledWith(
+        'BTCUSDT',
+        ref,
+        { leg: 'STOP' },
+      );
+    });
+
+    it('cancelEntryOrder delegates to the binance client', async () => {
+      const binance = createBinanceMock();
+      const executor = new LiveOrderExecutor(binance);
+
+      const ref = {
+        orderListId: 'ol-1',
+        orderId: null,
+        limitLegOrderId: 'lo-1',
+        stopLegOrderId: 'so-1',
+      };
+      await executor.cancelEntryOrder('BTCUSDT', ref);
+
+      expect(binance.cancelEntryOrder).toHaveBeenCalledWith('BTCUSDT', ref);
+    });
   });
 });
 

@@ -25,6 +25,7 @@ describe('classifyActionExposure', () => {
     ['SELL_FULL', 'REDUCING'],
     ['SELL_PARTIAL', 'REDUCING'],
     ['PROTECTION_REARM', 'NEUTRAL'],
+    ['ENTRY_CANCEL', 'REDUCING'],
   ])('classifies %s as %s', (kind, expected) => {
     expect(classifyActionExposure(kind)).toBe(expected);
   });
@@ -32,7 +33,7 @@ describe('classifyActionExposure', () => {
 
 describe('evaluateActionCaps', () => {
   describe('REDUCING actions are never blocked (§3.1)', () => {
-    it.each<BotActionKind>(['SELL_FULL', 'SELL_PARTIAL'])(
+    it.each<BotActionKind>(['SELL_FULL', 'SELL_PARTIAL', 'ENTRY_CANCEL'])(
       'allows %s even with daily loss reached, min interval violated and hourly cap exhausted',
       (kind) => {
         const decision = evaluateActionCaps(

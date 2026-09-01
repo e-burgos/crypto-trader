@@ -5,6 +5,12 @@ import {
   TradeType,
   TradingMode,
   ExchangeOrderStatus,
+  EntryOrderRequest,
+  EntryOrderRef,
+  EntryOrderResult,
+  EntryOrderLeg,
+  EntryOrderExchangeStatus,
+  RestingEntryMode,
 } from '@crypto-trader/shared';
 import { TRADE_FEE_PCT } from '@crypto-trader/shared';
 
@@ -70,6 +76,13 @@ export interface OrderExecutorPort {
   ): Promise<ExchangeOrderStatus>;
   cancelProtectionOrder(symbol: string, ref: ProtectionOrderRef): Promise<void>;
   getOpenOrders(symbol: string): Promise<OpenOrderSummary[]>;
+  placeEntryOrder(req: EntryOrderRequest): Promise<EntryOrderResult>;
+  getEntryOrderStatus(
+    symbol: string,
+    ref: EntryOrderRef,
+    opts?: { leg?: EntryOrderLeg },
+  ): Promise<EntryOrderExchangeStatus>;
+  cancelEntryOrder(symbol: string, ref: EntryOrderRef): Promise<void>;
 }
 
 interface SandboxProtection {
@@ -80,6 +93,16 @@ interface SandboxProtection {
   clientOrderId: string | null;
 }
 
+interface SandboxEntry {
+  mode: RestingEntryMode;
+  symbol: string;
+  quantity: number;
+  limitPrice: number;
+  stopPrice: number | null;
+  stopLimitPrice: number | null;
+  clientOrderId: string;
+}
+
 /**
  * Sandbox executor for paper trading.
  */
@@ -87,6 +110,8 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
   private balances: Map<string, Balance>;
   private readonly protections = new Map<string, SandboxProtection>();
   private protectionCounter = 0;
+  private readonly entries = new Map<string, SandboxEntry>();
+  private entryCounter = 0;
 
   constructor(initialBalance = 10_000) {
     this.balances = new Map();
@@ -310,6 +335,107 @@ export class SandboxOrderExecutor implements OrderExecutorPort {
     return open;
   }
 
+  async placeEntryOrder(req: EntryOrderRequest): Promise<EntryOrderResult> {
+    const id = `sandbox-entry-${++this.entryCounter}`;
+    this.entries.set(id, {
+      mode: req.mode,
+      symbol: req.symbol,
+      quantity: req.quantity,
+      limitPrice: req.limitPrice,
+      stopPrice: req.stopPrice,
+      stopLimitPrice: req.stopLimitPrice,
+      clientOrderId: req.clientOrderId,
+    });
+
+    const placedAt = new Date();
+    if (req.mode === 'LIMIT_MAKER') {
+      return {
+        mode: req.mode,
+        orderListId: null,
+        orderId: id,
+        limitLegOrderId: null,
+        stopLegOrderId: null,
+        clientOrderId: req.clientOrderId,
+        placedAt,
+      };
+    }
+
+    return {
+      mode: req.mode,
+      orderListId: id,
+      orderId: null,
+      limitLegOrderId: `${id}-limit`,
+      stopLegOrderId: `${id}-stop`,
+      clientOrderId: req.clientOrderId,
+      placedAt,
+    };
+  }
+
+  async getEntryOrderStatus(
+    symbol: string,
+    ref: EntryOrderRef,
+  ): Promise<EntryOrderExchangeStatus> {
+    const key = ref.orderId ?? ref.orderListId ?? null;
+    const entry = key ? this.entries.get(key) : undefined;
+    if (!entry) {
+      return {
+        state: 'MISSING',
+        filledLeg: null,
+        executedPrice: null,
+        executedQuantity: null,
+        remainingQuantity: null,
+        partial: false,
+        orderId: null,
+      };
+    }
+
+    const price = this.currentPrices.get(symbol);
+    if (price !== undefined) {
+      if (price <= entry.limitPrice) {
+        return {
+          state: 'FILLED',
+          filledLeg: 'LIMIT',
+          executedPrice: entry.limitPrice,
+          executedQuantity: entry.quantity,
+          remainingQuantity: 0,
+          partial: false,
+          orderId: key,
+        };
+      }
+      if (
+        entry.mode === 'OCO' &&
+        entry.stopPrice !== null &&
+        price >= entry.stopPrice
+      ) {
+        return {
+          state: 'FILLED',
+          filledLeg: 'STOP',
+          executedPrice: entry.stopLimitPrice,
+          executedQuantity: entry.quantity,
+          remainingQuantity: 0,
+          partial: false,
+          orderId: key,
+        };
+      }
+    }
+
+    return {
+      state: 'RESTING',
+      filledLeg: null,
+      executedPrice: null,
+      executedQuantity: null,
+      remainingQuantity: entry.quantity,
+      partial: false,
+      orderId: key,
+    };
+  }
+
+  async cancelEntryOrder(_symbol: string, ref: EntryOrderRef): Promise<void> {
+    const key = ref.orderId ?? ref.orderListId ?? null;
+    if (!key) return;
+    this.entries.delete(key);
+  }
+
   private parseSymbol(symbol: string): { base: string; quote: string } {
     for (const quote of ['USDT', 'USDC']) {
       if (symbol.endsWith(quote)) {
@@ -368,6 +494,49 @@ export class LiveOrderExecutor implements OrderExecutorPort {
       ): Promise<ExchangeOrderStatus>;
       cancelOcoOrderList(symbol: string, orderListId: string): Promise<void>;
       getOpenOrders(symbol: string): Promise<OpenOrderSummary[]>;
+      placeLimitMakerBuyOrder(
+        symbol: string,
+        params: {
+          quantity: number;
+          price: number;
+          referencePrice: number;
+          clientOrderId?: string;
+        },
+      ): Promise<{ orderId: string; clientOrderId: string; placedAt: Date }>;
+      placeOcoBuyOrder(
+        symbol: string,
+        params: {
+          quantity: number;
+          belowPrice: number;
+          aboveStopPrice: number;
+          abovePrice: number;
+          aboveTrailingDeltaBips?: number;
+          referencePrice: number;
+          listClientOrderId?: string;
+          belowClientOrderId?: string;
+          aboveClientOrderId?: string;
+        },
+      ): Promise<{
+        orderListId: string;
+        listClientOrderId: string;
+        stopOrderId: string;
+        limitOrderId: string;
+        placedAt: Date;
+      }>;
+      getEntryOrderStatus(
+        symbol: string,
+        ref: {
+          orderListId?: string | null;
+          orderId?: string | null;
+          limitLegOrderId?: string | null;
+          stopLegOrderId?: string | null;
+        },
+        opts?: { leg?: EntryOrderLeg },
+      ): Promise<EntryOrderExchangeStatus>;
+      cancelEntryOrder(
+        symbol: string,
+        ref: { orderListId?: string | null; orderId?: string | null },
+      ): Promise<void>;
     },
   ) {}
 
@@ -462,6 +631,61 @@ export class LiveOrderExecutor implements OrderExecutorPort {
 
   async getOpenOrders(symbol: string): Promise<OpenOrderSummary[]> {
     return this.binance.getOpenOrders(symbol);
+  }
+
+  async placeEntryOrder(req: EntryOrderRequest): Promise<EntryOrderResult> {
+    if (req.mode === 'LIMIT_MAKER') {
+      const result = await this.binance.placeLimitMakerBuyOrder(req.symbol, {
+        quantity: req.quantity,
+        price: req.limitPrice,
+        referencePrice: req.referencePrice,
+        clientOrderId: req.clientOrderId,
+      });
+
+      return {
+        mode: 'LIMIT_MAKER',
+        orderListId: null,
+        orderId: result.orderId,
+        limitLegOrderId: null,
+        stopLegOrderId: null,
+        clientOrderId: result.clientOrderId,
+        placedAt: result.placedAt,
+      };
+    }
+
+    const result = await this.binance.placeOcoBuyOrder(req.symbol, {
+      quantity: req.quantity,
+      belowPrice: req.limitPrice,
+      aboveStopPrice: req.stopPrice as number,
+      abovePrice: req.stopLimitPrice as number,
+      aboveTrailingDeltaBips: req.trailingDeltaBips ?? undefined,
+      referencePrice: req.referencePrice,
+      listClientOrderId: req.clientOrderId,
+      belowClientOrderId: `${req.clientOrderId}-l`,
+      aboveClientOrderId: `${req.clientOrderId}-s`,
+    });
+
+    return {
+      mode: 'OCO',
+      orderListId: result.orderListId,
+      orderId: null,
+      limitLegOrderId: result.limitOrderId,
+      stopLegOrderId: result.stopOrderId,
+      clientOrderId: result.listClientOrderId,
+      placedAt: result.placedAt,
+    };
+  }
+
+  async getEntryOrderStatus(
+    symbol: string,
+    ref: EntryOrderRef,
+    opts?: { leg?: EntryOrderLeg },
+  ): Promise<EntryOrderExchangeStatus> {
+    return this.binance.getEntryOrderStatus(symbol, ref, opts);
+  }
+
+  async cancelEntryOrder(symbol: string, ref: EntryOrderRef): Promise<void> {
+    await this.binance.cancelEntryOrder(symbol, ref);
   }
 }
 

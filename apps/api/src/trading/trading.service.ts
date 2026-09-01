@@ -1177,6 +1177,14 @@ export class TradingService implements OnModuleInit {
         newsHeadlines: newsItems.slice(0, 5) as any,
         waitMinutes: result.waitMinutes,
         configId: config.id,
+        // El costo se persiste igual que en el camino programado
+        // (trading.processor.ts). Omitirlo dejaba en NULL toda decision
+        // disparada a mano y el dashboard subreportaba sin ningun error
+        // (FIX-e-burgos-015). `?? null` conserva la distincion entre "costo
+        // cero" y "no se pudo tarifar", que es la razon por la que la columna
+        // es nullable.
+        llmCostUsd: result.llmCostUsd ?? null,
+        llmCallCount: result.llmCallCount ?? 0,
         metadata: {
           subAgentResults: result.subAgentResults,
           llmProvider: result.llmProvider,

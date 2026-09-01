@@ -1,0 +1,31 @@
+# Generado por: sdd-orchestrator | Al: iniciar el ciclo
+cycle: 3
+module: infra-hetzner-cloudflare
+phase: cutover-and-decommission
+date: 2026-09-01
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Cerrar el corte: verificar que un ciclo de agente completo corre de punta a punta en Hetzner y
+  queda registrado, y dar de baja Railway, que es lo ultimo que queda del stack anterior.
+
+scope:
+  - Fase 7 — verificacion de un ciclo de agente completo contra la infraestructura nueva (CA-007)
+  - Fase 7 — baja de Railway
+
+out_of_scope:
+  - Observabilidad y decision de degradacion de Redis (Fase 8, cycle-04)
+  - Fase 6 — ya ejecutada en cycle-02 por DEC-PAGES
+
+dependencies_required:
+  - cycle-02 cerrado. La API y la SPA tienen que estar sirviendo para poder verificar un ciclo.
+
+open_decisions_blocking:
+  - Ninguna tecnica. La baja de Railway la ejecuta el dueno: es destructiva sobre su cuenta.
+
+notes: |
+  Este ciclo NACE casi cumplido. La Fase 7 original era "corte de DNS + verificacion + baja de
+  Railway", pero DEC-DOM reescribio la primera parte (el alta del registro A en Hostinger se hizo en
+  cycle-02) y la verificacion de CA-007 se produjo sola al cazar bugs: se corrieron 5 ciclos reales
+  de agente en SANDBOX contra la infraestructura nueva, y son los que destaparon FIX-e-burgos-014.
+  Queda entonces un solo trabajo real: la baja de Railway.

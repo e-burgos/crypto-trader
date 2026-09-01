@@ -732,6 +732,39 @@
         "source": "declared-estimate",
         "model_tier": "claude/opus"
       }
+    },
+    {
+      "id": "FIX-e-burgos-015",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-015.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-09-01",
+      "resolved_at": "2026-09-01",
+      "validated_at": null,
+      "title": "El costo LLM no se guarda en las decisiones disparadas a mano: el dashboard subreporta",
+      "estimation_hours": 1,
+      "description": "TradingService.triggerAnalysis llama a orchestrateDecision, que devuelve llmCostUsd y llmCallCount, pero su prisma.agentDecision.create OMITE los dos campos. El camino programado (trading.processor.ts:522) si los persiste. Resultado: toda decision disparada desde el boton de analisis manual queda con llmCostUsd NULL y sin llmCallCount, asi que el dashboard de costo subreporta sin ningun error. Medido en produccion: de 5 decisiones reales, la unica con costo ($0.0038725) es la del ciclo programado; las 4 de trigger-analysis quedaron en NULL, pese a que OpenRouter SI publica tarifa para los cinco modelos configurados (verificado contra su catalogo). Es el hallazgo C de spec-001 reapareciendo por un camino que aquel ciclo no cubrio: metadata.manualTrigger:true muestra que se penso distinguir ese origen, pero el costo se olvido.",
+      "justification": "FIX GATE y no ciclo: un archivo, sin entidades ni endpoints nuevos, sin tocar sdd/schema.json. No espera porque la plataforma ya tiene claves LIVE conectadas y el dashboard de costo es la unica senal de cuanto gasta el operador en LLM; una subestimacion silenciosa es peor que no medir.",
+      "related_modules": [
+        "trading",
+        "orchestrator"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.service.trigger-analysis.spec.ts"
+      ],
+      "test_reference": "Verificado en produccion con dos decisiones reales creadas por el MISMO endpoint. Antes: conf 0.88, llmCostUsd NULL, llmCallCount 0, manualTrigger true. Despues: conf 0.72, llmCostUsd 0.006398032088, llmCallCount 5, manualTrigger true. El guard estatico trading.service.trigger-analysis.spec.ts (4 asserts) exige que el create persista llmCostUsd y llmCallCount, que use ?? null y NO ?? 0 para el costo —la columna es nullable justamente para distinguir 'gratis' de 'no se pudo tarifar'— y que los contadores caigan a 0 porque su columna es Int no-nullable. Suite completa 755/755 en 88 suites, typecheck y lint en verde.",
+      "status": "implemented",
+      "cycle": "cycle-03",
+      "usage": {
+        "tokens_in": 120000,
+        "tokens_out": 15000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

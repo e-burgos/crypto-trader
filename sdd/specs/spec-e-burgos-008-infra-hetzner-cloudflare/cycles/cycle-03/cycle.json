@@ -1,0 +1,78 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 3,
+  "module": "infra-hetzner-cloudflare",
+  "spec": "spec-e-burgos-008-infra-hetzner-cloudflare",
+  "apps": [
+    "apps/api"
+  ],
+  "phase": "cutover-and-decommission",
+  "flow": "reduced",
+  "objectives": [
+    "Verificar por evidencia que un ciclo de agente completo corre en Hetzner y queda registrado (CA-007)",
+    "Dar de baja Railway, lo ultimo que queda del stack anterior"
+  ],
+  "status": "completed",
+  "started_at": "2026-09-01",
+  "completed_at": "2026-09-01",
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-008-infra-hetzner-cloudflare/cycles/cycle-03/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "tasks_skipped": 0,
+    "story_points": 0,
+    "files_created": [
+      "apps/api/src/trading/trading.service.trigger-analysis.spec.ts"
+    ],
+    "files_modified": [
+      "apps/api/src/trading/trading.service.ts"
+    ],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 280000,
+      "tokens_out": 34000,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/opus": {
+          "tokens_in": 280000,
+          "tokens_out": 34000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [
+    "RESUELTO por FIX-e-burgos-015 — triggerAnalysis no persistia llmCostUsd ni llmCallCount, asi que toda decision manual quedaba con costo NULL y el dashboard subreportaba en silencio. Es el hallazgo C de spec-001 reapareciendo por un camino que aquel ciclo no cubrio.",
+    "REGRESION PROPIA, resuelta — el primer intento del fix agrego pricedCallCount y unpricedCallCount, copiados del objeto INTERNO del processor y no de su create real. Esos campos no existen en el modelo y el endpoint paso a devolver 500 con PrismaClientValidationError. Lo detecto ejecutar el endpoint contra produccion, NO el typecheck: hay un any de por medio en el create de Prisma.",
+    "BLOQUEADO POR EL DUENO — la baja de Railway no se ejecuta. Su trial vencio y todos sus deployments estan en REMOVED, asi que no corre nada, pero el proyecto sigue existiendo. Borrarlo es destructivo sobre la cuenta del dueno.",
+    "OBSERVACION — altfins devuelve 401 en cada ciclo porque su credencial no esta cargada. Las 8 fuentes estan activas pero sin claves; se cargan por el panel de admin, no por env."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-01",
+    "ca_results": {
+      "CA-007": "PASS — 6 ciclos completos de agente corrieron contra la infraestructura nueva y quedaron registrados en agent_decisions. Cada uno ejercito la cadena entera: cola de Bull, data-fetcher (5 de 6 fuentes OK, altfins sin credencial), calculo de indicadores, los cuatro sub-agentes por OpenRouter, sintesis, persistencia y evaluaciones agendadas. La progresion de confianza documenta ademas el efecto de FIX-e-burgos-014: 0.20 con el gate fallando abierto, y 0.72 / 0.82 / 0.84 / 0.88 a medida que los sub-agentes dejaron de truncar. El ultimo ciclo verifica tambien FIX-e-burgos-015 con costo real persistido: llmCostUsd 0.006398032088 y llmCallCount 5."
+    },
+    "tests": {
+      "nx test api": "755/755 en 88 suites",
+      "typecheck:api": "OK",
+      "lint api": "0 errores",
+      "sdd:validate": "OK — 22 archivos validos",
+      "verificacion en produccion": "Comparacion directa sobre el mismo endpoint: antes conf 0.88 con llmCostUsd NULL y llmCallCount 0; despues conf 0.72 con llmCostUsd 0.006398032088 y llmCallCount 5."
+    },
+    "notes": "APROBADO con una salvedad explicita: la baja de Railway NO se ejecuto y el ciclo se cierra igual. Es lo unico de la Fase 7 que queda, y no lo ejecuta un agente — borrar el proyecto es destructivo sobre la cuenta del dueno. En terminos de riesgo el corte ya esta hecho: el trial vencio, todos los deployments estan REMOVED y nada de la plataforma depende de ese stack. El ciclo nacio casi cumplido porque DEC-DOM ya habia movido el alta de DNS a cycle-02 y la verificacion de CA-007 se produjo sola al cazar bugs. El trabajo real que aparecio fue otro: revisar la evidencia de CA-007 destapo que el costo LLM no se guardaba en el camino manual, lo que se cerro como FIX-e-burgos-015. Vale registrar que el primer intento de ese fix introdujo una regresion (500 en el endpoint) que el typecheck no vio y que solo aparecio al ejecutar contra produccion.",
+    "follow_ups": [
+      "El dueno tiene que borrar el proyecto de Railway para cerrar la Fase 7 del todo.",
+      "Cargar las credenciales de las 8 fuentes de datos por el panel: altfins devuelve 401 en cada ciclo.",
+      "El typecheck no protege el create de Prisma en trading.service.ts por un any de por medio. Vale evaluar tipar ese punto."
+    ]
+  }
+}

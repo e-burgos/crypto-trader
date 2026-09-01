@@ -120,6 +120,19 @@ services:
       driver: json-file
       options: { max-size: '10m', max-file: '3' }
 
+  # ── SPA (React + Vite) servida por su propio nginx ─────────────────────────
+  # Va en el MISMO origen que la API a proposito: el nginx de borde publica la
+  # SPA en / y la API en /api, de modo que no hay CORS, ni preflight, ni una
+  # segunda configuracion de origenes que se desincronice. El WebSocket queda
+  # same-origin por la misma razon.
+  # SIN `ports:`: solo el nginx de borde la alcanza.
+  web:
+    image: crypto-trader-web:latest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
   # ── nginx — el único con puertos publicados ────────────────────────────────
   nginx:
     image: nginx:alpine
@@ -133,6 +146,7 @@ services:
       - ./certbot/www:/var/www/certbot:ro
     depends_on:
       - api
+      - web
     logging:
       driver: json-file
       options: { max-size: '10m', max-file: '3' }

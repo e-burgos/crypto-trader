@@ -5,7 +5,13 @@ import { useAuthStore } from '../store/auth.store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMarketStore } from '../store/market.store';
 
-const WS_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// VITE_API_URL is the REST base and includes the `/api` prefix, but the Socket.io
+// gateway lives on the origin under namespace `/ws` — not under `/api`. Reusing
+// the REST base verbatim here made the client negotiate namespace `/api/ws`,
+// which the gateway does not serve.
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const WS_URL =
+  import.meta.env.VITE_WS_URL ?? API_URL.replace(/\/api\/?$/, '');
 
 let socket: Socket | null = null;
 

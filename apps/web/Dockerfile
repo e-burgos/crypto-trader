@@ -3,9 +3,11 @@ FROM node:22-alpine AS builder
 RUN npm install -g pnpm@9
 WORKDIR /app
 
+# apps/web has no package.json — every dependency lives at the workspace root,
+# same as apps/api. Copying apps/web/package.json failed the build outright, and
+# no workflow builds this image, so nothing caught it.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json apps/web/
-RUN pnpm install --frozen-lockfile --filter @crypto-trader/web...
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 ARG VITE_API_URL=http://localhost:3000

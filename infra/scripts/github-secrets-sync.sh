@@ -55,7 +55,10 @@ for par in $MAPA; do
   if [ "$DRY_RUN" = '1' ]; then
     echo "  (dry)   $secret  <- $var  (${#valor} chars)"
   else
-    printf '%s' "$valor" | gh secret set "$secret" --body-file - >/dev/null
+    # Por stdin, sin --body ni --body-file: --body dejaria el valor en la linea de
+    # comandos (visible en `ps` y en el historial), y --body-file no existe en
+    # todas las versiones del CLI. Sin flag, `gh secret set` lee de stdin.
+    printf '%s' "$valor" | gh secret set "$secret" >/dev/null
     echo "  OK      $secret"
   fi
 done

@@ -644,24 +644,34 @@ export class BinanceRestClient {
     symbol: string,
     side: 'BUY' | 'SELL',
     quantity: number,
-    stopPrice: number,
+    stopPrice: number | null,
     limitPrice: number,
-    opts?: { clientOrderId?: string },
+    opts?: { clientOrderId?: string; trailingDeltaBips?: number },
   ): Promise<OrderResult> {
+    const trailingDeltaBips = opts?.trailingDeltaBips ?? 0;
+    if (stopPrice === null && trailingDeltaBips <= 0) {
+      throw new OrderValidationError(
+        'PRICE_FILTER',
+        'A STOP_LOSS_LIMIT order needs a stopPrice, a trailingDeltaBips, or both',
+      );
+    }
+
     const filters = await this.getSymbolFilters(symbol);
     const rounding = side === 'BUY' ? 'up' : 'down';
     const adjustedQty = this.validateQuantity(quantity, filters.lotSize);
-    const adjustedStopPrice = this.validatePrice(
-      stopPrice,
-      filters.price,
-      rounding,
-    );
+    const adjustedStopPrice =
+      stopPrice === null
+        ? null
+        : this.validatePrice(stopPrice, filters.price, rounding);
     const adjustedLimitPrice = this.validatePrice(
       limitPrice,
       filters.price,
       rounding,
     );
     this.validateNotional(adjustedLimitPrice, adjustedQty, filters.notional);
+    if (trailingDeltaBips > 0) {
+      this.validateTrailingDelta(trailingDeltaBips, filters.trailingDelta);
+    }
 
     const { data } = await this.signedRequest<BinanceOrderResponse>(
       '/api/v3/order',
@@ -673,10 +683,17 @@ export class BinanceRestClient {
         timeInForce: 'GTC',
         quantity: this.formatDecimal(adjustedQty, filters.lotSize.stepSize),
         price: this.formatDecimal(adjustedLimitPrice, filters.price.tickSize),
-        stopPrice: this.formatDecimal(
-          adjustedStopPrice,
-          filters.price.tickSize,
-        ),
+        ...(adjustedStopPrice !== null
+          ? {
+              stopPrice: this.formatDecimal(
+                adjustedStopPrice,
+                filters.price.tickSize,
+              ),
+            }
+          : {}),
+        ...(trailingDeltaBips > 0
+          ? { trailingDelta: String(trailingDeltaBips) }
+          : {}),
         ...(opts?.clientOrderId
           ? { newClientOrderId: opts.clientOrderId }
           : {}),
@@ -776,6 +793,89 @@ export class BinanceRestClient {
         newOrderRespType: 'FULL',
         ...(params.listClientOrderId
           ? { listClientOrderId: params.listClientOrderId }
+          : {}),
+      },
+    );
+
+    return this.parseOcoResult(data, symbol, adjustedQty);
+  }
+
+  async placeOcoBuyOrder(
+    symbol: string,
+    params: {
+      quantity: number;
+      belowPrice: number;
+      aboveStopPrice: number;
+      abovePrice: number;
+      aboveTrailingDeltaBips?: number;
+      referencePrice: number;
+      listClientOrderId?: string;
+      belowClientOrderId?: string;
+      aboveClientOrderId?: string;
+    },
+  ): Promise<OcoOrderResult> {
+    const filters = await this.getSymbolFilters(symbol);
+    const aboveTrailingDeltaBips = params.aboveTrailingDeltaBips ?? 0;
+    const adjustedQty = this.validateQuantity(params.quantity, filters.lotSize);
+    const adjustedBelowPrice = this.validatePrice(
+      params.belowPrice,
+      filters.price,
+      'down',
+    );
+    const adjustedAboveStopPrice = this.validatePrice(
+      params.aboveStopPrice,
+      filters.price,
+      'up',
+    );
+    const adjustedAbovePrice = this.validatePrice(
+      params.abovePrice,
+      filters.price,
+      'up',
+    );
+
+    this.validateNotional(adjustedBelowPrice, adjustedQty, filters.notional);
+    this.validateNotional(adjustedAbovePrice, adjustedQty, filters.notional);
+
+    if (aboveTrailingDeltaBips > 0) {
+      this.validateTrailingDelta(
+        aboveTrailingDeltaBips,
+        filters.trailingDelta,
+      );
+    }
+
+    this.assertBuyPriceCrossesMarket(
+      adjustedBelowPrice < params.referencePrice &&
+        params.referencePrice < adjustedAboveStopPrice,
+      `OCO BUY legs ${adjustedBelowPrice}/${adjustedAboveStopPrice} do not straddle referencePrice ${params.referencePrice}`,
+    );
+
+    const priceStep = filters.price.tickSize;
+
+    const { data } = await this.signedRequest<BinanceOcoPlaceResponse>(
+      '/api/v3/orderList/oco',
+      'POST',
+      {
+        symbol,
+        side: 'BUY',
+        quantity: this.formatDecimal(adjustedQty, filters.lotSize.stepSize),
+        belowType: 'LIMIT_MAKER',
+        belowPrice: this.formatDecimal(adjustedBelowPrice, priceStep),
+        aboveType: 'STOP_LOSS_LIMIT',
+        aboveStopPrice: this.formatDecimal(adjustedAboveStopPrice, priceStep),
+        abovePrice: this.formatDecimal(adjustedAbovePrice, priceStep),
+        aboveTimeInForce: 'GTC',
+        ...(aboveTrailingDeltaBips > 0
+          ? { aboveTrailingDelta: String(aboveTrailingDeltaBips) }
+          : {}),
+        newOrderRespType: 'FULL',
+        ...(params.listClientOrderId
+          ? { listClientOrderId: params.listClientOrderId }
+          : {}),
+        ...(params.belowClientOrderId
+          ? { belowClientOrderId: params.belowClientOrderId }
+          : {}),
+        ...(params.aboveClientOrderId
+          ? { aboveClientOrderId: params.aboveClientOrderId }
           : {}),
       },
     );

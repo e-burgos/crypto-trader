@@ -741,6 +741,143 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
       expect(call.params.stopPrice).toBe('108210.0');
       expect(call.params.price).toBe('108310.0');
     });
+
+    it('includes trailingDelta when trailingDeltaBips is provided alongside stopPrice', async () => {
+      mockExchangeInfo('SLLUSDT5', {
+        trailingDelta: {
+          minTrailingAboveDelta: '10',
+          maxTrailingAboveDelta: '2000',
+          minTrailingBelowDelta: '10',
+          maxTrailingBelowDelta: '2000',
+        },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 203,
+          symbol: 'SLLUSDT5',
+          side: 'BUY',
+          status: 'NEW',
+          price: '108310.00',
+          origQty: '0.20000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeStopLossLimitOrder(
+        'SLLUSDT5',
+        'BUY',
+        0.2,
+        108210,
+        108310,
+        { trailingDeltaBips: 100 },
+      );
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.stopPrice).toBe('108210.00');
+      expect(call.params.trailingDelta).toBe('100');
+    });
+
+    it('omits stopPrice and includes trailingDelta when placed with stopPrice null', async () => {
+      mockExchangeInfo('SLLUSDT6', {
+        trailingDelta: {
+          minTrailingAboveDelta: '10',
+          maxTrailingAboveDelta: '2000',
+          minTrailingBelowDelta: '10',
+          maxTrailingBelowDelta: '2000',
+        },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 204,
+          symbol: 'SLLUSDT6',
+          side: 'BUY',
+          status: 'NEW',
+          price: '108310.00',
+          origQty: '0.20000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeStopLossLimitOrder(
+        'SLLUSDT6',
+        'BUY',
+        0.2,
+        null,
+        108310,
+        { trailingDeltaBips: 100 },
+      );
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params).not.toHaveProperty('stopPrice');
+      expect(call.params.trailingDelta).toBe('100');
+    });
+
+    it('omits trailingDelta when trailingDeltaBips is not provided', async () => {
+      mockExchangeInfo('SLLUSDT7');
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 205,
+          symbol: 'SLLUSDT7',
+          side: 'SELL',
+          status: 'NEW',
+          price: '63000.00',
+          origQty: '0.20000',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeStopLossLimitOrder('SLLUSDT7', 'SELL', 0.2, 63100, 63000);
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params).not.toHaveProperty('trailingDelta');
+    });
+
+    it('rejects locally when stopPrice is null and no trailingDeltaBips is given', async () => {
+      await expect(
+        client.placeStopLossLimitOrder('SLLUSDT8', 'BUY', 0.2, null, 108310),
+      ).rejects.toMatchObject({ code: 'PRICE_FILTER' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on TRAILING_DELTA when the symbol declares no filter', async () => {
+      mockExchangeInfo('SLLUSDT9');
+
+      await expect(
+        client.placeStopLossLimitOrder('SLLUSDT9', 'BUY', 0.2, 108210, 108310, {
+          trailingDeltaBips: 100,
+        }),
+      ).rejects.toMatchObject({ code: 'TRAILING_DELTA' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on TRAILING_DELTA when the requested bips are out of range', async () => {
+      mockExchangeInfo('SLLUSDT10', {
+        trailingDelta: {
+          minTrailingAboveDelta: '10',
+          maxTrailingAboveDelta: '2000',
+          minTrailingBelowDelta: '10',
+          maxTrailingBelowDelta: '2000',
+        },
+      });
+
+      await expect(
+        client.placeStopLossLimitOrder(
+          'SLLUSDT10',
+          'BUY',
+          0.2,
+          108210,
+          108310,
+          { trailingDeltaBips: 5 },
+        ),
+      ).rejects.toMatchObject({ code: 'TRAILING_DELTA' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
   });
 
   describe('placeOcoSellOrder', () => {
@@ -867,6 +1004,241 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
           stopLimitPrice: 69999,
         }),
       ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('placeOcoBuyOrder', () => {
+    it('sends the exact OCO BUY payload and parses both legs by type, not array position', async () => {
+      mockExchangeInfo('OCOBUSDT1', {
+        priceFilter: { minPrice: '1', maxPrice: '999999', tickSize: '1' },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderListId: 700,
+          listClientOrderId: 'list-buy-1',
+          symbol: 'OCOBUSDT1',
+          transactionTime: 1700000000000,
+          orders: [
+            { symbol: 'OCOBUSDT1', orderId: 801, clientOrderId: 'below-1' },
+            { symbol: 'OCOBUSDT1', orderId: 802, clientOrderId: 'above-1' },
+          ],
+          orderReports: [
+            {
+              symbol: 'OCOBUSDT1',
+              orderId: 802,
+              clientOrderId: 'above-1',
+              type: 'STOP_LOSS_LIMIT',
+            },
+            {
+              symbol: 'OCOBUSDT1',
+              orderId: 801,
+              clientOrderId: 'below-1',
+              type: 'LIMIT_MAKER',
+            },
+          ],
+        },
+      });
+
+      const result = await client.placeOcoBuyOrder('OCOBUSDT1', {
+        quantity: 0.001,
+        belowPrice: 46375,
+        aboveStopPrice: 108210,
+        abovePrice: 108310,
+        referencePrice: 77292.81,
+        listClientOrderId: 'list-buy-1',
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('POST');
+      expect(call.url).toBe('/api/v3/orderList/oco');
+      expect(call.params).toEqual({
+        symbol: 'OCOBUSDT1',
+        side: 'BUY',
+        quantity: '0.00100',
+        belowType: 'LIMIT_MAKER',
+        belowPrice: '46375',
+        aboveType: 'STOP_LOSS_LIMIT',
+        aboveStopPrice: '108210',
+        abovePrice: '108310',
+        aboveTimeInForce: 'GTC',
+        newOrderRespType: 'FULL',
+        listClientOrderId: 'list-buy-1',
+        timestamp: expect.any(String),
+        recvWindow: '60000',
+        signature: expect.any(String),
+      });
+      expect(call.params.belowTimeInForce).toBeUndefined();
+      expect(call.params.aboveTrailingDelta).toBeUndefined();
+
+      expect(result).toEqual({
+        orderListId: '700',
+        listClientOrderId: 'list-buy-1',
+        stopOrderId: '802',
+        limitOrderId: '801',
+        symbol: 'OCOBUSDT1',
+        quantity: 0.001,
+        placedAt: new Date(1700000000000),
+      });
+    });
+
+    it('includes aboveTrailingDelta and belowClientOrderId/aboveClientOrderId when provided', async () => {
+      mockExchangeInfo('OCOBUSDT2', {
+        priceFilter: { minPrice: '1', maxPrice: '999999', tickSize: '1' },
+        trailingDelta: {
+          minTrailingAboveDelta: '10',
+          maxTrailingAboveDelta: '2000',
+          minTrailingBelowDelta: '10',
+          maxTrailingBelowDelta: '2000',
+        },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderListId: 701,
+          listClientOrderId: 'list-buy-2',
+          symbol: 'OCOBUSDT2',
+          transactionTime: 1700000000000,
+          orders: [
+            { symbol: 'OCOBUSDT2', orderId: 811, clientOrderId: 'below-2' },
+            { symbol: 'OCOBUSDT2', orderId: 812, clientOrderId: 'above-2' },
+          ],
+          orderReports: [
+            {
+              symbol: 'OCOBUSDT2',
+              orderId: 811,
+              clientOrderId: 'below-2',
+              type: 'LIMIT_MAKER',
+            },
+            {
+              symbol: 'OCOBUSDT2',
+              orderId: 812,
+              clientOrderId: 'above-2',
+              type: 'STOP_LOSS_LIMIT',
+            },
+          ],
+        },
+      });
+
+      await client.placeOcoBuyOrder('OCOBUSDT2', {
+        quantity: 0.001,
+        belowPrice: 46375,
+        aboveStopPrice: 108210,
+        abovePrice: 108310,
+        aboveTrailingDeltaBips: 100,
+        referencePrice: 77292.81,
+        belowClientOrderId: 'below-2',
+        aboveClientOrderId: 'above-2',
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.aboveTrailingDelta).toBe('100');
+      expect(call.params.belowClientOrderId).toBe('below-2');
+      expect(call.params.aboveClientOrderId).toBe('above-2');
+      expect(call.params.trailingDelta).toBeUndefined();
+    });
+
+    it('rejects locally on LOT_SIZE without calling the exchange', async () => {
+      mockExchangeInfo('OCOBUSDT3', {
+        lotSize: { minQty: '1', maxQty: '900', stepSize: '0.001' },
+      });
+
+      await expect(
+        client.placeOcoBuyOrder('OCOBUSDT3', {
+          quantity: 0.5,
+          belowPrice: 46375,
+          aboveStopPrice: 108210,
+          abovePrice: 108310,
+          referencePrice: 77292.81,
+        }),
+      ).rejects.toMatchObject({ code: 'LOT_SIZE' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on PRICE_FILTER without calling the exchange', async () => {
+      mockExchangeInfo('OCOBUSDT4', {
+        priceFilter: { minPrice: '100000', maxPrice: '999999', tickSize: '1' },
+      });
+
+      await expect(
+        client.placeOcoBuyOrder('OCOBUSDT4', {
+          quantity: 0.1,
+          belowPrice: 46375,
+          aboveStopPrice: 108210,
+          abovePrice: 108310,
+          referencePrice: 77292.81,
+        }),
+      ).rejects.toMatchObject({ code: 'PRICE_FILTER' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on MIN_NOTIONAL without calling the exchange', async () => {
+      mockExchangeInfo('OCOBUSDT5', {
+        notional: { minNotional: '1000000', filterType: 'NOTIONAL' },
+      });
+
+      await expect(
+        client.placeOcoBuyOrder('OCOBUSDT5', {
+          quantity: 0.001,
+          belowPrice: 46375,
+          aboveStopPrice: 108210,
+          abovePrice: 108310,
+          referencePrice: 77292.81,
+        }),
+      ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on PRICE_CROSSES_MARKET when the reference does not sit between the legs', async () => {
+      mockExchangeInfo('OCOBUSDT6');
+
+      await expect(
+        client.placeOcoBuyOrder('OCOBUSDT6', {
+          quantity: 0.1,
+          belowPrice: 46375,
+          aboveStopPrice: 108210,
+          abovePrice: 108310,
+          referencePrice: 200000,
+        }),
+      ).rejects.toMatchObject({ code: 'PRICE_CROSSES_MARKET' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on TRAILING_DELTA when the symbol declares no filter', async () => {
+      mockExchangeInfo('OCOBUSDT7');
+
+      await expect(
+        client.placeOcoBuyOrder('OCOBUSDT7', {
+          quantity: 0.1,
+          belowPrice: 46375,
+          aboveStopPrice: 108210,
+          abovePrice: 108310,
+          aboveTrailingDeltaBips: 100,
+          referencePrice: 77292.81,
+        }),
+      ).rejects.toMatchObject({ code: 'TRAILING_DELTA' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on TRAILING_DELTA when the requested bips are out of range', async () => {
+      mockExchangeInfo('OCOBUSDT8', {
+        trailingDelta: {
+          minTrailingAboveDelta: '10',
+          maxTrailingAboveDelta: '2000',
+          minTrailingBelowDelta: '10',
+          maxTrailingBelowDelta: '2000',
+        },
+      });
+
+      await expect(
+        client.placeOcoBuyOrder('OCOBUSDT8', {
+          quantity: 0.1,
+          belowPrice: 46375,
+          aboveStopPrice: 108210,
+          abovePrice: 108310,
+          aboveTrailingDeltaBips: 5,
+          referencePrice: 77292.81,
+        }),
+      ).rejects.toMatchObject({ code: 'TRAILING_DELTA' });
       expect(getMockClient().request).not.toHaveBeenCalled();
     });
   });

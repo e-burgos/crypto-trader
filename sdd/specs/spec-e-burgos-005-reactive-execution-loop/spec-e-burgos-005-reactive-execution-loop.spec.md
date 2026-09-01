@@ -170,6 +170,25 @@ relajar, y con detección explícita de la degradación del stream.
 > entrada que disparan solas mientras el servicio está caído **exige que los caps de frecuencia y
 > la detección de staleness ya existan y estén probados** — es el orden seguro, no una preferencia.
 
+#### Decisiones de alcance de cycle-02 (registradas 2026-09-01 al abrir el ciclo)
+
+La línea del ítem 6 deja cuatro huecos que el código verificado no resuelve. Se cierran acá para
+que el ciclo no los resuelva en silencio.
+
+| # | Hueco | Decisión | Razonamiento |
+| --- | --- | --- | --- |
+| D2-1 | **De dónde sale el precio de entrada.** `LLMDecision` es `BUY \| SELL \| HOLD` sin precio. | La única fuente de niveles del sistema es `supportResistance` del `IndicatorSnapshot` (`calculateSupportResistance`, últimos 5 niveles por lado). `LIMIT_MAKER` de entrada = soporte más cercano **por debajo** del precio, con fallback a `precio × (1 − orderPriceOffsetPct)` si no hay soporte utilizable. OCO de entrada = esa misma pierna más `STOP_LOSS_LIMIT` de ruptura en la resistencia más cercana **por encima**. `trailingDelta` es opcional y aplica sólo a la pierna de ruptura (Binance lo admite en `STOP_LOSS`/`STOP_LOSS_LIMIT`/`TAKE_PROFIT`/`TAKE_PROFIT_LIMIT`, en BIPS, combinable con `stopPrice`). | Reusar un nivel ya calculado por ciclo mantiene la lib pura y evita pedirle un precio al LLM, que hoy no lo produce y cuyo formato de salida no se toca en esta spec. |
+| D2-2 | **Una entrada que se llena con el servicio caído no crea `Position`.** La reconciliación sólo conoce posiciones protegidas y barre órdenes con prefijo `prot-`. | Se persiste la entrada descansando en una tabla propia (`entry_orders`), con prefijo de `clientOrderId` distinto de `prot-`. `ReconciliationService` se extiende: fill ⇒ `Position` + `Trade` + protección inicial por el camino existente; vencida, cancelada o huérfana ⇒ se cierra el registro y se cancela en el exchange. | Sin registro persistido, un fill durante un deploy queda como balance base sin posición: invisible para el fast path, la protección y los caps. |
+| D2-3 | **Contabilidad en `bot_actions`.** Una orden que dispara en Binance no pasa por `authorizeAndRun`. | La **colocación** pasa por `authorizeAndRun` como `kind: BUY` y consume caps igual que la compra a mercado. El **fill** lo registra la reconciliación a posteriori con `source: EXCHANGE_TRIGGER` (valor nuevo de `BotActionSource`), sin autorización porque ya ocurrió y no se puede bloquear. Una misma compra nunca cuenta dos veces. Coherencia con los caps: cuando el cap de pérdida diaria devuelve `DISCARDED`, las entradas descansando del bot se cancelan. | `authorizeAndRun` sigue siendo la única puerta de las acciones que el bot decide; lo que el exchange ejecuta se audita, no se autoriza. |
+| D2-4 | **SANDBOX.** `SandboxOrderExecutor` se construye nuevo en cada ciclo del processor: una entrada simulada en memoria se evapora. | `SandboxOrderExecutor` implementa el contrato nuevo del port en memoria para poder testear el port sin red; en modo SANDBOX el bot sigue comprando a mercado como hoy. La capa es efectivamente LIVE y TESTNET. | Simular fills persistentes en papel es un ciclo propio; no se paga acá. |
+
+**Interruptor:** `TradingConfig.entryOrderMode` con default `MARKET` (comportamiento idéntico al
+actual), más TTL de la entrada y `trailingDelta` opcional. Los campos van a `CreateTradingConfigDto`
+y `UpdateTradingConfigDto` por el `forbidNonWhitelisted`. Nace apagado y se cierra el ciclo apagado.
+
+**Deuda registrada que NO entra:** la cola `trading-agent` duplicada entre `TradingModule` y
+`ReactiveModule` (reviewer de cycle-01) sigue siendo deuda, no bloqueante.
+
 ## 4. No-objetivos (fuera de esta spec)
 
 | Excluido                                                                                 | Dónde va                            |
@@ -210,6 +229,13 @@ abiertas.
 - **Sin acceso a testnet ni credenciales reales.** Todo se verifica contra un mock de la capa de
   transporte: payload exacto, y assert de que el mock **no** fue invocado cuando la acción se
   rechaza localmente.
+  > **Superada parcialmente en cycle-02 (decisión del dev, 2026-09-01):** el mock de transporte
+  > sigue siendo el primer criterio, pero las órdenes nuevas se verifican **además contra Binance
+  > TESTNET** (colocar, consultar y cancelar cada tipo) con las credenciales de testnet ya cargadas.
+  > Razón: hay una cuenta LIVE con fondos reales conectada, el servicio se reinicia en cada deploy y
+  > una orden condicional mal colocada no se deshace desde el código. **Nunca en LIVE durante el
+  > ciclo.** El harness lee únicamente credenciales de testnet y aborta si la URL base no es la de
+  > testnet.
 - **Prohibido testear sobre el texto fuente.** Ninguna aserción nueva puede hacer string-matching
   sobre un rango de archivo entre dos símbolos. Las invariantes se afirman sobre comportamiento
   observable o sobre un símbolo concreto.

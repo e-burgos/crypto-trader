@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 2,
+  "module": "reactive-execution-loop",
+  "spec": "spec-e-burgos-005-reactive-execution-loop",
+  "apps": ["apps/api", "libs/data-fetcher", "libs/trading-engine", "libs/shared"],
+  "phase": "exchange-resting-entries",
+  "flow": "full",
+  "objectives": [
+    "Extender BinanceRestClient con LIMIT_MAKER colocable, OCO de compra y trailingDelta, validados contra LOT_SIZE/PRICE_FILTER/NOTIONAL/TRAILING_DELTA antes de firmar",
+    "Extender OrderExecutorPort y sus dos implementaciones con el vocabulario de entrada compartido en libs/shared",
+    "Persistir las entradas descansando y reconciliar su fill a Position + Trade + protección aunque el servicio haya estado caído",
+    "Contabilizar colocación y fill en bot_actions sin doble conteo y bajo los caps existentes",
+    "Verificar contra mock de transporte y contra Binance TESTNET; nunca en LIVE; interruptor apagado al cerrar"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-09-01",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

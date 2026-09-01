@@ -1,0 +1,253 @@
+# sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 2
+module: reactive-execution-loop
+phase: exchange-resting-entries
+date: 2026-09-01
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Que la reacción de ENTRADA también descanse en Binance: LIMIT_MAKER en nivel, OCO de entrada y
+  trailingDelta colocables desde el bot, con su fill reconciliado a Position + protección aunque
+  el servicio esté caído o reiniciando, contabilizado en bot_actions, bajo los caps existentes, y
+  todo detrás de un interruptor que nace apagado y se cierra apagado.
+
+scope:
+  - Extender BinanceRestClient con las órdenes de entrada nuevas: LIMIT_MAKER colocable, OCO de
+    compra por /api/v3/orderList/oco (LIMIT_MAKER abajo + STOP_LOSS_LIMIT arriba) y trailingDelta
+    en BIPS sobre la pierna contingente; filtro TRAILING_DELTA en getSymbolFilters; pesos reales
+    en ENDPOINT_WEIGHTS; validación LOT_SIZE/PRICE_FILTER/NOTIONAL/TRAILING_DELTA antes de firmar.
+  - Extender OrderExecutorPort con el vocabulario de entrada (tipos en libs/shared) y las DOS
+    implementaciones: LiveOrderExecutor (estructural, sin importar data-fetcher) y
+    SandboxOrderExecutor (contrato en memoria para tests del port).
+  - Persistir las entradas descansando (tabla entry_orders) y extender ReconciliationService:
+    fill => Position + Trade + protección inicial; vencida/cancelada/huérfana => cierre y cancelación.
+  - Camino de BUY del processor: cuando entryOrderMode != MARKET y el modo es LIVE/TESTNET,
+    colocar la entrada descansando vía authorizeAndRun en lugar de la compra a mercado.
+  - Contabilidad en bot_actions según D2-3 de la spec (colocación autorizada como BUY; fill
+    auditado con source EXCHANGE_TRIGGER) y cancelación de entradas cuando el cap diario DISCARDA.
+  - Interruptor entryOrderMode (default MARKET) + TTL + trailingDelta opcional en TradingConfig,
+    declarados en Create y Update DTO.
+  - Verificación en dos niveles: mock de transporte (payload exacto, firma, mock NO invocado ante
+    rechazo local) y harness contra Binance TESTNET que coloca, consulta y cancela cada tipo nuevo.
+
+out_of_scope:
+  - Cualquier orden en LIVE durante el ciclo. Ni una.
+  - Simulación persistente de fills en SANDBOX (D2-4 de la spec): SANDBOX sigue comprando a mercado.
+  - Pedirle un precio de entrada al LLM o cambiar el formato de salida de la síntesis.
+  - User data stream de Binance (executionReport por WS) para detectar fills: se difiere; el fill se
+    detecta por consulta REST (ver decisión D6 abajo).
+  - UI de configuración de los campos nuevos (deuda de UI ya diferida por spec-001).
+  - La cola trading-agent duplicada entre TradingModule y ReactiveModule (deuda registrada, no bloqueante).
+  - Futuros, SHORT, apalancamiento, subcuentas, IP allowlist (specs 006/007).
+
+dependencies_required:
+  - spec-e-burgos-005-reactive-execution-loop cycle-01 (completed 2026-08-30) — caps de frecuencia,
+    ActionGateService, bot_actions, staleness del stream. Prerrequisito de seguridad explícito de la spec §3.
+  - spec-e-burgos-001-agents-simplification (completed) — protección nativa OCO, reconciliación, sell-policy.
+
+agent_contexts:
+  functional:
+    goal: >
+      Convertir el ítem 6 de la spec §3 y sus decisiones D2-1..D2-4 en historias de usuario y
+      reglas de negocio verificables. Definir con precisión: qué modos de entrada existen, cuándo
+      se coloca cada uno, cuándo vence o se cancela una entrada (TTL, decisión posterior del LLM
+      distinta de BUY, cap diario DISCARDED, bot detenido), qué pasa cuando se llena con el servicio
+      caído, y cómo se ve todo eso en bot_actions y en las notificaciones. Todo criterio debe medir
+      una PROPIEDAD verificable sin mercado real (payload, estado persistido, mock no invocado).
+    business_context: >
+      cycle-01 hizo que el bot despierte por precio y ejecute reflejos de SALIDA sin LLM. En la
+      ENTRADA sigue inerte: compra a mercado cuando el LLM lo dice y nada más. Una orden de entrada
+      descansando en Binance compra en el nivel aunque el servicio esté caído — y el servicio se
+      reinicia en cada deploy. Riesgo central: una orden mal colocada queda viva en el exchange y
+      dispara sola; no se deshace con un deploy. Por eso el ciclo nace apagado y se verifica en
+      TESTNET antes de tocar una clave LIVE.
+    relevant_spec_sections:
+      - "3. Alcance por ciclo — Cycle-02, ítem 6 y 'Decisiones de alcance de cycle-02' (D2-1..D2-4)"
+      - "5. Restricciones de diseño — incluida la nota de TESTNET"
+      - "6. Criterios de aceptación CA-001, CA-004, CA-006, CA-007 (aplican también a este ciclo)"
+
+  planner:
+    goal: >
+      Tasks ordenadas por dependencia de libs: libs/shared -> libs/data-fetcher (cliente + tests
+      contra mock) -> libs/trading-engine (port + ambos executors) -> apps/api (migración, DTOs,
+      entry_orders, processor, reconciliación, bot_actions) -> harness TESTNET -> cierre. Ninguna
+      task de apps/api que coloque órdenes puede empezar antes de que el cliente y el port tengan
+      tests en verde. Cada task es una unidad independiente que commitea al terminar, con
+      `usage.model_tier` registrado al cerrarla.
+    output_file: sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/planner.md
+
+  architect:
+    goal: >
+      Cerrar como contrato las decisiones D5..D9 de abajo y el detalle de D2-1..D2-4 de la spec:
+      shape exacto de los tipos compartidos, de los métodos nuevos del port, de la tabla
+      entry_orders, de la secuencia de reconciliación y del harness TESTNET. Reescribir como
+      criterio ejecutable todo criterio del funcional que dependa del mercado.
+    existing_tables:
+      - trading_configs
+      - positions
+      - trades
+      - bot_actions
+      - user_risk_policies
+    existing_endpoints:
+      - EP-006 POST /trading/config (updated)
+      - EP-007 PUT /trading/config/{id} (updated)
+      - EP-008 GET /trading/positions (implemented)
+      - EP-016 GET /trading/actions (implemented)
+    output_file: sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/architect.md
+
+  implementor_back:
+    goal: >
+      Implementar task por task contra el contrato del architect. Cliente y port primero, con
+      tests contra mock de transporte; apps/api después. Sin comentarios narrativos. Nunca una
+      orden en LIVE.
+    app: apps/api
+    app_context: sdd/context/apps/api/context_prompt.md
+    libs:
+      - libs/data-fetcher
+      - libs/trading-engine
+      - libs/shared
+
+  reviewer:
+    goal: >
+      Validar todo el output del ciclo, correr el harness TESTNET como evidencia de cierre,
+      confirmar que el interruptor queda apagado y que con el default el comportamiento es
+      idéntico al actual (CA-001).
+    output_file: sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/cycle.json
+
+# Hechos verificados contra el código y la documentación de Binance el 2026-09-01.
+# NO re-investigar: usar como punto de partida y corregir solo con evidencia contraria.
+verified_facts:
+  execution_surface:
+    - "OrderExecutorPort (libs/trading-engine/src/lib/order-executor.ts:43-73) tiene 9 métodos y DOS
+       implementaciones: SandboxOrderExecutor (:86) y LiveOrderExecutor (:326). Todo método nuevo
+       va por duplicado."
+    - "LiveOrderExecutor tipa su dependencia como objeto ESTRUCTURAL inline (order-executor.ts:327-370)
+       y NO importa BinanceRestClient. trading-engine nunca depende de data-fetcher; el vocabulario
+       compartido (ExchangeOrderState/ExchangeOrderStatus) vive en libs/shared/src/types/interfaces.ts:271."
+    - "placeOcoSellOrder (binance-rest.client.ts:608-680) usa /api/v3/orderList/oco con side:'SELL'
+       fijo, aboveType LIMIT_MAKER + belowType STOP_LOSS_LIMIT, newOrderRespType FULL, y valida
+       LOT_SIZE/PRICE_FILTER/NOTIONAL en ambas piernas más PRICE_CROSSES_MARKET con referencePrice."
+    - "trailingDelta: 0 ocurrencias en el repo. LIMIT_MAKER solo como aboveType interno del OCO."
+    - "getSymbolFilters cachea LOT_SIZE, PRICE_FILTER y NOTIONAL/MIN_NOTIONAL. NO lee TRAILING_DELTA."
+    - "ENDPOINT_WEIGHTS (binance-rest.client.ts:22-37) ya tiene POST /api/v3/order peso 1, POST
+       /api/v3/orderList/oco peso 1, GET /api/v3/order 4, DELETE /api/v3/order 1, GET/DELETE
+       /api/v3/orderList 4/1, /api/v3/openOrders 6 (siempre con símbolo)."
+    - "Prefijo de clientOrderId de la protección: `prot-${position.id}-${attempt}`. El barrido de
+       huérfanas (reconciliation.service.ts:320-346) SOLO toca órdenes cuyo clientOrderId empieza
+       con 'prot-'. Una entrada con otro prefijo no se barre hoy: necesita su propio barrido."
+  binance_docs:
+    - "POST /api/v3/orderList/oco, side BUY: 'LIMIT_MAKER/TAKE_PROFIT_LIMIT price < Last Traded Price
+       < stopPrice'. Para compra: belowType LIMIT_MAKER (belowPrice) y aboveType STOP_LOSS_LIMIT
+       (aboveStopPrice + abovePrice + aboveTimeInForce)."
+    - "trailingDelta: soportado en STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, TAKE_PROFIT_LIMIT; unidad
+       BIPS (100 = 1 %); combinable con stopPrice (empieza a trackear cuando se cumple stopPrice; sin
+       stopPrice trackea desde el próximo trade). BUY trackea desde el mínimo y dispara al subir el
+       delta. Filtro de símbolo TRAILING_DELTA: para BUY STOP_LOSS/STOP_LOSS_LIMIT el valor debe
+       estar entre minTrailingAboveDelta y maxTrailingAboveDelta. Las piernas de OCO también lo admiten."
+  processor_buy_path:
+    - "trading.processor.ts ~1027-1110: en LIVE/TESTNET construye LiveOrderExecutor(new
+       BinanceRestClient({testnet: mode === TESTNET})), resuelve sizing, pasa assertBuyAllowed, y
+       dentro de actionGate.authorizeAndRun({kind:'BUY', source:'LLM_CYCLE'}) hace placeMarketOrder,
+       positionManager.openPosition, prisma.position.create (con protectionStatus PENDING si
+       nativeProtectionEnabled) y prisma.trade.create. Ese `create` está tipado con `as any`: un
+       campo inexistente pasa el typecheck y estalla en runtime."
+    - "TESTNET usa cachedPrice (kline close) en vez de llamar al ticker de testnet: 'unreliable,
+       aggressive rate limits'. El harness TESTNET debe tolerar latencia (~1 s por request medida)
+       y usar precios lejos del mercado para que nada se llene."
+    - "LLMDecision = {decision: BUY|SELL|HOLD, confidence, reasoning, suggestedWaitMinutes}. Sin precio.
+       Niveles disponibles: IndicatorSnapshot.supportResistance {support[], resistance[]} (últimos 5,
+       redondeados a 2 decimales en calculateSupportResistance, indicators.ts:235-266)."
+  reconciliation:
+    - "ReconciliationService.reconcile corre al inicio de cada ciclo del processor SOLO en LIVE/TESTNET
+       con credenciales; hoy: reconcileProtected, closeFilledByExchange, attemptProtection,
+       addExternalLiveOrderIds, sweepOrphanOrders. Un fill ocurrido con el servicio caído se detecta
+       recién en el próximo ciclo."
+  state_and_gates:
+    - "bot_actions: kind BUY|SELL_FULL|SELL_PARTIAL|PROTECTION_REARM, source FAST_PATH|LLM_CYCLE,
+       outcome EXECUTED|BLOCKED|DEFERRED|SUPERSEDED, blockedBy ACTIONS_PER_HOUR|MIN_INTERVAL|DAILY_LOSS.
+       classifyActionExposure es la única fuente de la exposure; toda REDUCING sale allowed antes de
+       mirar caps."
+    - "ActionRequest = {userId, configId, symbol, mode, kind, source, positionId, decisionId,
+       expected, detail}. authorizeAndRun toma lease rx:v1:bot:{configId}."
+    - "TradingConfig ya tiene orderPriceOffsetPct (default 0), stopLimitOffsetPct (0.002),
+       maxConcurrentPositions (2), nativeProtectionEnabled, reactiveLoopEnabled (false)."
+    - "BinanceCredential tiene isTestnet con @@unique([userId, isTestnet]). users.service.ts resuelve
+       las de testnet cuando mode === 'TESTNET'."
+  environment:
+    - "Credenciales de TESTNET disponibles en .env local (BINANCE_API_TESTNET_KEY/SECRET). El mismo
+       .env tiene claves LIVE: el harness lee SOLO las de testnet y aborta si la URL base no es
+       https://testnet.binance.vision."
+    - "Probe TESTNET ejecutado 2026-09-01 (solo lectura): claves válidas (canTrade true), BTCUSDT
+       con ocoAllowed=true, otoAllowed=true, allowTrailingStop=true, orderTypes
+       LIMIT,LIMIT_MAKER,MARKET,STOP_LOSS,STOP_LOSS_LIMIT,TAKE_PROFIT,TAKE_PROFIT_LIMIT; filtros:
+       PRICE_FILTER tickSize 0.01, LOT_SIZE stepSize 0.00001 minQty 0.00001, NOTIONAL minNotional 5,
+       TRAILING_DELTA min/max Above y Below = 10/2000 BIPS. Balances: 10000 USDT, 10000 USDC, 1 BTC.
+       0 órdenes abiertas en BTCUSDT. Latencia: exchangeInfo ~950 ms, account ~300 ms."
+    - "Producción se redeploya con cada push a main. El trabajo va en la rama feat/spec-005-cycle-02
+       y se mergea después del cierre del reviewer, con el interruptor apagado."
+
+decisiones_criticas:
+  - id: D5
+    titulo: Shape del contrato de entrada en el port
+    pregunta: >
+      Un solo método `placeEntryOrder(req)` con un discriminante de modo (LIMIT_MAKER | OCO_ENTRY),
+      más `getEntryOrderStatus` y `cancelEntryOrder`, o un método por tipo. Definir los tipos en
+      libs/shared (EntryOrderRequest / EntryOrderRef / EntryOrderResult / estado), cómo se
+      representa un OCO de compra (orderListId + dos orderIds) frente a un LIMIT_MAKER suelto
+      (orderId), y cómo el estado FILLED expone precio y cantidad ejecutados de la pierna que llenó.
+      Mantener LiveOrderExecutor estructural.
+  - id: D6
+    titulo: Detección del fill y ventana sin protección
+    pregunta: >
+      Si la entrada se llena con el servicio ARRIBA, el bot tampoco se entera hasta el próximo
+      ciclo del processor (15-30 min): la posición queda sin protección nativa durante esa
+      ventana. Definir dónde se consulta el estado además de la reconciliación de inicio de ciclo:
+      candidatos son (a) un chequeo en el riel reactivo cuando el tick toca el precio de la
+      entrada (solo con reactiveLoopEnabled), (b) un job repetible barato por bot con entradas
+      vivas, (c) ambos. Presupuestar el peso del endpoint. El user data stream queda fuera de alcance.
+  - id: D7
+    titulo: Tabla entry_orders y su ciclo de vida
+    pregunta: >
+      Columnas, índices, estados (RESTING | FILLED | CANCELLED | EXPIRED | MISSING) y transiciones.
+      Quién vence una entrada (TTL desde placedAt), quién la cancela (decisión posterior HOLD/SELL,
+      cap diario DISCARDED, stop del bot, fallo de protección tras el fill), y cómo se evita el
+      doble conteo con bot_actions. Prefijo de clientOrderId propio y barrido de huérfanas
+      propio. Sin FK a decision (auditoría), con FK a config/user como bot_actions.
+  - id: D8
+    titulo: Concurrencia y riesgo con entradas vivas
+    pregunta: >
+      maxConcurrentPositions y assertBuyAllowed hoy cuentan posiciones abiertas. Definir si una
+      entrada RESTING cuenta como posición a efectos de concurrencia y de notional planificado
+      (recomendación: sí, es exposición comprometida), y cómo se refleja en el sizing. Definir
+      qué pasa si al reconciliar un fill la protección inicial falla (reusar
+      closeOnProtectionFailure del camino existente).
+  - id: D9
+    titulo: Harness TESTNET como evidencia reproducible
+    pregunta: >
+      Diseñar el spec de Jest gateado por variable de entorno (por defecto se salta) que: lee solo
+      BINANCE_API_TESTNET_*, fija testnet:true, aborta si la baseURL no es testnet, coloca cada
+      tipo nuevo a precios lejanos del mercado (LIMIT_MAKER muy por debajo, STOP muy por encima),
+      consulta, cancela, y termina afirmando cero órdenes abiertas propias. Tolerar la latencia y
+      los rate limits de testnet. Dejar el comando documentado para que el reviewer lo corra.
+
+harness_rules:
+  - "Código sin comentarios: la documentación vive en los documentos SDD, no en el código."
+  - "Prohibido testear sobre el texto fuente de un rango entre dos símbolos."
+  - "Releer libs/shared/src/types/interfaces.ts antes de implementar un contrato que lea un tipo compartido."
+  - "Al centralizar una regla en un servicio, enumerar TODOS sus lectores, no solo el camino caliente."
+  - "Un campo nuevo de TradingConfig va en Create Y Update DTO o el request responde 400."
+  - "Una columna nueva se declara en schema.prisma; el prisma.position.create está tipado any."
+  - "Toda salida que cierre posición llama releaseProtectionIfNeeded antes de vender."
+  - "Registrar usage (tokens_in/tokens_out/model_tier) al cerrar cada task."
+  - "Nunca una orden en LIVE. Si parece necesario, detenerse y preguntar al dev."
+
+model_tiers:
+  functional: sonnet / medium
+  planner: sonnet / medium
+  architect: opus / high
+  implementor_back: sonnet / medium
+  reviewer: opus / high
+  orquestacion_y_verificacion_testnet: loop principal

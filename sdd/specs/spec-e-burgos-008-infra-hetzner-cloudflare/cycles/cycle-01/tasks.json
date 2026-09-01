@@ -21,7 +21,7 @@
       "estimation_hours": 3,
       "story_points": 8,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "infra/scripts/provision-01-base.sh",
         "infra/scripts/provision-02-sshd.sh",

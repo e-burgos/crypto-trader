@@ -160,5 +160,9 @@
       "file": "tasks-index.schema.json"
     }
   ],
-  "memory": []
+  "memory": [
+    {
+      "file": "2026-09-01-spec-e-burgos-008-cycle-04.md"
+    }
+  ]
 }

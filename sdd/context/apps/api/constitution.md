@@ -1,7 +1,7 @@
 # Constitución — apps/api
 
-> Versión 1.4 | Última actualización: cycle-01 | Fecha: 2026-08-30
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30)
+> Versión 1.5 | Última actualización: cycle-04 | Fecha: 2026-09-01
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01)
 
 ## 1. Propósito
 
@@ -11,7 +11,7 @@
 ## 2. Stack tecnológico
 
 - **NestJS 11** (HTTP + DI + módulos), **Prisma 7** + **PostgreSQL 16**, **Redis 7** (cache + pub/sub), **Bull 4** (colas de análisis/órdenes/noticias/evaluación), **Socket.io 4** (gateway WebSocket), **Passport + JWT** (access 15min + refresh rotation), **bcrypt**, **class-validator**.
-- Build: `@swc-node/register` en dev, Webpack en producción. Deploy: Railway (Dockerfile en `apps/api/Dockerfile`).
+- Build: `@swc-node/register` en dev, Webpack en producción. **Deploy: VPS propio (Hetzner CX23, Helsinki) vía `docker-compose.prod.yml`, detrás de nginx en `https://trader.estebanburgos.com.ar/api`** — Railway fue dado de baja como plataforma de despliegue (spec-e-burgos-008; ver §3.5).
 
 ## 3. Estructura y patrones
 
@@ -32,7 +32,7 @@
 | `AggregateRiskService` + `user_risk_policies` | Límite de exposición por activo, pérdida diaria máxima (**día calendario UTC**, no ventana móvil) y drawdown que pausa **todas** las configs del usuario. Vive en tabla propia 1:1 con `User`, **no** en `TradingConfig` ni en `AgentBudgetPolicy` — este último es presupuesto de **gasto de LLM**; límite de pérdida operativa ≠ presupuesto de tokens. La tabla nace **sin fila** ⇒ sin política, no se consulta nada. |
 | `evaluateSellPolicy` (`libs/trading-engine`) | **Única** decisión de SELL. Dos caminos independientes: toma de ganancia (piso `minProfitPct`, idéntico al comportamiento previo) y corte de pérdida por señal (`lossCutEnabled`). **Fail-closed en cadena**: confianza ausente, no finita o fuera de `[0,1]` ⇒ nunca vende en pérdida. El veto absoluto de `minProfitPct` en `trading.processor.ts` ya no existe.                                                          |
 | `resolveTradeQuantity` (`libs/trading-engine`) | **Única** aritmética de sizing: `factor = min(aegis × verdict, forge)` con `clamp(·,0,1)` en cada factor ⇒ el techo `balance × maxTradePct` es inviolable **por construcción**. `REDUCE` reduce tamaño (`reduceSizeFactor`), no bloquea; FORGE `skip` ⇒ tamaño 0 con `blockedBy: 'FORGE_SKIP'`, distinto de `AEGIS_BLOCK`.                                                                                             |
-| `aegisVerdictSchema` (`src/orchestrator/dto/`) | **Única** lectura del verdict de AEGIS: `blockReasons: AegisBlockReason[]` tipado (zod, un `.catch()` por campo para degradar a neutro ante payload parcial). `isOverridableBlock` es **fail-closed**: sin `blockReasons`, con array vacío o con cualquier motivo fuera del conjunto anulable, el BLOCK se respeta. El regex `isFalseConcentrationBlock` sobre `reason` fue eliminado y **no se reintroduce**.            |
+| `aegisVerdictSchema` (`src/orchestrator/dto/`) | **Única** lectura del verdict de AEGIS: `blockReasons: AegisBlockReason[]` tipado (zod, un `.catch()` por campo para degradar a neutro ante payload parcial). `isOverridableBlock` es **fail-closed**: sin `blockReasons`, con array vacío o con cualquier motivo fuera del conjunto anulable, el BLOCK se respeta. El regex `isFalseConcentrationBlock` sobre `reason` fue eliminado y **no se reintroduce**. **El gate ya no falla abierto ante un payload vacío (FIX-e-burgos-014):** antes, `verdict` con `.catch('PASS')` y `positionSizeMultiplier` con `.catch(1)` convertían una respuesta ilegible en un PASS a tamaño completo; ahora un verdict que no se pudo parsear es `BLOCK` con multiplicador `0` y alerta `AEGIS_UNPARSEABLE`. Los `.catch()` por campo se conservan para degradar un payload *parcial*; lo que cambió es que un payload *vacío* ya no se confunde con una autorización — `isAegisUnavailable()` distingue "AEGIS dijo PASS" de "AEGIS no dijo nada". |
 | `ReconciliationService` (`src/trading/`)     | **Única** puerta de sincronización con el exchange; corre como paso previo a toda decisión del ciclo (antes del health check del LLM), solo en LIVE/TESTNET. Idempotente por **transición condicional** (`updateMany` con `status: 'OPEN'` esperado + guard `claimed.count === 0`), nunca por conteo de trades. Barre OCO zombie por `clientOrderId` con prefijo `prot-`, preservando antes las `PROTECTED` de otras configs del mismo usuario/símbolo. |
 | `DecisionGateService` (`src/orchestrator/decision-gate.service.ts`) | **Único** gate determinista pre-LLM: resuelve HOLD sin llamar al LLM cuando las 5 condiciones de "sin señal" se cumplen a la vez, persistiendo una `AgentDecision` con `llmCostUsd = 0`. **Fail-closed**: reconciliación no confirmada, indicadores incompletos/stale, sin decisión previa o sin snapshot en la previa → llama al LLM. Nace apagado (`deterministicGateEnabled` default `false`). |
 | `ActionGateService.authorizeAndRun` (`src/trading/action-gate.service.ts`) | **Única** puerta de toda acción automática — camino reactivo y camino del LLM por igual. Es el invariante central del loop reactivo: un cap no se puede eludir porque no hay segunda puerta. Toma el lease del bot, revalida la posición esperada (`SUPERSEDED` si cambió bajo el lease), evalúa los caps, ejecuta y escribe la fila en `bot_actions`, liberando el lease pase lo que pase. **Cualquier punto de ejecución nuevo pasa por acá, nunca llama al executor directo.** |
@@ -105,6 +105,136 @@ Cambios de acompañamiento en `src/trading/`:
 - `trading.processor.ts` — pasó de ~1961 a ~1400 líneas al extraerse `PositionActionService`; sus 5 puntos de ejecución pasan por `authorizeAndRun` y escribe `rx:v1:window:{configId}` al re-encolar. **La omisión deliberada del `jobId` en el re-encolado sigue vigente y sigue siendo obligatoria** (reusar un jobId estático con el job activo hace que Bull devuelva el job existente y el agente se detenga en silencio); el adelanto por evento se hace con `Job.promote()`, no removiendo y re-encolando.
 
 **Datos:** tabla nueva `bot_actions` (+4 enums), ledger sobre el que se cuentan los caps — `positionId`/`decisionId` **sin FK a propósito**: es auditoría y debe sobrevivir al borrado de lo que referencia. Getter `botAction` dado de alta en `PrismaService`. `trading_configs` suma `reactiveLoopEnabled`, `maxActionsPerHour`, `minActionIntervalSec`.
+
+### 3.5 Infraestructura de producción — Hetzner (spec-e-burgos-008 cycle-01/02)
+
+`apps/api` ya no corre en Railway. Su base y su cola viven en un **VPS propio de Hetzner (CX23,
+Helsinki)**: `docker-compose.prod.yml` en la raíz del repo, con `infra/` conteniendo los scripts de
+provisión, backup y verificación. **Sólo `nginx` publica puertos** — Postgres y Redis viven
+exclusivamente en la red interna del compose. Inventario del servidor y línea de base medida:
+[`docs/infra/hetzner-server.md`](../../../../docs/infra/hetzner-server.md).
+
+| Archivo (`infra/`) | Para qué |
+| --- | --- |
+| `scripts/provision-01-base.sh` | Usuario no-root, swap, Docker, `unattended-upgrades` |
+| `scripts/provision-02-sshd.sh` | Apaga la auth por contraseña |
+| `scripts/provision-03-firewall.sh` | Firewall de Hetzner por API |
+| `scripts/db-backup.sh` · `db-restore.sh` | Cadena de backup a R2 |
+| `scripts/db-backup-cron-install.sh` | Cron horario, idempotente |
+| `scripts/db-migrate.sh` | Migraciones desde contenedor efímero |
+| `scripts/verify-network-isolation.sh` | Comprueba desde AFUERA que los puertos de datos no responden |
+| `scripts/*.test.sh` | 49 aserciones que el CI corre **antes** de construir |
+| `db/initdb/00-init.sql` | Base, rol de aplicación y extensión `vector` |
+
+Postgres corre `pgvector/pgvector:pg16` con las migraciones aplicadas. Redis 7 corre con **AOF y
+`noeviction`**. Backups horarios a Cloudflare R2 con restore verificado en una base descartable.
+
+**Decisiones que un cambio futuro no puede romper:**
+
+- **Redis en `noeviction` + AOF, NO `allkeys-lru`.** Acá Redis sostiene **las colas de Bull y los
+  leases `rx:v1:*` del loop reactivo** (ver §3.4), no un cache descartable. Con `allkeys-lru`, bajo
+  presión de memoria Redis descarta jobs y leases **en silencio**. Ver
+  [`docs/infra/redis-degradation.md`](../../../../docs/infra/redis-degradation.md): se decidió
+  **monitorear y no mitigar** — un fallback en memoria violaría el aislamiento entre réplicas y haría
+  que los caps de frecuencia (§3.4) dejen de contar lo que realmente pasó.
+- **Postgres y Redis sin `ports:`, nunca** — ni siquiera bindeados a `127.0.0.1` "para debuggear":
+  para eso está `docker compose exec postgres psql` desde el propio VPS.
+- **El healthcheck de Postgres consulta la base real**, no `pg_isready`: un `pg_isready` genérico da
+  **falso verde durante `initdb`**, cuando Postgres levanta un servidor temporal en socket unix.
+- **`pg_dump -Fc` por base, jamás `pg_dumpall`.** Un `pg_dumpall` lleva `CREATE DATABASE`/`\connect`
+  embebidos y se auto-direcciona a producción. Un dump `-Fc` no contiene el destino, así que
+  `pg_restore` exige `--dbname` — *"restaurar no puede pisar la base viva"* queda garantizado por
+  **el formato del artefacto**, no por la disciplina del operador.
+- **`.env.db` separado de `.env.production`.** El contenedor de Postgres no necesita ver las claves
+  de Binance ni los JWT; un `env_file` único se las daría a los cinco contenedores.
+- El archivado continuo de WAL quedó descartado a conciencia — ver
+  [`docs/infra/rpo-decision.md`](../../../../docs/infra/rpo-decision.md): si el archivado se traba,
+  Postgres retiene los segmentos y en 40 GB de disco eso termina con la base detenida — el mecanismo
+  que protege pasa a ser el que tumba.
+- **La IP del operador es residencial y cambia**: cuando pase, el puerto 22 deja de responder hasta
+  editar la regla en el panel de Hetzner. Es el precio de administrar el firewall **fuera** de la VM.
+- **El disco de 40 GB es el número a vigilar** — pasó de 4 % a 30 % sólo con desplegar (imágenes
+  3,26 GB) y Hetzner **no permite achicar**. Los dumps horarios y los embeddings crecen sobre eso.
+
+**Datos:** ninguna tabla nueva. La base de producción arranca vacía — los datos de Railway se
+descartaron a conciencia (DEC-DATOS, spec §7): el trial venció y no había forma técnica de
+extraerlos sin levantar el servicio. **Railway sigue existiendo** (trial vencido, deployments en
+`REMOVED`), pero darlo de baja es acción del dueño de la cuenta — no la ejecuta un agente.
+
+**Dependencias:** **Cloudflare R2** para los dumps (cuenta `cryptotradereb@gmail.com`) — es lo único
+de Cloudflare que se usa, DNS y TLS quedaron fuera (DEC-DOM). **Hostinger** sirve el DNS de
+`estebanburgos.com.ar`. Ninguna dependencia nueva de npm.
+
+### 3.6 Health check real, seed de ADMIN y correcciones de riesgo/embeddings (spec-e-burgos-008 cycle-02)
+
+- **`src/app/` — `HealthService` consulta Postgres con `SELECT 1` y hace `PING` a Redis**; el
+  controller responde **503** cuando alguna está caída (antes devolvía `{status:'ok'}` fijo sin
+  mirar nada). Timeout de 2 s por sonda — una dependencia colgada no puede colgar el chequeo, o un
+  orquestador esperando respuesta nunca reinicia el contenedor. Usa una **conexión ioredis
+  dedicada**, no una cola de Bull prestada: registrar una cola acá sumaría una tercera `Bull.Queue`
+  para `trading-agent` (ver §3.4). `lazyConnect` para que un Redis caído no bloquee el arranque.
+- **`prisma/seed.ts` — `seedSuperAdmin()` provisiona un único usuario `ADMIN`** desde
+  `ADMIN_USERNAME`/`ADMIN_PASSWORD` y **converge en cada corrida** (rotar la contraseña es cambiar
+  el secret y redesplegar, mismo contrato que el rol de aplicación en `00-init.sql`). **Fail-closed
+  en producción**: sin esas variables lanza y, como el `CMD` del Dockerfile corre `db seed` antes de
+  arrancar, **el contenedor no levanta**. Otros usuarios `ADMIN` se reportan con warning pero **no se
+  borran**. No existe rol `SUPERADMIN`: `UserRole` es `TRADER | ADMIN`.
+- **El gate de riesgo ya no falla abierto (FIX-e-burgos-014)** — ver la fila `aegisVerdictSchema` en
+  §3.1.
+- **Los embeddings pasan a OpenRouter con proveedor explícito.** `EmbeddingService` ya **no cae solo**
+  de un proveedor a otro: vectores de modelos distintos viven en espacios distintos y una similitud
+  coseno entre ellos no significa nada. Cambiar `EMBEDDING_PROVIDER` o `EMBEDDING_MODEL` **obliga a
+  re-embeber todo lo guardado**. `assertShape()` es la **única** defensa de la dimensión: la columna
+  `embedding` es `jsonb` y acepta cualquier largo en silencio.
+  - `FIX-e-burgos-013` restauró `agent_document_chunks.embedding_vec vector(1024)` y su índice
+    `ivfflat`, que la migración `20260413184109` había borrado como daño colateral de un diff
+    autogenerado. Lo que impide la recaída no está en la migración sino en `schema.prisma`, que
+    ahora declara la columna como `Unsupported("vector(1024)")` — mientras Prisma no sepa que
+    existe, cualquier diff futuro la borra otra vez.
+  - `OPEN_ROUTER_API_KEY` es **variable de entorno** además de vivir cifrada en `llm_credentials`: no
+    es duplicación por descuido — los embeddings son **infraestructura de plataforma** y la
+    credencial de la base es la del **chat de agentes**. Si los embeddings dependieran de la
+    credencial de cada usuario, los documentos se indexarían con modelos distintos según quién los
+    suba y el índice quedaría incomparable consigo mismo.
+
+### 3.7 Persistencia de costo LLM en decisiones manuales (spec-e-burgos-008 cycle-03, FIX-e-burgos-015)
+
+`TradingService.triggerAnalysis` persiste `llmCostUsd` y `llmCallCount` en la `AgentDecision`, igual
+que el camino programado. Omitirlos dejaba en `NULL` toda decisión disparada desde el botón de
+análisis manual, y el dashboard de costo subreportaba sin ningún error. **Sólo esos dos campos
+existen en el modelo** — `pricedCallCount`/`unpricedCallCount` viven únicamente en el objeto interno
+del processor; agregarlos al `create` tira `PrismaClientValidationError`. `llmCostUsd` usa `?? null`
+y **nunca** `?? 0`: la columna es nullable para distinguir *"la corrida fue gratis"* de *"no se pudo
+tarifar"* — confundirlas convierte una falla de tarifado en un cero creíble.
+
+El ciclo de agente corre entero en Hetzner y queda registrado (CA-007), verificado con 6 ciclos
+reales en SANDBOX contra la infraestructura de §3.5.
+
+### 3.8 Observabilidad — alertas de infraestructura (spec-e-burgos-008 cycle-04)
+
+`infra/scripts/daily-health-check.sh` corre por cron **`0 8 * * *` UTC** (05:00 Argentina, antes de
+que el operador empiece el día) y hace seis verificaciones, cada una atada a un modo de falla que
+este proyecto demostró que ocurre en silencio:
+
+| Chequeo | El silencio que rompe |
+| --- | --- |
+| Disco | 40 GB que Hetzner **no deja achicar** (§3.5) |
+| Contenedores | Si la API queda `unhealthy`, nginx sigue en pie devolviendo 502 |
+| Backups | El cron horario de backup escribe a un log que nadie lee: 24 chances diarias de fallar |
+| Certificado | Vence el 2026-11-30; si la renovación falla, el sitio cae sin aviso previo |
+| `/api/health` | Exige el **cuerpo**, no el código — un 200 con la base caída sería el mismo fail-open que corrigió `HealthService` (§3.6) |
+| Truncados de LLM | Un sub-agente que trunca degrada la decisión sin ningún error — así se coló `FIX-e-burgos-014` (§3.1/§3.6) |
+
+**El aviso va a la tabla `Notification` de la propia plataforma**, tipo nuevo `INFRA_ALERT`, con su
+evento WebSocket — agregar un servicio externo sumaría un punto de falla justo cuando algo está roto.
+`INFRA_ALERT` es un tipo propio y no `AGENT_ERROR`: *"mi bot falló"* y *"el servidor se queda sin
+disco"* son urgencias distintas que el operador tiene que poder distinguir. Con esto son tres crons:
+backup horario, renovación del certificado dos veces al día, y este.
+
+El chequeo **no mide uso de memoria de Redis** — con `noeviction` (§3.5) un Redis lleno falla las
+escrituras en vez de descartar jobs, que es lo buscado, pero no se ve venir. La ventana entre que
+algo cae y las 08:00 UTC no está cubierta por ningún monitor externo; un uptime check gratuito
+contra `/api/health` cerraría el hueco (mejora, no requisito).
 
 ## 4. Convenciones propias
 

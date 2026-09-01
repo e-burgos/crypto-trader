@@ -263,3 +263,69 @@ describe('OpenRouterProvider', () => {
     expect(result.truncated).toBe(false);
   });
 });
+
+// ── FIX-e-burgos-014 ─────────────────────────────────────────────────────────
+describe('OpenRouterProvider — razonamiento apagado', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('manda reasoning.enabled=false en el cuerpo', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      },
+    } as never);
+
+    const provider = new OpenRouterProvider({
+      apiKey: 'sk-or-test',
+      model: 'deepseek/deepseek-v4-pro',
+    });
+    await provider.complete('sistema', 'usuario', { maxTokens: 350 });
+
+    const body = mockedAxios.post.mock.calls[0][1] as Record<string, unknown>;
+    // enabled:false y NO exclude:true — exclude solo oculta el razonamiento: el
+    // modelo igual lo genera, igual consume el presupuesto y igual se cobra.
+    expect(body['reasoning']).toEqual({ enabled: false });
+    expect(body['max_tokens']).toBe(350);
+  });
+
+  it('reintenta SIN el flag cuando el endpoint exige razonamiento', async () => {
+    // minimax-m2.7 responde 400 "Reasoning is mandatory for this endpoint and
+    // cannot be disabled". Sin este reintento, agregar el flag convertia una
+    // respuesta truncada en un fallo duro para esos modelos.
+    mockedAxios.post
+      .mockRejectedValueOnce({
+        response: {
+          status: 400,
+          data: { error: { message: 'Reasoning is mandatory for this endpoint and cannot be disabled.' } },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: '{"ok":true}' }, finish_reason: 'stop' }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        },
+      } as never);
+
+    const provider = new OpenRouterProvider({
+      apiKey: 'sk-or-test',
+      model: 'minimax/minimax-m2.7',
+    });
+    await provider.complete('sistema', 'usuario', { maxTokens: 600 });
+
+    expect(mockedAxios.post).toHaveBeenCalledTimes(2);
+    const primero = mockedAxios.post.mock.calls[0][1] as Record<string, unknown>;
+    const segundo = mockedAxios.post.mock.calls[1][1] as Record<string, unknown>;
+    expect(primero['reasoning']).toEqual({ enabled: false });
+    expect(segundo).not.toHaveProperty('reasoning');
+  });
+
+  it('NO reintenta ante un 400 que no sea por razonamiento obligatorio', async () => {
+    mockedAxios.post.mockRejectedValue({
+      response: { status: 400, data: { error: { message: 'model not found' } } },
+    });
+    const provider = new OpenRouterProvider({ apiKey: 'k', model: 'x/y' });
+    await expect(provider.complete('s', 'u')).rejects.toBeDefined();
+    expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+  });
+});

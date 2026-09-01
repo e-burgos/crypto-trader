@@ -693,6 +693,45 @@
         "source": "declared-estimate",
         "model_tier": "claude/opus"
       }
+    },
+    {
+      "id": "FIX-e-burgos-014",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-014.md",
+      "type": "HOTFIX",
+      "severity": "critical",
+      "created_at": "2026-09-01",
+      "resolved_at": "2026-09-01",
+      "validated_at": null,
+      "title": "El gate de riesgo AEGIS falla ABIERTO: si el LLM trunca, el veredicto queda en PASS a tamano completo",
+      "estimation_hours": 4,
+      "description": "Reproducido en produccion con un ciclo real del agente. Los cuatro sub-agentes (risk, operations, market, blockchain) fallaron con 'LLM response truncated' y AUN ASI se produjo una decision (cmtj2x3ef000h01qgsohx5bih) con 4 evaluaciones agendadas. Causa raiz medida contra OpenRouter con el prompt real: los modelos configurados en admin_agent_configs son de RAZONAMIENTO y consumen todo el presupuesto en tokens de pensamiento antes de emitir el JSON. deepseek/deepseek-v4-pro (agente risk) devuelve finish_reason=length con 350/350 tokens, 1361 caracteres de reasoning y contenido de CERO caracteres; minimax/minimax-m2.7 (blockchain) igual con 1239 caracteres de reasoning. Los limites de AGENT_TASK_MAX_TOKENS (risk_gate 350, sizing_suggestion 350, news_sentiment 500, macro_context 600) se dimensionaron para modelos sin razonamiento. La consecuencia es la grave: aegis-verdict.schema.ts declara verdict con .catch('PASS') y positionSizeMultiplier con .catch(1), asi que una respuesta vacia recorre safeParseJson(raw,{}) -> {} -> defaults del schema -> PASS a tamano completo. Un gate de riesgo que ante su propio fallo autoriza la operacion al maximo es exactamente lo contrario de un gate.",
+      "justification": "HOTFIX y no ciclo SDD: la cuenta ya tiene claves de Binance LIVE con saldo real (75.19 USDT verificado) y el defecto autoriza operaciones al maximo cada vez que el gate falla, que con los modelos actuales es SIEMPRE. No hay entidades ni endpoints nuevos y son 3 archivos. El hallazgo estaba anotado como riesgo teorico en la spec 008 ('Fail-open de AEGIS al degradar'); esta corrida lo convirtio en un hecho medido.",
+      "related_modules": [
+        "orchestrator",
+        "risk",
+        "agents"
+      ],
+      "affected_files": [
+        "apps/api/src/orchestrator/dto/aegis-verdict.schema.ts",
+        "apps/api/src/orchestrator/dto/aegis-verdict.schema.spec.ts",
+        "apps/api/src/orchestrator/agent-task-limits.ts",
+        "apps/api/src/orchestrator/agent-task-limits.spec.ts",
+        "apps/api/src/orchestrator/orchestrator.service.spec.ts",
+        "libs/analysis/src/lib/llm/openrouter.provider.ts",
+        "libs/analysis/src/lib/llm/openrouter.provider.spec.ts"
+      ],
+      "test_reference": "Verificado con ciclos REALES del agente en produccion, no solo en suite. Progresion medida: antes del fix 4 de 4 sub-agentes fallaban con 'LLM response truncated' y la decision se producia igual; con fail-closed + reasoning apagado quedaron 2 fallando (confianza 0.82); con el reintento para minimax quedo 1 (0.84); con news_sentiment en 1500 quedaron CERO fallados y confianza 0.88. Mediciones contra OpenRouter con el prompt real: deepseek-v4-pro sin tocar da finish_reason=length 350/350 con 1361 chars de reasoning y 0 de contenido, y con reasoning.enabled=false da finish=stop en 136 tokens con JSON valido. reasoning.exclude=true NO sirve: deja contenido vacio en 350/350 porque solo oculta el razonamiento, el modelo igual lo genera y se cobra. minimax-m2.7 responde 400 'Reasoning is mandatory for this endpoint and cannot be disabled', de ahi el reintento sin el flag. Suites: 751/751 en apps/api (87 suites) y 161/161 en libs/analysis, typecheck y lint en verde. CA-050 (risk_gate 300-400) intacto y el harness de costo CA-060/CA-061 sigue pasando.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 340000,
+        "tokens_out": 44000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     }
   ]
 }

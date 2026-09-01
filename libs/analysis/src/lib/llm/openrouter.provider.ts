@@ -36,10 +36,23 @@ export class OpenRouterProvider implements LLMProviderClient {
     const capability = resolvePromptCacheCapability(this.name, this.model);
     const shouldMark = shouldMarkPromptForCache(capability, systemPrompt);
 
-    const buildBody = (withCacheControl: boolean): Record<string, unknown> => {
+    const buildBody = (
+      withCacheControl: boolean,
+      disableReasoning: boolean,
+    ): Record<string, unknown> => {
       const body: Record<string, unknown> = {
         model: this.model,
         max_tokens: maxTokens,
+        // Reasoning models spend the whole max_tokens budget thinking and return
+        // an empty message, which the caller can only read as a truncated answer
+        // (FIX-e-burgos-014). Measured on deepseek-v4-pro with the real risk_gate
+        // prompt: 350/350 tokens, 1361 characters of reasoning, ZERO characters of
+        // content — with reasoning off, 136 tokens and a valid verdict.
+        //
+        // It must be `enabled: false`, not `exclude: true`: exclude only hides the
+        // reasoning from the response, the model still generates it, still burns
+        // the budget and it is still billed. Measured too — exclude left content
+        // empty at 350/350.
         messages: [
           {
             role: 'system',
@@ -57,6 +70,22 @@ export class OpenRouterProvider implements LLMProviderClient {
         ],
       };
 
+      // Reasoning models spend the whole max_tokens budget thinking and return an
+      // empty message, which the caller can only read as a truncated answer
+      // (FIX-e-burgos-014). Measured on deepseek-v4-pro with the real risk_gate
+      // prompt: 350/350 tokens, 1361 characters of reasoning, ZERO of content;
+      // with reasoning off, 136 tokens and a valid verdict.
+      //
+      // `enabled: false`, never `exclude: true`: exclude only hides the reasoning
+      // from the response — the model still generates it, still burns the budget
+      // and it is still billed. Measured too.
+      //
+      // Some endpoints refuse to disable it (minimax-m2.7 answers 400 "Reasoning
+      // is mandatory"), so this flag is what the retry below turns off.
+      if (disableReasoning) {
+        body['reasoning'] = { enabled: false };
+      }
+
       // Enable fallback routing when fallback models are configured
       if (this.fallbackModels.length > 0) {
         body['route'] = 'fallback';
@@ -66,11 +95,12 @@ export class OpenRouterProvider implements LLMProviderClient {
       return body;
     };
 
-    const response = await postWithCacheControlRetry(
-      (withCacheControl) =>
-        axios.post(
-          'https://openrouter.ai/api/v1/chat/completions',
-          buildBody(withCacheControl),
+    const response = await postWithMandatoryReasoningRetry((disableReasoning) =>
+      postWithCacheControlRetry(
+        (withCacheControl) =>
+          axios.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            buildBody(withCacheControl, disableReasoning),
           {
             headers: {
               Authorization: `Bearer ${this.apiKey}`,
@@ -80,8 +110,9 @@ export class OpenRouterProvider implements LLMProviderClient {
             },
             timeout: 60000,
           },
-        ),
-      shouldMark,
+          ),
+        shouldMark,
+      ),
     );
     const data = response.data;
 
@@ -110,4 +141,32 @@ export class OpenRouterProvider implements LLMProviderClient {
       truncated: data.choices?.[0]?.finish_reason === 'length',
     };
   }
+}
+
+/**
+ * Retries without `reasoning: { enabled: false }` when the endpoint refuses to
+ * disable it (FIX-e-burgos-014). Mirrors postWithCacheControlRetry: ask for the
+ * cheaper behaviour first, fall back to the provider's terms if it says no.
+ *
+ * Measured: minimax/minimax-m2.7 answers HTTP 400 with "Reasoning is mandatory
+ * for this endpoint and cannot be disabled." Without this retry, adding the flag
+ * turned a truncated answer into a hard failure for those models.
+ */
+export async function postWithMandatoryReasoningRetry<T>(
+  post: (disableReasoning: boolean) => Promise<T>,
+): Promise<T> {
+  try {
+    return await post(true);
+  } catch (err) {
+    if (isMandatoryReasoningRejection(err)) return await post(false);
+    throw err;
+  }
+}
+
+function isMandatoryReasoningRejection(err: unknown): boolean {
+  const response = (err as { response?: { status?: number; data?: unknown } })
+    ?.response;
+  if (response?.status !== 400) return false;
+  const message = JSON.stringify(response.data ?? '').toLowerCase();
+  return message.includes('reasoning') && message.includes('mandatory');
 }

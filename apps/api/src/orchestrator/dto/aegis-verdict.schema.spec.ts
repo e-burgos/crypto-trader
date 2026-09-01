@@ -1,6 +1,7 @@
 import { AegisVerdict } from './decision-synthesis.dto';
 import {
   aegisVerdictSchema,
+  isAegisUnavailable,
   isOverridableBlock,
   parseAegisVerdict,
 } from './aegis-verdict.schema';
@@ -91,15 +92,16 @@ describe('parseAegisVerdict', () => {
     });
   });
 
-  it('degrades unparsable text to a neutral PASS verdict instead of throwing', () => {
-    expect(parseAegisVerdict('not json at all')).toEqual({
-      riskScore: 50,
-      verdict: 'PASS',
-      positionSizeMultiplier: 1,
-      blockReasons: [],
-      reason: '',
-      alerts: [],
-    });
+  // INVERTIDO por FIX-e-burgos-014. Este test afirmaba que un texto ilegible
+  // degradaba a "PASS neutro a tamano completo", o sea que consagraba el
+  // fail-open como comportamiento deseado. No era un descuido: estaba escrito.
+  // Un gate de riesgo que ante su propio fallo autoriza al maximo no es neutro.
+  it('degrades unparsable text to a BLOCK verdict, never to PASS', () => {
+    const v = parseAegisVerdict('not json at all');
+    expect(v.verdict).toBe('BLOCK');
+    expect(v.positionSizeMultiplier).toBe(0);
+    expect(v.riskScore).toBe(100);
+    expect(v.alerts).toContain('AEGIS_UNPARSEABLE');
   });
 
   it('strips <think> tags and markdown fences before parsing', () => {
@@ -167,5 +169,63 @@ describe('isOverridableBlock', () => {
     expect(
       isOverridableBlock({ ...base, verdict: 'PASS', blockReasons: [] }),
     ).toBe(false);
+  });
+});
+
+// ── FIX-e-burgos-014 — el gate debe fallar CERRADO ───────────────────────────
+// Medido en produccion: con los modelos de razonamiento configurados, AEGIS
+// gasta todo su presupuesto pensando y devuelve cero caracteres. Antes de este
+// fix esa respuesta vacia salia como PASS a tamano completo.
+describe('parseAegisVerdict — fail-closed (FIX-e-burgos-014)', () => {
+  const casosSinRespuesta: Array<[string, string]> = [
+    ['cadena vacia', ''],
+    ['solo espacios', '   \n  '],
+    ['texto que no es JSON', 'Lo siento, no puedo responder'],
+    ['JSON vacio', '{}'],
+    ['objeto sin ninguna clave esperada', '{"foo":"bar"}'],
+    ['razonamiento truncado sin cerrar', '<think>estoy evaluando el riesgo y'],
+  ];
+
+  it.each(casosSinRespuesta)(
+    'bloquea cuando AEGIS no responde nada util: %s',
+    (_desc, raw) => {
+      const v = parseAegisVerdict(raw);
+      expect(v.verdict).toBe('BLOCK');
+      expect(v.positionSizeMultiplier).toBe(0);
+      expect(v.riskScore).toBe(100);
+      expect(isAegisUnavailable(v)).toBe(true);
+    },
+  );
+
+  it('NO confunde un BLOCK real con un fallo del gate', () => {
+    const v = parseAegisVerdict(
+      '{"verdict":"BLOCK","riskScore":90,"positionSizeMultiplier":0,"blockReasons":["DAILY_LOSS_LIMIT"],"reason":"limite diario","alerts":[]}',
+    );
+    expect(v.verdict).toBe('BLOCK');
+    expect(isAegisUnavailable(v)).toBe(false);
+  });
+
+  it('un PASS real sigue pasando', () => {
+    const v = parseAegisVerdict(
+      '{"verdict":"PASS","riskScore":20,"positionSizeMultiplier":1,"blockReasons":[],"reason":"ok","alerts":[]}',
+    );
+    expect(v.verdict).toBe('PASS');
+    expect(v.positionSizeMultiplier).toBe(1);
+    expect(isAegisUnavailable(v)).toBe(false);
+  });
+
+  it('sigue degradando un payload PARCIAL en vez de descartarlo', () => {
+    // Esa parte del diseno era correcta: si vino el veredicto pero falta un
+    // campo secundario, se completa con el default y se respeta el veredicto.
+    const v = parseAegisVerdict('{"verdict":"REDUCE","positionSizeMultiplier":0.5}');
+    expect(v.verdict).toBe('REDUCE');
+    expect(v.positionSizeMultiplier).toBe(0.5);
+    expect(v.riskScore).toBe(50);
+    expect(isAegisUnavailable(v)).toBe(false);
+  });
+
+  it('un verdict invalido con el resto presente NO se toma como fallo del gate', () => {
+    const v = parseAegisVerdict('{"verdict":"MAYBE","riskScore":30}');
+    expect(isAegisUnavailable(v)).toBe(false);
   });
 });

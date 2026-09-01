@@ -6,7 +6,14 @@ import {
 import { AgentTask } from './sub-agent.service';
 
 describe('AGENT_TASK_MAX_TOKENS', () => {
-  it('defines the exact limits fixed by architect.md', () => {
+  // Los valores salen del architect.md de spec-001 cycle-03, con DOS
+  // desviaciones registradas en FIX-e-burgos-014: news_sentiment (500 -> 900) y
+  // macro_context (600 -> 1200). Son las unicas tareas cuyos modelos siguen
+  // truncando tras apagar el razonamiento, porque minimax-m2.7 no permite
+  // apagarlo (400 "Reasoning is mandatory") y deepseek-v4-flash razona de forma
+  // intermitente. Los limites que CA-050 acota quedan intactos, y el harness de
+  // costo CA-060/CA-061 sigue en verde con estos valores.
+  it('defines the exact limits, with the deviations of FIX-e-burgos-014', () => {
     expect(AGENT_TASK_MAX_TOKENS).toEqual({
       risk_gate: 350,
       sizing_suggestion: 350,
@@ -14,8 +21,8 @@ describe('AGENT_TASK_MAX_TOKENS', () => {
       news_technical_relevance: 250,
       ecosystem_impact: 300,
       technical_signal: 500,
-      news_sentiment: 500,
-      macro_context: 600,
+      news_sentiment: 1500,
+      macro_context: 1200,
       decision_synthesis: 700,
       cross_agent_synthesis: 1024,
     });

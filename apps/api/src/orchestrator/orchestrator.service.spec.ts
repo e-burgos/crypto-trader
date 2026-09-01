@@ -283,6 +283,14 @@ describe('OrchestratorService', () => {
             return Promise.resolve(
               '{"decision":"HOLD","confidence":0.5,"reasoning":"ok","waitMinutes":15}',
             );
+          // AEGIS tiene que devolver un veredicto LEGIBLE: desde
+          // FIX-e-burgos-014 un '{}' significa "el gate no respondio" y bloquea,
+          // lo que cortaria el ciclo antes de la sintesis. Este test mide la
+          // contabilidad de costo, no el gate, asi que se lo deja responder.
+          if (agentId === 'risk' && task === 'risk_gate')
+            return Promise.resolve(
+              '{"verdict":"PASS","riskScore":20,"positionSizeMultiplier":1,"blockReasons":[],"reason":"ok","alerts":[]}',
+            );
           return Promise.resolve('{}');
         },
       );

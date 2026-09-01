@@ -493,6 +493,141 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
     });
   });
 
+  describe('placeLimitMakerBuyOrder', () => {
+    it('sends the exact LIMIT_MAKER BUY payload without timeInForce', async () => {
+      mockExchangeInfo('LMBUSDT1', {
+        priceFilter: { minPrice: '0.01', maxPrice: '999999', tickSize: '0.01' },
+      });
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 300,
+          symbol: 'LMBUSDT1',
+          side: 'BUY',
+          status: 'NEW',
+          price: '46375.00',
+          clientOrderId: 'gen-abc',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      const result = await client.placeLimitMakerBuyOrder('LMBUSDT1', {
+        quantity: 0.2,
+        price: 46375,
+        referencePrice: 47000,
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.method).toBe('POST');
+      expect(call.url).toBe('/api/v3/order');
+      expect(call.params).toEqual({
+        symbol: 'LMBUSDT1',
+        side: 'BUY',
+        type: 'LIMIT_MAKER',
+        quantity: '0.20000',
+        price: '46375.00',
+        newOrderRespType: 'FULL',
+        timestamp: expect.any(String),
+        recvWindow: '60000',
+        signature: expect.any(String),
+      });
+      expect(call.params.timeInForce).toBeUndefined();
+      expect(call.params.newClientOrderId).toBeUndefined();
+
+      expect(result).toEqual({
+        orderId: '300',
+        clientOrderId: 'gen-abc',
+        placedAt: new Date(1700000000000),
+      });
+    });
+
+    it('includes newClientOrderId only when provided', async () => {
+      mockExchangeInfo('LMBUSDT2');
+      getMockClient().request.mockResolvedValueOnce({
+        data: {
+          orderId: 301,
+          symbol: 'LMBUSDT2',
+          side: 'BUY',
+          status: 'NEW',
+          price: '65000.00',
+          clientOrderId: 'my-client-id',
+          executedQty: '0.00000',
+          cummulativeQuoteQty: '0.00000',
+          transactTime: 1700000000000,
+        },
+      });
+
+      await client.placeLimitMakerBuyOrder('LMBUSDT2', {
+        quantity: 0.1,
+        price: 65000,
+        referencePrice: 66000,
+        clientOrderId: 'my-client-id',
+      });
+
+      const call = getMockClient().request.mock.calls[0][0];
+      expect(call.params.newClientOrderId).toBe('my-client-id');
+    });
+
+    it('rejects locally on LOT_SIZE without calling the exchange', async () => {
+      mockExchangeInfo('LMBUSDT3', {
+        lotSize: { minQty: '1', maxQty: '900', stepSize: '0.001' },
+      });
+
+      await expect(
+        client.placeLimitMakerBuyOrder('LMBUSDT3', {
+          quantity: 0.5,
+          price: 65000,
+          referencePrice: 66000,
+        }),
+      ).rejects.toMatchObject({ code: 'LOT_SIZE' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on PRICE_FILTER without calling the exchange', async () => {
+      mockExchangeInfo('LMBUSDT4', {
+        priceFilter: { minPrice: '100', maxPrice: '999999', tickSize: '0.1' },
+      });
+
+      await expect(
+        client.placeLimitMakerBuyOrder('LMBUSDT4', {
+          quantity: 1,
+          price: 50,
+          referencePrice: 60,
+        }),
+      ).rejects.toMatchObject({ code: 'PRICE_FILTER' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on MIN_NOTIONAL without calling the exchange', async () => {
+      mockExchangeInfo('LMBUSDT5', {
+        notional: { minNotional: '1000000', filterType: 'NOTIONAL' },
+      });
+
+      await expect(
+        client.placeLimitMakerBuyOrder('LMBUSDT5', {
+          quantity: 1,
+          price: 100,
+          referencePrice: 110,
+        }),
+      ).rejects.toMatchObject({ code: 'MIN_NOTIONAL' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+
+    it('rejects locally on PRICE_CROSSES_MARKET when price is not below the reference', async () => {
+      mockExchangeInfo('LMBUSDT6');
+
+      await expect(
+        client.placeLimitMakerBuyOrder('LMBUSDT6', {
+          quantity: 0.2,
+          price: 108210,
+          referencePrice: 77292.81,
+        }),
+      ).rejects.toMatchObject({ code: 'PRICE_CROSSES_MARKET' });
+      expect(getMockClient().request).not.toHaveBeenCalled();
+    });
+  });
+
   describe('placeStopLossLimitOrder', () => {
     it('sends the exact STOP_LOSS_LIMIT payload', async () => {
       mockExchangeInfo('SLLUSDT1');

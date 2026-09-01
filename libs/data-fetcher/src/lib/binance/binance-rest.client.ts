@@ -54,6 +54,7 @@ interface BinanceOrderResponse {
   side: string;
   status: string;
   price: string;
+  clientOrderId?: string;
   origQty?: string;
   executedQty: string;
   cummulativeQuoteQty: string;
@@ -589,6 +590,51 @@ export class BinanceRestClient {
     );
 
     return this.toOrderResult(data);
+  }
+
+  async placeLimitMakerBuyOrder(
+    symbol: string,
+    params: {
+      quantity: number;
+      price: number;
+      referencePrice: number;
+      clientOrderId?: string;
+    },
+  ): Promise<{ orderId: string; clientOrderId: string; placedAt: Date }> {
+    const filters = await this.getSymbolFilters(symbol);
+    const adjustedQty = this.validateQuantity(params.quantity, filters.lotSize);
+    const adjustedPrice = this.validatePrice(
+      params.price,
+      filters.price,
+      'down',
+    );
+    this.validateNotional(adjustedPrice, adjustedQty, filters.notional);
+    this.assertBuyPriceCrossesMarket(
+      adjustedPrice < params.referencePrice,
+      `LIMIT_MAKER price ${adjustedPrice} must stay below referencePrice ${params.referencePrice}`,
+    );
+
+    const { data } = await this.signedRequest<BinanceOrderResponse>(
+      '/api/v3/order',
+      'POST',
+      {
+        symbol,
+        side: 'BUY',
+        type: 'LIMIT_MAKER',
+        quantity: this.formatDecimal(adjustedQty, filters.lotSize.stepSize),
+        price: this.formatDecimal(adjustedPrice, filters.price.tickSize),
+        newOrderRespType: 'FULL',
+        ...(params.clientOrderId
+          ? { newClientOrderId: params.clientOrderId }
+          : {}),
+      },
+    );
+
+    return {
+      orderId: String(data.orderId),
+      clientOrderId: data.clientOrderId ?? '',
+      placedAt: new Date(data.transactTime),
+    };
   }
 
   /**

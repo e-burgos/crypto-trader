@@ -23,9 +23,13 @@ import { Injectable, Logger } from '@nestjs/common';
 export type EmbeddingProvider = 'openrouter' | 'voyage' | 'openai';
 
 /**
- * Fixed by the schema: agent_document_chunks.embedding_vec is vector(1024).
- * Any provider used here must produce exactly this many dimensions, or the
- * insert fails — which is the loud failure we want instead of a silent one.
+ * The vector space every stored chunk shares. NOTHING IN THE DATABASE ENFORCES
+ * THIS: migration 20260413184109 dropped the `embedding_vec vector(1024)` column
+ * and its ivfflat index as collateral damage of a Prisma-generated migration, so
+ * embeddings now live in a jsonb column that accepts any length. assertShape() is
+ * the only thing standing between a provider change and an index of mixed,
+ * incomparable vectors. 1024 is kept because it is what the dropped column used
+ * and what every stored chunk already has.
  */
 export const EMBEDDING_DIMENSIONS = 1024;
 
@@ -76,9 +80,8 @@ export class EmbeddingService {
   }
 
   /**
-   * A vector of the wrong length would be rejected by Postgres anyway, but the
-   * error there names a column, not a provider. Checking here says which model
-   * produced it and stops a partially-written batch.
+   * The jsonb column accepts a vector of ANY length without complaining, so this
+   * check is not belt-and-braces: it is the only enforcement there is.
    */
   private assertShape(
     vectors: number[][],
@@ -93,7 +96,7 @@ export class EmbeddingService {
     for (const vector of vectors) {
       if (vector.length !== EMBEDDING_DIMENSIONS) {
         throw new Error(
-          `${provider} model '${this.model}' returned ${vector.length} dimensions, but agent_document_chunks.embedding_vec is vector(${EMBEDDING_DIMENSIONS}). Storing it would corrupt the index.`,
+          `${provider} model '${this.model}' returned ${vector.length} dimensions, but every stored chunk has ${EMBEDDING_DIMENSIONS}. The jsonb column would accept it silently and the index would stop being comparable.`,
         );
       }
     }

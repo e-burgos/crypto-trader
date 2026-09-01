@@ -92,16 +92,19 @@ describe('EmbeddingService', () => {
     expect(config.headers.Authorization).toBe('Bearer k');
   });
 
-  it('rechaza un vector de otra dimension antes de que llegue a la base', async () => {
-    // Sin dimensions, text-embedding-3-small devuelve 1536. Postgres lo
-    // rechazaria igual, pero su error nombra una columna, no un modelo.
+  it('rechaza un vector de otra dimension: la base NO lo haria', async () => {
+    // La columna embedding es jsonb y acepta cualquier largo en silencio — la
+    // columna pgvector la borro la migracion 20260413184109. Este chequeo es la
+    // unica defensa que queda.
     process.env['OPEN_ROUTER_API_KEY'] = 'k';
     post.mockResolvedValue(respuesta([VECTOR_1536()]));
     const { EmbeddingService: S } = await import('./embedding.service');
     await expect(new S().embed(['hola'])).rejects.toThrow(
       /returned 1536 dimensions/,
     );
-    await expect(new S().embed(['hola'])).rejects.toThrow(/corrupt the index/);
+    await expect(new S().embed(['hola'])).rejects.toThrow(
+      /stop being comparable/,
+    );
   });
 
   it('rechaza si vuelven menos vectores que textos', async () => {

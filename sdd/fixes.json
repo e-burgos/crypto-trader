@@ -831,6 +831,41 @@
         "source": "declared-estimate",
         "model_tier": "claude/fable"
       }
+    },
+    {
+      "id": "FIX-e-burgos-018",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-018.md",
+      "type": "IMPROVEMENT",
+      "severity": "low",
+      "created_at": "2026-09-02",
+      "resolved_at": "2026-09-02",
+      "validated_at": null,
+      "title": "Retirar Railway y GitHub Pages del repo tras borrar la cuenta de Railway",
+      "estimation_hours": 0.5,
+      "description": "Con la cuenta de Railway borrada y la SPA servida desde el VPS en el mismo origen, railway.toml y deploy-web.yml (GitHub Pages con VITE_API_URL apuntando a Railway) publicaban en cada push una SPA contra una API muerta. Se borran ambos y README y .env.example pasan a describir el VPS y deploy.yml. Los documentos historicos y los registros SDD de spec-008 no se tocan.",
+      "justification": "Limpieza sin comportamiento de aplicacion; evita publicar una SPA rota en Pages en cada push.",
+      "related_modules": [
+        "infra",
+        "deploy"
+      ],
+      "affected_files": [
+        "railway.toml",
+        ".github/workflows/deploy-web.yml",
+        "README.md",
+        ".env.example"
+      ],
+      "test_reference": "grep -ri railway README.md .env.example sin resultados; el siguiente push a main no ejecuta Deploy Web to GitHub Pages. Pendiente del dev fuera del repo: desinstalar la GitHub App de Railway y deshabilitar Pages.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 15000,
+        "tokens_out": 2500,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     }
   ]
 }

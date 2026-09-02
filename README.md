@@ -34,7 +34,7 @@ Plataforma fullstack de **trading autónomo de criptomonedas** impulsada por un 
 | LLM              | OpenRouter (`@openrouter/sdk`), Claude, OpenAI, Groq, Gemini, Mistral, Together — por usuario |
 | Trading API      | Binance REST + WebSocket                                                                      |
 | Tests            | Vitest (frontend), Jest (backend), Playwright (E2E)                                           |
-| CI/CD            | GitHub Actions → GitHub Pages (web) + Railway (api)                                           |
+| CI/CD            | GitHub Actions → VPS Hetzner (`deploy.yml`: API + SPA en el mismo origen, detrás de nginx)     |
 
 ---
 
@@ -154,8 +154,8 @@ pnpm nx run api:serve                  # Equivalente a dev:api
 ```
 crypto-trader/
 ├── apps/
-│   ├── api/               Backend NestJS — Railway (prod)
-│   └── web/               Frontend React 19 — GitHub Pages (prod)
+│   ├── api/               Backend NestJS — VPS Hetzner (prod)
+│   └── web/               Frontend React 19 — VPS Hetzner, mismo origen (prod)
 ├── libs/
 │   ├── analysis/          Indicadores técnicos + integración LLM
 │   ├── data-fetcher/      Binance OHLCV, noticias (CryptoPanic, RSS)
@@ -197,9 +197,9 @@ Cada N minutos (adaptativo por volatilidad):
 
 | Entorno         | Servicio                          | Trigger                  |
 | --------------- | --------------------------------- | ------------------------ |
-| Frontend (prod) | GitHub Pages                      | Push a `main`            |
-| Backend (prod)  | Railway                           | Push a `main`            |
-| DB + Cache      | Railway (PostgreSQL 16 + Redis 7) | Provisionado manualmente |
+| Frontend (prod) | VPS Hetzner (nginx, mismo origen) | Push a `main` (`deploy.yml`) |
+| Backend (prod)  | VPS Hetzner (Docker Compose)      | Push a `main` (`deploy.yml`) |
+| DB + Cache      | VPS Hetzner (PostgreSQL 16 + Redis 7 en Compose) | `docs/infra/hetzner-server.md` |
 | Local dev       | Docker Compose                    | `pnpm docker:infra`      |
 
 ---

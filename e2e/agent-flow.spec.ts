@@ -12,6 +12,12 @@
  * dispara órdenes reales.
  */
 import { test, expect, type Page } from '@playwright/test';
+import { hasUsableLlmProvider } from './helpers/llm-availability';
+
+/** Sin un proveedor LLM utilizable el ciclo del agente falla y el servicio lo
+ *  detiene solo, así que el estado Running no llega a observarse en la UI. */
+const AGENT_CANNOT_STAY_RUNNING_REASON =
+  'Sin un proveedor LLM habilitado y con clave, el agente se detiene solo tras el primer ciclo: el badge Running no es observable.';
 
 // Los bloques comparten el mismo agente (arrancar / detener): deben correr en orden
 test.describe.configure({ mode: 'serial' });
@@ -242,6 +248,9 @@ test.describe('3 — Arranque del agente', () => {
         ),
         stopBtn.click(),
       ]);
+      await expect(row.getByText('Stopped', { exact: true })).toBeVisible({
+        timeout: 20_000,
+      });
     }
 
     const startBtn = row.getByRole('button', { name: 'Start Agent' });
@@ -255,6 +264,10 @@ test.describe('3 — Arranque del agente', () => {
     ]);
     expect(startResp.status()).toBeLessThan(400);
 
+    test.skip(
+      !(await hasUsableLlmProvider(page)),
+      AGENT_CANNOT_STAY_RUNNING_REASON,
+    );
     await expect(row.getByText('Running', { exact: true })).toBeVisible({
       timeout: 20_000,
     });
@@ -426,6 +439,10 @@ test.describe('7 — Parada del agente', () => {
     page,
   }) => {
     await gotoAgentsList(page);
+    test.skip(
+      !(await hasUsableLlmProvider(page)),
+      AGENT_CANNOT_STAY_RUNNING_REASON,
+    );
     const row = agentRow(page);
     await expect(row).toBeVisible({ timeout: 15_000 });
 
@@ -438,6 +455,9 @@ test.describe('7 — Parada del agente', () => {
         ),
         startBtn.click(),
       ]);
+      await expect(row.getByText('Running', { exact: true })).toBeVisible({
+        timeout: 20_000,
+      });
     }
 
     const stopBtn = row.getByRole('button', { name: 'Stop Agent' });

@@ -21,21 +21,35 @@ export const AGENT_NAMES: Record<AgentId, string> = {
 
 export class AgentSelectorPage {
   readonly page: Page;
+  readonly trigger: Locator;
 
   constructor(page: Page) {
     this.page = page;
+    this.trigger = page.getByTestId('agent-selector-trigger');
   }
 
   agentCard(agentId: AgentId): Locator {
     return this.page.getByTestId(`agent-card-${agentId}`);
   }
 
+  /** El selector es un dropdown: las tarjetas solo existen con el panel abierto. */
+  async open() {
+    if (await this.page.getByTestId('agent-card-auto').isVisible().catch(() => false)) {
+      return;
+    }
+    await this.trigger.click();
+    await this.page
+      .getByTestId('agent-card-auto')
+      .waitFor({ state: 'visible', timeout: 10_000 });
+  }
+
   async select(agentId: AgentId) {
-    // The card itself is the button — just click it directly
+    await this.open();
     await this.agentCard(agentId).click();
   }
 
   async selectAutoRoute() {
+    await this.open();
     await this.page.getByTestId('agent-card-auto').click();
   }
 }

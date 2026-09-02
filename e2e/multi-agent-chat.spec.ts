@@ -16,10 +16,20 @@ import { ChatPage } from './page-objects/chat-page';
 import { AgentSelectorPage, AGENT_NAMES } from './page-objects/agent-selector';
 import { ToolCallCard } from './page-objects/tool-call-card';
 import { getRole } from './helpers/get-role';
+import {
+  hasLlmCredentials,
+  hasUsableLlmProvider,
+  NO_LLM_KEYS_REASON,
+  NO_USABLE_LLM_REASON,
+} from './helpers/llm-availability';
+
+const ADMIN_HAS_NO_CHAT_REASON =
+  '/dashboard/* está restringido al rol TRADER: el chat multi-agente no es accesible para ADMIN.';
 
 // ── Monitor de consola — todos los tests ─────────────────────────────────────
 let consoleErrors: string[] = [];
 test.beforeEach(async ({ page }) => {
+  test.skip((await getRole(page)) === 'ADMIN', ADMIN_HAS_NO_CHAT_REASON);
   consoleErrors = [];
   page.on('console', (msg) => {
     if (msg.type() === 'error') consoleErrors.push(msg.text());
@@ -33,6 +43,9 @@ test.beforeEach(async ({ page }) => {
       console.warn(`[HTTP ${res.status()}] ${res.url()}`);
     }
   });
+
+  await page.goto('/dashboard');
+  test.skip(!(await hasLlmCredentials(page)), NO_LLM_KEYS_REASON);
 });
 test.afterEach(async () => {
   // Filtrar errores conocidos de librerías externas (HMR, etc.)
@@ -102,7 +115,9 @@ test.describe('BLOQUE 1 — AgentSelector [ADMIN + TRADER]', () => {
 
   test('1.7 Opción auto (KRYPTO decide) disponible', async ({ page }) => {
     const chat = new ChatPage(page);
+    const selector = new AgentSelectorPage(page);
     await chat.gotoWithSession();
+    await selector.open();
     await expect(page.getByTestId('agent-card-auto')).toBeVisible({
       timeout: 8_000,
     });
@@ -112,7 +127,9 @@ test.describe('BLOQUE 1 — AgentSelector [ADMIN + TRADER]', () => {
     page,
   }) => {
     const chat = new ChatPage(page);
+    const selector = new AgentSelectorPage(page);
     await chat.gotoWithSession();
+    await selector.open();
     for (const id of [
       'platform',
       'operations',
@@ -133,9 +150,9 @@ test.describe('BLOQUE 1 — AgentSelector [ADMIN + TRADER]', () => {
 test.describe('BLOQUE 2 — Intent Routing de KRYPTO [ADMIN + TRADER]', () => {
   test('2.1 Seleccionar auto → chat input habilitado', async ({ page }) => {
     const chat = new ChatPage(page);
+    const selector = new AgentSelectorPage(page);
     await chat.gotoWithSession();
-    // Seleccionar modo auto (KRYPTO decide)
-    await page.getByTestId('agent-card-auto').click();
+    await selector.selectAutoRoute();
     // El input debe estar habilitado para escribir
     await expect(chat.chatInput).toBeEnabled({ timeout: 5_000 });
   });
@@ -182,6 +199,11 @@ test.describe('BLOQUE 2 — Intent Routing de KRYPTO [ADMIN + TRADER]', () => {
 // BLOQUE 3 — Chat con cada sub-agente [ADMIN + TRADER]
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('BLOQUE 3 — Chat por sub-agente [ADMIN + TRADER]', () => {
+  // Estos bloques exigen una respuesta real del LLM
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await hasUsableLlmProvider(page)), NO_USABLE_LLM_REASON);
+  });
+
   // serial: evitar rate-limit de Groq (429) — los tests LLM no deben correr en paralelo
   test.describe.configure({ mode: 'serial' });
   async function chatWithAgent(
@@ -264,6 +286,11 @@ test.describe('BLOQUE 3 — Chat por sub-agente [ADMIN + TRADER]', () => {
 // BLOQUE 4 — RAG en chat [ADMIN sube doc / TRADER lo usa]
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('BLOQUE 4 — RAG en chat', () => {
+  // Estos bloques exigen una respuesta real del LLM
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await hasUsableLlmProvider(page)), NO_USABLE_LLM_REASON);
+  });
+
   test('4.1 NEXUS responde y el chat funciona (RAG activo si hay documentos)', async ({
     page,
   }) => {
@@ -286,6 +313,11 @@ test.describe('BLOQUE 4 — RAG en chat', () => {
 // BLOQUE 5 — Tool Calling (FORGE) [ADMIN + TRADER]
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('BLOQUE 5 — Tool Calling FORGE [ADMIN + TRADER]', () => {
+  // Estos bloques exigen una respuesta real del LLM
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await hasUsableLlmProvider(page)), NO_USABLE_LLM_REASON);
+  });
+
   test('5.1 FORGE responde sin errores de consola', async ({ page }) => {
     const chat = new ChatPage(page);
     const selector = new AgentSelectorPage(page);
@@ -351,6 +383,11 @@ test.describe('BLOQUE 5 — Tool Calling FORGE [ADMIN + TRADER]', () => {
 // BLOQUE 6 — Cross-agent synthesis [ADMIN + TRADER]
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('BLOQUE 6 — Cross-agent synthesis [ADMIN + TRADER]', () => {
+  // Estos bloques exigen una respuesta real del LLM
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await hasUsableLlmProvider(page)), NO_USABLE_LLM_REASON);
+  });
+
   test('6.1 Consulta multi-dominio → respuesta del agente sin errores', async ({
     page,
   }) => {
@@ -358,7 +395,7 @@ test.describe('BLOQUE 6 — Cross-agent synthesis [ADMIN + TRADER]', () => {
     const selector = new AgentSelectorPage(page);
     await chat.gotoWithSession();
     // Seleccionar auto para que KRYPTO pueda hacer síntesis cross-agente
-    await page.getByTestId('agent-card-auto').click();
+    await selector.selectAutoRoute();
     await chat.sendMessage('¿Conviene comprar ETH ahora y qué es un AMM?');
     await expect(page.locator('[data-role="assistant"]').first()).toBeVisible({
       timeout: 45_000,
@@ -371,8 +408,9 @@ test.describe('BLOQUE 6 — Cross-agent synthesis [ADMIN + TRADER]', () => {
     page,
   }) => {
     const chat = new ChatPage(page);
+    const selector = new AgentSelectorPage(page);
     await chat.gotoWithSession();
-    await page.getByTestId('agent-card-auto').click();
+    await selector.selectAutoRoute();
     await chat.sendMessage('¿Conviene comprar ETH ahora y qué es un AMM?');
     // El indicador de orquestación puede aparecer brevemente
     // No fail si no aparece (depende de timing del LLM)

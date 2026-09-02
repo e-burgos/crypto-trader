@@ -2,7 +2,8 @@
  * Spec 30 — ChatPage Page Object
  * Locators y acciones del chat widget + página /dashboard/chat
  */
-import { Page, Locator, expect } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
+import { API_BASE } from '../helpers/llm-availability';
 
 export class ChatPage {
   readonly page: Page;
@@ -31,69 +32,53 @@ export class ChatPage {
 
   async goto() {
     await this.page.goto('/dashboard/chat');
-    await this.page.waitForLoadState('networkidle');
+    // networkidle nunca ocurre: el chat mantiene WebSocket/SSE abiertos
+    await this.page
+      .getByRole('button', { name: /new session/i })
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 });
   }
 
   /**
-   * Navega a /dashboard/chat y crea una nueva sesión SIEMPRE.
-   * Necesario para ver AgentSelector con estado limpio (sin mensajes previos).
+   * Navega a /dashboard/chat con una sesión nueva y vacía activa.
+   * El AgentSelector solo se renderiza con una sesión activa, y la UI ya no
+   * ofrece un modal para crearla: se crea por API (no consume tokens del LLM)
+   * y se activa por el localStorage que usa el store del chat.
    */
   async gotoWithSession() {
-    await this.page.goto('/dashboard/chat');
-    await this.page.waitForLoadState('networkidle');
+    await this.goto();
 
-    // Siempre crear una nueva sesión para tener estado limpio
-    // (evitar re-usar sesiones con mensajes previos)
-    const newSessionBtn = this.page
-      .getByRole('button', { name: /new session|nueva sesión/i })
-      .or(this.page.getByRole('button', { name: /\+ New session/i }))
-      .first();
+    const token = await this.page.evaluate(() =>
+      localStorage.getItem('accessToken'),
+    );
+    const optionsRes = await this.page.request.get(
+      `${API_BASE}/chat/llm-options`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    const options = (await optionsRes.json()) as Array<{
+      provider: string;
+      model?: string;
+      models: string[];
+    }>;
+    const option = options[0];
+    const created = await this.page.request.post(`${API_BASE}/chat/sessions`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        provider: option.provider,
+        model: option.model ?? option.models[0],
+      },
+    });
+    const session = (await created.json()) as { id: string };
 
-    // Wait for either the button or agentSelector (if session already created for this test)
-    await Promise.race([
-      newSessionBtn.waitFor({ state: 'visible', timeout: 8_000 }),
-      this.agentSelector.waitFor({ state: 'visible', timeout: 8_000 }),
-    ]).catch(() => {});
-
-    // If new session button is visible, click it to create a fresh session
-    const btnVisible = await newSessionBtn.isVisible().catch(() => false);
-    if (btnVisible) {
-      await newSessionBtn.click();
-
-      // Wait for modal to open — click the "Select AI..." dropdown
-      const providerDropdown = this.page
-        .getByRole('button', { name: /Select AI|Seleccionar/i })
-        .first();
-      await providerDropdown.waitFor({ state: 'visible', timeout: 8_000 });
-      await providerDropdown.click();
-
-      // Click the first visible provider option (e.g. "Groq")
-      await this.page.waitForTimeout(400);
-      const providerOption = this.page
-        .locator('[class*="z-50"] li button')
-        .first();
-      const hasZIndexOption = await providerOption
-        .isVisible({ timeout: 2_000 })
-        .catch(() => false);
-      if (hasZIndexOption) {
-        await providerOption.click();
-      } else {
-        await this.page.locator('ul li').first().click();
-      }
-
-      // Wait for "Start session" button to become enabled
-      const startBtn = this.page.getByRole('button', {
-        name: /Start session|Iniciar sesión/i,
-      });
-      await startBtn.waitFor({ state: 'visible', timeout: 5_000 });
-      await expect(startBtn).toBeEnabled({ timeout: 8_000 });
-      await startBtn.click();
-
-      // Wait for session to be created (AgentSelector should appear)
-      await this.agentSelector.waitFor({ state: 'visible', timeout: 15_000 });
-    }
-    // AgentSelector is now visible (either existing or newly created session)
-    await this.agentSelector.waitFor({ state: 'visible', timeout: 5_000 });
+    await this.page.evaluate(
+      (id) => localStorage.setItem('chat:activeSessionId', id),
+      session.id,
+    );
+    await this.page.reload();
+    await this.agentSelector.waitFor({ state: 'visible', timeout: 30_000 });
   }
 
   async sendMessage(text: string) {

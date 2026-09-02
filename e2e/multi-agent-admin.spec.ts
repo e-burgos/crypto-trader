@@ -14,6 +14,7 @@ import {
   TEST_DOC_PATH,
 } from './page-objects/admin-agents-page';
 import { getRole } from './helpers/get-role';
+import { API_BASE } from './helpers/llm-availability';
 
 // ── Monitor de consola ────────────────────────────────────────────────────────
 let consoleErrors: string[] = [];
@@ -51,19 +52,16 @@ test.describe('BLOQUE 7 — Admin: gestión de agentes [SOLO ADMIN]', () => {
   test('7.1 /admin/agents carga correctamente', async ({ page }) => {
     await page.goto('/admin/agents');
     await expect(page).toHaveURL(/admin\/agents/, { timeout: 10_000 });
-    // La página debe mostrar el heading del Admin Panel
     await expect(
-      page
-        .getByRole('heading', { name: /admin/i })
-        .or(page.getByText('Admin Panel'))
-        .or(page.getByText('AI Agents'))
-        .first(),
-    ).toBeVisible({ timeout: 8_000 });
+      page.getByRole('heading', { name: 'Agent Management' }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('7.2 Los 6 agentes están presentes en la página', async ({ page }) => {
     await page.goto('/admin/agents');
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: 'Agent Management' }),
+    ).toBeVisible({ timeout: 15_000 });
     // Verificar que los nombres de los agentes aparecen en la página
     for (const name of ['NEXUS', 'FORGE', 'SIGMA', 'CIPHER', 'AEGIS']) {
       await expect(page.getByText(name).first()).toBeVisible({
@@ -74,7 +72,9 @@ test.describe('BLOQUE 7 — Admin: gestión de agentes [SOLO ADMIN]', () => {
 
   test('7.3 GET /api/admin/agents devuelve 6 agentes', async ({ page }) => {
     await page.goto('/admin/agents');
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: 'Agent Management' }),
+    ).toBeVisible({ timeout: 15_000 });
     // Extraer el Bearer token del localStorage de la página
     const token = await page.evaluate(() =>
       localStorage.getItem('accessToken'),
@@ -82,7 +82,7 @@ test.describe('BLOQUE 7 — Admin: gestión de agentes [SOLO ADMIN]', () => {
     expect(token, 'accessToken debe estar en localStorage').toBeTruthy();
     // Llamar al API directamente con el token
     const res = await page.request.get(
-      'http://localhost:3000/api/admin/agents',
+      `${API_BASE}/admin/agents`,
       {
         headers: { Authorization: `Bearer ${token}` },
       },
@@ -94,7 +94,9 @@ test.describe('BLOQUE 7 — Admin: gestión de agentes [SOLO ADMIN]', () => {
 
   test('7.4 Editor de un agente es accesible', async ({ page }) => {
     await page.goto('/admin/agents');
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: 'Agent Management' }),
+    ).toBeVisible({ timeout: 15_000 });
     // Click en el primer botón de editar que aparezca
     const editBtn = page.getByRole('button', { name: /editar|edit/i }).first();
     const hasEditBtn = await editBtn
@@ -117,7 +119,9 @@ test.describe('BLOQUE 7 — Admin: gestión de agentes [SOLO ADMIN]', () => {
   }) => {
     const adminPage = new AdminAgentsPage(page);
     await adminPage.goto();
-    await page.waitForLoadState('networkidle');
+    await expect(
+      page.getByRole('heading', { name: 'Agent Management' }),
+    ).toBeVisible({ timeout: 15_000 });
     // Verificar que existe un botón de upload
     const uploadBtn = page
       .getByRole('button', { name: /subir|upload/i })
@@ -139,7 +143,7 @@ test.describe('BLOQUE 7 — Admin: gestión de agentes [SOLO ADMIN]', () => {
       localStorage.getItem('accessToken'),
     );
     const res = await page.request.post(
-      'http://localhost:3000/api/admin/agents/market/rag-test',
+      `${API_BASE}/admin/agents/market/rag-test`,
       {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         data: { query: '¿Qué es el RSI?' },
@@ -175,8 +179,7 @@ test.describe('BLOQUE 7b — Control de acceso [SOLO TRADER]', () => {
   }) => {
     // el afterEach verifica que no hay errores de consola
     await page.goto('/admin/agents');
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
   });
 
   test('7b.3 GET /api/admin/agents con sesión de TRADER → 401 o 403', async ({
@@ -187,7 +190,7 @@ test.describe('BLOQUE 7b — Control de acceso [SOLO TRADER]', () => {
       localStorage.getItem('accessToken'),
     );
     const res = await page.request.get(
-      'http://localhost:3000/api/admin/agents',
+      `${API_BASE}/admin/agents`,
       {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       },
@@ -203,7 +206,7 @@ test.describe('BLOQUE 7b — Control de acceso [SOLO TRADER]', () => {
       localStorage.getItem('accessToken'),
     );
     const res = await page.request.patch(
-      'http://localhost:3000/api/admin/agents/market',
+      `${API_BASE}/admin/agents/market`,
       {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         data: { systemPrompt: 'Hacked' },

@@ -2,15 +2,19 @@
  * Spec 30 — QA E2E del Sistema Multi-Agente (Spec 28)
  * Suite: Trading dashboard + Smoke global (BLOQUE 8 + 9)
  *
- * BLOQUE 8 — /dashboard/bot-analysis para ambos roles
- * BLOQUE 9 — Smoke test de navegación completa
- *
- * En tiempo real (browser visible):
- *   pnpm playwright test e2e/multi-agent-trading.spec.ts --project=headed-debug --headed --slowMo=400
+ * BLOQUE 8 — /dashboard/bot-analysis (solo TRADER: /dashboard/* está restringido a ese rol)
+ * BLOQUE 9 — Smoke test de navegación completa por rol
  */
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { getRole } from './helpers/get-role';
 import { ChatPage } from './page-objects/chat-page';
+import {
+  hasLlmCredentials,
+  NO_LLM_KEYS_REASON,
+} from './helpers/llm-availability';
+
+const ADMIN_HAS_NO_DASHBOARD_REASON =
+  '/dashboard/* está restringido al rol TRADER: el ADMIN es redirigido a /admin.';
 
 // ── Monitor de consola ────────────────────────────────────────────────────────
 let consoleErrors: string[] = [];
@@ -36,77 +40,83 @@ test.afterEach(async () => {
   ).toHaveLength(0);
 });
 
+function realConsoleErrors() {
+  return consoleErrors.filter(
+    (e) =>
+      !e.includes('WebSocket') &&
+      !e.includes('[vite]') &&
+      !e.includes('favicon'),
+  );
+}
+
+/** networkidle nunca ocurre en el dashboard: WebSocket + polling siempre activos. */
+async function gotoAndSettle(page: Page, route: string) {
+  await page.goto(route);
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('h1, h2').first()).toBeVisible({ timeout: 20_000 });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOQUE 8 — Dashboard bot-analysis [AMBOS ROLES]
+// BLOQUE 8 — Dashboard bot-analysis [SOLO TRADER]
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('BLOQUE 8 — Dashboard bot-analysis [AMBOS ROLES]', () => {
+test.describe('BLOQUE 8 — Dashboard bot-analysis [SOLO TRADER]', () => {
+  test.beforeEach(async ({ page }) => {
+    test.skip((await getRole(page)) === 'ADMIN', ADMIN_HAS_NO_DASHBOARD_REASON);
+  });
+
   test('8.1 /dashboard/bot-analysis carga sin errores JS', async ({ page }) => {
-    await page.goto('/dashboard/bot-analysis');
-    await expect(page).toHaveURL(/bot-analysis/, { timeout: 10_000 });
-    await page.waitForLoadState('networkidle');
-    // afterEach verifica ausencia de errores JS
+    await gotoAndSettle(page, '/dashboard/bot-analysis');
+    await expect(page).toHaveURL(/bot-analysis/);
   });
 
   test('8.2 La página muestra contenido relevante (positions, bots o empty state)', async ({
     page,
   }) => {
-    await page.goto('/dashboard/bot-analysis');
-    await page.waitForLoadState('networkidle');
-    // Debe haber algún contenido visible (tabla, cards, empty state, heading)
-    const content = page
-      .locator(
-        'table, [data-testid*="position"], [data-testid*="bot"], [data-testid*="empty"], h1, h2',
-      )
-      .first();
-    await expect(content).toBeVisible({ timeout: 8_000 });
+    await gotoAndSettle(page, '/dashboard/bot-analysis');
+    await expect(
+      page.locator('h1').filter({ hasText: /bot analysis/i }),
+    ).toBeVisible();
   });
 
   test('8.3 Badge de decisión orquestada visible cuando metadata.orchestrated = true', async ({
     page,
   }) => {
-    await page.goto('/dashboard/bot-analysis');
-    await page.waitForLoadState('networkidle');
-    // Si existen decisiones orquestadas, el badge debe estar visible
+    await gotoAndSettle(page, '/dashboard/bot-analysis');
     const badge = page.getByTestId('orchestrated-decision-badge');
-    const count = await badge.count();
-    // Pass si no hay decisiones aún (count = 0) o si el badge está correctamente renderizado
-    if (count > 0) {
+    if ((await badge.count()) > 0) {
       await expect(badge.first()).toBeVisible();
     }
-    // El test pasa en ambos casos — verifica que no explota cuando sí hay datos
   });
 
   test('8.4 TRADER solo ve sus propias decisiones (sin datos de otros usuarios)', async ({
     page,
   }) => {
-    const role = await getRole(page);
-    test.skip(
-      role !== 'TRADER',
-      'Test de aislamiento de datos requiere TRADER',
-    );
-    await page.goto('/dashboard/bot-analysis');
-    await page.waitForLoadState('networkidle');
-    // No debe haber referencias a admin@crypto.com en los datos visibles
+    await gotoAndSettle(page, '/dashboard/bot-analysis');
     const pageText = await page.locator('body').innerText();
     expect(pageText).not.toContain('admin@crypto.com');
   });
+});
 
-  test('8.5 ADMIN puede ver el panel de análisis sin restricciones', async ({
+test.describe('BLOQUE 8b — Aislamiento del panel de trading [SOLO ADMIN]', () => {
+  test.beforeEach(async ({ page }) => {
+    test.skip(
+      (await getRole(page)) !== 'ADMIN',
+      'Verificación de privilegios ADMIN',
+    );
+  });
+
+  test('8b.1 ADMIN en /dashboard/bot-analysis es redirigido a su propio panel', async ({
     page,
   }) => {
-    const role = await getRole(page);
-    test.skip(role !== 'ADMIN', 'Verificación de privilegios ADMIN');
     await page.goto('/dashboard/bot-analysis');
-    await expect(page).toHaveURL(/bot-analysis/, { timeout: 10_000 });
-    // No debe aparecer un mensaje de "sin permiso"
+    await expect(page).toHaveURL(/\/admin/, { timeout: 15_000 });
     const pageText = await page.locator('body').innerText();
-    const blockedPhrases = [
+    for (const phrase of [
       'sin permiso',
       'unauthorized',
       'forbidden',
       'access denied',
-    ];
-    for (const phrase of blockedPhrases) {
+    ]) {
       expect(pageText.toLowerCase()).not.toContain(phrase);
     }
   });
@@ -121,24 +131,16 @@ test.describe('BLOQUE 9 — Smoke test global de navegación [AMBOS ROLES]', () 
     '/dashboard/chat',
     '/dashboard/bot-analysis',
   ];
-  const ADMIN_EXTRA_ROUTES = ['/admin', '/admin/agents'];
+  const ADMIN_ROUTES = ['/admin', '/admin/agents', '/admin/users'];
 
   test('9.1 TRADER navega todas sus rutas sin errores JS', async ({ page }) => {
-    const role = await getRole(page);
-    test.skip(role !== 'TRADER', 'Test de smoke TRADER');
+    test.skip((await getRole(page)) !== 'TRADER', 'Test de smoke TRADER');
     for (const route of TRADER_ROUTES) {
-      consoleErrors = []; // reset por ruta
-      await page.goto(route);
-      await page.waitForLoadState('networkidle', { timeout: 15_000 });
-      const realErrors = consoleErrors.filter(
-        (e) =>
-          !e.includes('WebSocket') &&
-          !e.includes('[vite]') &&
-          !e.includes('favicon'),
-      );
+      consoleErrors = [];
+      await gotoAndSettle(page, route);
       expect(
-        realErrors,
-        `[${route}] Errores de consola:\n${realErrors.join('\n')}`,
+        realConsoleErrors(),
+        `[${route}] Errores de consola:\n${realConsoleErrors().join('\n')}`,
       ).toHaveLength(0);
     }
   });
@@ -146,30 +148,22 @@ test.describe('BLOQUE 9 — Smoke test global de navegación [AMBOS ROLES]', () 
   test('9.2 TRADER en /admin redirige a /dashboard limpiamente', async ({
     page,
   }) => {
-    const role = await getRole(page);
-    test.skip(role !== 'TRADER', 'Test de restricción de acceso TRADER');
+    test.skip(
+      (await getRole(page)) !== 'TRADER',
+      'Test de restricción de acceso TRADER',
+    );
     await page.goto('/admin');
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
-    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
   });
 
   test('9.3 ADMIN navega todas las rutas sin errores JS', async ({ page }) => {
-    const role = await getRole(page);
-    test.skip(role !== 'ADMIN', 'Test de smoke ADMIN');
-    const allRoutes = [...TRADER_ROUTES, ...ADMIN_EXTRA_ROUTES];
-    for (const route of allRoutes) {
+    test.skip((await getRole(page)) !== 'ADMIN', 'Test de smoke ADMIN');
+    for (const route of ADMIN_ROUTES) {
       consoleErrors = [];
-      await page.goto(route);
-      await page.waitForLoadState('networkidle', { timeout: 15_000 });
-      const realErrors = consoleErrors.filter(
-        (e) =>
-          !e.includes('WebSocket') &&
-          !e.includes('[vite]') &&
-          !e.includes('favicon'),
-      );
+      await gotoAndSettle(page, route);
       expect(
-        realErrors,
-        `[${route}] Errores de consola:\n${realErrors.join('\n')}`,
+        realConsoleErrors(),
+        `[${route}] Errores de consola:\n${realConsoleErrors().join('\n')}`,
       ).toHaveLength(0);
     }
   });
@@ -177,47 +171,48 @@ test.describe('BLOQUE 9 — Smoke test global de navegación [AMBOS ROLES]', () 
   test('9.4 /dashboard/chat permanece montado 10s sin errores', async ({
     page,
   }) => {
-    await page.goto('/dashboard/chat');
-    await page.waitForLoadState('networkidle');
-    // Esperar 10 segundos para detectar errores asincrónicos (timers, WS reconnects)
+    test.skip((await getRole(page)) === 'ADMIN', ADMIN_HAS_NO_DASHBOARD_REASON);
+    const chat = new ChatPage(page);
+    await chat.goto();
     await page.waitForTimeout(10_000);
-    const realErrors = consoleErrors.filter(
-      (e) =>
-        !e.includes('WebSocket') &&
-        !e.includes('[vite]') &&
-        !e.includes('favicon'),
-    );
     expect(
-      realErrors,
-      `Errores tras 10s en /dashboard/chat:\n${realErrors.join('\n')}`,
+      realConsoleErrors(),
+      `Errores tras 10s en /dashboard/chat:\n${realConsoleErrors().join('\n')}`,
     ).toHaveLength(0);
   });
 
-  test('9.5 El chat input está presente y aceptable en /dashboard/chat', async ({
+  test('9.5 El chat input está presente y habilitado en /dashboard/chat', async ({
     page,
   }) => {
+    test.skip((await getRole(page)) === 'ADMIN', ADMIN_HAS_NO_DASHBOARD_REASON);
+    await page.goto('/dashboard');
+    test.skip(!(await hasLlmCredentials(page)), NO_LLM_KEYS_REASON);
     const chat = new ChatPage(page);
     await chat.gotoWithSession();
-    await expect(chat.chatInput).toBeVisible({ timeout: 8_000 });
+    await expect(chat.chatInput).toBeVisible({ timeout: 10_000 });
     await expect(chat.chatInput).toBeEnabled();
   });
 
   test('9.6 El AgentSelector está presente en /dashboard/chat', async ({
     page,
   }) => {
+    test.skip((await getRole(page)) === 'ADMIN', ADMIN_HAS_NO_DASHBOARD_REASON);
+    await page.goto('/dashboard');
+    test.skip(!(await hasLlmCredentials(page)), NO_LLM_KEYS_REASON);
     const chat = new ChatPage(page);
     await chat.gotoWithSession();
-    await expect(chat.agentSelector).toBeVisible({ timeout: 8_000 });
+    await expect(chat.agentSelector).toBeVisible({ timeout: 10_000 });
   });
 
   test('9.7 Reload de /dashboard/chat no causa error de hidratación', async ({
     page,
   }) => {
-    await page.goto('/dashboard/chat');
-    await page.waitForLoadState('networkidle');
+    test.skip((await getRole(page)) === 'ADMIN', ADMIN_HAS_NO_DASHBOARD_REASON);
+    const chat = new ChatPage(page);
+    await chat.goto();
     await page.reload();
-    await page.waitForLoadState('networkidle');
-    const realErrors = consoleErrors.filter(
+    await chat.goto();
+    const hydrationSafe = consoleErrors.filter(
       (e) =>
         !e.includes('WebSocket') &&
         !e.includes('[vite]') &&
@@ -225,8 +220,8 @@ test.describe('BLOQUE 9 — Smoke test global de navegación [AMBOS ROLES]', () 
         !(e.includes('Minified React error') && e.includes('hydrat')),
     );
     expect(
-      realErrors,
-      `Errores tras reload:\n${realErrors.join('\n')}`,
+      hydrationSafe,
+      `Errores tras reload:\n${hydrationSafe.join('\n')}`,
     ).toHaveLength(0);
   });
 });

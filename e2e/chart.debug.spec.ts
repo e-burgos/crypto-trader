@@ -1,9 +1,15 @@
 import { test, expect } from '@playwright/test';
+import {
+  BINANCE_UNREACHABLE_REASON,
+  isBinancePublicApiReachable,
+} from './helpers/binance-public-api';
 
 // Standalone: handles its own auth, no dependency on global setup
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('live chart renders candles', async ({ page }) => {
+  test.skip(!(await isBinancePublicApiReachable()), BINANCE_UNREACHABLE_REASON);
+
   const consoleLogs: string[] = [];
   const networkFails: string[] = [];
 
@@ -40,10 +46,10 @@ test('live chart renders candles', async ({ page }) => {
   await page.waitForURL('**/dashboard**', { timeout: 15_000 });
   console.log('Logged in, URL:', page.url());
 
-  // step 2 — navigate to chart
+  // step 2 — navigate to the chart (/dashboard/chart redirects to /dashboard/market)
   await page.goto('/dashboard/chart');
-  // wait for Binance fetch + chart render
-  await page.waitForTimeout(8000);
+  await page.waitForURL('**/dashboard/market', { timeout: 15_000 });
+  await page.waitForSelector('canvas', { timeout: 30_000 });
 
   // collect DOM info + pixel sample from main canvas
   const info = await page.evaluate(() => {
@@ -95,9 +101,9 @@ test('live chart renders candles', async ({ page }) => {
     console.log('=== NET FAILS ===\n' + networkFails.join('\n'));
   console.log('=== DOM ===\n' + JSON.stringify(info, null, 2));
 
-  await page.screenshot({ path: 'e2e/chart-debug.png' });
+  await page.screenshot({ path: 'test-results/chart-debug.png' });
 
-  expect(info.url).toContain('/dashboard/chart');
+  expect(info.url).toContain('/dashboard/market');
   expect(info.canvasCount).toBeGreaterThan(0);
   expect(info.canvases[0].width).toBeGreaterThan(100);
   expect(info.canvases[0].height).toBeGreaterThan(100);

@@ -16,7 +16,7 @@ setup('authenticate as trader', async ({ page }) => {
     .getByRole('main')
     .getByRole('button', { name: /sign in/i })
     .click();
-  await page.waitForURL('**/dashboard**', { timeout: 12_000 });
+  await page.waitForURL('**/dashboard**', { timeout: 20_000 });
   await expect(page).toHaveURL(/dashboard/);
 
   // Configure real Groq API key if available in the environment

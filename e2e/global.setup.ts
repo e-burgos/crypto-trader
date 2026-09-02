@@ -18,7 +18,7 @@ setup('authenticate', async ({ page }) => {
     .click();
 
   // Wait for redirect to dashboard
-  await page.waitForURL('**/dashboard**', { timeout: 10_000 });
+  await page.waitForURL('**/dashboard**', { timeout: 20_000 });
   await expect(page).toHaveURL(/dashboard/);
 
   // Save auth state

@@ -16,8 +16,8 @@ setup('authenticate as admin', async ({ page }) => {
     .getByRole('main')
     .getByRole('button', { name: /sign in/i })
     .click();
-  await page.waitForURL('**/dashboard**', { timeout: 12_000 });
-  await expect(page).toHaveURL(/dashboard/);
+  await page.waitForURL(/\/(admin|dashboard)/, { timeout: 12_000 });
+  await expect(page).toHaveURL(/\/(admin|dashboard)/);
 
   // Configure real Groq API key if available in the environment
   const groqApiKey = process.env['GROQ_API_KEY'];

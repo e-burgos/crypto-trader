@@ -93,7 +93,7 @@ jobs:
           pnpm nx build web --skip-nx-cache
           pnpm dlx serve -s dist/apps/web -l 4200 &
         env:
-          VITE_API_URL: http://localhost:3000
+          VITE_API_URL: http://localhost:3000/api
 
       - name: Wait for servers
         run: |

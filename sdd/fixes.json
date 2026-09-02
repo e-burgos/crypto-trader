@@ -1014,6 +1014,39 @@
       "test_reference": "Pendiente: test unitario del componente/servicio afectado al implementar.",
       "status": "pending",
       "cycle": "cycle-02"
+    },
+    {
+      "id": "FIX-e-burgos-024",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-024.md",
+      "type": "HOTFIX",
+      "severity": "critical",
+      "created_at": "2026-09-02",
+      "resolved_at": "2026-09-02",
+      "validated_at": null,
+      "title": "El seed importo un modulo de src/ y tiro produccion: la imagen no lo contiene",
+      "estimation_hours": 0.5,
+      "description": "El commit 4f8bab68 hizo que apps/api/prisma/seed.ts importara ../src/users/utils/encryption.util. El CMD del Dockerfile corre prisma db seed en cada arranque y la imagen no incluye src/: Cannot find module, contenedor en bucle de reinicio y 502 en produccion ~25 min. SEED_DEMO_ACCOUNTS=false no lo evitaba porque el import se evalua al cargar el modulo. Restaurado con docker-compose.override.yml que salta el seed; fix: el seed cifra con node:crypto en el mismo formato que encryption.util.",
+      "justification": "Produccion caida. Una funcion en el seed.",
+      "related_modules": [
+        "infra",
+        "deploy",
+        "seed"
+      ],
+      "affected_files": [
+        "apps/api/prisma/seed.ts"
+      ],
+      "test_reference": "Round-trip encryptLikeTheApi -> decrypt verificado localmente; run de deploy.yml posterior con la API healthy sin override y GET /api/health ok.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 40000,
+        "tokens_out": 5000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     }
   ]
 }

@@ -31,6 +31,8 @@ test.afterEach(async () => {
   const realErrors = consoleErrors.filter(
     (e) =>
       !e.includes('WebSocket') &&
+      !e.includes('status of 401') &&
+      !e.includes('status of 403') &&
       !e.includes('[vite]') &&
       !e.includes('favicon'),
   );

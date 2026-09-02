@@ -4,7 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 import { AGENT_SEEDS } from './seed/agents';
 import { AgentId, LLMProvider, UserRole } from '../generated/prisma/enums';
-import { encrypt } from '../src/users/utils/encryption.util';
+import { createCipheriv, randomBytes } from 'crypto';
 
 // Inlined from src/agents/agent-presets.ts to avoid importing src/ in production seed
 const PRESET_FREE: Partial<
@@ -393,8 +393,20 @@ const DEMO_LLM_KEY_EMAILS = [
   'trader@cryptotrader.dev',
 ];
 
+function encryptLikeTheApi(plaintext: string): { encrypted: string; iv: string } {
+  const key = process.env.BINANCE_KEY_ENCRYPTION_KEY || '';
+  if (key.length !== 32) {
+    throw new Error('BINANCE_KEY_ENCRYPTION_KEY must be exactly 32 characters');
+  }
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', Buffer.from(key, 'utf8'), iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const combined = Buffer.concat([encrypted, cipher.getAuthTag()]);
+  return { encrypted: combined.toString('base64'), iv: iv.toString('base64') };
+}
+
 async function seedDemoLlmCredentials(prisma: PrismaClient) {
-  const { encrypted, iv } = encrypt('sk-or-v1-demo-placeholder-not-a-real-key');
+  const { encrypted, iv } = encryptLikeTheApi('sk-or-v1-demo-placeholder-not-a-real-key');
   for (const email of DEMO_LLM_KEY_EMAILS) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) continue;

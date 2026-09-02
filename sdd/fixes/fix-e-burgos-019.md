@@ -35,7 +35,9 @@ código de aplicación.
 
 ## Solución aplicada
 
-- `.github/workflows/e2e.yml`: `VITE_API_URL: http://localhost:3000/api`.
+- `.github/workflows/e2e.yml`: `VITE_API_URL: http://localhost:3000/api` y `timeout-minutes: 60` (el primer
+  run con el login arreglado fue cancelado por el tope de 30 min: la suite completa con `retries: 2`
+  no entra en ese tiempo en el runner de GitHub).
 - `e2e/global.setup-admin.ts`: `waitForURL(/\/(admin|dashboard)/)` y `toHaveURL(/\/(admin|dashboard)/)`.
 - `playwright.config.ts`: el proyecto `headed-debug` (`headless: false`, `slowMo`) corría en todo
   `playwright test` sin `--project`, duplicando los specs multi-agent con un browser **visible** sobre

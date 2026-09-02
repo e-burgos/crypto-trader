@@ -15,7 +15,7 @@ jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     services:
       postgres:
@@ -100,7 +100,7 @@ jobs:
           npx wait-on http://localhost:3000/api/health http://localhost:4200 --timeout 60000
 
       - name: Run Playwright tests
-        run: pnpm exec playwright test --reporter=html
+        run: pnpm exec playwright test --reporter=list,html
 
       - name: Upload Playwright report
         if: always()

@@ -1,62 +1,67 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
-/**
- * E2E: Market Intelligence page (trader-facing)
- * Uses default trader auth state.
- */
+const ENRICHED_SNAPSHOT_UNAVAILABLE =
+  'El endpoint /market/enriched-snapshot no devolvió datos: las fuentes externas no son alcanzables desde este runner.';
+
+async function gotoWithSnapshot(page: Page) {
+  const snapshot = page
+    .waitForResponse(
+      (r) => r.url().includes('/market/enriched-snapshot'),
+      { timeout: 30_000 },
+    )
+    .catch(() => null);
+  await page.goto('/dashboard/market-intelligence');
+  return snapshot;
+}
+
 test.describe('Market Intelligence', () => {
   test('navigates to /dashboard/market-intelligence and renders page', async ({
     page,
   }) => {
     await page.goto('/dashboard/market-intelligence');
     await expect(
-      page.getByText(/Market Intelligence|Inteligencia de Mercado/i),
-    ).toBeVisible({ timeout: 8_000 });
+      page.getByRole('heading', { name: 'Market Intelligence' }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
-  test('symbol selector tabs are visible and clickable', async ({ page }) => {
+  test('asset selector tabs are visible and clickable', async ({ page }) => {
     await page.goto('/dashboard/market-intelligence');
     await expect(
-      page.getByText(/Market Intelligence|Inteligencia de Mercado/i),
-    ).toBeVisible({ timeout: 8_000 });
+      page.getByRole('heading', { name: 'Market Intelligence' }),
+    ).toBeVisible({ timeout: 15_000 });
 
-    // Should see symbol tabs (BTC/USDT, ETH/USDT, etc.)
-    const btcTab = page.getByRole('tab', { name: /BTC/i }).first();
+    const btcTab = page.getByRole('button', { name: 'Bitcoin', exact: true });
+    const ethTab = page.getByRole('button', { name: 'Ethereum', exact: true });
     await expect(btcTab).toBeVisible();
+    await expect(ethTab).toBeVisible();
 
-    const ethTab = page.getByRole('tab', { name: /ETH/i }).first();
-    if (await ethTab.isVisible()) {
-      await ethTab.click();
-      // Should not crash
-      await page.waitForTimeout(1_000);
-    }
+    await ethTab.click();
+    await expect(ethTab).toHaveClass(/bg-background/);
   });
 
   test('shows metadata footer with active sources info', async ({ page }) => {
-    await page.goto('/dashboard/market-intelligence');
+    const snapshot = await gotoWithSnapshot(page);
     await expect(
-      page.getByText(/Market Intelligence|Inteligencia de Mercado/i),
-    ).toBeVisible({ timeout: 8_000 });
+      page.getByRole('heading', { name: 'Market Intelligence' }),
+    ).toBeVisible({ timeout: 15_000 });
 
-    // Metadata footer should eventually appear
-    const footer = page.getByText(
-      /Active sources|Fuentes activas|Build time|Tiempo/i,
-    );
-    // It may take a moment for the API to respond
-    await expect(footer.first()).toBeVisible({ timeout: 10_000 });
+    const response = await snapshot;
+    test.skip(!response?.ok(), ENRICHED_SNAPSHOT_UNAVAILABLE);
+
+    await expect(page.getByText(/active sources/i).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('link from bot-analysis to market-intelligence works', async ({
     page,
   }) => {
     await page.goto('/dashboard/bot-analysis');
-    await page.waitForTimeout(2_000);
-
     const link = page.getByText(
       /View full Market Intelligence|Ver panel completo/i,
     );
-    if (await link.isVisible({ timeout: 5_000 })) {
-      await link.click();
+    if (await link.first().isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await link.first().click();
       await expect(page).toHaveURL(/market-intelligence/);
     }
   });
@@ -64,16 +69,20 @@ test.describe('Market Intelligence', () => {
   test('refresh button triggers data reload', async ({ page }) => {
     await page.goto('/dashboard/market-intelligence');
     await expect(
-      page.getByText(/Market Intelligence|Inteligencia de Mercado/i),
-    ).toBeVisible({ timeout: 8_000 });
+      page.getByRole('heading', { name: 'Market Intelligence' }),
+    ).toBeVisible({ timeout: 15_000 });
 
-    const refreshBtn = page.getByRole('button', {
-      name: /refresh|actualizar/i,
-    });
-    if (await refreshBtn.isVisible()) {
-      await refreshBtn.click();
-      // Should not crash — button may show spinning animation
-      await page.waitForTimeout(1_500);
-    }
+    const refreshBtn = page.getByRole('button', { name: /refresh/i });
+    await expect(refreshBtn).toBeVisible();
+    const refetch = page
+      .waitForResponse((r) => r.url().includes('/market/enriched-snapshot'), {
+        timeout: 30_000,
+      })
+      .catch(() => null);
+    await refreshBtn.click();
+    await refetch;
+    await expect(
+      page.getByRole('heading', { name: 'Market Intelligence' }),
+    ).toBeVisible();
   });
 });

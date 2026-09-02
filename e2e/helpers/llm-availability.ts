@@ -10,9 +10,7 @@ export const NO_USABLE_LLM_REASON =
 
 /** A chat session cannot be created without at least one configured LLM provider. */
 export async function hasLlmCredentials(page: Page): Promise<boolean> {
-  const token = await page.evaluate(() =>
-    localStorage.getItem('accessToken'),
-  );
+  const token = await page.evaluate(() => localStorage.getItem('accessToken'));
   if (!token) return false;
   try {
     const res = await page.request.get(
@@ -59,6 +57,27 @@ export async function hasUsableLlmProvider(page: Page): Promise<boolean> {
       (p) => p.keyStatus === 'ACTIVE' && enabled.has(p.provider),
     );
     if (!configured) return false;
+    const keysRes = await page.request.get(
+      `${API_BASE}/users/me/llm-keys/status`,
+      {
+        headers,
+        timeout: 15_000,
+      },
+    );
+    if (!keysRes.ok()) return false;
+    const { providers } = (await keysRes.json()) as {
+      providers: Array<{
+        provider: string;
+        selectedModel: string;
+        isActive: boolean;
+      }>;
+    };
+    const realProviders = new Set(
+      providers
+        .filter((k) => k.isActive && !k.selectedModel.startsWith('e2e/'))
+        .map((k) => k.provider),
+    );
+    if (realProviders.size === 0) return false;
     const validation = await page.request.get(
       `${API_BASE}/users/me/llm-keys/validate-all`,
       { headers, timeout: 60_000 },
@@ -68,7 +87,10 @@ export async function hasUsableLlmProvider(page: Page): Promise<boolean> {
       results: Array<{ provider: string; status: string }>;
     };
     return results.some(
-      (r) => r.status === 'ACTIVE' && enabled.has(r.provider),
+      (r) =>
+        r.status === 'ACTIVE' &&
+        enabled.has(r.provider) &&
+        realProviders.has(r.provider),
     );
   } catch {
     return false;

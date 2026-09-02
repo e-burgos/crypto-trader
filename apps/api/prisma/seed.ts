@@ -393,20 +393,28 @@ const DEMO_LLM_KEY_EMAILS = [
   'trader@cryptotrader.dev',
 ];
 
-function encryptLikeTheApi(plaintext: string): { encrypted: string; iv: string } {
+function encryptLikeTheApi(plaintext: string): {
+  encrypted: string;
+  iv: string;
+} {
   const key = process.env.BINANCE_KEY_ENCRYPTION_KEY || '';
   if (key.length !== 32) {
     throw new Error('BINANCE_KEY_ENCRYPTION_KEY must be exactly 32 characters');
   }
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', Buffer.from(key, 'utf8'), iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
   const combined = Buffer.concat([encrypted, cipher.getAuthTag()]);
   return { encrypted: combined.toString('base64'), iv: iv.toString('base64') };
 }
 
 async function seedDemoLlmCredentials(prisma: PrismaClient) {
-  const { encrypted, iv } = encryptLikeTheApi('sk-or-v1-demo-placeholder-not-a-real-key');
+  const { encrypted, iv } = encryptLikeTheApi(
+    'sk-or-v1-demo-placeholder-not-a-real-key',
+  );
   for (const email of DEMO_LLM_KEY_EMAILS) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) continue;
@@ -420,12 +428,14 @@ async function seedDemoLlmCredentials(prisma: PrismaClient) {
         provider: LLMProvider.OPENROUTER,
         apiKeyEncrypted: encrypted,
         apiKeyIv: iv,
-        selectedModel: 'openai/gpt-4o-mini',
+        selectedModel: 'e2e/placeholder',
         isActive: true,
       },
     });
   }
-  console.log('Demo LLM credentials ready (placeholder OpenRouter key, never overwrites a real one)');
+  console.log(
+    'Demo LLM credentials ready (placeholder OpenRouter key, never overwrites a real one)',
+  );
 }
 
 async function main() {

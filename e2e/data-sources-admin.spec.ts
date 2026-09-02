@@ -4,6 +4,10 @@ import { test, expect } from '@playwright/test';
  * E2E: Admin Data Sources management
  * Uses admin auth state (e2e/.auth/admin.json)
  */
+// The data-testid on <Card> never reaches the DOM (the UI Card drops unknown
+// props), so the page's own .ds-card wrapper is the stable hook here.
+const SOURCE_CARD = '.ds-card';
+
 test.describe('Admin — Data Sources', () => {
   test.use({ storageState: 'e2e/.auth/admin.json' });
 
@@ -11,62 +15,50 @@ test.describe('Admin — Data Sources', () => {
     page,
   }) => {
     await page.goto('/admin/data-sources');
-    await expect(page.getByText(/Data Sources|Fuentes de Datos/i)).toBeVisible({
-      timeout: 8_000,
-    });
-    // At least one source should be listed
     await expect(
-      page.locator('[data-testid="data-source-card"]').first(),
-    ).toBeVisible({ timeout: 5_000 });
+      page.getByRole('heading', { name: 'Market Data Sources' }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.locator(SOURCE_CARD).first(),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('can toggle a data source off and on', async ({ page }) => {
     await page.goto('/admin/data-sources');
-    await expect(
-      page.locator('[data-testid="data-source-card"]').first(),
-    ).toBeVisible({ timeout: 8_000 });
+    const firstCard = page.locator(SOURCE_CARD).first();
+    await expect(firstCard).toBeVisible({ timeout: 15_000 });
 
-    // Find the first toggle button
-    const firstCard = page.locator('[data-testid="data-source-card"]').first();
-    const toggle = firstCard.locator(
-      'button[aria-label*="toggle"], [data-testid="toggle-source"]',
-    );
-
-    if (await toggle.isVisible()) {
-      await toggle.click();
-      // Wait for status change feedback
-      await page.waitForTimeout(1_000);
-      // Toggle back
-      await toggle.click();
-      await page.waitForTimeout(1_000);
-    }
+    const toggle = firstCard.getByRole('switch');
+    const initial = await toggle.getAttribute('aria-checked');
+    await toggle.click();
+    await expect(toggle).not.toHaveAttribute('aria-checked', initial ?? '', {
+      timeout: 10_000,
+    });
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-checked', initial ?? '', {
+      timeout: 10_000,
+    });
   });
 
   test('health check button works', async ({ page }) => {
     await page.goto('/admin/data-sources');
     await expect(
-      page.locator('[data-testid="data-source-card"]').first(),
-    ).toBeVisible({ timeout: 8_000 });
+      page.locator(SOURCE_CARD).first(),
+    ).toBeVisible({ timeout: 15_000 });
 
-    const healthBtn = page
-      .getByRole('button', { name: /health|check|verificar/i })
-      .first();
-
-    if (await healthBtn.isVisible()) {
-      await healthBtn.click();
-      // Should show some feedback (toast or status change)
-      await page.waitForTimeout(2_000);
-    }
+    const healthBtn = page.getByRole('button', { name: /health check all/i });
+    await expect(healthBtn).toBeVisible();
+    await healthBtn.click();
+    await expect(healthBtn).toBeEnabled({ timeout: 60_000 });
   });
 
-  test('stats section displays metrics', async ({ page }) => {
+  test('summary bar displays the active-sources metric', async ({ page }) => {
     await page.goto('/admin/data-sources');
-    await expect(page.getByText(/Data Sources|Fuentes de Datos/i)).toBeVisible({
-      timeout: 8_000,
+    await expect(
+      page.getByRole('heading', { name: 'Market Data Sources' }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/\d+\/\d+ active/i).first()).toBeVisible({
+      timeout: 15_000,
     });
-
-    // Check for stats section elements
-    const statsText = page.getByText(/active|activas|total|circuit|rate/i);
-    await expect(statsText.first()).toBeVisible({ timeout: 5_000 });
   });
 });

@@ -6,7 +6,7 @@ test.describe('Auth — Login', () => {
   test('shows login form', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
+    await expect(page.locator('input[type="password"]')).toBeVisible();
     await expect(
       page.locator('main').getByRole('button', { name: /sign in/i }),
     ).toBeVisible();
@@ -15,7 +15,7 @@ test.describe('Auth — Login', () => {
   test('shows error on invalid credentials', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel(/email/i).fill('bad@example.com');
-    await page.getByLabel(/password/i).fill('wrongpassword');
+    await page.locator('input[type="password"]').fill('wrongpassword');
     await page
       .locator('main')
       .getByRole('button', { name: /sign in/i })
@@ -101,40 +101,48 @@ test.describe('Auth — Register', () => {
   });
 });
 
-test.describe('Help Page', () => {
+test.describe('Docs', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('help page is accessible without auth', async ({ page }) => {
+  test('docs are reachable without auth and redirect to Quickstart', async ({
+    page,
+  }) => {
     await page.goto('/docs');
+    await expect(page).toHaveURL(/\/docs\/quickstart$/);
     await expect(
-      page.getByRole('heading', { name: /help|faq|guide|docs/i }),
+      page.getByRole('heading', { name: 'Quickstart', exact: true }),
     ).toBeVisible({ timeout: 8_000 });
   });
 
-  test('FAQ accordion items are visible', async ({ page }) => {
-    await page.goto('/docs');
-    // FAQ items should be listed
-    await expect(page.getByText(/crypto|trader|what is/i).first()).toBeVisible({
-      timeout: 5_000,
-    });
-  });
-
-  test('clicking a FAQ item expands the answer', async ({ page }) => {
-    await page.goto('/docs');
-    const firstFaq = page
-      .locator('[class*="faq"], button[class*="flex"]')
-      .first();
-    if (await firstFaq.isVisible()) {
-      await firstFaq.click();
-      await page.waitForTimeout(400);
-      // Answer should be visible after click
-    }
-  });
-
-  test('Getting Started guide steps are visible', async ({ page }) => {
-    await page.goto('/docs');
+  test('FAQ page lists its questions', async ({ page }) => {
+    await page.goto('/docs/faq');
     await expect(
-      page.getByText(/register|connect|configure/i).first(),
-    ).toBeVisible({ timeout: 5_000 });
+      page.getByRole('heading', { name: 'FAQ', exact: true }),
+    ).toBeVisible({ timeout: 8_000 });
+    await expect(
+      page.getByRole('heading', { name: 'Is CryptoTrader free?' }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Can I lose money?' }),
+    ).toBeVisible();
+  });
+
+  test('FAQ answers render inline, without an accordion', async ({ page }) => {
+    await page.goto('/docs/faq');
+    await expect(page.locator('#faq-free')).toBeVisible({ timeout: 8_000 });
+    await expect(
+      page.locator('#faq-free').getByText(/free to use/i),
+    ).toBeVisible();
+    await expect(page.locator('#faq-free button')).toHaveCount(0);
+  });
+
+  test('Quickstart shows the account creation steps', async ({ page }) => {
+    await page.goto('/docs/quickstart');
+    await expect(
+      page.getByRole('heading', { name: /create your account/i }),
+    ).toBeVisible({ timeout: 8_000 });
+    await expect(
+      page.getByText(/navigate to the registration page/i),
+    ).toBeVisible();
   });
 });

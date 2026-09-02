@@ -799,6 +799,38 @@
         "source": "declared-estimate",
         "model_tier": "claude/fable"
       }
+    },
+    {
+      "id": "FIX-e-burgos-017",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-017.md",
+      "type": "HOTFIX",
+      "severity": "high",
+      "created_at": "2026-09-02",
+      "resolved_at": "2026-09-02",
+      "validated_at": null,
+      "title": "El deploy deja a nginx apuntando a las IPs viejas de api y web: 502 hasta reiniciarlo",
+      "estimation_hours": 0.5,
+      "description": "Al recrear api y web con docker compose up -d, nginx (que resuelve los upstreams al arrancar) sigue apuntando a las IPs viejas de la red del compose y responde 502 aunque la API este healthy. Observado en produccion al desplegar la release de spec-005 cycle-02: ~1 minuto de 502 en /api/health y en la SPA hasta reiniciar nginx a mano.",
+      "justification": "Caida de produccion en cada deploy que recree api o web. Una linea en el script del workflow.",
+      "related_modules": [
+        "infra",
+        "deploy"
+      ],
+      "affected_files": [
+        ".github/workflows/deploy.yml"
+      ],
+      "test_reference": "Paso 'Verificar desde internet' de deploy.yml tras el fix (exige status ok a traves de nginx). Verificado a mano el 2026-09-02: tras docker compose restart nginx, GET /api/health 200 con status ok, database up, redis up; SPA 200.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 20000,
+        "tokens_out": 3000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     }
   ]
 }

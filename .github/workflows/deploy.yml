@@ -218,6 +218,7 @@ jobs:
             export API_IMAGE WEB_IMAGE
             docker compose pull api web
             docker compose up -d --remove-orphans
+            docker compose up -d --force-recreate --no-deps nginx
 
             # El healthcheck de api exige "status":"ok", o sea base Y Redis
             # respondiendo. Un deploy que deja la API arriba pero sin base no

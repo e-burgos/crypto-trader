@@ -55,8 +55,20 @@ export async function hasUsableLlmProvider(page: Page): Promise<boolean> {
     const enabled = new Set(
       platform.filter((p) => p.isActive).map((p) => p.provider),
     );
-    return userProviders.some(
+    const configured = userProviders.some(
       (p) => p.keyStatus === 'ACTIVE' && enabled.has(p.provider),
+    );
+    if (!configured) return false;
+    const validation = await page.request.get(
+      `${API_BASE}/users/me/llm-keys/validate-all`,
+      { headers, timeout: 60_000 },
+    );
+    if (!validation.ok()) return false;
+    const { results } = (await validation.json()) as {
+      results: Array<{ provider: string; status: string }>;
+    };
+    return results.some(
+      (r) => r.status === 'ACTIVE' && enabled.has(r.provider),
     );
   } catch {
     return false;

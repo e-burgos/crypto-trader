@@ -913,7 +913,7 @@
       "validated_at": null,
       "title": "La suite E2E esta desactualizada contra la UI actual: 30 fallos en el primer corte de CI, 286 en la corrida completa",
       "estimation_hours": 6,
-      "description": "Con el login arreglado (FIX-e-burgos-019), CI ejecuto la suite y fallaron tests en 10 de los 20 archivos de e2e/: selectores y textos que ya no coinciden con la UI (getByLabel(/password/i) matchea el input y el boton de mostrar contrasena, /docs sin heading help|faq|guide|docs, rutas y textos del panel de agentes, etc.). Los specs se escribieron en abril contra un entorno local con claves; ninguno se actualizo con los cambios de UI de las specs 001 a 008.",
+      "description": "Con el login arreglado (FIX-e-burgos-019), CI ejecuto la suite y fallaron tests en 10 de los 20 archivos de e2e/: selectores y textos que ya no coinciden con la UI (getByLabel(/password/i) matchea el input y el boton de mostrar contrasena, /docs sin heading help|faq|guide|docs, rutas y textos del panel de agentes, etc.). Los specs se escribieron en abril contra un entorno local con claves; ninguno se actualizo con los cambios de UI de las specs 001 a 008. Segunda vuelta: llm-key-guard.tsx redirige toda ruta autenticada a settings/llms sin credencial LLM activa; en CI los usuarios sembrados no tenian ninguna. El seed demo siembra una credencial OpenRouter placeholder (upsert sin pisar claves reales) y hasUsableLlmProvider exige validate-all en vivo.",
       "justification": "CI sin cobertura E2E util: el check falla siempre. Es mantenimiento de tests, sin cambios de aplicacion salvo que un test destape un bug real, que se registra aparte.",
       "related_modules": [
         "web-e2e",
@@ -925,7 +925,8 @@
         "e2e/helpers/binance-public-api.ts",
         "e2e/helpers/llm-availability.ts",
         "e2e/global.setup*.ts",
-        "playwright.config.ts"
+        "playwright.config.ts",
+        "apps/api/prisma/seed.ts"
       ],
       "test_reference": "Local headless con CI=1 contra API y build de la SPA: 195 passed, 62 skipped (con motivo), 0 failed en 6.2 min. CI: run de E2E Tests en main posterior a estos commits.",
       "status": "implemented",

@@ -4,6 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcrypt';
 import { AGENT_SEEDS } from './seed/agents';
 import { AgentId, LLMProvider, UserRole } from '../generated/prisma/enums';
+import { encrypt } from '../src/users/utils/encryption.util';
 
 // Inlined from src/agents/agent-presets.ts to avoid importing src/ in production seed
 const PRESET_FREE: Partial<
@@ -385,6 +386,36 @@ async function seedReferenceData(prisma: PrismaClient) {
   );
 }
 
+const DEMO_LLM_KEY_EMAILS = [
+  'admin@crypto.com',
+  'admin@cryptotrader.dev',
+  'trader@crypto.com',
+  'trader@cryptotrader.dev',
+];
+
+async function seedDemoLlmCredentials(prisma: PrismaClient) {
+  const { encrypted, iv } = encrypt('sk-or-v1-demo-placeholder-not-a-real-key');
+  for (const email of DEMO_LLM_KEY_EMAILS) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) continue;
+    await prisma.lLMCredential.upsert({
+      where: {
+        userId_provider: { userId: user.id, provider: LLMProvider.OPENROUTER },
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        provider: LLMProvider.OPENROUTER,
+        apiKeyEncrypted: encrypted,
+        apiKeyIv: iv,
+        selectedModel: 'openai/gpt-4o-mini',
+        isActive: true,
+      },
+    });
+  }
+  console.log('Demo LLM credentials ready (placeholder OpenRouter key, never overwrites a real one)');
+}
+
 async function main() {
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
@@ -397,6 +428,7 @@ async function main() {
 
     if (demoAccountSeedingAllowed()) {
       await seedDemoAccounts(prisma);
+      await seedDemoLlmCredentials(prisma);
     } else {
       console.log(
         'Demo accounts skipped — reference data only (NODE_ENV=production or SEED_DEMO_ACCOUNTS=false)',

@@ -29,6 +29,14 @@ salvo que un test destape un bug real, que se registra aparte.
 
 ## Solución aplicada
 
+- **Gate de clave LLM en CI:** `llm-key-guard.tsx` redirige toda ruta autenticada a
+  `/dashboard/settings/llms` si el usuario no tiene ninguna credencial LLM activa; en CI los usuarios
+  sembrados no tenían ninguna y todo test autenticado fallaba, mientras en local el trader sí tenía
+  claves. `seed.ts` siembra ahora, sólo con cuentas demo, una credencial OpenRouter **placeholder**
+  (`upsert` con `update: {}`, nunca pisa una clave real). El helper `hasUsableLlmProvider` de E2E pasa
+  a exigir `validate-all` con un proveedor `ACTIVE` verificado en vivo, así la clave placeholder no
+  habilita los bloques que necesitan un LLM real.
+
 Se actualizan los specs para que afirmen el comportamiento vigente, sin debilitar aserciones para
 "que pasen": selectores estrictos, textos actuales, rutas actuales, y `test.skip` con motivo cuando un
 test depende de claves externas que CI no tiene. Todo se corre **headless**; el proyecto

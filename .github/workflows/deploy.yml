@@ -29,6 +29,7 @@ env:
   VPS_HOST: 2.29.24.221
   VPS_USER: deploy
   APP_DIR: /opt/crypto-trader
+  FIREWALL_ID: '11552165'
 
 jobs:
   build-and-deploy:
@@ -86,6 +87,35 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/crypto-trader-web:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Abrir SSH del firewall de Hetzner para la IP del runner
+        env:
+          HETZNER_API_TOKEN: ${{ secrets.HETZNER_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          runner_ip="$(curl -fsS --max-time 20 https://api.ipify.org)"
+          echo "runner ip: $runner_ip"
+          export RUNNER_IP="$runner_ip"
+          rules="$(curl -fsS --max-time 30 -H "Authorization: Bearer $HETZNER_API_TOKEN" \
+            "https://api.hetzner.cloud/v1/firewalls/$FIREWALL_ID" \
+            | python3 -c '
+          import json, sys, os
+          fw = json.load(sys.stdin)["firewall"]
+          rules = [r for r in fw["rules"] if not (r.get("description") or "").startswith("gh-runner-")]
+          rules.append({"direction": "in", "protocol": "tcp", "port": "22",
+                        "source_ips": [os.environ["RUNNER_IP"] + "/32"],
+                        "description": "gh-runner-" + os.environ["GITHUB_RUN_ID"]})
+          print(json.dumps({"rules": rules}))
+          ')"
+          curl -fsS --max-time 30 -X POST -H "Authorization: Bearer $HETZNER_API_TOKEN" \
+            -H 'Content-Type: application/json' -d "$rules" \
+            "https://api.hetzner.cloud/v1/firewalls/$FIREWALL_ID/actions/set_rules" > /dev/null
+          for i in $(seq 1 12); do
+            if nc -z -w 5 "$VPS_HOST" 22 2>/dev/null; then echo "puerto 22 abierto para el runner"; exit 0; fi
+            sleep 5
+          done
+          echo "FATAL: el puerto 22 no se abrio para el runner" >&2
+          exit 1
 
       - name: Copiar compose, nginx, SQL de init y scripts al VPS
         uses: appleboy/scp-action@v0.1.7
@@ -216,3 +246,22 @@ jobs:
           echo "$cuerpo" | grep -q '"redis":"up"'
           curl -fsS -o /dev/null --max-time 30 https://trader.estebanburgos.com.ar/
           echo "verificacion externa OK: la SPA responde y el health check reporta todo arriba"
+
+      - name: Cerrar SSH del firewall para el runner
+        if: always()
+        env:
+          HETZNER_API_TOKEN: ${{ secrets.HETZNER_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          rules="$(curl -fsS --max-time 30 -H "Authorization: Bearer $HETZNER_API_TOKEN" \
+            "https://api.hetzner.cloud/v1/firewalls/$FIREWALL_ID" \
+            | python3 -c '
+          import json, sys
+          fw = json.load(sys.stdin)["firewall"]
+          rules = [r for r in fw["rules"] if not (r.get("description") or "").startswith("gh-runner-")]
+          print(json.dumps({"rules": rules}))
+          ')"
+          curl -fsS --max-time 30 -X POST -H "Authorization: Bearer $HETZNER_API_TOKEN" \
+            -H 'Content-Type: application/json' -d "$rules" \
+            "https://api.hetzner.cloud/v1/firewalls/$FIREWALL_ID/actions/set_rules" > /dev/null
+          echo "reglas gh-runner-* retiradas del firewall"

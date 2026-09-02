@@ -50,6 +50,7 @@ desde el panel sin necesidad de entrar. Una regla de `ufw` mal puesta es un serv
 | Regla | Origen |
 | --- | --- |
 | TCP **22** | `181.87.108.160/32` — solo la IP del operador |
+| TCP **22** | `<ip-del-runner>/32`, regla **transitoria** `gh-runner-<run_id>` que `deploy.yml` agrega antes de copiar por SCP y elimina al terminar (`if: always()`), vía `HETZNER_API_TOKEN` (FIX-e-burgos-016). Si aparece una fuera de un deploy en curso, es residuo de una corrida abortada: borrarla |
 | TCP **80** | `0.0.0.0/0`, `::/0` — desafío HTTP-01 y redirección a HTTPS |
 | TCP **443** | `0.0.0.0/0`, `::/0` |
 | ICMP | `0.0.0.0/0`, `::/0` |

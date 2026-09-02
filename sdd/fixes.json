@@ -765,6 +765,40 @@
         "source": "declared-estimate",
         "model_tier": "claude/opus"
       }
+    },
+    {
+      "id": "FIX-e-burgos-016",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-016.md",
+      "type": "HOTFIX",
+      "severity": "high",
+      "created_at": "2026-09-02",
+      "resolved_at": "2026-09-02",
+      "validated_at": null,
+      "title": "El workflow de deploy no puede abrir SSH al VPS: el firewall de Hetzner solo admite la IP del operador",
+      "estimation_hours": 1,
+      "description": "El primer push a main con deploy.yml activo (cierre de spec-005 cycle-02, 60d3333c) publico las imagenes en GHCR y fallo en la copia por SCP con 'dial tcp 2.29.24.221:22: i/o timeout'. Verificado contra la API de Hetzner: el firewall crypto-trader-prod (11552165) admite TCP 22 solo desde 181.87.108.160/32, la IP del operador; ningun runner de GitHub Actions puede alcanzar sshd. El workflow nunca habia desplegado desde Actions. Produccion quedo intacta con la imagen anterior.",
+      "justification": "Produccion bloqueada para todo deploy automatico y la release de cycle-02 sin poder salir. Un workflow y un secret; sin entidades, endpoints ni codigo de aplicacion.",
+      "related_modules": [
+        "infra",
+        "deploy"
+      ],
+      "affected_files": [
+        ".github/workflows/deploy.yml",
+        "infra/scripts/github-secrets-sync.sh",
+        "docs/infra/hetzner-server.md"
+      ],
+      "test_reference": "Run de deploy.yml en main tras el fix con los pasos 'Abrir SSH del firewall de Hetzner para la IP del runner' y 'Verificar desde internet' en verde, y GET /v1/firewalls/11552165 sin reglas gh-runner-* al terminar (paso de cierre con if: always()).",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 60000,
+        "tokens_out": 8000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     }
   ]
 }

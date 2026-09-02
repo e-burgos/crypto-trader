@@ -4,13 +4,34 @@
     {
       "name": "api",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["nx", "serve", "api"],
+      "runtimeArgs": [
+        "nx",
+        "serve",
+        "api"
+      ],
       "port": 3000
     },
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["nx", "serve", "web"],
+      "runtimeArgs": [
+        "nx",
+        "serve",
+        "web"
+      ],
+      "port": 4200
+    },
+    {
+      "name": "web-dist",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dlx",
+        "serve",
+        "-s",
+        "dist/apps/web",
+        "-l",
+        "4200"
+      ],
       "port": 4200
     }
   ]

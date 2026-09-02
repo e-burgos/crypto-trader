@@ -909,7 +909,7 @@
       "type": "BUGFIX",
       "severity": "medium",
       "created_at": "2026-09-02",
-      "resolved_at": null,
+      "resolved_at": "2026-09-02",
       "validated_at": null,
       "title": "La suite E2E esta desactualizada contra la UI actual: 30 fallos en el primer corte de CI, 286 en la corrida completa",
       "estimation_hours": 6,
@@ -921,10 +921,97 @@
       ],
       "affected_files": [
         "e2e/*.spec.ts",
-        "e2e/page-objects/*.ts"
+        "e2e/page-objects/*.ts",
+        "e2e/helpers/binance-public-api.ts",
+        "e2e/helpers/llm-availability.ts",
+        "e2e/global.setup*.ts",
+        "playwright.config.ts"
       ],
-      "test_reference": "Corrida headless local de pnpm exec playwright test con CI=1 contra API y build de la SPA locales, y el run de E2E Tests en main posterior al cierre: 0 failed.",
-      "status": "in-progress",
+      "test_reference": "Local headless con CI=1 contra API y build de la SPA: 195 passed, 62 skipped (con motivo), 0 failed en 6.2 min. CI: run de E2E Tests en main posterior a estos commits.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 1150000,
+        "tokens_out": 78000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
+    },
+    {
+      "id": "FIX-e-burgos-021",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-021.md",
+      "type": "BUGFIX",
+      "severity": "low",
+      "created_at": "2026-09-02",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "Card de libs/ui descarta props desconocidas: data-testid nunca llega al DOM",
+      "estimation_hours": 1,
+      "description": "libs/ui/src/lib/primitives/card.tsx desestructura sus props y no hace spread del resto, asi que <Card data-testid=...> no emite el atributo. Evidencia en /admin/data-sources: [data-testid=\"data-source-card\"] -> 0 elementos, .ds-card -> 8. Los E2E usan .ds-card mientras tanto.",
+      "justification": "Bug real destapado por la actualizacion de la suite E2E (FIX-e-burgos-020); se registra para no perderlo, sin implementar todavia.",
+      "related_modules": [
+        "ui"
+      ],
+      "affected_files": [
+        "libs/ui/src/lib/primitives/card.tsx"
+      ],
+      "test_reference": "Pendiente: test unitario del componente/servicio afectado al implementar.",
+      "status": "pending",
+      "cycle": "cycle-02"
+    },
+    {
+      "id": "FIX-e-burgos-022",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-022.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-09-02",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "La API nunca abre el puerto HTTP si Redis no es alcanzable y app.listen() cuelga sin log",
+      "estimation_hours": 1,
+      "description": "Con 6379 sin publicar la API mapea rutas y corre schedulers pero nunca bindea el puerto ni loguea error: MarketStreamService.onModuleInit -> runOwnershipCycle -> RedisReactiveCoordination.tryAcquire espera para siempre sobre un cliente ioredis con offline queue. En CI se veria como wait-on agotando 60 s sin pista. Candidatos: enableOfflineQueue false en el cliente de coordinacion o timeout en el health check.",
+      "justification": "Bug real destapado por la actualizacion de la suite E2E (FIX-e-burgos-020); se registra para no perderlo, sin implementar todavia.",
+      "related_modules": [
+        "reactive",
+        "infra"
+      ],
+      "affected_files": [
+        "apps/api/src/reactive/redis-reactive-coordination.service.ts",
+        "apps/api/src/reactive/market-stream.service.ts"
+      ],
+      "test_reference": "Pendiente: test unitario del componente/servicio afectado al implementar.",
+      "status": "pending",
+      "cycle": "cycle-02"
+    },
+    {
+      "id": "FIX-e-burgos-023",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-023.md",
+      "type": "BUGFIX",
+      "severity": "low",
+      "created_at": "2026-09-02",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "POST /api/users/me/llm-keys responde 500 con una clave invalida en vez de 4xx",
+      "estimation_hours": 1,
+      "description": "Observado en los setups E2E: '[setup-admin] LLM key update: 500' al enviar una clave no valida. Deberia ser 400/422 con mensaje; no bloquea la suite porque los setups solo lo loguean.",
+      "justification": "Bug real destapado por la actualizacion de la suite E2E (FIX-e-burgos-020); se registra para no perderlo, sin implementar todavia.",
+      "related_modules": [
+        "users",
+        "llm"
+      ],
+      "affected_files": [
+        "apps/api/src/users/users.controller.ts",
+        "apps/api/src/users/users.service.ts"
+      ],
+      "test_reference": "Pendiente: test unitario del componente/servicio afectado al implementar.",
+      "status": "pending",
       "cycle": "cycle-02"
     }
   ]

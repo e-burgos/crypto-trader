@@ -900,6 +900,32 @@
         "source": "declared-estimate",
         "model_tier": "claude/fable"
       }
+    },
+    {
+      "id": "FIX-e-burgos-020",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-020.md",
+      "type": "BUGFIX",
+      "severity": "medium",
+      "created_at": "2026-09-02",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "La suite E2E esta desactualizada contra la UI actual: 30 fallos en el primer corte de CI, 286 en la corrida completa",
+      "estimation_hours": 6,
+      "description": "Con el login arreglado (FIX-e-burgos-019), CI ejecuto la suite y fallaron tests en 10 de los 20 archivos de e2e/: selectores y textos que ya no coinciden con la UI (getByLabel(/password/i) matchea el input y el boton de mostrar contrasena, /docs sin heading help|faq|guide|docs, rutas y textos del panel de agentes, etc.). Los specs se escribieron en abril contra un entorno local con claves; ninguno se actualizo con los cambios de UI de las specs 001 a 008.",
+      "justification": "CI sin cobertura E2E util: el check falla siempre. Es mantenimiento de tests, sin cambios de aplicacion salvo que un test destape un bug real, que se registra aparte.",
+      "related_modules": [
+        "web-e2e",
+        "ci"
+      ],
+      "affected_files": [
+        "e2e/*.spec.ts",
+        "e2e/page-objects/*.ts"
+      ],
+      "test_reference": "Corrida headless local de pnpm exec playwright test con CI=1 contra API y build de la SPA locales, y el run de E2E Tests en main posterior al cierre: 0 failed.",
+      "status": "in-progress",
+      "cycle": "cycle-02"
     }
   ]
 }

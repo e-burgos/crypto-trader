@@ -30,7 +30,7 @@ setup('authenticate as trader', async ({ page }) => {
       localStorage.getItem('accessToken'),
     );
     if (token) {
-      const apiBase = 'http://localhost:3000';
+      const apiBase = process.env['E2E_API_ORIGIN'] || 'http://localhost:3000';
       const res = await page.request.post(`${apiBase}/api/users/me/llm-keys`, {
         headers: {
           Authorization: `Bearer ${token}`,

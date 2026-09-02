@@ -31,8 +31,7 @@ setup('authenticate as admin', async ({ page }) => {
       localStorage.getItem('accessToken'),
     );
     if (token) {
-      // Use direct API URL (port 3000) since Vite doesn't proxy /api
-      const apiBase = 'http://localhost:3000';
+      const apiBase = process.env['E2E_API_ORIGIN'] || 'http://localhost:3000';
       const res = await page.request.post(`${apiBase}/api/users/me/llm-keys`, {
         headers: {
           Authorization: `Bearer ${token}`,

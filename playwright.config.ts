@@ -32,7 +32,8 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.auth/user.json',
       },
-      dependencies: ['setup'],
+      // Some specs under this project opt into the admin/trader storage states
+      dependencies: ['setup', 'setup-admin', 'setup-trader'],
       testIgnore: [/.*\.unauth\.spec\.ts/, /multi-agent.*\.spec\.ts/],
     },
     {

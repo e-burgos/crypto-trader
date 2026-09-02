@@ -879,7 +879,7 @@
       "validated_at": null,
       "title": "El workflow E2E fallaba en el login desde abril: base de API sin /api y el admin aterriza en /admin",
       "estimation_hours": 1,
-      "description": "E2E Tests fallaba en todos los runs desde 2026-04-13: los tres setups de autenticacion agotaban waitForURL('**/dashboard**'). Causa 1: e2e.yml construia la SPA con VITE_API_URL=http://localhost:3000, pero apps/web/src/lib/api.ts toma esa variable como base REST CON el prefijo /api, asi que el login iba a /auth/login (404). Causa 2: global.setup-admin.ts esperaba /dashboard y el rol ADMIN aterriza en /admin desde que existe el panel de administracion. No era una regresion de spec-005.",
+      "description": "E2E Tests fallaba en todos los runs desde 2026-04-13: los tres setups de autenticacion agotaban waitForURL('**/dashboard**'). Causa 1: e2e.yml construia la SPA con VITE_API_URL=http://localhost:3000, pero apps/web/src/lib/api.ts toma esa variable como base REST CON el prefijo /api, asi que el login iba a /auth/login (404). Causa 2: global.setup-admin.ts esperaba /dashboard y el rol ADMIN aterriza en /admin desde que existe el panel de administracion. No era una regresion de spec-005. Ademas, el proyecto headed-debug (headless:false) corria en todo `playwright test` sin --project, duplicando los specs multi-agent con un browser visible sobre las pantallas del dev; queda gateado por PLAYWRIGHT_HEADED_DEBUG=1.",
       "justification": "CI sin cobertura E2E durante cinco meses; dos lineas de configuracion y un selector de URL, sin codigo de aplicacion.",
       "related_modules": [
         "ci",
@@ -887,7 +887,8 @@
       ],
       "affected_files": [
         ".github/workflows/e2e.yml",
-        "e2e/global.setup-admin.ts"
+        "e2e/global.setup-admin.ts",
+        "playwright.config.ts"
       ],
       "test_reference": "Local 2026-09-02: pnpm exec playwright test completa contra la API local: 88 passed, 22 skipped, 0 failed en 9.4 min. CI: run de E2E Tests en main posterior al commit.",
       "status": "implemented",

@@ -71,20 +71,24 @@ export default defineConfig({
     },
 
     // ── Spec 30 — headed-debug: browser visible en tiempo real ───────────────
-    // Usar con: pnpm playwright test --project=headed-debug --headed --slowMo=400
-    {
-      name: 'headed-debug',
-      use: {
-        ...devices['Desktop Chrome'],
-        headless: false,
-        launchOptions: { slowMo: 400 },
-        storageState: 'e2e/.auth/admin.json',
-        video: 'retain-on-failure',
-        screenshot: 'on',
-      },
-      dependencies: ['setup-admin'],
-      testMatch: /multi-agent.*\.spec\.ts/,
-    },
+    // Usar con: PLAYWRIGHT_HEADED_DEBUG=1 pnpm playwright test --project=headed-debug --slowMo=400
+    ...(process.env['PLAYWRIGHT_HEADED_DEBUG'] === '1'
+      ? [
+          {
+            name: 'headed-debug',
+            use: {
+              ...devices['Desktop Chrome'],
+              headless: false,
+              launchOptions: { slowMo: 400 },
+              storageState: 'e2e/.auth/admin.json',
+              video: 'retain-on-failure' as const,
+              screenshot: 'on' as const,
+            },
+            dependencies: ['setup-admin'],
+            testMatch: /multi-agent.*\.spec\.ts/,
+          },
+        ]
+      : []),
   ],
 
   webServer: process.env.CI

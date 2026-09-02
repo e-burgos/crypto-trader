@@ -37,10 +37,13 @@ código de aplicación.
 
 - `.github/workflows/e2e.yml`: `VITE_API_URL: http://localhost:3000/api`.
 - `e2e/global.setup-admin.ts`: `waitForURL(/\/(admin|dashboard)/)` y `toHaveURL(/\/(admin|dashboard)/)`.
+- `playwright.config.ts`: el proyecto `headed-debug` (`headless: false`, `slowMo`) corría en todo
+  `playwright test` sin `--project`, duplicando los specs multi-agent con un browser **visible** sobre
+  las pantallas del dev. Queda incluido sólo con `PLAYWRIGHT_HEADED_DEBUG=1`.
 
 ### Archivos modificados
 
-- `.github/workflows/e2e.yml`, `e2e/global.setup-admin.ts`
+- `.github/workflows/e2e.yml`, `e2e/global.setup-admin.ts`, `playwright.config.ts`
 
 ### Test de validación
 

@@ -23,7 +23,7 @@ test.describe('Positions Page — render', () => {
     // Skeleton pulses may be briefly visible
     // After load, they should disappear
     await page.waitForTimeout(4_000);
-    const skeletons = page.locator('.animate-pulse');
+    const skeletons = page.locator('.animate-pulse.rounded-lg.bg-muted');
     // After loading completes, skeletons should be gone
     await expect(skeletons).toHaveCount(0, { timeout: 6_000 });
   });

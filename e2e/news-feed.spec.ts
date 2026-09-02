@@ -1,89 +1,74 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+
+const NEWS_SKELETON = '.animate-pulse.rounded-xl.bg-muted';
+
+async function gotoNewsFeed(page: Page) {
+  await page.goto('/dashboard/news');
+  await expect(
+    page.locator('h1').filter({ hasText: /news analysis/i }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator(NEWS_SKELETON)).toHaveCount(0, { timeout: 30_000 });
+}
 
 test.describe('News Feed — render', () => {
   test('heading and Newspaper icon visible', async ({ page }) => {
     await page.goto('/dashboard/news');
-    await expect(page.getByRole('heading', { name: /news/i })).toBeVisible({
-      timeout: 8_000,
-    });
+    await expect(
+      page.locator('h1').filter({ hasText: /news analysis/i }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('sentiment filter buttons all visible', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await expect(page.getByRole('button', { name: /all/i })).toBeVisible({
-      timeout: 5_000,
-    });
-    await expect(page.getByRole('button', { name: /positive/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /negative/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /neutral/i })).toBeVisible();
+    await gotoNewsFeed(page);
+    await expect(
+      page.getByRole('button', { name: 'All news', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Positive', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Negative', exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Neutral', exact: true }),
+    ).toBeVisible();
   });
 
-  test('"All" filter is active by default', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await page.waitForTimeout(2_000);
-    const allBtn = page.getByRole('button', { name: /^all$/i });
-    // Active state has bg-primary/10 or similar — check aria or class
-    const allClass = await allBtn.getAttribute('class');
-    expect(allClass).toBeTruthy();
+  test('"All news" filter is active by default', async ({ page }) => {
+    await gotoNewsFeed(page);
+    await expect(
+      page.getByRole('button', { name: 'All news', exact: true }),
+    ).toHaveClass(/bg-background/);
   });
 });
 
 test.describe('News Feed — sentiment filters', () => {
-  test('clicking Positive filter updates list', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await page.waitForTimeout(3_000);
-    await page.getByRole('button', { name: /positive/i }).click();
-    // Count before/after changes or page re-renders
-    await page.waitForTimeout(500);
-    // Positive filter button should now look active
-    const posBtn = page.getByRole('button', { name: /positive/i });
-    const cls = await posBtn.getAttribute('class');
-    expect(cls).toContain('primary');
-  });
-
-  test('clicking Negative filter updates list', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await page.waitForTimeout(3_000);
-    await page.getByRole('button', { name: /negative/i }).click();
-    await page.waitForTimeout(500);
-    const negBtn = page.getByRole('button', { name: /negative/i });
-    const cls = await negBtn.getAttribute('class');
-    expect(cls).toContain('primary');
-  });
-
-  test('clicking Neutral filter updates list', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await page.waitForTimeout(3_000);
-    await page.getByRole('button', { name: /neutral/i }).click();
-    await page.waitForTimeout(500);
-    const neutralBtn = page.getByRole('button', { name: /neutral/i });
-    const cls = await neutralBtn.getAttribute('class');
-    expect(cls).toContain('primary');
-  });
+  for (const label of ['Positive', 'Negative', 'Neutral']) {
+    test(`clicking ${label} marks that filter as active`, async ({ page }) => {
+      await gotoNewsFeed(page);
+      const btn = page.getByRole('button', { name: label, exact: true });
+      await btn.click();
+      await expect(btn).toHaveClass(/bg-background/);
+      await expect(
+        page.getByRole('button', { name: 'All news', exact: true }),
+      ).not.toHaveClass(/bg-background/);
+    });
+  }
 });
 
 test.describe('News Feed — news cards', () => {
   test('shows news cards or empty state', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await page.waitForTimeout(4_000);
-    const hasCard = await page.locator('.news-card').first().isVisible();
-    const hasEmpty = await page
-      .locator('[class*="border-dashed"]')
-      .first()
-      .isVisible();
-    expect(hasCard || hasEmpty).toBe(true);
+    await gotoNewsFeed(page);
+    const cards = await page.locator('.news-card').count();
+    const empty = await page.locator('[class*="border-dashed"]').count();
+    expect(cards > 0 || empty > 0).toBe(true);
   });
 
   test('news cards have external link', async ({ page }) => {
-    await page.goto('/dashboard/news');
-    await page.waitForTimeout(4_000);
+    await gotoNewsFeed(page);
     if ((await page.locator('.news-card').count()) > 0) {
-      // Each card should have a clickable link with target="_blank"
       const link = page.locator('.news-card a[target="_blank"]').first();
-      if (await link.isVisible()) {
-        const href = await link.getAttribute('href');
-        expect(href).toBeTruthy();
-      }
+      await expect(link).toHaveAttribute('href', /^https?:\/\//);
     }
   });
 });

@@ -18,20 +18,160 @@
     "Contabilizar colocación y fill en bot_actions sin doble conteo y bajo los caps existentes",
     "Verificar contra mock de transporte y contra Binance TESTNET; nunca en LIVE; interruptor apagado al cerrar"
   ],
-  "status": "in-progress",
+  "status": "completed",
   "started_at": "2026-09-01",
-  "completed_at": null,
+  "completed_at": "2026-09-01",
   "documents": {
-    "brief": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/brief.yaml"
+    "brief": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/tasks.json"
   },
   "artifacts": [
     "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/artifacts/testnet-write-probe.md",
     "sdd/specs/spec-e-burgos-005-reactive-execution-loop/cycles/cycle-02/artifacts/testnet-integration-run.md"
   ],
-  "metrics": null,
-  "tables_created": [],
-  "endpoints_implemented": [],
+  "metrics": {
+    "tasks_total": 26,
+    "tasks_completed": 25,
+    "tasks_skipped": 1,
+    "story_points": 138,
+    "files_created": [
+      "apps/api/jest.testnet.config.js",
+      "apps/api/prisma/migrations/20260901230000_add_entry_order_bot_action_values/migration.sql",
+      "apps/api/prisma/migrations/20260901230100_add_entry_orders/migration.sql",
+      "apps/api/prisma/migrations/20260901230200_add_trading_config_entry_order_columns/migration.sql",
+      "apps/api/src/reactive/entry-fill-watch.service.spec.ts",
+      "apps/api/src/reactive/entry-fill-watch.service.ts",
+      "apps/api/src/trading/dto/list-entry-orders.dto.ts",
+      "apps/api/src/trading/dto/trading-config.dto.spec.ts",
+      "apps/api/src/trading/entry-order.integration.testnet.spec.ts",
+      "apps/api/src/trading/entry-order.service.spec.ts",
+      "apps/api/src/trading/entry-order.service.ts",
+      "apps/api/src/trading/trading.controller.entry-orders.spec.ts",
+      "apps/api/src/trading/trading.processor.entry-cancellation.spec.ts",
+      "apps/api/src/trading/trading.processor.entry-orders.spec.ts",
+      "apps/api/src/trading/trading.service.entry-order-config.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.testnet.spec.ts",
+      "libs/trading-engine/src/lib/entry-levels.spec.ts",
+      "libs/trading-engine/src/lib/entry-levels.ts"
+    ],
+    "files_modified": [
+      "apps/api/jest.config.js",
+      "apps/api/prisma/schema.prisma",
+      "apps/api/src/agents/domain/risk-budget.service.spec.ts",
+      "apps/api/src/agents/domain/risk-budget.service.ts",
+      "apps/api/src/prisma/prisma.service.ts",
+      "apps/api/src/reactive/fast-path.service.ts",
+      "apps/api/src/reactive/reactive-module-wiring.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.ts",
+      "apps/api/src/reactive/reactive.module.ts",
+      "apps/api/src/trading/__mocks__/trading-processor-deps.ts",
+      "apps/api/src/trading/action-gate.service.ts",
+      "apps/api/src/trading/bot-action-counters.spec.ts",
+      "apps/api/src/trading/bot-action-counters.ts",
+      "apps/api/src/trading/dto/trading-config.dto.ts",
+      "apps/api/src/trading/reconciliation.service.spec.ts",
+      "apps/api/src/trading/reconciliation.service.ts",
+      "apps/api/src/trading/trading.controller.bot-actions.spec.ts",
+      "apps/api/src/trading/trading.controller.ts",
+      "apps/api/src/trading/trading.module.ts",
+      "apps/api/src/trading/trading.processor.reactive-gate.spec.ts",
+      "apps/api/src/trading/trading.processor.ts",
+      "apps/api/src/trading/trading.service.platform-mode-ceiling.spec.ts",
+      "apps/api/src/trading/trading.service.positions.spec.ts",
+      "apps/api/src/trading/trading.service.risk-policy.spec.ts",
+      "apps/api/src/trading/trading.service.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+      "libs/data-fetcher/src/lib/binance/index.ts",
+      "libs/shared/src/types/interfaces.ts",
+      "libs/trading-engine/src/lib/index.ts",
+      "libs/trading-engine/src/lib/order-executor.spec.ts",
+      "libs/trading-engine/src/lib/order-executor.ts",
+      "libs/trading-engine/src/lib/risk/action-caps.spec.ts",
+      "libs/trading-engine/src/lib/risk/action-caps.ts"
+    ],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 3855000,
+      "tokens_out": 276000,
+      "duration_minutes": 140,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 1305000,
+          "tokens_out": 128000,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/opus": {
+          "tokens_in": 1310000,
+          "tokens_out": 79000,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/fable": {
+          "tokens_in": 1240000,
+          "tokens_out": 69000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
+  "tables_created": [
+    "entry_orders"
+  ],
+  "endpoints_implemented": [
+    "EP-017"
+  ],
   "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "issues_found": [
+    "trading.processor.reactive-gate.spec.ts cuenta ocurrencias textuales de authorizeAndRun (6 -> 8): es el anti-patron que lessons.md prohibe. Se ajusto el numero en vez de retirar el test; queda como follow-up, no bloquea el cierre porque el comportamiento del gate esta afirmado por specs de comportamiento (entry-orders y entry-cancellation).",
+    "Un fill parcial deja cancelReason: PARTIAL_FILL_REMAINDER en la fila FILLED. Verificado en entry-order.service.ts settleFill: informa que el remanente se cancelo, pero un cancelReason sobre una fila no cancelada es semanticamente ambiguo. Sin consecuencia funcional.",
+    "La invalidacion del cache de posiciones de FastPathService se hace solo desde la sonda por tick; el camino de reconciliacion queda acotado por el TTL del cache. Aceptado por architect §11 fila 14.",
+    "El test de 401 de EP-017 (TASK-021) es una verificacion por reflexion de los guards de clase (JwtAuthGuard + RolesGuard TRADER), no un e2e con request real.",
+    "apps/web no tiene claves de locale para entryOrderPlaced, entryOrderFilled ni entryOrderMissing: i18next muestra la clave literal. Deuda de UI, no rompe.",
+    "trading.service.ts:762 agrega un separador de seccion '// -- Entry order ledger --' siguiendo las 9 ocurrencias preexistentes del mismo archivo. Es marcador de organizacion, no comentario narrativo; se deja por consistencia y se corrige junto con los otros nueve si se decide retirarlos."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-01",
+    "ca_results": {
+      "CA-001": "PASS — trading.processor.entry-orders.spec.ts 'places one market order with the pre-cycle args and never touches the entry-order machinery' y 'sizes and settles against the sandbox wallet exactly once, ignoring entryOrderMode' (25/25 en la corrida del reviewer). Interruptor apagado por construccion: schema.prisma:371 entryOrderMode EntryOrderMode @default(MARKET); migration 20260901230200 ADD COLUMN ... NOT NULL DEFAULT 'MARKET'; trading.service.ts:64 DEFAULTS.entryOrderMode 'MARKET'; ningun seed lo setea (grep en apps/api/prisma/seed.ts y seed/ sin ocurrencias).",
+      "CA-002": "N/A — cycle-01. No se re-evalua.",
+      "CA-003": "N/A — cycle-01. No se re-evalua.",
+      "CA-004": "PASS — la colocacion de una entrada descansando pasa por actionGate.authorizeAndRun con kind BUY (trading.processor.ts placeRestingEntry) y ninguna config nueva relaja un cap: bot-action-counters.ts excluye source EXCHANGE_TRIGGER y kind ENTRY_CANCEL del conteo, y bot-action-counters.spec.ts 'counts pre-existing LLM_CYCLE and FAST_PATH EXECUTED rows exactly as before (CA-001)' verifica que el conteo historico no cambia. entry-orders.spec.ts 'a DAILY_LOSS block cancels the bot resting entries through a second gate call' cubre el cap de perdida diaria.",
+      "CA-005": "N/A — cycle-01. No se re-evalua.",
+      "CA-006": "PASS — el ciclo no agrega ningun camino de salida nuevo: settleFill solo ABRE posicion y delega la proteccion inicial en positionAction.placeInitialProtection, el mismo camino de la compra a mercado. entry-order.service.spec.ts 'reuses the market-buy protection path: exhausting retries leaves UNPROTECTED with its notification and event' y 'closes the position after a protection failure only when closeOnProtectionFailure is on'. Los 873 tests de apps/api en verde incluyen los de releaseProtectionIfNeeded del fast path de cycle-01, sin regresion.",
+      "CA-007": "PASS — toda accion decidida por el bot sobre entradas pasa por authorizeAndRun, que toma el lease rx:v1:bot:{configId}: colocacion (kind BUY) y las cuatro cancelaciones decididas (c1, c1', c2, c3) con kind ENTRY_CANCEL. La deduplicacion del fill entre replicas no depende del lease sino de un claim condicional en la base: settleFill hace prisma.entryOrder.updateMany({where:{id, status:'RESTING'}}) y corta con ALREADY_SETTLED si claimed.count === 0 — verificado leyendo el codigo punta a punta y afirmado por entry-order.service.spec.ts 'stops when the conditional claim finds no RESTING row (another pass already settled it)'. entry-fill-watch.service.spec.ts 'en una replica que no es dueña del simbolo, isWarmupComplete es false y no se prueba nada'."
+    },
+    "tests": {
+      "sdd:validate": "OK — 25 files valid, cross-checks passed (pre-review y post-cierre)",
+      "lint+typecheck": "pnpm nx run-many -t lint,typecheck --all --exclude=crypto-trader — 11 proyectos OK, 0 errores (28 warnings preexistentes de no-unused-vars en apps/web). pnpm typecheck:api sin salida (limpio).",
+      "apps/api (jest)": "873/874 PASS, 94/95 suites. Unico fallo: auth.service.spec.ts 'should login with valid credentials' por timeout de 5000 ms en bcrypt bajo carga paralela (flaky conocido). Reejecutado solo: pnpm nx test api --testPathPatterns=auth.service -> 9/9 PASS, 1/1 suite. Baseline pre-ciclo 755 tests / 88 suites.",
+      "libs/data-fetcher (vitest)": "141 PASS + 7 skipped (el harness TESTNET gateado), 5 archivos PASS + 1 skipped. Baseline pre-ciclo 63.",
+      "libs/trading-engine (vitest)": "156 PASS / 8 archivos. Baseline pre-ciclo 134.",
+      "libs/shared (vitest)": "7 PASS / 1 archivo. Baseline pre-ciclo 7 (el ciclo solo agrega tipos, sin runtime).",
+      "libs/analysis (vitest)": "161 PASS / 16 archivos (sin cambios en el ciclo).",
+      "TESTNET nivel 2 — cliente": "set -a && source .env && set +a && BINANCE_TESTNET_E2E=1 pnpm nx test data-fetcher --skip-nx-cache -- --run testnet -> 7/7 PASS en 12.99 s contra https://testnet.binance.vision: LIMIT_MAKER BUY, STOP_LOSS_LIMIT BUY con stopPrice+trailingDelta, STOP_LOSS_LIMIT BUY con trailingDelta sin stopPrice, OCO BUY sin y con aboveTrailingDeltaBips (ambas piernas), mas los dos rechazos locales sin invocar el transporte.",
+      "TESTNET nivel 3 — integrado": "set -a && source .env && set +a && BINANCE_TESTNET_E2E=1 npx jest --config apps/api/jest.testnet.config.js -> 4/4 PASS en 19.05 s con Prisma real contra Postgres local: S1 LIMIT_MAKER colocada+RESTING+reconciliada+cancelada por la puerta al detener el bot, S2 OCO con aboveTrailingDelta EXPIRED por TTL con la cancelacion en el exchange antes de la fila, y el cierre en cero.",
+      "TESTNET — limpieza": "Verificacion independiente del reviewer via GET /api/v3/openOrders firmado sobre BTCUSDT en testnet: HTTP 200, 0 ordenes abiertas totales, 0 con prefijo ent- o prot-. Ninguna orden en LIVE en todo el ciclo."
+    },
+    "notes": "Ciclo APROBADO. Todo se verifico EJECUTANDO, no leyendo. Gates corridos por el reviewer: pnpm sdd:validate (verde antes y despues), lint+typecheck de los 11 proyectos, la suite completa de los 5 proyectos, los dos harness de TESTNET y la confirmacion independiente de que no queda ninguna orden abierta propia en testnet. Evidencia de TESTNET en tres niveles, como pedia la nota de spec §5: (1) probe crudo con fetch+HMAC previo al architect (artifacts/testnet-write-probe.md), que fijo los payloads reales — aboveTrailingDelta en la pierna contingente del OCO, -1013 compartido por TRAILING_DELTA y LOT_SIZE; (2) harness del cliente en libs/data-fetcher, 7/7; (3) spec integrado con Prisma real en apps/api, 4/4 (artifacts/testnet-integration-run.md). Nunca se toco una clave LIVE. Se valido contra architect §12 (criterios reescritos como ejecutables), no contra la letra del funcional: los 9 criterios de §12.1 y las 8 correcciones de §12.2 estan implementados y afirmados por test — en particular el signo del fallback (referencePrice x (1 + orderPriceOffsetPct)), aboveTrailingDelta, el notional del peor caso, la exclusion de EXCHANGE_TRIGGER/ENTRY_CANCEL del contador, MISSING solo por -2013 directo, y la cancelacion del remanente antes de crear la Position. La correccion del orquestador a §7.3 esta implementada: las cuatro cancelaciones decididas por el bot (c1 decision posterior, c1' reemplazo, c2 cap de perdida diaria en sus dos puntos, c3 stop del bot y sus tres variantes masivas mas deleteConfig) llaman a authorizeAndRun con kind ENTRY_CANCEL y recordAction false, mientras que lo que la reconciliacion observa o limpia (TTL, VANISHED_ON_EXCHANGE, MISSING, barrido de huerfanas) escribe la fila directamente. Verificado por grep exhaustivo de callers de cancelResting: los unicos dos directos son reconciliation.service.ts:200 y :250, ambos del lado no-decidido. Verificacion adversarial de cuatro invariantes leyendo el camino de punta a punta: (a) doble conteo en bot_actions IMPOSIBLE — el claim condicional updateMany({id, status RESTING}) de settleFill corta la segunda liquidacion (sonda por tick vs reconciliacion) antes de crear Position, Trade y la fila EXCHANGE_TRIGGER, y el contador horario excluye esa fuente y kind ENTRY_CANCEL; (b) una fila EXPIRED con la orden viva en el exchange IMPOSIBLE — cancelResting exige que cancelOnExchange devuelva true antes de applyTerminalStatus, y un fallo deja la fila RESTING con lastError; ademas la rama de TTL solo se alcanza despues de que la consulta de estado devolvio RESTING, asi que el fill le gana al vencimiento; (c) SANDBOX creando una fila entry_orders IMPOSIBLE — la rama SANDBOX de executeBuy retorna antes del chequeo de entryOrderMode, cancelRestingEntriesForConfig corta si el modo no es LIVE ni TESTNET, y la reconciliacion solo corre en LIVE/TESTNET con credenciales; (d) una cancelacion decidida esquivando la puerta NO ENCONTRADA. Dos invariantes extra revisados: el barrido de huerfanas normaliza los sufijos -l/-s de las piernas del OCO antes de comparar (sin eso habria cancelado las dos piernas de toda OCO viva) y filtra por prefijo ent- sobre la misma llamada a getOpenOrders que el barrido prot-, con scope por userId para no barrer entradas de otras configs del mismo usuario; y placeResting coloca en el exchange ANTES de escribir la fila, de modo que un fallo nunca deja una fila fantasma ocupando concurrencia y una caida entre ambos pasos la levanta el barrido de huerfanas. TASK-009 quedo skipped: su alcance (ENTRY_CANCEL en el vocabulario del port) fue absorbido por TASK-008 en el mismo commit a1d3f17a; no es un pendiente. Regla de codigo sin comentarios: el diff del ciclo no agrega ningun comentario narrativo en codigo de produccion — las unicas ocurrencias son directivas eslint, el /* eslint-disable */ del config de jest, dos lineas /// de Prisma sobre columnas de auditoria y un separador de seccion en trading.service.ts consistente con nueve preexistentes del mismo archivo. Telemetria: consolidada sumando el usage ya registrado por task en tasks.json (25 tasks con usage; TASK-009 skipped sin usage) y agregando el loop principal del orquestador y la propia revision; todo declarado como estimacion (approx true) porque ningun contador de sesion estuvo disponible al cierre.",
+    "follow_ups": [
+      "Retirar trading.processor.reactive-gate.spec.ts como test de conteo textual de authorizeAndRun y reemplazarlo por una asercion de comportamiento: es el anti-patron que lessons.md prohibe y este ciclo lo ajusto de 6 a 8 en vez de retirarlo.",
+      "Decidir si PARTIAL_FILL_REMAINDER merece columna propia en entry_orders en vez de viajar en cancelReason de una fila FILLED.",
+      "Deuda de UI: los tres campos nuevos de TradingConfig, la lista de entradas de EP-017 y las claves de locale de apps/web para entryOrderPlaced, entryOrderFilled y entryOrderMissing (hoy i18next muestra la clave literal).",
+      "User data stream de Binance (executionReport por WS) para cerrar la ventana sin proteccion tras un fill y eliminar la dependencia del TTL del cache de FastPathService.",
+      "Cola trading-agent duplicada entre TradingModule y ReactiveModule: deuda registrada por el reviewer de cycle-01, sigue abierta y sigue sin ser bloqueante.",
+      "Consolidacion de los 4 fragmentos de contexto escritos por este ciclo (apps/api, libs/shared, libs/data-fetcher, libs/trading-engine): ninguno llega al umbral de 5 por subproyecto, la hace el proximo orquestador que abra ciclo sobre cada uno. NO consolidar desde este cierre.",
+      "Convertir el test de 401 de EP-017 en un e2e real: hoy es una verificacion por reflexion de los guards de clase.",
+      "Encender entryOrderMode en produccion es decision del dev, bot por bot y primero en TESTNET: el ciclo cierra con el interruptor apagado."
+    ]
+  }
 }

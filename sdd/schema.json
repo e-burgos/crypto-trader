@@ -1235,7 +1235,7 @@
       "entry_orders": {
         "module": "reactive-execution-loop",
         "spec": "sdd/specs/spec-e-burgos-005-reactive-execution-loop",
-        "status": "defined",
+        "status": "migrated",
         "created_in_cycle": 2,
         "updated_in_cycle": null,
         "migration_file": "apps/api/prisma/migrations/20260901230100_add_entry_orders/migration.sql",

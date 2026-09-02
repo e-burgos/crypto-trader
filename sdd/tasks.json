@@ -87,7 +87,7 @@
             "libs/trading-engine",
             "libs/shared"
           ],
-          "status": "in-progress",
+          "status": "completed",
           "tasks_total": 26,
           "tasks_done": 25
         }

@@ -42,9 +42,7 @@
       "description": "Migracion de Railway + GitHub Pages a Hetzner + Cloudflare, cerrada en 4 ciclos el 2026-09-01. VPS CX23 en Helsinki con Postgres pgvector y Redis autoalojados sin puerto publico, backups horarios a Cloudflare R2 con restore verificado en base descartable, API y SPA sirviendo en el mismo origen detras de nginx con Let's Encrypt renovado por cron, deploy por GitHub Actions a GHCR, y chequeo diario que avisa por la tabla Notification cuando algo falla en silencio. Dos fases se reescribieron sobre la marcha y quedaron registradas como decisiones: la Fase 4 (migrar datos) se CANCELO porque el trial de Railway vencio y no habia via tecnica de extraccion, asi que la base arranca vacia; y la Fase 6 dejo Cloudflare Pages afuera para servir la SPA desde el propio VPS, que es lo que elimina CORS. Correr ciclos reales del agente durante la verificacion destapo tres defectos que llevaban meses en el arbol y que ninguna suite detectaba, cerrados por FIX GATE: el gate de riesgo AEGIS fallaba ABIERTO, el indice vectorial del RAG no existia, y el costo LLM no se guardaba en las decisiones manuales. Queda pendiente del dueno borrar el proyecto de Railway, que ya no corre nada",
       "cycles_completed": 4,
       "completed_at": "2026-09-01"
-    }
-  ],
-  "in_progress_modules": [
+    },
     {
       "module": "reactive-execution-loop",
       "spec": "spec-e-burgos-005-reactive-execution-loop",
@@ -55,10 +53,12 @@
         "libs/analysis",
         "libs/shared"
       ],
-      "description": "Loop de ejecucion dirigido por precio: despertar por evento material sobre stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST. cycle-01 cerrado 2026-08-30 (las 5 capas entregadas, el loop nace apagado). El modulo sigue in-progress porque la spec tiene un cycle-02 declarado en su §3: ordenes condicionales de ENTRADA descansando en el exchange (LIMIT_MAKER colocable, OCO de entrada, trailingDelta), que requiere extender BinanceRestClient y OrderExecutorPort",
-      "cycles_completed": 1
+      "description": "Loop de ejecucion dirigido por precio, cerrado en 2 ciclos el 2026-09-01. cycle-01 (2026-08-30) entrego las cinco capas de la SALIDA: despertar por evento material sobre el stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST; todo nace apagado detras de reactiveLoopEnabled. cycle-02 (2026-09-01) cierra la asimetria empujando tambien la ENTRADA al exchange: LIMIT_MAKER colocable en el soporte, OCO de entrada (LIMIT_MAKER por debajo + STOP_LOSS_LIMIT de ruptura por arriba) y trailingDelta en BIPS sobre la pierna contingente, con la entrada persistida en la tabla entry_orders, su fill reconciliado a Position + Trade + proteccion inicial aunque el servicio haya estado caido, contabilidad en bot_actions sin doble conteo (la colocacion pasa por la puerta como BUY, el fill se audita con source EXCHANGE_TRIGGER y no alimenta los caps) y sonda de fill por tick para acortar la ventana sin proteccion. Todo detras de TradingConfig.entryOrderMode, que nace en MARKET y cierra el ciclo en MARKET: con el default el comportamiento observable es identico al previo. Verificado ejecutando contra Binance TESTNET en tres niveles -- probe crudo con fetch+HMAC, harness del cliente en libs/data-fetcher y spec integrado con Prisma real en apps/api -- sin tocar una sola clave LIVE",
+      "cycles_completed": 2,
+      "completed_at": "2026-09-01"
     }
   ],
+  "in_progress_modules": [],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

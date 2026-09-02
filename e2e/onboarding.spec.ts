@@ -31,19 +31,13 @@ test.describe('Onboarding — Step navigation', () => {
 
   test('Step 1: can skip Binance step', async ({ page }) => {
     await page.goto('/onboarding');
-    const skipCheckbox = page.getByRole('checkbox', { name: /skip/i });
-    if (await skipCheckbox.isVisible()) {
-      await skipCheckbox.check();
-      // Fields should hide
-      await expect(page.getByPlaceholder(/binance api key/i)).not.toBeVisible();
-    } else {
-      // Some implementations use a button — look for skip button
-      const skipBtn = page.getByRole('button', { name: /skip/i });
-      if (await skipBtn.isVisible()) {
-        await skipBtn.click();
-      }
-    }
-    // "Next" button should be available
+    // Binance and Testnet each have their own skip toggle; this is the Binance one
+    const skipBinance = page.getByRole('button', { name: /skip for now/i });
+    await expect(skipBinance).toBeVisible({ timeout: 8_000 });
+    await skipBinance.click();
+    await expect(page.getByPlaceholder(/binance api key/i)).toBeVisible();
+    await skipBinance.click();
+    await expect(page.getByPlaceholder(/binance api key/i)).not.toBeVisible();
     await expect(
       page.getByRole('button', { name: /next|continue/i }),
     ).toBeVisible();

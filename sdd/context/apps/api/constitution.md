@@ -1,7 +1,7 @@
 # Constitución — apps/api
 
-> Versión 1.5 | Última actualización: cycle-04 | Fecha: 2026-09-01
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01)
+> Versión 1.6 | Última actualización: cycle-02 | Fecha: 2026-09-03
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01) + spec-e-burgos-005 cycle-02 (2026-09-01) + FIX-e-burgos-016, -017, -022, -023, -024, -025 (2026-09-02/03)
 
 ## 1. Propósito
 
@@ -155,6 +155,18 @@ Postgres corre `pgvector/pgvector:pg16` con las migraciones aplicadas. Redis 7 c
   editar la regla en el panel de Hetzner. Es el precio de administrar el firewall **fuera** de la VM.
 - **El disco de 40 GB es el número a vigilar** — pasó de 4 % a 30 % sólo con desplegar (imágenes
   3,26 GB) y Hetzner **no permite achicar**. Los dumps horarios y los embeddings crecen sobre eso.
+- **`deploy.yml` abre y cierra el puerto 22 del firewall de Hetzner para la IP del runner en cada
+  corrida** (FIX-e-burgos-016): el firewall `crypto-trader-prod` solo admite SSH desde la IP
+  residencial del operador, así que ningún runner de GitHub Actions puede alcanzar `sshd` sin este
+  paso. Abre con descripción `gh-runner-<run_id>` antes de la copia por SCP y cierra `if: always()`
+  al final, sin tocar la regla del operador. Requiere el secret `HETZNER_API_TOKEN` (mapeado en
+  `infra/scripts/github-secrets-sync.sh`).
+- **`deploy.yml` recrea `nginx` después de levantar `api`/`web`** (FIX-e-burgos-017): nginx resuelve
+  los upstreams de Docker **al arrancar** y no los vuelve a resolver sin un `resolver` explícito —
+  si `api`/`web` se recrean con IPs nuevas de red, nginx sigue apuntando a las viejas y responde 502
+  hasta que se lo reinicia. `docker compose up -d --force-recreate --no-deps nginx` tras el
+  `up -d --remove-orphans` cierra la ventana (costo: un par de segundos de interrupción, contra un
+  502 indefinido).
 
 **Datos:** ninguna tabla nueva. La base de producción arranca vacía — los datos de Railway se
 descartaron a conciencia (DEC-DATOS, spec §7): el trial venció y no había forma técnica de
@@ -235,6 +247,32 @@ El chequeo **no mide uso de memoria de Redis** — con `noeviction` (§3.5) un R
 escrituras en vez de descartar jobs, que es lo buscado, pero no se ve venir. La ventana entre que
 algo cae y las 08:00 UTC no está cubierta por ningún monitor externo; un uptime check gratuito
 contra `/api/health` cerraría el hueco (mejora, no requisito).
+
+### 3.9 Entradas descansando en el exchange (spec-e-burgos-005 cycle-02)
+
+- Capa de **entradas descansando en el exchange**, entregada y **apagada** por default: `TradingConfig.entryOrderMode` (`MARKET` default | `LIMIT_MAKER` | `OCO`), `entryOrderTtlMinutes` (120, rango 5..1440) y `entryTrailingDeltaBips` (nullable, 10..2000). Con `MARKET` el camino de compra es idéntico al anterior. Verificado **ejecutando** contra Binance TESTNET en tres niveles (probe crudo previo al contrato, harness del cliente en `libs/data-fetcher`, spec integrado con Prisma real) — nunca en LIVE.
+- `src/trading/entry-order.service.ts` — dueño de la entrada descansando: `placeResting` (fila `RESTING` creada **después** de la confirmación del exchange, `expiresAt = placedAt + TTL`), `settleFill` (única liquidación: si `partial` cancela el remanente primero, `updateMany` condicional como claim idempotente, `Position`+`Trade` con `decisionId: null`, `bot_actions {BUY, EXCHANGE_TRIGGER, EXECUTED}` **sin** pasar por la puerta), `cancelResting`, `markSkipped`, `countResting`, `sumRestingPlannedNotionalUsd`. Exportado por `TradingModule` para que `ReactiveModule` lo consuma sin invertir el grafo.
+- Tabla `entry_orders` (`EntryOrder`, 5 estados: `RESTING` único no terminal, `FILLED`, `CANCELLED`, `EXPIRED`, `MISSING`) con `cancelReason` tipado; `positionId`/`decisionId` sin FK (auditoría). Prefijo de `clientOrderId` **`ent-`** (piernas del OCO `-l`/`-s`). `BotActionKind` suma `ENTRY_CANCEL`, `BotActionSource` suma `EXCHANGE_TRIGGER`.
+- `trading.processor.ts` — rama de `executeBuy` para LIVE/TESTNET con `entryOrderMode != MARKET`: concurrencia contando `RESTING`, `resolveEntryLevels` (`libs/trading-engine`) sobre `supportResistance` del snapshot con el precio **crudo** como referencia, sizing al peor precio, reafirmación idempotente/reemplazo, y la colocación **dentro** de `authorizeAndRun` (`kind: BUY`, `detail: ENTRY_PLACED_<modo>`). Sin nivel utilizable no compra ni cae a mercado (evento `entry-order:skipped`). SANDBOX ignora el modo.
+- **Cancelaciones decididas por el bot pasan por la puerta** con `kind: ENTRY_CANCEL` (`REDUCING`, exento de caps: decisión posterior ≠ BUY, reemplazo, cap diario `DISCARDED`, stop del bot). Lo que la reconciliación observa o limpia (TTL, `VANISHED_ON_EXCHANGE`, `MISSING`, huérfanas) no pasa por la puerta.
+- `reconciliation.service.ts` — paso de entradas antes del barrido: **consulta primero, TTL después** (un fill le gana al vencimiento); `EXPIRED` cancela en el exchange antes de marcar; `MISSING` solo por `-2013` directo (la fila nunca se borra); barrido de huérfanas `ent-` sobre la **misma** llamada a `getOpenOrders` que el barrido `prot-`.
+- `bot-action-counters.ts` excluye `source: EXCHANGE_TRIGGER` y `kind: ENTRY_CANCEL` del conteo horario/cooldown (si no, una misma compra consumiría el cap dos veces). `risk-budget.service.ts` (`countOpenPositions`) suma las `RESTING` como exposición comprometida.
+- `src/reactive/entry-fill-watch.service.ts` — sonda de fill por tick: solo con `reactiveLoopEnabled`, solo cuando el tick cruza `limitPrice`/`stopPrice`, consulta solo la pierna cruzada, debounce 15 s por `(entryOrderId, leg)`, invalida el caché de posiciones del fast path. Nunca vence, cancela ni marca `MISSING` — la reconciliación de inicio de ciclo sigue siendo la autoridad; con el riel apagado la ventana sin protección tras un fill es hasta el próximo ciclo.
+- **EP-017 `GET /trading/entry-orders`**. Eventos WS `entry-order:placed|filled|expired|cancelled|missing|skipped`. `apps/web` no tiene las claves de locale todavía: i18next muestra la clave literal, no rompe (deuda de UI).
+- Tests: `jest.config.js` ignora `*.testnet.spec.ts`; `jest.testnet.config.js` (sin el mock de `generated/prisma`) corre `entry-order.integration.testnet.spec.ts` con `BINANCE_TESTNET_E2E=1 npx jest --config apps/api/jest.testnet.config.js`. **Filtrar specs de `apps/api` con `--testPathPatterns=`, nunca con `--testFile=`** — este último no filtra y corre las suites completas.
+
+### 3.10 Arranque robusto ante Redis/Bull caídos (FIX-e-burgos-022)
+
+- **Ningún `onModuleInit` de `apps/api` puede esperar una cola o Redis sin tope.** `EvaluationService` (`removeRepeatable`/`add`) y `TradingService` (`getWaiting`/`getDelayed`/`getActive`) esperaban un `isReady()` de Bull que nunca rechaza (Bull crea sus clientes con `maxRetriesPerRequest: null`), colgando `app.listen()` 92 s sin loguear una sola línea. `BullModule.forRoot` no alcanza para acotarlo: Bull pisa `maxRetriesPerRequest` en sus propios clientes.
+- `src/common/queue-bootstrap.ts` (`runQueueBootstrap`) es el tope: acota cada hook de arranque a 5 s, al vencer loguea un `ERROR` claro y **no lanza**, y encola una continuación sobre `queue.isReady()` con una ventana de asentamiento de 30 s para que el intento original y el reintento no corran dos veces. `src/common/with-timeout.ts` (`withTimeout`) es el helper genérico detrás.
+- El carril de coordinación reactiva usa su propio cliente (`redis-reactive-coordination.service.ts`) con `enableOfflineQueue: false`, `commandTimeout`/`connectTimeout` desde umbrales y `healthy` en `false` hasta `ready`; el ciclo de ownership del arranque está acotado por `coordinationBootstrapTimeoutMs`.
+- **Todo `onModuleInit` nuevo que dependa de una cola o de Redis pasa por `runQueueBootstrap`/`withTimeout`** — los 13 `onModuleInit` de `apps/api` quedaron auditados, solo estos dos esperaban Redis. Con Redis caído, `/api/health` responde `503 {redis: down}` en ~14 s en vez de colgar el arranque; con Redis real, `200 ok` en ~7 s.
+
+### 3.11 Correcciones de manejo de errores y seed de producción (FIX-e-burgos-023/024/025)
+
+- **`UsersService.setLLMKey`/`updateLLMKeySelection`** responden 4xx con mensaje en vez de 500 (FIX-e-burgos-023): proveedor desconocido (`assertKnownLLMProvider`) o inactivo, `apiKey` vacía tras `trim()` (`BadRequestException`), credencial inexistente al actualizar el modelo seleccionado (`NotFoundException` sobre `P2025` de Prisma).
+- **`apps/api/prisma/seed.ts` es código de producción: corre en cada arranque del contenedor** — el `CMD` del Dockerfile invoca `prisma db seed` antes de arrancar y la imagen **no incluye `src/`** (copia `dist/`, `prisma/` y `generated/`). Solo puede importar `prisma/`, `generated/` y `node_modules`; nunca `src/`. `SEED_DEMO_ACCOUNTS=false` **no protege** contra un import roto: se evalúa al cargar el módulo. El seed demo siembra una credencial LLM placeholder con `selectedModel: 'e2e/placeholder'`, cifrada con `node:crypto` (AES-256-GCM, IV 12 bytes, authTag anexado, base64) directamente en el archivo, replicando el formato de `encryption.util.ts` **sin importarlo** (FIX-e-burgos-024). Antes de tocar el seed, correrlo como lo hace la imagen: `SEED_DEMO_ACCOUNTS=false npx tsx prisma/seed.ts` desde `apps/api` con `src/` fuera del alcance. Restauración de emergencia que funcionó: `docker-compose.override.yml` con un `command` que salta el seed + `up -d --force-recreate --no-deps api` + recrear nginx; retirar el override una vez desplegada la imagen corregida.
+- **`MarketService` mapea el fallo del upstream de Binance a `503`** (`ServiceUnavailableException`, antes `500` genérico) en `getOhlcv`/`getSnapshot`/`getEnrichedSnapshot`, y a `400` (`BadRequestException`) ante asset/interval/símbolo inválido (FIX-e-burgos-025).
 
 ## 4. Convenciones propias
 

@@ -1,7 +1,7 @@
 # Constitución — libs/shared
 
-> Versión 1.3 | Última actualización: cycle-01 | Fecha: 2026-08-30
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30)
+> Versión 1.4 | Última actualización: cycle-02 | Fecha: 2026-09-03
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-005 cycle-02 (2026-09-01)
 
 ## 1. Propósito
 
@@ -24,6 +24,7 @@
 - `StreamHealthRecord` es la forma **serializada a Redis** (`rx:v1:health:{symbol}`, con TTL): todos sus campos son primitivos y los instantes van en epoch ms (`connectedAt`, `lastTickAtMs`, `lastHeartbeatAtMs`, `publishedAt`), **nunca `Date`**. Agregarle un campo no serializable rompe el `setJson`/`getJson` del puerto de coordinación.
 - `StreamHealthState.UNKNOWN` **no es un estado residual**: significa "no hay registro" y el sistema lo trata igual que `DEGRADED` (fail-closed). Cualquier lector nuevo debe cubrir los tres valores.
 - `IndicatorSnapshot` (`src/types/interfaces.ts`) **no tiene `close`** — solo `Candle` lo tiene. Al consumirlo, pasar el precio de cierre explícito desde el último candle; no castear esperando un campo que en runtime nunca está poblado.
+- **Vocabulario de órdenes de entrada** (spec-005 cycle-02), junto a `ExchangeOrderState`/`ExchangeOrderStatus` y por la misma razón (que `libs/trading-engine` tipe su port sin depender de `libs/data-fetcher`): `EntryOrderMode` (`MARKET | LIMIT_MAKER | OCO`), `RestingEntryMode`, `EntryOrderLeg` (`LIMIT | STOP`), `EntryOrderRequest`, `EntryOrderRef`, `EntryOrderResult`, `EntryOrderExchangeState` (`RESTING | FILLED | CANCELLED | MISSING` — sin `EXPIRED`: el vencimiento es regla del bot, no del exchange) y `EntryOrderExchangeStatus` (con `partial`, `remainingQuantity`, `filledLeg`). El nombre es deliberado: `EntryOrderStatus` es el enum de Prisma y ambos conviven en `reconciliation.service.ts` de `apps/api`.
 
 ## 4. Convenciones propias
 

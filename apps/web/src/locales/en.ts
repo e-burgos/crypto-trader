@@ -1614,6 +1614,168 @@ const en = {
       offsetTip:
         'Use –0.5% to –1% for slightly better entry prices. Use 0% if you prefer immediate execution.',
     },
+    advanced: {
+      step: {
+        title: 'Advanced settings',
+        hint: 'Everything starts off by default — turn on only what you want to tune.',
+      },
+      summary: {
+        title: 'Advanced settings',
+        none: 'No changes',
+        count: '{{count}} settings',
+      },
+      common: {
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        notApplicable: 'Not applicable',
+        unknown: 'Unknown',
+        rangeError: 'Value out of allowed range ({{min}}–{{max}})',
+      },
+      units: {
+        percent: '%',
+        times: '×',
+        minutes: 'min',
+        seconds: 's',
+        bips: 'bips',
+        count: '',
+      },
+      protection: {
+        title: 'Protection',
+        hint: 'Configure how each open position is protected against drawdowns or when taking profit.',
+        nativeProtectionEnabled: {
+          label: 'Native OCO protection',
+          hint: "Places a real OCO order when the position opens (LIVE/TESTNET only; ignored in SANDBOX).",
+        },
+        stopLimitOffsetPct: {
+          label: 'Stop-limit offset',
+          hint: 'Distance between the stop price and the limit price of the protection order.',
+        },
+        closeOnProtectionFailure: {
+          label: 'Close if protection fails',
+          hint: "Aggressive opt-in: closes the position at market if protection can't be placed after retries.",
+        },
+        trailingStopEnabled: {
+          label: 'Trailing stop',
+          hint: 'Enables the trailing stop. While active, the fixed take-profit is disabled.',
+        },
+        trailingStopPct: {
+          label: 'Trailing stop distance',
+          hint: 'Distance of the stop below the highest price reached by the position.',
+        },
+        trailingActivationPct: {
+          label: 'Trailing activation',
+          hint: 'Minimum unrealized gain needed before the trailing stop starts moving.',
+        },
+        partialTpEnabled: {
+          label: 'Partial take-profit',
+          hint: 'Enables staged partial selling once a profit target is reached.',
+        },
+        partialTpTriggerPct: {
+          label: 'Partial TP trigger',
+          hint: 'Profit that triggers the partial sell of the position.',
+        },
+        partialTpSellPct: {
+          label: 'Percentage to sell',
+          hint: 'Fraction of the position sold when the partial take-profit triggers.',
+        },
+        moveStopToBreakevenAfterPartial: {
+          label: 'Move stop to breakeven',
+          hint: 'After the partial TP, moves the stop to the fee-adjusted breakeven point.',
+        },
+        maxPositionHoldMinutes: {
+          label: 'Maximum time in position',
+          hint: "Maximum age of an open position before it's closed by time.",
+          toggleLabel: 'Time limit in position',
+          noLimit: 'No limit',
+        },
+      },
+      signal: {
+        title: 'Signal & sizing',
+        hint: 'Tune how the LLM signal and trade size react to market context.',
+        lossCutEnabled: {
+          label: 'Signal loss cut',
+          hint: "Master switch for the agent's signal-driven loss cut.",
+        },
+        lossCutConfidenceThreshold: {
+          label: 'Minimum confidence to cut',
+          hint: 'Minimum agent confidence needed to enable selling at a loss.',
+        },
+        lossCutMinLossPct: {
+          label: 'Minimum loss to cut',
+          hint: 'Minimum loss considered for the cut — avoids closing on market noise.',
+        },
+        lossCutMinEdgeRatio: {
+          label: 'Minimum edge ratio',
+          hint: 'Multiple of exit friction the avoided loss must exceed.',
+        },
+        smartSizingEnabled: {
+          label: 'Smart sizing',
+          hint: "Modulates order size based on the system's risk verdict.",
+        },
+        reduceSizeFactor: {
+          label: 'Reduction factor',
+          hint: 'Factor applied to order size when the system recommends reducing it.',
+        },
+        deterministicGateEnabled: {
+          label: 'Deterministic gate',
+          hint: 'If the market shows no signal since the last decision, resolves to hold without calling the LLM.',
+        },
+        gatePriceChangePct: {
+          label: 'Price change threshold',
+          hint: 'Minimum price change for the deterministic gate to allow a new decision.',
+        },
+      },
+      reactive: {
+        title: 'Reactive loop',
+        hint: 'Lets the bot react between LLM cycles to sudden market moves.',
+        reactiveLoopEnabled: {
+          label: 'Reactive loop',
+          hint: 'Master switch for the reactive cycle. Disabled, the bot only acts on the periodic LLM cycle.',
+        },
+        maxActionsPerHour: {
+          label: 'Maximum actions per hour',
+          hint: 'Maximum number of actions the reactive loop can take per hour.',
+        },
+        minActionIntervalSec: {
+          label: 'Minimum interval between actions',
+          hint: 'Minimum time between two consecutive reactive loop actions.',
+        },
+      },
+      entry: {
+        title: 'Entry',
+        hint: 'Defines how the bot places the entry order when opening a new position.',
+        entryOrderMode: {
+          label: 'Entry mode',
+          hint: 'How the order is placed when the position opens.',
+          options: {
+            MARKET: 'Market',
+            LIMIT_MAKER: 'Limit (resting)',
+            OCO: 'Support + breakout (OCO)',
+          },
+          descriptions: {
+            MARKET: 'Buys at market, same as current behavior.',
+            LIMIT_MAKER: 'The entry rests at the support level until it fills or expires.',
+            OCO: 'Places support and breakout at once: enters through whichever fills first.',
+          },
+        },
+        entryOrderTtlMinutes: {
+          label: 'Entry expiration',
+          hint: 'Minutes from placement until an unfilled order expires and is cancelled.',
+        },
+        entryTrailingDeltaBips: {
+          label: 'Breakout trailing',
+          hint: 'Trailing distance in bips for the breakout leg of the entry OCO.',
+          toggleLabel: 'Trailing on breakout',
+          fixedLevel: 'Fixed level',
+        },
+        sandboxDisabled:
+          "Resting entries don't apply in SANDBOX: the bot buys at a simulated market price.",
+        ttlMarketOnly:
+          'Expiration only applies to an entry resting on the exchange.',
+        trailingOcoOnly:
+          'Trailing on the breakout leg only exists in OCO mode.',
+      },
+    },
   },
   chat: {
     title: 'KRYPTO',
@@ -1842,6 +2004,12 @@ const en = {
     takeProfit:
       'Take-profit triggered: SELL {{qty}} {{asset}} @ ${{price}} | P&L: ${{pnl}}',
     orderError: 'Order failed: {{message}}',
+    entryOrderPlaced:
+      '{{entryMode}} entry placed: {{qty}} {{asset}} @ ${{price}} ({{mode}})',
+    entryOrderFilled:
+      'Entry filled: BUY {{qty}} {{asset}} @ ${{price}} ({{mode}})',
+    entryOrderMissing:
+      'Entry {{entryOrderId}} on {{symbol}} is missing on the exchange: check the bot state',
   },
   balanceSource: {
     sandbox: 'Virtual balance · Sandbox',

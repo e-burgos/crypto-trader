@@ -1632,6 +1632,168 @@ const es = {
       offsetTip:
         'Usá –0.5% a –1% para entrar a precios ligeramente mejores. Usá 0% si preferís ejecución inmediata.',
     },
+    advanced: {
+      step: {
+        title: 'Configuración avanzada',
+        hint: 'Todo empieza apagado por defecto — activa solo lo que quieras ajustar.',
+      },
+      summary: {
+        title: 'Configuración avanzada',
+        none: 'Sin cambios',
+        count: '{{count}} ajustes',
+      },
+      common: {
+        enabled: 'Activado',
+        disabled: 'Desactivado',
+        notApplicable: 'No aplica',
+        unknown: 'Desconocido',
+        rangeError: 'Valor fuera del rango permitido ({{min}}–{{max}})',
+      },
+      units: {
+        percent: '%',
+        times: '×',
+        minutes: 'min',
+        seconds: 's',
+        bips: 'bips',
+        count: '',
+      },
+      protection: {
+        title: 'Protección',
+        hint: 'Configura cómo se protege cada posición abierta ante caídas o al tomar ganancias.',
+        nativeProtectionEnabled: {
+          label: 'Protección nativa OCO',
+          hint: 'Coloca una orden OCO real al abrir la posición (solo LIVE/TESTNET; se ignora en SANDBOX).',
+        },
+        stopLimitOffsetPct: {
+          label: 'Offset de stop-limit',
+          hint: 'Distancia entre el precio de stop y el precio límite de la orden de protección.',
+        },
+        closeOnProtectionFailure: {
+          label: 'Cerrar si falla la protección',
+          hint: 'Opción agresiva: cierra la posición a mercado si la protección no se logra colocar tras los reintentos.',
+        },
+        trailingStopEnabled: {
+          label: 'Trailing stop',
+          hint: 'Activa el trailing stop. Mientras esté activo, el take-profit fijo queda desactivado.',
+        },
+        trailingStopPct: {
+          label: 'Distancia del trailing stop',
+          hint: 'Distancia del stop respecto del máximo precio alcanzado por la posición.',
+        },
+        trailingActivationPct: {
+          label: 'Activación del trailing',
+          hint: 'Ganancia mínima no realizada necesaria para que el trailing empiece a moverse.',
+        },
+        partialTpEnabled: {
+          label: 'Take-profit parcial',
+          hint: 'Activa la venta parcial escalonada al alcanzar una ganancia objetivo.',
+        },
+        partialTpTriggerPct: {
+          label: 'Disparo del TP parcial',
+          hint: 'Ganancia que dispara la venta parcial de la posición.',
+        },
+        partialTpSellPct: {
+          label: 'Porcentaje a vender',
+          hint: 'Fracción de la posición que se vende cuando se dispara el take-profit parcial.',
+        },
+        moveStopToBreakevenAfterPartial: {
+          label: 'Mover stop a breakeven',
+          hint: 'Tras el TP parcial, sube el stop al punto de equilibrio neto de comisiones.',
+        },
+        maxPositionHoldMinutes: {
+          label: 'Tiempo máximo en posición',
+          hint: 'Antigüedad máxima de una posición abierta antes de cerrarla por tiempo.',
+          toggleLabel: 'Límite de tiempo en posición',
+          noLimit: 'Sin límite',
+        },
+      },
+      signal: {
+        title: 'Señal y tamaño',
+        hint: 'Ajusta cómo la señal del LLM y el tamaño de la operación reaccionan al contexto de mercado.',
+        lossCutEnabled: {
+          label: 'Corte de pérdida por señal',
+          hint: 'Interruptor maestro del corte de pérdida por señal del agente.',
+        },
+        lossCutConfidenceThreshold: {
+          label: 'Confianza mínima para cortar',
+          hint: 'Confianza mínima del agente para habilitar la venta en pérdida.',
+        },
+        lossCutMinLossPct: {
+          label: 'Pérdida mínima para cortar',
+          hint: 'Pérdida mínima considerada para el corte — evita cerrar por ruido de mercado.',
+        },
+        lossCutMinEdgeRatio: {
+          label: 'Ratio de borde mínimo',
+          hint: 'Múltiplo de la fricción de salida que la pérdida evitada debe superar.',
+        },
+        smartSizingEnabled: {
+          label: 'Tamaño inteligente',
+          hint: 'Modula el tamaño de la orden según el veredicto de riesgo del sistema.',
+        },
+        reduceSizeFactor: {
+          label: 'Factor de reducción',
+          hint: 'Factor aplicado al tamaño de la orden cuando el sistema recomienda reducir.',
+        },
+        deterministicGateEnabled: {
+          label: 'Gate determinista',
+          hint: 'Si el mercado no muestra señal desde la última decisión, resuelve esperar sin consultar al LLM.',
+        },
+        gatePriceChangePct: {
+          label: 'Umbral de cambio de precio',
+          hint: 'Cambio de precio mínimo para que el gate determinista permita una nueva decisión.',
+        },
+      },
+      reactive: {
+        title: 'Loop reactivo',
+        hint: 'Permite que el bot reaccione entre ciclos del LLM ante movimientos bruscos del mercado.',
+        reactiveLoopEnabled: {
+          label: 'Loop reactivo',
+          hint: 'Interruptor maestro del ciclo reactivo. Desactivado, el bot solo actúa en el ciclo periódico del LLM.',
+        },
+        maxActionsPerHour: {
+          label: 'Máximo de acciones por hora',
+          hint: 'Cantidad máxima de acciones que el loop reactivo puede ejecutar por hora.',
+        },
+        minActionIntervalSec: {
+          label: 'Intervalo mínimo entre acciones',
+          hint: 'Tiempo mínimo entre dos acciones consecutivas del loop reactivo.',
+        },
+      },
+      entry: {
+        title: 'Entrada',
+        hint: 'Define cómo el bot coloca la orden de entrada al abrir una posición nueva.',
+        entryOrderMode: {
+          label: 'Modo de entrada',
+          hint: 'Cómo se coloca la orden al abrir la posición.',
+          options: {
+            MARKET: 'Mercado',
+            LIMIT_MAKER: 'Límite (descansa)',
+            OCO: 'Soporte + ruptura (OCO)',
+          },
+          descriptions: {
+            MARKET: 'Compra a mercado, igual que el comportamiento actual.',
+            LIMIT_MAKER: 'La entrada descansa en el nivel de soporte hasta que se ejecuta o vence.',
+            OCO: 'Coloca soporte y ruptura a la vez: entra por el que se ejecute primero.',
+          },
+        },
+        entryOrderTtlMinutes: {
+          label: 'Vencimiento de la entrada',
+          hint: 'Minutos desde que se coloca la orden hasta que, sin ejecutarse, se cancela.',
+        },
+        entryTrailingDeltaBips: {
+          label: 'Trailing de la ruptura',
+          hint: 'Distancia en bips del trailing de la pierna de ruptura del OCO de entrada.',
+          toggleLabel: 'Trailing en la ruptura',
+          fixedLevel: 'Nivel fijo',
+        },
+        sandboxDisabled:
+          'La entrada descansando no aplica en SANDBOX: el bot compra a mercado simulado.',
+        ttlMarketOnly:
+          'El vencimiento aplica sólo a una entrada que descansa en el exchange.',
+        trailingOcoOnly:
+          'El trailing de la pierna de ruptura existe sólo en modo OCO.',
+      },
+    },
   },
   chat: {
     title: 'KRYPTO',
@@ -1870,6 +2032,12 @@ const es = {
     takeProfit:
       'Take-profit activado: VENTA {{qty}} {{asset}} @ ${{price}} | G/P: ${{pnl}}',
     orderError: 'Orden fallida: {{message}}',
+    entryOrderPlaced:
+      'Entrada {{entryMode}} colocada: {{qty}} {{asset}} @ ${{price}} ({{mode}})',
+    entryOrderFilled:
+      'Entrada ejecutada: COMPRA {{qty}} {{asset}} @ ${{price}} ({{mode}})',
+    entryOrderMissing:
+      'Entrada {{entryOrderId}} de {{symbol}} no aparece en el exchange: revisá el estado del bot',
   },
   balanceSource: {
     sandbox: 'Saldo virtual · Sandbox',

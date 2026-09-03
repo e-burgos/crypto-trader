@@ -16,7 +16,6 @@ export function AgentCurrentStateModal({
 
   return (
     <AgentStateModal
-      // isActive: no field on the wire (H2, architect.md); GET never returned it either
       config={{ ...config, isActive: false }}
       lastDecision={lastDecision}
       onClose={onClose}

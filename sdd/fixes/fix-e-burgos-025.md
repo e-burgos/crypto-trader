@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, api)                   |
 
 ## Problema
@@ -34,7 +34,9 @@ monitores de consola de E2E ignoran mientras tanto los recursos de `/api/market/
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `pnpm nx test api --testPathPatterns="market.service"` (2026-09-03): 4 suites / 26 tests passed. Contra producción con sesión TRADER el 2026-09-03: `GET /api/market/snapshot/FOOBAR` → **400** `Invalid symbol: FOOBAR. Must be one of BTCUSDT, BTCUSDC, ETHUSDT, ETHUSDC` (antes 500).

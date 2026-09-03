@@ -8,7 +8,7 @@
 | **Keyword**   | [HOTFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, infra de spec-e-burgos-008) |
 
 ## Problema
@@ -53,7 +53,9 @@ para restablecer el servicio.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `.github/workflows/deploy.yml:225` ejecuta `docker compose up -d --force-recreate --no-deps nginx` después de levantar `api` y `web`; el paso 13 "Verificar desde internet" (que exige `status: ok` a través de nginx) quedó en `success` en los runs 33757979227 (2026-09-03) y 33696910696 (2026-09-02), y `GET https://trader.estebanburgos.com.ar/api/health` responde 200 `status: ok` el 2026-09-03 sin intervención manual.

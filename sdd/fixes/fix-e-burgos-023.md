@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level)                        |
 
 ## Problema
@@ -31,7 +31,9 @@ está implementado todavía.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `pnpm nx test api --testPathPatterns="users.service|auth.dto"` (2026-09-03): 3 suites / 34 tests passed. Contra producción con sesión TRADER el 2026-09-03: `POST /api/users/me/llm-keys {"provider":"BOGUS"…}` → **400** `provider must be one of the following values: CLAUDE, OPENAI, GROQ, GEMINI, MISTRAL, TOGETHER, OPENROUTER`; `DELETE /api/users/me/llm-keys/MISTRAL` → **404** `No MISTRAL LLM credential configured for this user`. Ya no hay 500.

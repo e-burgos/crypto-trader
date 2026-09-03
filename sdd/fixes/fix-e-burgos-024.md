@@ -8,7 +8,7 @@
 | **Keyword**   | [HOTFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, infra)                 |
 
 ## Problema
@@ -46,7 +46,9 @@ Producción caída. Una función en el seed.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `grep --line-number "src/" apps/api/prisma/seed.ts` no devuelve ningún import (única coincidencia: la nota de una línea que documenta el inline); los imports del seed son sólo `dotenv/config`, `../generated/prisma/*`, `bcrypt`, `./seed/agents` y `node:crypto`. En el VPS el 2026-09-03: `docker-compose.override.yml` **ausente** ("sin override") y `crypto-trader-api-1 Up 4 hours (healthy)`; `GET /api/health` → `status: ok`. El seed corre en cada arranque sin el módulo faltante.

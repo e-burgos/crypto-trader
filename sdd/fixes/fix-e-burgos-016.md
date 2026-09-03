@@ -8,7 +8,7 @@
 | **Keyword**   | [HOTFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, infra de spec-e-burgos-008) |
 
 ## Problema
@@ -56,7 +56,9 @@ actualiza en este fix para que futuras sincronizaciones lo incluyan).
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** Runs de `deploy.yml` en `main` **33757979227** (2026-09-03) y **33696910696** (2026-09-02), job `build-and-deploy` en `success` con los pasos 10 "Abrir SSH del firewall de Hetzner para la IP del runner", 12 "Desplegar", 13 "Verificar desde internet" y 14 "Cerrar SSH del firewall para el runner" los cuatro en `success`; `GET /api/health` a través de internet → 200 `{"status":"ok","database":"up","redis":"up"}` (2026-09-03T17:05:55Z). El firewall no se tocó durante la revisión.

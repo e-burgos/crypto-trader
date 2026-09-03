@@ -8,7 +8,7 @@
 | **Keyword**   | [IMPROVEMENT]                           |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, cierre de spec-e-burgos-008) |
 
 ## Problema
@@ -51,7 +51,11 @@ Limpieza sin comportamiento de aplicación. Dejarlo publica una SPA rota en Page
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `grep -ri railway README.md .env.example` sin resultados; `railway.toml` y `.github/workflows/deploy-web.yml` ausentes (`.github/workflows/` = `ci.yml`, `deploy.yml`, `e2e.yml`, `sdd-validate.yml`); en el commit `98eeb204` el endpoint de status devuelve 0 contexts y los check-runs son sólo de `github-actions` (Build, Lint & Test, Validate SDD registries, Playwright E2E): ya no aparece ningún check de Railway.
+>
+> **Seguimiento:** Pendiente del dev fuera del repo: confirmar que GitHub Pages quedó deshabilitado (no verificable desde el repo; el check de Railway ya no aparece).

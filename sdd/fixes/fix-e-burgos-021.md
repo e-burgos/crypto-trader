@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level)                        |
 
 ## Problema
@@ -30,7 +30,11 @@ está implementado todavía.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `pnpm nx test ui --skip-nx-cache` (2026-09-03) en verde: `src/lib/composites/card.spec.tsx` 2 tests passed — `data-testid` y los atributos HTML restantes llegan al div raíz.
+>
+> **Seguimiento:** Desvío menor de la regla ✍️ a limpiar en el próximo trabajo sobre E2E: el commit `8129518c` dejó un comentario narrativo de dos líneas con referencia al fix en `e2e/data-sources-admin.spec.ts:7-8`, fuera de las excepciones permitidas. No afecta el comportamiento.

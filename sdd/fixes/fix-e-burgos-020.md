@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | en curso                                |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, CI)                    |
 
 ## Problema
@@ -53,7 +53,9 @@ test depende de claves externas que CI no tiene. Todo se corre **headless**; el 
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** Run de `E2E Tests` **33758810860** en `main` (2026-09-03, commit `98eeb204`) en verde: línea de resumen del log **188 passed (5.0m), 69 skipped, 0 failed**, consistente con lo declarado en el registro. La suite local no se re-corrió: CI es la evidencia.

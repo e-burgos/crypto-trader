@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level, CI)                    |
 
 ## Problema
@@ -55,7 +55,9 @@ código de aplicación.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** Runs de `e2e.yml` en `main` **33758810860** (2026-09-03, commit `98eeb204`), **33757979255** y **33698294002**: los tres en `success`. El login de los tres setups ya no agota el `waitForURL`: la suite corre completa (188 passed) en vez de quedar sin ejecutar.

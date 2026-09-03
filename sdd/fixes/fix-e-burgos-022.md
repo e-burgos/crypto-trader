@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | N/A (repo-level)                        |
 
 ## Problema
@@ -55,7 +55,11 @@ está implementado todavía.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Revisado por sdd-reviewer el **2026-09-03** — evidencia ejecutada, no leída.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia:** `pnpm nx test api --testPathPatterns="queue-bootstrap|startup-recovery|evaluation.service|reactive"` (2026-09-03): 17 suites / 180 tests passed. Reproducción real ejecutada el 2026-09-03 con `REDIS_URL=redis://127.0.0.1:6390` (puerto cerrado) y `PORT=3011`, Postgres arriba: el puerto HTTP queda bindeado y `GET /api/health` responde **503** `{"status":"degraded","database":"up","redis":"down"}` **a los 20 s** del arranque (contra 92 s sin bindear ni loguear antes del fix), con exactamente las dos líneas ERROR esperadas: `[EvaluationService] Bull queue unavailable at bootstrap: … deferred until Redis returns (timed out after 5000ms)` y `[TradingService] Bull queue unavailable at bootstrap: … startup recovery … deferred`.
+>
+> **Seguimiento:** la política de arranque degradado que introduce este fix (tope de 5 s por hook de cola, ventana de asentamiento de 30 s, `health` en 503 `degraded` mientras Redis no vuelve) es una decisión arquitectónica transversal a `apps/api` y merece una línea de ADR en la próxima spec que toque colas o el carril reactivo. No se abre spec desde el FIX GATE.

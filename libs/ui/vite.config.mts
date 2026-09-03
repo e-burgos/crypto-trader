@@ -61,4 +61,17 @@ export default defineConfig(() => ({
       ],
     },
   },
+  test: {
+    name: 'ui',
+    watch: false,
+    globals: true,
+    environment: 'jsdom',
+    passWithNoTests: true,
+    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    reporters: ['default'],
+    coverage: {
+      reportsDirectory: '../../coverage/libs/ui',
+      provider: 'v8' as const,
+    },
+  },
 }));

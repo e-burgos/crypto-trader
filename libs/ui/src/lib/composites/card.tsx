@@ -1,6 +1,6 @@
 import { cn } from '../utils';
 
-interface CardProps {
+interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: string;
   description?: string;
   icon?: React.ReactNode;
@@ -22,9 +22,11 @@ export function Card({
   children,
   className,
   onClick,
+  ...rest
 }: CardProps) {
   return (
     <div
+      {...rest}
       className={cn(
         'rounded-xl border border-border bg-card',
         onClick && 'cursor-pointer hover:border-primary/30 transition-colors',

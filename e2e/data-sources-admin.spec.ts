@@ -4,9 +4,9 @@ import { test, expect } from '@playwright/test';
  * E2E: Admin Data Sources management
  * Uses admin auth state (e2e/.auth/admin.json)
  */
-// The data-testid on <Card> never reaches the DOM (the UI Card drops unknown
-// props), so the page's own .ds-card wrapper is the stable hook here.
-const SOURCE_CARD = '.ds-card';
+// Card now forwards data-testid to its root div (FIX-e-burgos-021); the page's
+// own .ds-card wrapper stays as a fallback selector.
+const SOURCE_CARD = '[data-testid="data-source-card"], .ds-card';
 
 test.describe('Admin — Data Sources', () => {
   test.use({ storageState: 'e2e/.auth/admin.json' });

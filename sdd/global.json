@@ -58,7 +58,19 @@
       "completed_at": "2026-09-01"
     }
   ],
-  "in_progress_modules": [],
+  "in_progress_modules": [
+    {
+      "module": "agent-advanced-config-ui",
+      "spec": "spec-e-burgos-009-agent-advanced-config-ui",
+      "apps": [
+        "apps/web",
+        "libs/shared",
+        "libs/ui"
+      ],
+      "description": "La SPA expone 11 de los 40 campos de configuracion del bot y redeclara el wire localmente; nada consume EP-017 ni los eventos entry-order:*. cycle-01: wire unico en libs/shared y configuracion avanzada (proteccion, senal y tamano, loop reactivo, entrada) en alta, edicion y detalle, siempre apagada por defecto, con locales. cycle-02: vista de entradas descansando sobre EP-017 con tiempo real y notificaciones traducidas.",
+      "cycles_completed": 0
+    }
+  ],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

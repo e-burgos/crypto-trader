@@ -6,6 +6,9 @@ interface ToggleSwitchProps {
   size?: 'sm' | 'md';
   disabled?: boolean;
   label?: string;
+  id?: string;
+  ariaLabel?: string;
+  describedById?: string;
   className?: string;
 }
 
@@ -15,6 +18,9 @@ export function ToggleSwitch({
   size = 'md',
   disabled = false,
   label,
+  id,
+  ariaLabel,
+  describedById,
   className,
 }: ToggleSwitchProps) {
   const trackSize = size === 'sm' ? 'h-5 w-9' : 'h-6 w-11';
@@ -34,9 +40,12 @@ export function ToggleSwitch({
       )}
     >
       <button
+        id={id}
         role="switch"
         type="button"
         aria-checked={checked}
+        aria-label={ariaLabel ?? label}
+        aria-describedby={describedById}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(

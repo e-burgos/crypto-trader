@@ -895,8 +895,6 @@ export class UpdateTradingConfigDto implements UpdateTradingConfigInput {
   @IsOptional()
   entryTrailingDeltaBips?: number;
 
-  // isActive is type-only: the wire still declares it, but no column and no decorator accept it here (spec-e-burgos-009)
-  declare isActive?: never;
 }
 
 export type _CreateTradingConfigWireIsExact = AssertNoKeyDrift<

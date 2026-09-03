@@ -113,7 +113,6 @@ export interface UpdateTradingConfigInput {
   minIntervalMinutes?: number;
   orderPriceOffsetPct?: number;
   intervalMode?: TradingIntervalModeWire;
-  isActive?: boolean;
   riskProfile?: TradingRiskProfileWire;
   lossCutEnabled?: boolean;
   lossCutConfidenceThreshold?: number;
@@ -144,7 +143,7 @@ export interface UpdateTradingConfigInput {
 
 export type UpdateTradingConfigPayload = Omit<
   UpdateTradingConfigInput,
-  'isActive' | 'mode' | 'maxPositionHoldMinutes' | 'entryTrailingDeltaBips'
+  'mode' | 'maxPositionHoldMinutes' | 'entryTrailingDeltaBips'
 > & {
   maxPositionHoldMinutes?: number | null;
   entryTrailingDeltaBips?: number | null;

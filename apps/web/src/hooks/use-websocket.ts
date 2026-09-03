@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../store/auth.store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMarketStore } from '../store/market.store';
+import { ENTRY_ORDER_WS_EVENTS } from '@crypto-trader/shared';
+import { ENTRY_ORDERS_QUERY_ROOT } from './use-entry-orders';
 
 // VITE_API_URL is the REST base and includes the `/api` prefix, but the Socket.io
 // gateway lives on the origin under namespace `/ws` — not under `/api`. Reusing
@@ -135,6 +137,16 @@ export function useWebSocket(opts?: { enabled?: boolean }) {
         }
       },
     );
+
+    ENTRY_ORDER_WS_EVENTS.forEach((event) => {
+      socket?.on(event, () => {
+        queryClient.invalidateQueries({ queryKey: ENTRY_ORDERS_QUERY_ROOT });
+        if (event === 'entry-order:filled') {
+          queryClient.invalidateQueries({ queryKey: ['trading', 'positions'] });
+          queryClient.invalidateQueries({ queryKey: ['analytics'] });
+        }
+      });
+    });
 
     return () => {
       // Remove all listeners first so no stale callbacks fire after cleanup,

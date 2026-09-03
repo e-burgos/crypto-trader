@@ -1122,7 +1122,7 @@
       "type": "BUGFIX",
       "severity": "high",
       "created_at": "2026-09-03",
-      "resolved_at": null,
+      "resolved_at": "2026-09-03",
       "validated_at": null,
       "title": "createConfig descarta 22 de los 25 campos avanzados del DTO: el POST responde 201 y persiste los defaults",
       "estimation_hours": 2,
@@ -1133,11 +1133,18 @@
       ],
       "affected_files": [
         "apps/api/src/trading/trading.service.ts",
-        "apps/api/src/trading/trading.service.spec.ts"
+        "apps/api/src/trading/trading.service.advanced-config.spec.ts"
       ],
-      "test_reference": "Test unitario: createConfig con los 25 campos avanzados presentes pasa cada uno a prisma.tradingConfig.create; sin ellos, el create contiene exactamente los DEFAULTS actuales (equivalencia con el comportamiento previo).",
-      "status": "in-progress",
-      "cycle": "cycle-01"
+      "test_reference": "trading.service.advanced-config.spec.ts (3 tests): los 22 campos avanzados llegan a prisma.tradingConfig.create cuando estan presentes; sin ellos el create reproduce el shape congelado previo al fix (equivalencia CA-002); los 3 campos de entrada siguen persistiendo. 8 suites / 57 tests verdes; commit 30d056d8.",
+      "status": "implemented",
+      "cycle": "cycle-01",
+      "usage": {
+        "tokens_in": 60000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "FIX-e-burgos-027",
@@ -1147,7 +1154,7 @@
       "type": "BUGFIX",
       "severity": "low",
       "created_at": "2026-09-03",
-      "resolved_at": null,
+      "resolved_at": "2026-09-03",
       "validated_at": null,
       "title": "UpdateTradingConfigDto.isActive no tiene columna en TradingConfig: un PUT que lo incluya responde 500",
       "estimation_hours": 1,
@@ -1158,11 +1165,18 @@
       ],
       "affected_files": [
         "apps/api/src/trading/dto/trading-config.dto.ts",
-        "apps/api/src/trading/trading.service.ts"
+        "apps/api/src/trading/dto/trading-config.dto.spec.ts"
       ],
-      "test_reference": "Test unitario: un PUT con isActive responde 400 (campo retirado del DTO, forbidNonWhitelisted) o se ignora explicitamente; el spread hacia prisma nunca incluye claves fuera del modelo.",
-      "status": "in-progress",
-      "cycle": "cycle-01"
+      "test_reference": "trading-config.dto.spec.ts: isActive rechazado como whitelistValidation por el ValidationPipe real y ausente de las propiedades del DTO; body-dto-validation (25 tests) sin regresion; commit 0a277d97. Unico emisor restante: el tipo local de apps/web que spec-009 elimina.",
+      "status": "implemented",
+      "cycle": "cycle-01",
+      "usage": {
+        "tokens_in": 25000,
+        "tokens_out": 3000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     }
   ]
 }

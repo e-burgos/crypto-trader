@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                 |
 | **Fecha**     | 2026-09-03                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | in-progress                             |
+| **Estado**    | implemented                             |
 | **Spec**      | spec-e-burgos-009-agent-advanced-config-ui (hallazgo del architect, cycle-01) |
 
 ## Problema

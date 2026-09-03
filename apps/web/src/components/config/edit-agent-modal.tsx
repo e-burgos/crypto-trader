@@ -33,9 +33,54 @@ import { type ConfigForm, StepperSlider } from './constants';
 import {
   AdvancedConfigSections,
   toAdvancedDraft,
+  diffToUpdatePayload,
   useAdvancedDraft,
   type AdvancedDraft,
 } from './advanced';
+
+const BASE_UPDATE_FIELDS = [
+  'name',
+  'buyThreshold',
+  'sellThreshold',
+  'stopLossPct',
+  'takeProfitPct',
+  'minProfitPct',
+  'maxTradePct',
+  'maxConcurrentPositions',
+  'intervalMode',
+  'minIntervalMinutes',
+  'orderPriceOffsetPct',
+  'riskProfile',
+] as const;
+
+type BaseUpdateField = (typeof BASE_UPDATE_FIELDS)[number];
+
+const BASE_FIELD_TO_WIRE_VALUE: Record<BaseUpdateField, (value: string) => unknown> = {
+  name: (v) => v,
+  buyThreshold: (v) => parseFloat(v),
+  sellThreshold: (v) => parseFloat(v),
+  stopLossPct: (v) => parseFloat(v) / 100,
+  takeProfitPct: (v) => parseFloat(v) / 100,
+  minProfitPct: (v) => parseFloat(v) / 100,
+  maxTradePct: (v) => parseFloat(v) / 100,
+  maxConcurrentPositions: (v) => parseInt(v),
+  intervalMode: (v) => v,
+  minIntervalMinutes: (v) => parseInt(v),
+  orderPriceOffsetPct: (v) => parseFloat(v) / 100,
+  riskProfile: (v) => v,
+};
+
+function diffBaseFields(
+  baseline: ConfigForm,
+  current: ConfigForm,
+): Partial<UpdateTradingConfigPayload> {
+  const payload: Record<string, unknown> = {};
+  for (const field of BASE_UPDATE_FIELDS) {
+    if (baseline[field] === current[field]) continue;
+    payload[field] = BASE_FIELD_TO_WIRE_VALUE[field](current[field]);
+  }
+  return payload as Partial<UpdateTradingConfigPayload>;
+}
 
 export function EditAgentModal({
   cfg,
@@ -67,30 +112,28 @@ export function EditAgentModal({
     riskProfile: c.riskProfile ?? 'MODERATE',
   });
 
+  const [baseline] = useState<ConfigForm>(() => toForm(cfg));
   const [form, setForm] = useState<ConfigForm>(() => toForm(cfg));
   const [advancedBaseline] = useState<AdvancedDraft>(() => toAdvancedDraft(cfg));
-  const { draft: advancedDraft, setField: setAdvancedField } = useAdvancedDraft(advancedBaseline);
+  const {
+    draft: advancedDraft,
+    setField: setAdvancedField,
+    isWithinRanges: isAdvancedWithinRanges,
+  } = useAdvancedDraft(advancedBaseline);
 
   function update(patch: Partial<ConfigForm>) {
     setForm((f) => ({ ...f, ...patch }));
   }
 
   function handleSave() {
-    const dto: UpdateTradingConfigPayload = {
-      name: form.name || undefined,
-      buyThreshold: parseFloat(form.buyThreshold),
-      sellThreshold: parseFloat(form.sellThreshold),
-      stopLossPct: parseFloat(form.stopLossPct) / 100,
-      takeProfitPct: parseFloat(form.takeProfitPct) / 100,
-      minProfitPct: parseFloat(form.minProfitPct) / 100,
-      maxTradePct: parseFloat(form.maxTradePct) / 100,
-      maxConcurrentPositions: parseInt(form.maxConcurrentPositions),
-      intervalMode: form.intervalMode,
-      minIntervalMinutes: parseInt(form.minIntervalMinutes),
-      orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
-      riskProfile: form.riskProfile,
-    };
-    updateConfig({ id: cfg.id, data: dto }, { onSuccess: onClose });
+    if (!isAdvancedWithinRanges) return;
+    const baseDiff = diffBaseFields(baseline, form);
+    const payload = diffToUpdatePayload(advancedBaseline, advancedDraft, baseDiff);
+    if (Object.keys(payload).length === 0) {
+      onClose();
+      return;
+    }
+    updateConfig({ id: cfg.id, data: payload }, { onSuccess: onClose });
   }
 
   const content = (

@@ -223,6 +223,8 @@ export class EntryOrderService {
         NotificationType.TRADE_EXECUTED,
         JSON.stringify({
           key: 'entryOrderPlaced',
+          configId: params.config.id,
+          entryOrderId: created.id,
           entryMode: params.plan.mode,
           qty: params.quantity.toString(),
           asset: params.config.asset,
@@ -353,6 +355,8 @@ export class EntryOrderService {
         NotificationType.TRADE_EXECUTED,
         JSON.stringify({
           key: 'entryOrderFilled',
+          configId: order.configId,
+          entryOrderId: order.id,
           qty: executedQuantity.toString(),
           asset: params.config.asset,
           price: executedPrice.toFixed(2),
@@ -433,6 +437,7 @@ export class EntryOrderService {
         NotificationType.AGENT_ERROR,
         JSON.stringify({
           key: 'entryOrderMissing',
+          configId: order.configId,
           entryOrderId: order.id,
           symbol: order.symbol,
         }),

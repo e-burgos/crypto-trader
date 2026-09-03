@@ -191,6 +191,17 @@ describe('EntryOrderService — placement and cancellation (TASK-012)', () => {
       NotificationType.TRADE_EXECUTED,
       expect.stringContaining('entryOrderPlaced'),
     );
+    const placedPayload = JSON.parse(
+      notificationsMock.create.mock.calls[0][2] as string,
+    );
+    expect(placedPayload).toMatchObject({
+      key: 'entryOrderPlaced',
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      entryMode: 'LIMIT_MAKER',
+      asset: 'BTC',
+      mode: 'LIVE',
+    });
   });
 
   it('places an OCO as a single row carrying both leg order ids and the trailing delta', async () => {
@@ -483,6 +494,31 @@ describe('EntryOrderService — placement and cancellation (TASK-012)', () => {
       }),
     ).resolves.toBe(0);
   });
+
+  it('marks the row MISSING and notifies configId and entryOrderId alongside the previous keys', async () => {
+    const prisma = makePrisma();
+
+    await buildService(prisma).markMissing(restingRow as any);
+
+    expect(prisma.entryOrder.update.mock.calls[0][0]).toMatchObject({
+      where: { id: 'entry-1' },
+      data: { status: 'MISSING', cancelReason: 'VANISHED_ON_EXCHANGE' },
+    });
+    expect(notificationsMock.create).toHaveBeenCalledWith(
+      'user-1',
+      NotificationType.AGENT_ERROR,
+      expect.stringContaining('entryOrderMissing'),
+    );
+    const missingPayload = JSON.parse(
+      notificationsMock.create.mock.calls[0][2] as string,
+    );
+    expect(missingPayload).toMatchObject({
+      key: 'entryOrderMissing',
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      symbol: 'BTCUSDT',
+    });
+  });
 });
 
 describe('EntryOrderService.settleFill (TASK-015)', () => {
@@ -639,6 +675,16 @@ describe('EntryOrderService.settleFill (TASK-015)', () => {
       NotificationType.TRADE_EXECUTED,
       expect.stringContaining('entryOrderFilled'),
     );
+    const filledPayload = JSON.parse(
+      notificationsMock.create.mock.calls[0][2] as string,
+    );
+    expect(filledPayload).toMatchObject({
+      key: 'entryOrderFilled',
+      configId: 'config-1',
+      entryOrderId: 'entry-1',
+      asset: 'BTC',
+      mode: 'LIVE',
+    });
     expect(gatewayMock.emitToUser).toHaveBeenCalledWith('user-1', 'entry-order:filled', {
       configId: 'config-1',
       entryOrderId: 'entry-1',

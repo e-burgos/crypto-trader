@@ -32,6 +32,10 @@ function openSignal() {
   fireEvent.click(screen.getByRole('button', { name: /Signal & sizing/ }));
 }
 
+function openReactive() {
+  fireEvent.click(screen.getByRole('button', { name: /Reactive loop/ }));
+}
+
 describe('AdvancedConfigSections — Protection', () => {
   it('renders every root switch off from DEFAULT_ADVANCED_DRAFT', () => {
     render(<Harness />);
@@ -132,5 +136,41 @@ describe('AdvancedConfigSections — Signal & sizing', () => {
 
     fireEvent.click(screen.getByRole('switch', { name: 'Deterministic gate' }));
     expect(screen.getByRole('slider', { name: 'Price change threshold' })).toBeEnabled();
+  });
+});
+
+describe('AdvancedConfigSections — Reactive loop', () => {
+  it('keeps the frequency caps disabled until reactiveLoopEnabled is on', () => {
+    render(<Harness />);
+    openReactive();
+
+    expect(screen.getByRole('slider', { name: 'Maximum actions per hour' })).toBeDisabled();
+    expect(
+      screen.getByRole('slider', { name: 'Minimum interval between actions' }),
+    ).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Reactive loop' }));
+
+    expect(screen.getByRole('slider', { name: 'Maximum actions per hour' })).toBeEnabled();
+    expect(
+      screen.getByRole('slider', { name: 'Minimum interval between actions' }),
+    ).toBeEnabled();
+  });
+
+  it('exposes exactly the DTO ranges for the frequency caps', () => {
+    render(<Harness />);
+    openReactive();
+
+    const maxActionsPerHour = screen.getByRole('slider', { name: 'Maximum actions per hour' });
+    expect(maxActionsPerHour).toHaveAttribute('min', '1');
+    expect(maxActionsPerHour).toHaveAttribute('max', '60');
+    expect(maxActionsPerHour).toHaveAttribute('step', '1');
+
+    const minActionIntervalSec = screen.getByRole('slider', {
+      name: 'Minimum interval between actions',
+    });
+    expect(minActionIntervalSec).toHaveAttribute('min', '5');
+    expect(minActionIntervalSec).toHaveAttribute('max', '3600');
+    expect(minActionIntervalSec).toHaveAttribute('step', '5');
   });
 });

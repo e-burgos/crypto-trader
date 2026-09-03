@@ -30,6 +30,12 @@ import {
 } from '../../hooks/use-trading';
 import { useTestnetBinanceKeyStatus } from '../../hooks/use-user';
 import { type ConfigForm, StepperSlider } from './constants';
+import {
+  AdvancedConfigSections,
+  toAdvancedDraft,
+  useAdvancedDraft,
+  type AdvancedDraft,
+} from './advanced';
 
 export function EditAgentModal({
   cfg,
@@ -62,6 +68,8 @@ export function EditAgentModal({
   });
 
   const [form, setForm] = useState<ConfigForm>(() => toForm(cfg));
+  const [advancedBaseline] = useState<AdvancedDraft>(() => toAdvancedDraft(cfg));
+  const { draft: advancedDraft, setField: setAdvancedField } = useAdvancedDraft(advancedBaseline);
 
   function update(patch: Partial<ConfigForm>) {
     setForm((f) => ({ ...f, ...patch }));
@@ -324,6 +332,16 @@ export function EditAgentModal({
           step={0.5}
           signed={true}
           onChange={(v) => update({ orderPriceOffsetPct: v })}
+        />
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+        <p className="text-sm font-semibold">{t('config.advanced.step.title')}</p>
+        <AdvancedConfigSections
+          draft={advancedDraft}
+          onChange={setAdvancedField}
+          resolvedMode={cfg.mode}
+          surface="edit"
         />
       </div>
     </div>

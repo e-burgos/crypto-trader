@@ -169,8 +169,23 @@
         "TASK-004",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/advanced/advanced-field-control.tsx",
+        "apps/web/src/components/config/advanced/advanced-section.tsx",
+        "apps/web/src/components/config/advanced/advanced-config-sections.tsx",
+        "apps/web/src/components/config/advanced/advanced-config-sections.spec.tsx",
+        "apps/web/src/components/config/advanced/index.ts",
+        "libs/ui/src/lib/primitives/toggle-switch.tsx",
+        "libs/ui/src/lib/composites/slider-field.tsx"
+      ],
+      "usage": {
+        "tokens_in": 55000,
+        "tokens_out": 9000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-007",
@@ -187,8 +202,18 @@
         "TASK-004",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/advanced/advanced-config-sections.tsx",
+        "apps/web/src/components/config/advanced/advanced-config-sections.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 6000,
+        "tokens_out": 2000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-008",
@@ -205,8 +230,18 @@
         "TASK-004",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/advanced/advanced-config-sections.tsx",
+        "apps/web/src/components/config/advanced/advanced-config-sections.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 5000,
+        "tokens_out": 1500,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-009",
@@ -223,8 +258,19 @@
         "TASK-004",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/advanced/advanced-field-control.tsx",
+        "apps/web/src/components/config/advanced/advanced-config-sections.tsx",
+        "apps/web/src/components/config/advanced/advanced-config-sections.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 10000,
+        "tokens_out": 3000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-010",
@@ -245,7 +291,7 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -259,7 +305,7 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -280,7 +326,7 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -297,7 +343,7 @@
       "depends_on": [
         "TASK-012"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -343,7 +389,7 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {

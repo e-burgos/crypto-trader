@@ -1,0 +1,29 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 2,
+  "module": "agent-advanced-config-ui",
+  "spec": "spec-e-burgos-009-agent-advanced-config-ui",
+  "apps": ["apps/web", "libs/shared", "libs/ui"],
+  "phase": "resting-entries-view",
+  "flow": "full",
+  "objectives": [
+    "Vista de entradas descansando sobre EP-017 con filtros, paginado por cursor y degradación de estados desconocidos",
+    "Tiempo real: invalidación ante entry-order:* y entrada RESTING vigente en el detalle del agente",
+    "Notificaciones de entradas traducidas con enlace a la vista",
+    "Tests Vitest sobre fixtures del wire y E2E headless",
+    "Cierre de la spec en dos ciclos"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-09-03",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/brief.yaml"
+  },
+  "artifacts": [],
+  "metrics": null,
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

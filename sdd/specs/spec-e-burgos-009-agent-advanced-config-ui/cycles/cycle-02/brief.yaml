@@ -1,0 +1,140 @@
+# sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 2
+module: agent-advanced-config-ui
+phase: resting-entries-view
+date: 2026-09-03
+app_context: sdd/context/apps/web/context_prompt.md
+
+objective: |
+  Que el trader vea desde el dashboard las entradas descansando que sus bots colocan en el exchange
+  (nivel, estado, notional comprometido, vencimiento y, si llenó, pierna y precio), con filtros por
+  estado y por bot, paginado por cursor, actualización en tiempo real por WebSocket y notificaciones
+  traducidas con enlace a la vista. Sin cambiar ni un endpoint: EP-017 tal como existe.
+
+scope:
+  - Vista de entradas descansando sobre EP-017 (GET /trading/entry-orders): pestaña propia en
+    Posiciones o sección equivalente (decide el funcional), columnas nivel/estado/notional/vencimiento/
+    pierna y precio de fill; filtros por estado y por bot; paginado por cursor; estados fuera del union
+    degradan a neutro.
+  - Tiempo real: use-websocket.ts invalida la consulta de entradas ante entry-order:placed|filled|
+    expired|cancelled|missing|skipped; el detalle del agente muestra su entrada RESTING vigente.
+  - Notificaciones entryOrderPlaced/Filled/Missing (claves ya existentes desde cycle-01) con enlace a la vista.
+  - Tests Vitest sobre fixtures del wire de EP-017 (CA-005, CA-006, CA-007) y E2E headless (CA-008).
+  - Fragmentos de contexto y cierre de la spec (dos ciclos).
+
+out_of_scope:
+  - Cancelar una entrada desde la UI (no existe endpoint DELETE; spec posterior si se justifica).
+  - Cualquier cambio en apps/api. Un campo del response ininteligible para la UI se registra como fix.
+  - Nuevas primitivas en libs/ui salvo exigencia de la regla 3 de frontend-component-rules.
+  - Gráficos o métricas agregadas de entradas.
+
+dependencies_required:
+  - spec-e-burgos-009 cycle-01 (completed 2026-09-03) — wire compartido, secciones avanzadas, claves i18n.
+  - spec-e-burgos-005 cycle-02 (completed 2026-09-01) — EP-017, eventos entry-order:*, tabla entry_orders.
+
+agent_contexts:
+  functional:
+    goal: >
+      Historias de usuario y reglas verificables para la vista de entradas: qué columnas, qué filtros,
+      qué significa cada estado para el trader (RESTING, FILLED, CANCELLED con motivo, EXPIRED,
+      MISSING), cómo se muestra una entrada OCO frente a una LIMIT_MAKER, qué pasa al llegar cada
+      evento WebSocket, y cómo se enlaza desde una notificación. Dónde vive la vista (pestaña en
+      Posiciones vs página propia) con su razonamiento. Criterios como propiedades sobre fixtures del
+      response de EP-017, nunca sobre mercado real.
+    business_context: >
+      Cycle-02 de spec-005 dejó al bot colocando entradas en el exchange y un registro consultable
+      (EP-017), pero el trader no puede verlas: hoy sólo por API. Hay un bot TESTNET en producción
+      configurado con LIMIT_MAKER; en cuanto el LLM decida BUY habrá una entrada real que nadie puede
+      seguir desde el dashboard. Riesgo central: mostrar como "llena" o "vencida" algo que no lo está;
+      el estado siempre viene del backend, la UI no lo infiere.
+    relevant_spec_sections:
+      - "1. Contexto y diagnóstico — hallazgos C, D, E"
+      - "3. Alcance por ciclo — Cycle-02"
+      - "5. Restricciones de diseño"
+      - "6. Criterios de aceptación CA-005 a CA-008"
+
+  planner:
+    goal: >
+      Tasks por dependencia: hook TanStack Query sobre EP-017 (tipos del wire desde libs/shared si hace
+      falta declararlos ahí primero) -> componentes de la vista (tabla/filtros/paginado con libs/ui)
+      -> integración en la página -> tiempo real en use-websocket.ts -> detalle del agente ->
+      enlace de notificaciones -> tests Vitest -> E2E headless -> fragmentos y cierre de la spec.
+    output_file: sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/planner.md
+
+  architect:
+    goal: >
+      Fijar el contrato: tipo del wire de EP-017 en libs/shared (el response de la API existe; el tipo
+      compartido no), hook y query keys, estructura de componentes, mapeo estado -> badge/texto,
+      invalidación por evento WebSocket (qué queries y con qué granularidad), la ruta y el enlace de
+      las notificaciones, i18n (seccion.componente.elemento) y el contrato de tests; sin endpoints nuevos.
+    existing_tables: []
+    existing_endpoints:
+      - EP-017 GET /trading/entry-orders (implemented, spec-005 cycle-02)
+      - EP-008 GET /trading/positions (implemented)
+    output_file: sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/architect.md
+
+  implementor_front:
+    goal: >
+      Implementar task por task contra el contrato, con frontend-component-rules; tests sobre fixtures
+      del wire; nunca abrir un browser visible; Playwright headless en el puerto 3001, jamás el 3000.
+    app: apps/web
+    app_context: sdd/context/apps/web/context_prompt.md
+    libs:
+      - libs/shared
+      - libs/ui
+
+  reviewer:
+    goal: >
+      Validar CA-005..CA-008 por ejecución (Vitest, E2E en CI), cerrar el ciclo y, siendo el segundo y
+      último de la spec, mover el módulo a completed_modules y la spec a completed.
+    output_file: sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/cycle.json
+
+verified_facts:
+  - "EP-017 responde { items: [{ id, configId, symbol, mode, entryMode, status, quantity, limitPrice,
+     stopPrice, stopLimitPrice, trailingDeltaBips, referencePrice, plannedNotionalUsd, clientOrderId,
+     orderListId, orderId, placedAt, expiresAt, filledLeg, executedPrice, executedQuantity, positionId,
+     cancelReason, settledAt }], nextCursor }; query configId, status (RESTING|FILLED|CANCELLED|EXPIRED|
+     MISSING), since, limit 1..200 (default 50), cursor (id). Orden placedAt desc. Scope por userId."
+  - "Eventos WS emitidos por apps/api/src/trading/entry-order.service.ts: entry-order:placed (:235),
+     filled (:364), skipped (:379), missing (:442), expired (:585), cancelled (:595). Payloads con
+     entryOrderId/configId/symbol y campos por etapa (leer el service)."
+  - "use-websocket.ts (apps/web/src/hooks) maneja notification:new, trade:executed, position:closed,
+     position:updated, wallet:updated, agent:killed; invalida queries de TanStack. No maneja entry-order:*."
+  - "apps/web/src/pages/dashboard/positions.tsx usa Tabs de libs/ui con tabOpen/tabClosed."
+  - "Claves i18n notificationMessages.entryOrderPlaced/Filled/Missing existen en es/en desde cycle-01."
+  - "libs/ui: data-table, filter-pills, pagination, tabs, badge, key-value-row, info-card, tooltip."
+  - "cancelReason enum: TTL_EXPIRED, LATER_DECISION, DAILY_LOSS_DISCARDED, BOT_STOPPED,
+     REPLACED_BY_NEW_ENTRY, PARTIAL_FILL_REMAINDER, ORPHAN_SWEEP, VANISHED_ON_EXCHANGE."
+  - "El wire de EP-017 no está tipado en libs/shared: el tipo compartido es parte de este ciclo."
+  - "Hay un bot TESTNET del trader en producción (config cmtlrzil8000001pqeojwpjsd) detenido, con
+     entryOrderMode LIMIT_MAKER: sirve para probar la vista si se arranca y el LLM decide BUY."
+
+decisiones_criticas:
+  - id: D1
+    titulo: Dónde vive la vista
+    pregunta: Pestaña "Entradas" en Posiciones (recomendado, comparte el modelo mental de exposición) o página propia.
+  - id: D2
+    titulo: Granularidad de la invalidación en tiempo real
+    pregunta: Invalidar toda la lista ante cualquier entry-order:* o actualizar la fila por entryOrderId; decidir por simplicidad y por el volumen real (pocas entradas por bot).
+  - id: D3
+    titulo: Enlace desde la notificación
+    pregunta: Ruta destino y query params (configId, entryOrderId) para abrir la vista filtrada; cómo se compone en notification-utils sin romper las notificaciones existentes.
+
+harness_rules:
+  - "frontend-component-rules antes de crear o modificar componentes."
+  - "Código sin comentarios narrativos."
+  - "Tipos del wire desde @crypto-trader/shared; ningún tipo local del wire en apps/web."
+  - "Todo texto por t(); claves seccion.componente.elemento en es y en."
+  - "Estado desconocido del wire degrada a neutro, nunca rompe el render."
+  - "Nunca abrir browsers visibles: Vitest y Playwright headless; puerto 3001 para la API local."
+  - "Registrar usage al cerrar cada task; el orquestador es el único escritor de tasks.json."
+
+model_tiers:
+  functional: sonnet / medium
+  planner: sonnet / medium
+  architect: opus / high
+  implementor_front: sonnet / medium
+  reviewer: opus / high

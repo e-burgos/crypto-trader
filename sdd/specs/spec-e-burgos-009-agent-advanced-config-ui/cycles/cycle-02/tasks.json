@@ -124,8 +124,19 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/locales/es.ts",
+        "apps/web/src/locales/en.ts",
+        "apps/web/src/locales/locales-parity.spec.ts"
+      ],
+      "usage": {
+        "tokens_in": 90000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-006",
@@ -141,8 +152,22 @@
         "TASK-001",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/ui/src/lib/primitives/badge.tsx",
+        "libs/ui/src/lib/primitives/badge.spec.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-order-labels.ts",
+        "apps/web/src/components/positions/entry-orders/entry-order-status-badge.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-order-cancel-reason-legend.tsx",
+        "apps/web/src/components/positions/entry-orders/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 140000,
+        "tokens_out": 12000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-007",
@@ -159,7 +184,7 @@
         "TASK-005",
         "TASK-006"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -175,7 +200,7 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -191,7 +216,7 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -206,7 +231,7 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -244,7 +269,7 @@
         "TASK-003",
         "TASK-006"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {

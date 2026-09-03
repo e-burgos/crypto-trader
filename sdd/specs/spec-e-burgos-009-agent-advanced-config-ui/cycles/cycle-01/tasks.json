@@ -1,0 +1,198 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-009-agent-advanced-config-ui",
+  "cycle": 1,
+  "module": "agent-advanced-config-ui",
+  "apps": [
+    "apps/web",
+    "libs/shared",
+    "libs/ui"
+  ],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": {
+    "tasks_generated": true
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Wire completo de TradingConfig + tipos de alta/edición en libs/shared",
+      "user_stories": ["US-1-001"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-002",
+      "title": "apps/api reutiliza el wire de libs/shared sin tocar decoradores (D2, CA-001)",
+      "user_stories": ["US-1-001"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-003",
+      "title": "apps/web — los hooks importan el wire y se borra la interfaz local",
+      "user_stories": ["US-1-001"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-004",
+      "title": "Locales es/en — las cuatro secciones + claves de notificación faltantes",
+      "user_stories": ["US-1-013"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-005",
+      "title": "Hook/reducer de estado del formulario avanzado — defaults apagados + reglas de dependencia",
+      "user_stories": ["US-1-002", "US-1-003", "US-1-004", "US-1-005", "US-1-012"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-001"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-006",
+      "title": "Componente de sección — Protección (US-1-002)",
+      "user_stories": ["US-1-002", "US-1-012", "US-1-014"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-001", "TASK-004", "TASK-005"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-007",
+      "title": "Componente de sección — Señal y tamaño (US-1-003)",
+      "user_stories": ["US-1-003", "US-1-012", "US-1-014"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-001", "TASK-004", "TASK-005"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-008",
+      "title": "Componente de sección — Loop reactivo (US-1-004)",
+      "user_stories": ["US-1-004", "US-1-012", "US-1-014"],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": ["TASK-001", "TASK-004", "TASK-005"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-009",
+      "title": "Componente de sección — Entrada (US-1-005)",
+      "user_stories": ["US-1-005", "US-1-012", "US-1-014"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-001", "TASK-004", "TASK-005"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-010",
+      "title": "Integrar las cuatro secciones en el stepper de alta (D1)",
+      "user_stories": ["US-1-002", "US-1-003", "US-1-004", "US-1-005", "US-1-006"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-003", "TASK-006", "TASK-007", "TASK-008", "TASK-009"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-011",
+      "title": "Test de equivalencia CA-002 — alta sin tocar lo avanzado es byte-idéntica",
+      "user_stories": ["US-1-006"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": ["TASK-010"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-012",
+      "title": "Integrar las cuatro secciones en la edición, precargadas con el estado real",
+      "user_stories": ["US-1-007", "US-1-008", "US-1-009", "US-1-010"],
+      "estimation_hours": 6,
+      "story_points": 8,
+      "depends_on": ["TASK-003", "TASK-006", "TASK-007", "TASK-008", "TASK-009"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-013",
+      "title": "PUT de edición envía solo los campos cambiados (D3, CA-003)",
+      "user_stories": ["US-1-007", "US-1-008", "US-1-009", "US-1-010"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-012"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-014",
+      "title": "Detalle del agente muestra las cuatro secciones de solo lectura",
+      "user_stories": ["US-1-011"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-001", "TASK-003", "TASK-004"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-015",
+      "title": "Fixtures Vitest por sección + test de propiedad de las reglas de dependencia",
+      "user_stories": ["US-1-015"],
+      "estimation_hours": 5,
+      "story_points": 8,
+      "depends_on": ["TASK-006", "TASK-007", "TASK-008", "TASK-009"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-016",
+      "title": "E2E headless — alta enciende un interruptor por sección y confirma la habilitación en el DOM",
+      "user_stories": ["US-1-015"],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": ["TASK-010"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-017",
+      "title": "Fragmento de contexto aditivo — libs/shared (+ libs/ui si se tocó)",
+      "user_stories": ["US-1-001"],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": ["TASK-001", "TASK-006", "TASK-007", "TASK-008", "TASK-009"],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-018",
+      "title": "Fragmento de contexto aditivo apps/web + journal (si aplica) + usage consolidado",
+      "user_stories": ["US-1-001"],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": ["TASK-011", "TASK-013", "TASK-014", "TASK-015", "TASK-016", "TASK-017"],
+      "status": "pending",
+      "files": []
+    }
+  ]
+}

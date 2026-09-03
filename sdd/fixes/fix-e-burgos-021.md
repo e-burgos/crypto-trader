@@ -8,12 +8,12 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | pending                                 |
+| **Estado**    | implemented                             |
 | **Spec**      | N/A (repo-level)                        |
 
 ## Problema
 
-libs/ui/src/lib/primitives/card.tsx desestructura sus props y no hace spread del resto, asi que <Card data-testid=...> no emite el atributo. Evidencia en /admin/data-sources: [data-testid="data-source-card"] -> 0 elementos, .ds-card -> 8. Los E2E usan .ds-card mientras tanto.
+libs/ui/src/lib/composites/card.tsx desestructura sus props y no hace spread del resto, asi que <Card data-testid=...> no emite el atributo. Evidencia en /admin/data-sources: [data-testid="data-source-card"] -> 0 elementos, .ds-card -> 8. Los E2E usan .ds-card mientras tanto.
 
 ## Justificación del bypass
 
@@ -22,7 +22,7 @@ está implementado todavía.
 
 ### Archivos a modificar
 
-- `libs/ui/src/lib/primitives/card.tsx`
+- `libs/ui/src/lib/composites/card.tsx`
 
 ### Test de validación
 

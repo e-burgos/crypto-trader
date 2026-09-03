@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                |
 | **Fecha**     | 2026-09-02                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | pending                                 |
+| **Estado**    | implemented                             |
 | **Spec**      | N/A (repo-level)                        |
 
 ## Problema

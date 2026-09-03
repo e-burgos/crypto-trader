@@ -1,5 +1,37 @@
 // Mock for generated/prisma/client — used by Jest to avoid ESM resolution issues
 export class PrismaClient {}
+
+class PrismaClientKnownRequestError extends Error {
+  code: string;
+  meta?: Record<string, unknown>;
+  clientVersion: string;
+  batchRequestIdx?: number;
+
+  constructor(
+    message: string,
+    {
+      code,
+      clientVersion,
+      meta,
+      batchRequestIdx,
+    }: {
+      code: string;
+      clientVersion: string;
+      meta?: Record<string, unknown>;
+      batchRequestIdx?: number;
+    },
+  ) {
+    super(message);
+    this.code = code;
+    this.clientVersion = clientVersion;
+    this.meta = meta;
+    this.batchRequestIdx = batchRequestIdx;
+  }
+}
+
+export const Prisma = {
+  PrismaClientKnownRequestError,
+};
 export const $Enums = {
   UserRole: { ADMIN: 'ADMIN', TRADER: 'TRADER', VIEWER: 'VIEWER' },
   LLMProvider: {

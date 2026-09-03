@@ -16,6 +16,7 @@ import {
 } from '../auth/dto/auth.dto';
 import { encrypt, decrypt } from './utils/encryption.util';
 import { LLMProvider, NewsApiProvider } from '../../generated/prisma/enums';
+import { Prisma } from '../../generated/prisma/client';
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import { recordCall } from '../llm/provider-health.service';
 import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
@@ -228,13 +229,25 @@ export class UsersService {
 
   // ── LLM credentials ────────────────────────────────────────────────────────
 
+  private assertKnownLLMProvider(provider: string): void {
+    if (!Object.values(LLMProvider).includes(provider as LLMProvider)) {
+      throw new BadRequestException(`Unknown LLM provider: ${provider}`);
+    }
+  }
+
   async setLLMKey(userId: string, dto: LLMKeyDto) {
+    this.assertKnownLLMProvider(dto.provider);
     const provider = dto.provider as LLMProvider;
 
     // Validate provider is active at platform level (Spec 38)
     await this.platformLLMProviderService.assertProviderActive(provider);
 
-    const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(dto.apiKey);
+    const apiKey = dto.apiKey.trim();
+    if (!apiKey) {
+      throw new BadRequestException('apiKey must not be blank');
+    }
+
+    const { encrypted: apiKeyEncrypted, iv: apiKeyIv } = encrypt(apiKey);
     const selectedModel = dto.selectedModel || '';
 
     return this.prisma.lLMCredential.upsert({
@@ -257,17 +270,43 @@ export class UsersService {
     provider: string,
     selectedModel: string | null,
   ) {
-    return this.prisma.lLMCredential.update({
-      where: { userId_provider: { userId, provider: provider as LLMProvider } },
-      data: { selectedModel: selectedModel || '' },
-      select: { id: true, provider: true, selectedModel: true, isActive: true },
-    });
+    this.assertKnownLLMProvider(provider);
+    try {
+      return await this.prisma.lLMCredential.update({
+        where: {
+          userId_provider: { userId, provider: provider as LLMProvider },
+        },
+        data: { selectedModel: selectedModel || '' },
+        select: {
+          id: true,
+          provider: true,
+          selectedModel: true,
+          isActive: true,
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2025'
+      ) {
+        throw new NotFoundException(
+          `No ${provider} LLM credential configured for this user`,
+        );
+      }
+      throw err;
+    }
   }
 
   async deleteLLMKey(userId: string, provider: string) {
-    await this.prisma.lLMCredential.deleteMany({
+    this.assertKnownLLMProvider(provider);
+    const { count } = await this.prisma.lLMCredential.deleteMany({
       where: { userId, provider: provider as LLMProvider },
     });
+    if (count === 0) {
+      throw new NotFoundException(
+        `No ${provider} LLM credential configured for this user`,
+      );
+    }
   }
 
   async getLLMKeyStatus(userId: string) {
@@ -341,12 +380,13 @@ export class UsersService {
   }
 
   async testLLMKey(userId: string, provider: string) {
+    this.assertKnownLLMProvider(provider);
     const cred = await this.prisma.lLMCredential.findUnique({
       where: { userId_provider: { userId, provider: provider as LLMProvider } },
     });
     if (!cred) return { connected: false, error: 'No credentials saved' };
-    const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
     try {
+      const apiKey = decrypt(cred.apiKeyEncrypted, cred.apiKeyIv);
       if (provider === 'CLAUDE') {
         await axios.get('https://api.anthropic.com/v1/models', {
           headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },

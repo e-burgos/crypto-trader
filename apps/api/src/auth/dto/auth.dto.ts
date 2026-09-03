@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { LLMProvider } from '../../../generated/prisma/enums';
 
 export class RegisterDto {
   @ApiProperty({
@@ -90,11 +92,12 @@ export class LLMKeyDto {
     enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL', 'TOGETHER'],
     example: 'CLAUDE',
   })
-  @IsString()
+  @IsEnum(LLMProvider)
   provider!: string;
 
   @ApiProperty({ description: 'API Key del proveedor LLM' })
   @IsString()
+  @IsNotEmpty()
   apiKey!: string;
 
   @ApiProperty({
@@ -113,7 +116,7 @@ export class LLMModelDto {
     enum: ['CLAUDE', 'OPENAI', 'GROQ', 'GEMINI', 'MISTRAL', 'TOGETHER'],
     example: 'OPENAI',
   })
-  @IsString()
+  @IsEnum(LLMProvider)
   provider!: string;
 
   @ApiProperty({

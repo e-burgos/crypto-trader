@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PlatformLLMProviderService } from '../llm/platform-llm-provider.service';
+import { Prisma } from '../../generated/prisma/client';
 
 const mockPlatformLLMProviderService = {
   assertProviderActive: jest.fn().mockResolvedValue(undefined),
@@ -22,6 +23,7 @@ const mockPrismaService = {
   },
   lLMCredential: {
     upsert: jest.fn(),
+    update: jest.fn(),
     deleteMany: jest.fn(),
     findMany: jest.fn(),
     findUnique: jest.fn(),
@@ -137,6 +139,131 @@ describe('UsersService', () => {
       expect(result.provider).toBe('CLAUDE');
       const call = prisma.lLMCredential.upsert.mock.calls[0][0];
       expect(call.create.apiKeyEncrypted).not.toBe('sk-ant-123');
+    });
+
+    it('should reject a provider outside the LLMProvider enum with 400 instead of 500', async () => {
+      await expect(
+        service.setLLMKey('user-1', {
+          provider: 'NOT_A_PROVIDER',
+          apiKey: 'sk-ant-123',
+        } as any),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(
+        mockPlatformLLMProviderService.assertProviderActive,
+      ).not.toHaveBeenCalled();
+      expect(prisma.lLMCredential.upsert).not.toHaveBeenCalled();
+    });
+
+    it('should reject a blank apiKey with 400 instead of saving it', async () => {
+      await expect(
+        service.setLLMKey('user-1', {
+          provider: 'CLAUDE',
+          apiKey: '   ',
+        } as any),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.lLMCredential.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateLLMModel', () => {
+    it('should reject a provider outside the LLMProvider enum with 400 instead of 500', async () => {
+      await expect(
+        service.updateLLMModel('user-1', 'NOT_A_PROVIDER', 'gpt-4o'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.lLMCredential.update).not.toHaveBeenCalled();
+    });
+
+    it('should translate a missing credential (Prisma P2025) into 404 instead of 500', async () => {
+      prisma.lLMCredential.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('No record found', {
+          code: 'P2025',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        service.updateLLMModel('user-1', 'GROQ', 'llama-3.3-70b-versatile'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should update the selected model when the credential exists', async () => {
+      prisma.lLMCredential.update.mockResolvedValue({
+        id: 'cred-1',
+        provider: 'GROQ',
+        selectedModel: 'llama-3.3-70b-versatile',
+        isActive: true,
+      });
+
+      const result = await service.updateLLMModel(
+        'user-1',
+        'GROQ',
+        'llama-3.3-70b-versatile',
+      );
+
+      expect(result.selectedModel).toBe('llama-3.3-70b-versatile');
+    });
+  });
+
+  describe('deleteLLMKey', () => {
+    it('should reject a provider outside the LLMProvider enum with 400 instead of 500', async () => {
+      await expect(
+        service.deleteLLMKey('user-1', 'NOT_A_PROVIDER'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.lLMCredential.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('should throw 404 when no credential existed for that provider', async () => {
+      prisma.lLMCredential.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.deleteLLMKey('user-1', 'GROQ'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should resolve when a credential existed and was deleted', async () => {
+      prisma.lLMCredential.deleteMany.mockResolvedValue({ count: 1 });
+
+      await expect(
+        service.deleteLLMKey('user-1', 'GROQ'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('testLLMKey', () => {
+    it('should reject a provider outside the LLMProvider enum with 400 instead of 500', async () => {
+      await expect(
+        service.testLLMKey('user-1', 'NOT_A_PROVIDER'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(prisma.lLMCredential.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should return connected:false instead of throwing when the stored key cannot be decrypted', async () => {
+      prisma.lLMCredential.findUnique.mockResolvedValue({
+        provider: 'GROQ',
+        apiKeyEncrypted: 'not-valid-base64-ciphertext',
+        apiKeyIv: 'not-valid-iv',
+      });
+
+      const result = await service.testLLMKey('user-1', 'GROQ');
+
+      expect(result.connected).toBe(false);
+      expect(typeof result.error).toBe('string');
+    });
+
+    it('should report no credentials saved when none exist', async () => {
+      prisma.lLMCredential.findUnique.mockResolvedValue(null);
+
+      const result = await service.testLLMKey('user-1', 'GROQ');
+
+      expect(result).toEqual({
+        connected: false,
+        error: 'No credentials saved',
+      });
     });
   });
 

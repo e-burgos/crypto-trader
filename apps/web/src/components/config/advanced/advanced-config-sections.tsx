@@ -10,7 +10,7 @@ export interface AdvancedConfigSectionsProps {
   surface: 'create' | 'edit';
 }
 
-const RENDERED_SECTIONS: readonly AdvancedSectionId[] = ['protection', 'signal', 'reactive'];
+const RENDERED_SECTIONS: readonly AdvancedSectionId[] = ['protection', 'signal', 'reactive', 'entry'];
 
 function sectionHasNonDefaultValue(sectionId: AdvancedSectionId, draft: AdvancedDraft): boolean {
   return fieldsBySection(sectionId).some((field) => draft[field] !== DEFAULT_ADVANCED_DRAFT[field]);

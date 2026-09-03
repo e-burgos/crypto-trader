@@ -36,6 +36,10 @@ function openReactive() {
   fireEvent.click(screen.getByRole('button', { name: /Reactive loop/ }));
 }
 
+function openEntry() {
+  fireEvent.click(screen.getByRole('button', { name: /^Entry/ }));
+}
+
 describe('AdvancedConfigSections — Protection', () => {
   it('renders every root switch off from DEFAULT_ADVANCED_DRAFT', () => {
     render(<Harness />);
@@ -172,5 +176,92 @@ describe('AdvancedConfigSections — Reactive loop', () => {
     expect(minActionIntervalSec).toHaveAttribute('min', '5');
     expect(minActionIntervalSec).toHaveAttribute('max', '3600');
     expect(minActionIntervalSec).toHaveAttribute('step', '5');
+  });
+});
+
+describe('AdvancedConfigSections — Entry', () => {
+  it('offers the three entryOrderMode options with their descriptions in TESTNET', () => {
+    render(<Harness resolvedMode="TESTNET" />);
+    openEntry();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Market' }));
+
+    expect(screen.getByText('Limit (resting)')).toBeInTheDocument();
+    expect(
+      screen.getByText('The entry rests at the support level until it fills or expires.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Support + breakout (OCO)')).toBeInTheDocument();
+    expect(
+      screen.getByText('Places support and breakout at once: enters through whichever fills first.'),
+    ).toBeInTheDocument();
+  });
+
+  it('disables entryOrderMode in SANDBOX and shows the visible sandbox explanation', () => {
+    render(<Harness resolvedMode="SANDBOX" />);
+    openEntry();
+
+    expect(screen.getByRole('button', { name: 'Market' })).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Resting entries don't apply in SANDBOX: the bot buys at a simulated market price.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('enables entryOrderMode outside SANDBOX without the sandbox explanation', () => {
+    render(<Harness resolvedMode="TESTNET" />);
+    openEntry();
+
+    expect(screen.getByRole('button', { name: 'Market' })).toBeEnabled();
+    expect(
+      screen.queryByText(
+        "Resting entries don't apply in SANDBOX: the bot buys at a simulated market price.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('enables entryOrderTtlMinutes only once entryOrderMode leaves MARKET, with the DTO range', () => {
+    render(<Harness resolvedMode="TESTNET" />);
+    openEntry();
+
+    expect(screen.getByRole('slider', { name: 'Entry expiration' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Market' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Limit \(resting\)/ }));
+
+    const ttl = screen.getByRole('slider', { name: 'Entry expiration' });
+    expect(ttl).toBeEnabled();
+    expect(ttl).toHaveAttribute('min', '5');
+    expect(ttl).toHaveAttribute('max', '1440');
+    expect(ttl).toHaveAttribute('step', '5');
+  });
+
+  it('shows "Fixed level" and a disabled toggle while entryOrderMode is not OCO', () => {
+    render(<Harness resolvedMode="TESTNET" />);
+    openEntry();
+
+    expect(screen.getByText('Fixed level')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Trailing on breakout' })).toBeDisabled();
+  });
+
+  it('enables entryTrailingDeltaBips only with OCO and its synthetic switch on', () => {
+    render(<Harness resolvedMode="TESTNET" />);
+    openEntry();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Market' }));
+    fireEvent.click(screen.getByRole('button', { name: /Support \+ breakout/ }));
+
+    const trailingToggle = screen.getByRole('switch', { name: 'Trailing on breakout' });
+    expect(trailingToggle).toBeEnabled();
+    expect(screen.getByText('Fixed level')).toBeInTheDocument();
+    expect(screen.queryByRole('slider', { name: 'Breakout trailing' })).not.toBeInTheDocument();
+
+    fireEvent.click(trailingToggle);
+
+    const trailingSlider = screen.getByRole('slider', { name: 'Breakout trailing' });
+    expect(trailingSlider).toBeEnabled();
+    expect(trailingSlider).toHaveAttribute('min', '10');
+    expect(trailingSlider).toHaveAttribute('max', '2000');
+    expect(trailingSlider).toHaveAttribute('step', '10');
   });
 });

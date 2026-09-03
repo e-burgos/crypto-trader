@@ -20,7 +20,7 @@ las alcanzó: la deuda de UI se difirió explícitamente en spec-001 y volvió a
 thresholds → risk → timing → review) y el modal de edición (`edit-agent-modal.tsx`) exponen
 exactamente los 11 originales: `name, asset, pair, mode, buyThreshold, sellThreshold, stopLossPct,
 takeProfitPct, minProfitPct, maxTradePct, maxConcurrentPositions, minIntervalMinutes, intervalMode,
-orderPriceOffsetPct, riskProfile`. Ninguno de los 26 interruptores y parámetros posteriores tiene
+orderPriceOffsetPct, riskProfile`. Ninguno de los 25 interruptores y parámetros posteriores tiene
 control: `lossCut*`, `smartSizing*`, `nativeProtectionEnabled`, `closeOnProtectionFailure`,
 `stopLimitOffsetPct`, `trailingStop*`, `partialTp*`, `moveStopToBreakevenAfterPartial`,
 `maxPositionHoldMinutes`, `deterministicGateEnabled`, `gatePriceChangePct`, `reactiveLoopEnabled`,
@@ -127,7 +127,7 @@ Sin cambiar ni un endpoint del backend: la spec consume EP-006, EP-007 y EP-017 
   y `apps/web` no lo contempla: `apps/web` no declara ningún tipo local del wire de configuración.
 - **CA-002** Un agente creado desde el stepper sin tocar la configuración avanzada produce
   exactamente el mismo `POST /trading/config` que hoy (mismos campos, ningún interruptor en `true`).
-- **CA-003** Cada uno de los 26 campos avanzados se puede leer y modificar desde la edición, y el
+- **CA-003** Cada uno de los 25 campos avanzados se puede leer y modificar desde la edición, y el
   `PUT` resultante contiene sólo los campos cambiados, dentro de los rangos del DTO.
 - **CA-004** Con `mode = SANDBOX` el control de `entryOrderMode` está deshabilitado y explica por qué;
   con `LIVE`/`TESTNET` ofrece `MARKET | LIMIT_MAKER | OCO`, y el `trailingDelta` sólo con `OCO`.

@@ -152,6 +152,165 @@
         "consumes": ["EP-011", "EP-012", "EP-013"],
         "created_at": "2026-08-19",
         "changelog": []
+      },
+      {
+        "id": "COMP-009",
+        "name": "AdvancedConfigSections",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/advanced/advanced-config-sections.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Las cuatro secciones de configuracion avanzada del agente (Proteccion, Senal y tamano, Loop reactivo, Entrada) sobre el draft compartido: renderiza una AdvancedSection por grupo en el orden de TRADING_CONFIG_ADVANCED_FIELDS. En el alta arranca con las cuatro colapsadas y todo apagado; en la edicion abre la seccion que tenga algun campo distinto del default del DTO. Recibe el modo resuelto del bot por prop (no consulta el perfil) para aplicar la regla SANDBOX de entryOrderMode.",
+        "consumes": ["EP-006", "EP-007"],
+        "created_at": "2026-09-03",
+        "changelog": []
+      },
+      {
+        "id": "COMP-010",
+        "name": "AdvancedSection",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/advanced/advanced-section.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Un grupo colapsable de configuracion avanzada: Collapsible de libs/ui con titulo y explicacion de la seccion, y un AdvancedFieldControl por campo del catalogo. Sin estado propio mas que abierto/cerrado.",
+        "consumes": [],
+        "created_at": "2026-09-03",
+        "changelog": []
+      },
+      {
+        "id": "COMP-011",
+        "name": "AdvancedFieldControl",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/advanced/advanced-field-control.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Traduce un AdvancedFieldSpec del catalogo al control correcto de libs/ui (ToggleSwitch, SliderField o Select), calcula su estado disabled con isFieldEnabled, aplica el clamp al rango del DTO y muestra la razon visible cuando el disabled viene de una regla de coherencia (SANDBOX para entryOrderMode, OCO para entryTrailingDeltaBips) en vez de una dependencia simple.",
+        "consumes": [],
+        "created_at": "2026-09-03",
+        "changelog": []
+      },
+      {
+        "id": "COMP-012",
+        "name": "AgentAdvancedSummary",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/advanced/agent-advanced-summary.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Resumen de solo lectura de los 25 campos avanzados para el detalle del agente: cuatro bloques de KeyValueRow con el valor persistido. Un interruptor apagado se muestra como tal y su parametro dependiente como \"no aplica\" (nunca su numero); maxPositionHoldMinutes null es \"sin limite\" y entryTrailingDeltaBips null es \"nivel fijo\"; un entryOrderMode fuera del union degrada esa fila a unknown sin afectar a las otras 24. No dispara ninguna mutacion.",
+        "consumes": [],
+        "created_at": "2026-09-03",
+        "changelog": []
+      },
+      {
+        "id": "COMP-013",
+        "name": "useAdvancedDraft",
+        "type": "hook",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/advanced/use-advanced-draft.ts",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Estado del formulario avanzado sobre un baseline congelado: expone draft, setField tipado por clave, isFieldEnabled, changedFields memoizado e isWithinRanges. Sirve al alta (baseline = draft por default, su diff es el payload del POST) y a la edicion (baseline = draft derivado de la config, su diff es el payload del PUT).",
+        "consumes": [],
+        "created_at": "2026-09-03",
+        "changelog": []
+      },
+      {
+        "id": "COMP-014",
+        "name": "NewAgentStepperModal",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/new-agent-stepper-modal.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Stepper de alta del agente. Componente pre-existente, registrado en el arnes al sumarle el paso advanced entre timing y review (siete pasos) con las cuatro secciones de configuracion avanzada, y al pasar el POST a construirse como campos base + diff del draft avanzado: sin tocar la seccion avanzada el cuerpo es exactamente el de antes del ciclo, sin ninguna clave nueva.",
+        "consumes": ["EP-006"],
+        "created_at": "2026-09-03",
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "Suma el paso advanced (cuatro secciones colapsadas, todo apagado) y el resumen de cambios en review; el POST pasa a campos base + diff contra el draft por default (CA-002: cero claves nuevas en el camino por default)."
+          }
+        ]
+      },
+      {
+        "id": "COMP-015",
+        "name": "EditAgentModal",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/edit-agent-modal.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Modal de edicion del agente. Componente pre-existente, registrado en el arnes al sumarle las cuatro secciones avanzadas con el estado real precargado y al reemplazar el guardado completo de los 11 campos visibles por un diff contra el draft inicial: el PUT contiene solo lo cambiado y con el payload vacio no se dispara ningun request.",
+        "consumes": ["EP-007"],
+        "created_at": "2026-09-03",
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "Suma AdvancedConfigSections con el estado persistido y cambia el guardado a diff contra el baseline congelado (CA-003: el PUT lleva solo los campos cambiados; sin cambios no hay request)."
+          }
+        ]
+      },
+      {
+        "id": "COMP-016",
+        "name": "AgentDetailModal",
+        "type": "component",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/components/config/agent-detail-modal.tsx",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Detalle del agente. Componente pre-existente, registrado en el arnes al sumarle AgentAdvancedSummary debajo de sus filas actuales: el trader ve el estado de los 25 campos avanzados sin abrir la edicion. La edicion del nombre sigue igual.",
+        "consumes": ["EP-007"],
+        "created_at": "2026-09-03",
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "Suma el resumen de solo lectura de las cuatro secciones avanzadas (25 filas)."
+          }
+        ]
+      },
+      {
+        "id": "COMP-017",
+        "name": "useTrading",
+        "type": "hook",
+        "module": "agent-advanced-config-ui",
+        "spec": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui",
+        "path": "src/hooks/use-trading.ts",
+        "status": "defined",
+        "created_in_cycle": 1,
+        "updated_in_cycle": null,
+        "description": "Hooks TanStack Query del dominio de trading (configs, agentes, posiciones, historial, decisiones, wallet, balance). Registrado en el arnes al eliminar sus interfaces locales TradingConfig y TradingConfigDto —el wire redeclarado que la constitucion de apps/web prohibe— en favor de TradingConfigWire, CreateTradingConfigInput y UpdateTradingConfigPayload de libs/shared; las uniones TradingMode/TradingAsset/TradingPair/IntervalMode/RiskProfile pasan a re-exportarse del wire compartido para no romper a sus 18 importadores.",
+        "consumes": ["EP-006", "EP-007"],
+        "created_at": "2026-09-03",
+        "changelog": [
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "Elimina la interface local del wire de TradingConfig (incluido el isActive que el GET nunca devolvio) e importa los tipos de @crypto-trader/shared (CA-001)."
+          }
+        ]
       }
     ]
   }

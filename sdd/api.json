@@ -172,7 +172,7 @@
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
         "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": 2,
+        "updated_in_cycle": 1,
         "description": "Crear una configuracion de trading. Endpoint pre-existente, registrado en el arnes con el contrato extendido del cycle-02. Suma los 15 campos del cycle-02 al DTO, todos opcionales: lossCutEnabled, lossCutConfidenceThreshold, lossCutMinLossPct, lossCutMinEdgeRatio, smartSizingEnabled, reduceSizeFactor, nativeProtectionEnabled, closeOnProtectionFailure, stopLimitOffsetPct, trailingStopEnabled, trailingStopPct, trailingActivationPct, partialTpEnabled, partialTpTriggerPct, partialTpSellPct, moveStopToBreakevenAfterPartial, maxPositionHoldMinutes. El cycle-03 suma 2 campos mas del gate determinista pre-LLM: deterministicGateEnabled, gatePriceChangePct. Declararlos es obligatorio: el ValidationPipe global corre con forbidNonWhitelisted, asi que un campo no declarado hace fallar el request entero con 400 en vez de ignorarse. El spec-e-burgos-005 cycle-01 suma 3 campos mas del loop reactivo: reactiveLoopEnabled, maxActionsPerHour, minActionIntervalSec. El spec-e-burgos-005 cycle-02 suma 3 campos mas de la entrada descansando: entryOrderMode, entryOrderTtlMinutes, entryTrailingDeltaBips.",
         "path_params": [],
         "required_headers": ["Authorization"],
@@ -224,6 +224,11 @@
             "cycle": 2,
             "date": "2026-09-01",
             "change": "spec-e-burgos-005 cycle-02: suma entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips al DTO (entrada descansando en el exchange; los tres opcionales, y el default entryOrderMode=MARKET reproduce el comportamiento previo). Declararlos en Create Y Update es obligatorio: con forbidNonWhitelisted un campo no declarado hace fallar el request entero con 400."
+          },
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "spec-e-burgos-009 cycle-01 (nota de discrepancia, sin cambio de contrato): trading.service.createConfig construye el prisma.create campo por campo y NO incluye 22 de los 25 campos avanzados declarados en el DTO (todos los de proteccion, senal y tamano, gate determinista y loop reactivo). Un POST con nativeProtectionEnabled=true responde 201 y persiste false por el default de la columna: el ValidationPipe lo acepta y el servicio lo descarta en silencio. Los unicos avanzados que el create persiste hoy son entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips. Registrado como FIX (apps/api) por el architect de spec-009; EP-007 no tiene el problema porque updateConfig hace data: { ...dto }."
           }
         ]
       },
@@ -235,7 +240,7 @@
         "spec": "sdd/specs/spec-e-burgos-001-agents-simplification",
         "status": "updated",
         "created_in_cycle": 2,
-        "updated_in_cycle": 2,
+        "updated_in_cycle": 1,
         "description": "Actualizar una configuracion de trading. Endpoint pre-existente, registrado con el contrato extendido del cycle-02: UpdateTradingConfigDto suma los mismos 15 campos opcionales de EP-006. Es la unica via para habilitar corte de perdida por senal, sizing modulado, proteccion nativa, trailing, TP parcial y salida por tiempo. El cycle-03 suma los mismos 2 campos del gate determinista que EP-006. El spec-e-burgos-005 cycle-01 suma los mismos 3 campos del loop reactivo que EP-006. El spec-e-burgos-005 cycle-02 suma los mismos 3 campos de la entrada descansando que EP-006.",
         "path_params": ["id"],
         "required_headers": ["Authorization"],
@@ -263,6 +268,11 @@
             "cycle": 2,
             "date": "2026-09-01",
             "change": "spec-e-burgos-005 cycle-02: suma entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips al DTO (entrada descansando en el exchange; los tres opcionales, y el default entryOrderMode=MARKET reproduce el comportamiento previo). Declararlos en Create Y Update es obligatorio: con forbidNonWhitelisted un campo no declarado hace fallar el request entero con 400."
+          },
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "spec-e-burgos-009 cycle-01 (notas de discrepancia, sin cambio de contrato): (1) UpdateTradingConfigDto declara isActive?: boolean y el modelo Prisma TradingConfig no tiene esa columna; con data: { ...dto } as any un PUT que lo incluya termina en PrismaClientValidationError (500), no en 400 — registrado como FIX y excluido por construccion del payload que emite apps/web. (2) maxPositionHoldMinutes y entryTrailingDeltaBips estan declarados ?: number en el DTO pero el contrato real admite null (columnas Int? y @IsOptional saltea null): enviar null es la unica forma de volver a 'sin limite' / 'nivel fijo' desde la edicion, y funciona hoy. apps/web lo tipa con UpdateTradingConfigPayload en libs/shared para no depender del tipo mas angosto del DTO."
           }
         ]
       },

@@ -1113,6 +1113,56 @@
         "source": "declared-estimate",
         "model_tier": "claude/sonnet"
       }
+    },
+    {
+      "id": "FIX-e-burgos-026",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
+      "fix_document": "sdd/fixes/fix-e-burgos-026.md",
+      "type": "BUGFIX",
+      "severity": "high",
+      "created_at": "2026-09-03",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "createConfig descarta 22 de los 25 campos avanzados del DTO: el POST responde 201 y persiste los defaults",
+      "estimation_hours": 2,
+      "description": "TradingService.createConfig (apps/api/src/trading/trading.service.ts ~255-274) arma el prisma.create campo por campo y solo copia los 15 base mas los 3 de entrada: un POST /trading/config con nativeProtectionEnabled true (o cualquiera de los otros 21 avanzados) responde 201 y persiste false. La edicion (updateConfig, spread del dto) si los toma. Descubierto por el architect de spec-009 cycle-01 (H1) al contrastar el DTO contra el create.",
+      "justification": "Bloquea el alta con configuracion avanzada de spec-009 cycle-01 y hoy hace que cualquier cliente de la API pierda campos en silencio. Un metodo del service.",
+      "related_modules": [
+        "trading"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/trading.service.ts",
+        "apps/api/src/trading/trading.service.spec.ts"
+      ],
+      "test_reference": "Test unitario: createConfig con los 25 campos avanzados presentes pasa cada uno a prisma.tradingConfig.create; sin ellos, el create contiene exactamente los DEFAULTS actuales (equivalencia con el comportamiento previo).",
+      "status": "in-progress",
+      "cycle": "cycle-01"
+    },
+    {
+      "id": "FIX-e-burgos-027",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
+      "fix_document": "sdd/fixes/fix-e-burgos-027.md",
+      "type": "BUGFIX",
+      "severity": "low",
+      "created_at": "2026-09-03",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "UpdateTradingConfigDto.isActive no tiene columna en TradingConfig: un PUT que lo incluya responde 500",
+      "estimation_hours": 1,
+      "description": "UpdateTradingConfigDto declara isActive (trading-config.dto.ts ~615) pero el modelo TradingConfig no tiene esa columna; como updateConfig hace data: { ...dto } con as any, un PUT con isActive termina en PrismaClientValidationError (500). El tipo local de apps/web lo declaraba como si el GET lo devolviera (architect de spec-009, H2).",
+      "justification": "Un PUT valido segun el DTO no puede responder 500. Un campo del DTO.",
+      "related_modules": [
+        "trading"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/dto/trading-config.dto.ts",
+        "apps/api/src/trading/trading.service.ts"
+      ],
+      "test_reference": "Test unitario: un PUT con isActive responde 400 (campo retirado del DTO, forbidNonWhitelisted) o se ignora explicitamente; el spread hacia prisma nunca incluye claves fuera del modelo.",
+      "status": "in-progress",
+      "cycle": "cycle-01"
     }
   ]
 }

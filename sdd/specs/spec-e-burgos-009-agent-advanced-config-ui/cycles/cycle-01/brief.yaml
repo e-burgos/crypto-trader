@@ -9,7 +9,7 @@ date: 2026-09-03
 app_context: sdd/context/apps/web/context_prompt.md
 
 objective: |
-  Que el trader configure desde la SPA, en el alta y en la edición del agente, los 26 interruptores y
+  Que el trader configure desde la SPA, en el alta y en la edición del agente, los 25 interruptores y
   parámetros que hoy sólo existen por API (protección, señal y tamaño, loop reactivo y entrada),
   agrupados y explicados, siempre apagados por defecto; y que el wire de configuración viva una sola
   vez en libs/shared para que el typecheck del monorepo vuelva a proteger a apps/web.

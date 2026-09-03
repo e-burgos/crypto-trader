@@ -44,6 +44,11 @@ import {
   TRADE_FEE_PCT,
   MAX_ACTIVE_AGENTS_PER_USER,
 } from '@crypto-trader/shared';
+import type {
+  EntryOrderWireField,
+  ExactKeys,
+  AssertNoKeyDrift,
+} from '@crypto-trader/shared';
 import { decrypt } from '../users/utils/encryption.util';
 import { assertModeWithinPlatformCeiling } from '../common/platform-operation-mode';
 import { ActionGateService } from './action-gate.service';
@@ -98,6 +103,37 @@ function toRiskPolicyResponse(policy: {
     pausedReason: policy.pausedReason,
   };
 }
+
+const ENTRY_ORDER_SELECT = {
+  id: true,
+  configId: true,
+  symbol: true,
+  mode: true,
+  entryMode: true,
+  status: true,
+  quantity: true,
+  limitPrice: true,
+  stopPrice: true,
+  stopLimitPrice: true,
+  trailingDeltaBips: true,
+  referencePrice: true,
+  plannedNotionalUsd: true,
+  clientOrderId: true,
+  orderListId: true,
+  orderId: true,
+  placedAt: true,
+  expiresAt: true,
+  filledLeg: true,
+  executedPrice: true,
+  executedQuantity: true,
+  positionId: true,
+  cancelReason: true,
+  settledAt: true,
+} satisfies Record<EntryOrderWireField, true>;
+
+type _EntryOrderSelectMatchesWire = AssertNoKeyDrift<
+  ExactKeys<typeof ENTRY_ORDER_SELECT, Record<EntryOrderWireField, true>>
+>;
 
 export const TRADING_QUEUE = 'trading-agent';
 
@@ -801,32 +837,7 @@ export class TradingService implements OnModuleInit {
       orderBy: [{ placedAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-      select: {
-        id: true,
-        configId: true,
-        symbol: true,
-        mode: true,
-        entryMode: true,
-        status: true,
-        quantity: true,
-        limitPrice: true,
-        stopPrice: true,
-        stopLimitPrice: true,
-        trailingDeltaBips: true,
-        referencePrice: true,
-        plannedNotionalUsd: true,
-        clientOrderId: true,
-        orderListId: true,
-        orderId: true,
-        placedAt: true,
-        expiresAt: true,
-        filledLeg: true,
-        executedPrice: true,
-        executedQuantity: true,
-        positionId: true,
-        cancelReason: true,
-        settledAt: true,
-      },
+      select: ENTRY_ORDER_SELECT,
     });
 
     const hasMore = items.length > limit;

@@ -928,7 +928,7 @@
         "playwright.config.ts",
         "apps/api/prisma/seed.ts"
       ],
-      "test_reference": "Local headless con CI=1 contra API y build de la SPA: 195 passed, 62 skipped (con motivo), 0 failed en 6.2 min. CI: run de E2E Tests en main posterior a estos commits.",
+      "test_reference": "Local headless con CI=1: 195 passed / 62 skipped / 0 failed. CI: run E2E Tests 33697680174 en main (b8adc25e) en verde: 188 passed, 69 skipped con motivo, 0 failed, 5.0 min. Primer run verde del workflow desde su creacion.",
       "status": "implemented",
       "cycle": "cycle-02",
       "usage": {

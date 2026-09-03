@@ -1,7 +1,7 @@
-import { CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '../utils';
 
-type BadgeVariant = 'success' | 'error' | 'warning' | 'neutral' | 'loading';
+type BadgeVariant = 'success' | 'error' | 'warning' | 'neutral' | 'loading' | 'info';
 
 interface BadgeProps {
   variant: BadgeVariant;
@@ -37,6 +37,11 @@ const VARIANTS: Record<
     bg: 'bg-primary/10 border-primary/20',
     text: 'text-primary',
     icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+  },
+  info: {
+    bg: 'bg-sky-500/10 border-sky-500/20',
+    text: 'text-sky-500',
+    icon: <Clock className="h-3.5 w-3.5" />,
   },
 };
 

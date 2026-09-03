@@ -471,8 +471,18 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "sdd/context/libs/shared/updates/2026-09-03-spec-e-burgos-009-cycle-01.md",
+        "sdd/context/libs/ui/updates/2026-09-03-spec-e-burgos-009-cycle-01.md"
+      ],
+      "usage": {
+        "tokens_in": 12000,
+        "tokens_out": 2500,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     },
     {
       "id": "TASK-018",
@@ -490,8 +500,18 @@
         "TASK-016",
         "TASK-017"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "sdd/context/apps/web/updates/2026-09-03-spec-e-burgos-009-cycle-01.md",
+        "sdd/memory/journal/2026-09-03-spec-e-burgos-009-cycle-01.md"
+      ],
+      "usage": {
+        "tokens_in": 15000,
+        "tokens_out": 3500,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/fable"
+      }
     }
   ]
 }

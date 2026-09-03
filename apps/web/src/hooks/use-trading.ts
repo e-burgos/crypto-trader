@@ -1,52 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import type {
+  TradingConfigWire,
+  CreateTradingConfigInput,
+  UpdateTradingConfigPayload,
+  TradingModeWire,
+  TradingAssetWire,
+  TradingQuoteWire,
+  TradingIntervalModeWire,
+  TradingRiskProfileWire,
+} from '@crypto-trader/shared';
 
-export type TradingMode = 'SANDBOX' | 'LIVE' | 'TESTNET';
-export type TradingAsset = 'BTC' | 'ETH';
-export type TradingPair = 'USDT' | 'USDC';
-export type IntervalMode = 'AGENT' | 'CUSTOM';
-export type RiskProfile = 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE';
-
-export interface TradingConfig {
-  id: string;
-  name: string;
-  asset: TradingAsset;
-  pair: TradingPair;
-  mode: TradingMode;
-  buyThreshold: number;
-  sellThreshold: number;
-  stopLossPct: number;
-  takeProfitPct: number;
-  minProfitPct: number;
-  maxTradePct: number;
-  maxConcurrentPositions: number;
-  minIntervalMinutes: number;
-  intervalMode: IntervalMode;
-  orderPriceOffsetPct: number;
-  isActive: boolean;
-  isRunning: boolean;
-  riskProfile: RiskProfile;
-  createdAt: string;
-}
-
-export interface TradingConfigDto {
-  name?: string;
-  asset: TradingAsset;
-  pair: TradingPair;
-  mode: TradingMode;
-  buyThreshold: number;
-  sellThreshold: number;
-  stopLossPct: number;
-  takeProfitPct: number;
-  minProfitPct: number;
-  maxTradePct: number;
-  maxConcurrentPositions: number;
-  minIntervalMinutes: number;
-  intervalMode: IntervalMode;
-  orderPriceOffsetPct: number;
-  riskProfile?: RiskProfile;
-}
+export type TradingMode = TradingModeWire;
+export type TradingAsset = TradingAssetWire;
+export type TradingPair = TradingQuoteWire;
+export type IntervalMode = TradingIntervalModeWire;
+export type RiskProfile = TradingRiskProfileWire;
 
 export interface AgentStatus {
   id: string;
@@ -118,7 +88,7 @@ export interface TradingDecision {
 }
 
 export function useTradingConfigs() {
-  return useQuery<TradingConfig[]>({
+  return useQuery<TradingConfigWire[]>({
     queryKey: ['trading', 'config'],
     queryFn: () => api.get('/trading/config'),
     staleTime: 30_000,
@@ -128,8 +98,8 @@ export function useTradingConfigs() {
 export function useCreateConfig() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: TradingConfigDto) =>
-      api.post<TradingConfig>('/trading/config', data),
+    mutationFn: (data: CreateTradingConfigInput) =>
+      api.post<TradingConfigWire>('/trading/config', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading', 'config'] });
       toast.success('Configuración creada');
@@ -147,8 +117,8 @@ export function useUpdateConfig() {
       data,
     }: {
       id: string;
-      data: Partial<TradingConfigDto>;
-    }) => api.put<TradingConfig>(`/trading/config/${id}`, data),
+      data: UpdateTradingConfigPayload;
+    }) => api.put<TradingConfigWire>(`/trading/config/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trading', 'config'] });
       toast.success('Configuración actualizada');

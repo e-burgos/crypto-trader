@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pencil, Check, Loader2, Bot } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { TabModal } from '@crypto-trader/ui';
-import type { TradingConfig } from '../../hooks/use-trading';
+import type { TradingConfigWire } from '@crypto-trader/shared';
 import { useUpdateConfig } from '../../hooks/use-trading';
 
 export function AgentDetailModal({
@@ -12,7 +12,7 @@ export function AgentDetailModal({
   onStart,
   onStop,
 }: {
-  cfg: TradingConfig;
+  cfg: TradingConfigWire;
   isRunning: boolean;
   onClose: () => void;
   onStart: () => void;

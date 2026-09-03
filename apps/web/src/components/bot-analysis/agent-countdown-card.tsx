@@ -3,7 +3,8 @@ import { Bot, Activity, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../lib/utils';
-import type { TradingConfig, AgentStatus } from '../../hooks/use-trading';
+import type { TradingConfigWire } from '@crypto-trader/shared';
+import type { AgentStatus } from '../../hooks/use-trading';
 import type { AgentDecision } from '../../hooks/use-analytics';
 import { useCountdown } from './helpers';
 import { AgentCurrentStateModal } from './agent-state-modal';
@@ -13,7 +14,7 @@ export function AgentCountdownCard({
   lastDecision,
   nextRunAt: serverNextRunAt,
 }: {
-  config: TradingConfig;
+  config: TradingConfigWire;
   lastDecision: AgentDecision | null;
   nextRunAt: number | null;
 }) {
@@ -178,7 +179,7 @@ export function NextDecisionBanner({
   agentStatuses,
   decisions,
 }: {
-  configs: TradingConfig[];
+  configs: TradingConfigWire[];
   agentStatuses: AgentStatus[];
   decisions: AgentDecision[];
 }) {

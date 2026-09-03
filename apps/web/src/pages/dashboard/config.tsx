@@ -10,7 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { TradingConfig } from '../../hooks/use-trading';
+import type { TradingConfigWire } from '@crypto-trader/shared';
 import { cn } from '../../lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useGSAP } from '@gsap/react';
@@ -32,13 +32,13 @@ import {
 export function ConfigPage() {
   const { t } = useTranslation();
   const { mode: platformMode } = usePlatformMode();
-  const [selectedConfig, setSelectedConfig] = useState<TradingConfig | null>(
+  const [selectedConfig, setSelectedConfig] = useState<TradingConfigWire | null>(
     null,
   );
-  const [editingConfig, setEditingConfig] = useState<TradingConfig | null>(
+  const [editingConfig, setEditingConfig] = useState<TradingConfigWire | null>(
     null,
   );
-  const [deletingConfig, setDeletingConfig] = useState<TradingConfig | null>(
+  const [deletingConfig, setDeletingConfig] = useState<TradingConfigWire | null>(
     null,
   );
   const [stepperOpen, setStepperOpen] = useState(false);

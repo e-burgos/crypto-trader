@@ -19,9 +19,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { PRESETS, TabModal } from '@crypto-trader/ui';
+import type { CreateTradingConfigInput } from '@crypto-trader/shared';
 import {
   useCreateConfig,
-  type TradingConfigDto,
   type TradingMode,
   type TradingAsset,
   type TradingPair,
@@ -71,7 +71,7 @@ export function NewAgentStepperModal({
   }
 
   function handleSubmit() {
-    const dto: TradingConfigDto = {
+    const dto: CreateTradingConfigInput = {
       name: form.name || undefined,
       asset: form.asset,
       pair: form.pair,

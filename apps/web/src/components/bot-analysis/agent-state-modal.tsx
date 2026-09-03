@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { AgentStateModal } from '@crypto-trader/ui';
-import type { TradingConfig } from '../../hooks/use-trading';
+import type { TradingConfigWire } from '@crypto-trader/shared';
 import type { AgentDecision } from '../../hooks/use-analytics';
 
 export function AgentCurrentStateModal({
@@ -8,7 +8,7 @@ export function AgentCurrentStateModal({
   lastDecision,
   onClose,
 }: {
-  config: TradingConfig;
+  config: TradingConfigWire;
   lastDecision: AgentDecision | null;
   onClose: () => void;
 }) {
@@ -16,7 +16,8 @@ export function AgentCurrentStateModal({
 
   return (
     <AgentStateModal
-      config={config}
+      // isActive: no field on the wire (H2, architect.md); GET never returned it either
+      config={{ ...config, isActive: false }}
       lastDecision={lastDecision}
       onClose={onClose}
       labels={{

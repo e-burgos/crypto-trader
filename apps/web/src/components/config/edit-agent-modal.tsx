@@ -19,10 +19,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { TabModal } from '@crypto-trader/ui';
-import type { TradingConfig } from '../../hooks/use-trading';
+import type {
+  TradingConfigWire,
+  UpdateTradingConfigPayload,
+} from '@crypto-trader/shared';
 import {
   useUpdateConfig,
-  type TradingConfigDto,
   type TradingMode,
   type IntervalMode,
 } from '../../hooks/use-trading';
@@ -33,7 +35,7 @@ export function EditAgentModal({
   cfg,
   onClose,
 }: {
-  cfg: TradingConfig;
+  cfg: TradingConfigWire;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -41,7 +43,7 @@ export function EditAgentModal({
   const { data: testnetKeyStatus } = useTestnetBinanceKeyStatus();
   const hasTestnetKeys = testnetKeyStatus?.hasKeys ?? false;
 
-  const toForm = (c: TradingConfig): ConfigForm => ({
+  const toForm = (c: TradingConfigWire): ConfigForm => ({
     name: c.name ?? '',
     asset: c.asset,
     pair: c.pair,
@@ -66,7 +68,7 @@ export function EditAgentModal({
   }
 
   function handleSave() {
-    const dto: Partial<TradingConfigDto> = {
+    const dto: UpdateTradingConfigPayload = {
       name: form.name || undefined,
       buyThreshold: parseFloat(form.buyThreshold),
       sellThreshold: parseFloat(form.sellThreshold),

@@ -1,6 +1,6 @@
 import { Trash2, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { TradingConfig } from '../../hooks/use-trading';
+import type { TradingConfigWire } from '@crypto-trader/shared';
 import { useDeleteConfig } from '../../hooks/use-trading';
 import { TabModal } from '@crypto-trader/ui';
 
@@ -8,7 +8,7 @@ export function DeleteAgentModal({
   cfg,
   onClose,
 }: {
-  cfg: TradingConfig;
+  cfg: TradingConfigWire;
   onClose: () => void;
 }) {
   const { t } = useTranslation();

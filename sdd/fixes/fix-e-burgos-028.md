@@ -1,4 +1,4 @@
-# FIX-e-burgos-028 — Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link desde la notificacion no puede abrir la entrada exacta
+# FIX-e-burgos-028 — Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link no puede abrir la entrada exacta
 
 | Campo         | Valor                                   |
 | ------------- | --------------------------------------- |

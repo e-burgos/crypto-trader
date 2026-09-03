@@ -1188,7 +1188,7 @@
       "created_at": "2026-09-03",
       "resolved_at": null,
       "validated_at": null,
-      "title": "Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link desde la notificacion no puede abrir la entrada exacta",
+      "title": "Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link no puede abrir la entrada exacta",
       "estimation_hours": 1,
       "description": "Los JSON de notificacion entryOrderPlaced y entryOrderFilled (apps/api/src/trading/entry-order.service.ts) no incluyen configId ni entryOrderId; solo entryOrderMissing trae entryOrderId. La vista de entradas de spec-009 cycle-02 solo puede enlazar por estado. Agregar ambos ids a los tres mensajes (aditivo; apps/web ignora claves extra).",
       "justification": "Cambio aditivo en tres JSON de notificacion; hace ejecutable el criterio original de US-2-010 de spec-009 cycle-02.",

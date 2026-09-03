@@ -1177,6 +1177,55 @@
         "source": "declared-estimate",
         "model_tier": "claude/sonnet"
       }
+    },
+    {
+      "id": "FIX-e-burgos-028",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
+      "fix_document": "sdd/fixes/fix-e-burgos-028.md",
+      "type": "IMPROVEMENT",
+      "severity": "low",
+      "created_at": "2026-09-03",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link desde la notificacion no puede abrir la entrada exacta",
+      "estimation_hours": 1,
+      "description": "Los JSON de notificacion entryOrderPlaced y entryOrderFilled (apps/api/src/trading/entry-order.service.ts) no incluyen configId ni entryOrderId; solo entryOrderMissing trae entryOrderId. La vista de entradas de spec-009 cycle-02 solo puede enlazar por estado. Agregar ambos ids a los tres mensajes (aditivo; apps/web ignora claves extra).",
+      "justification": "Cambio aditivo en tres JSON de notificacion; hace ejecutable el criterio original de US-2-010 de spec-009 cycle-02.",
+      "related_modules": [
+        "trading"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/entry-order.service.ts",
+        "apps/api/src/trading/entry-order.service.spec.ts"
+      ],
+      "test_reference": "entry-order.service.spec.ts: los tres mensajes de notificacion incluyen configId y entryOrderId; las claves previas se conservan.",
+      "status": "in-progress",
+      "cycle": "cycle-02"
+    },
+    {
+      "id": "FIX-e-burgos-029",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
+      "fix_document": "sdd/fixes/fix-e-burgos-029.md",
+      "type": "IMPROVEMENT",
+      "severity": "low",
+      "created_at": "2026-09-03",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "El select de listEntryOrders no esta atado al wire compartido: una deriva no falla en typecheck",
+      "estimation_hours": 1,
+      "description": "TradingService.listEntryOrders (apps/api/src/trading/trading.service.ts) proyecta 24 campos con un select literal sin relacion de tipos con el wire de EP-017 que libs/shared publica en spec-009 cycle-02. Un satisfies (o el patron implements + ExactKeys de cycle-01) hace que agregar o quitar un campo en un solo lado falle en pnpm typecheck:api.",
+      "justification": "Mismo mecanismo de no-deriva que cycle-01 aplico al DTO de configuracion; un tipo y una anotacion.",
+      "related_modules": [
+        "trading"
+      ],
+      "affected_files": [
+        "apps/api/src/trading/trading.service.ts"
+      ],
+      "test_reference": "pnpm typecheck:api falla al agregar una clave al select que no exista en el wire (probe revertido) y pasa en el estado final.",
+      "status": "in-progress",
+      "cycle": "cycle-02"
     }
   ]
 }

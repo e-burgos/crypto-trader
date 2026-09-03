@@ -408,8 +408,19 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/advanced/fixtures.ts",
+        "apps/web/src/components/config/advanced/advanced-rules.property.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 145000,
+        "tokens_out": 11000,
+        "duration_minutes": 16,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-016",

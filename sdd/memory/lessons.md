@@ -1,7 +1,7 @@
 # 🧠 Memoria del proyecto — lecciones destiladas
 
-> Versión 1.2 | Última destilación: 2026-09-01 — 6 entradas (spec-e-burgos-005 cycle-01,
-> spec-e-burgos-008 cycle-02, FIX-e-burgos-004, -005-001, -010)
+> Versión 1.3 | Última destilación: 2026-09-03 — 6 entradas (spec-e-burgos-005 cycle-02,
+> spec-e-burgos-008 cycle-04, FIX-e-burgos-016, -020, -022, -024)
 > **Cap duro: 120 líneas.** Este archivo se lee COMPLETO al inicio de cada sesión de agente —
 > cada línea acá cuesta tokens en todas las sesiones futuras. Si al destilar se supera el cap,
 > primero podar lecciones obsoletas o absorbidas por constitutions/skills.
@@ -27,8 +27,13 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
   sistema vivo, no contra lo que el repo dice de sí mismo.
 - **Antes de reportar un bug en una SPA, esperar a que la consulta resuelva.** Un estado de carga
   leído a destiempo se parece exactamente a un dato faltante.
-- **Antes de operar con `gh`, cambiar a la cuenta `e-burgos` y volver a la original al terminar.**
-  Un `403` de `gh` es cuenta equivocada hasta que se demuestre lo contrario, no falta de permisos.
+- **Ante un `403` de `gh`, correr `gh auth switch --user e-burgos` siempre —aunque el status ya la
+  muestre activa, el switch refresca el token del keyring— y volver a la original al terminar.** Es
+  cuenta equivocada hasta que se demuestre lo contrario, no falta de permisos; la cuenta de `git`
+  puede no coincidir con la de `gh`.
+
+- **Correr un probe de escritura crudo contra el sandbox del proveedor antes de escribir el
+  contrato**: los payloads medidos valen más que la documentación y ahorran una vuelta completa.
 
 - **Verificar con `ls` todo invariante que el arnés declare por nombre de archivo** antes de
   darlo por cumplido: los pasos "opcionales" del INSTALL son la fuente típica de gates que
@@ -36,6 +41,8 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
 - **Diseñar cada oleada de subagentes como N unidades independientes que commitean al
   terminar**: un corte por límite de sesión cuesta solo las tasks en vuelo y el relanzamiento
   no necesita coordinación ni rescate de estado a medio escribir.
+- **En una oleada de implementadores en paralelo, el registro SDD tiene un solo escritor: el
+  orquestador.** Los implementadores no tocan `sdd/**`; reportan `usage` en su informe de cierre.
 - **Reescribir como criterio ejecutable todo criterio de aceptación que mida un valor en vez
   de una propiedad**: "costo > $0" es incumplible con modelos `:free`, mientras que
   "`pricingSource` nunca nulo" sí es verificable. Lo reescribe el architect y el reviewer
@@ -44,6 +51,8 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
   entorno de referencia), congelar N escenarios como fixture y correr línea base vs. optimizado
   en el mismo test, con assert **por escenario** además del agregado — un promedio favorable
   esconde un caso regresionado.
+- **Un chequeo de salud se diseña desde los modos de falla que el proyecto ya sufrió, no desde una
+  lista genérica de métricas**, y se notifica por un canal propio de la plataforma, no uno externo nuevo.
 
 ## Técnica (stack, herramientas, gotchas transversales)
 
@@ -91,9 +100,13 @@ Reglas de este archivo (ver sección 🧠 MEMORIA GATE del dual-harness):
 
 ## Costo (qué gastó tokens/tiempo de más y cómo evitarlo)
 
-- **Verificar antes de afirmar.** Tres hipótesis afirmadas con demasiada seguridad y desmentidas
-  después (IP allowlist de Binance, OpenRouter "no soporta embeddings", tres falsos positivos por
-  estado de carga) costaron más vueltas que comprobarlas de entrada.
+- **Verificar antes de afirmar — un fix se re-diagnostica ejecutando, no leyendo.** Cuatro hipótesis
+  afirmadas con demasiada seguridad y desmentidas después (IP allowlist de Binance, OpenRouter "no
+  soporta embeddings", tres falsos positivos por estado de carga, y un bloqueo de arranque atribuido a
+  ioredis cuando el `await` colgado era el de Bull) costaron más vueltas que comprobarlas de entrada.
+- **Una suite E2E que sólo falla en CI se reproduce con la configuración exacta de CI** (build de
+  producción, sin claves externas, usuarios recién sembrados): correr local con el `.env` del dev
+  demuestra poco y cuesta varias corridas de CI de decenas de minutos cada una.
 
 - **Verificar el mínimo de prefijo cacheable del proveedor contra el tamaño real del prompt
   antes de presupuestar ahorro por prompt caching**: Anthropic exige 1024 tokens (2048 en

@@ -160,24 +160,5 @@
       "file": "tasks-index.schema.json"
     }
   ],
-  "memory": [
-    {
-      "file": "2026-09-03-fix-e-burgos-022.md"
-    },
-    {
-      "file": "2026-09-02-fix-e-burgos-024.md"
-    },
-    {
-      "file": "2026-09-02-fix-e-burgos-020.md"
-    },
-    {
-      "file": "2026-09-02-fix-e-burgos-016.md"
-    },
-    {
-      "file": "2026-09-01-spec-e-burgos-008-cycle-04.md"
-    },
-    {
-      "file": "2026-09-01-spec-e-burgos-005-cycle-02.md"
-    }
-  ]
+  "memory": []
 }

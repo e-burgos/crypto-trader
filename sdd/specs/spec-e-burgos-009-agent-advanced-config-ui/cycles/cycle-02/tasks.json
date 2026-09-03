@@ -23,8 +23,20 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/shared/src/types/entry-order-wire.ts",
+        "libs/shared/src/types/entry-order-wire.spec.ts",
+        "libs/shared/src/types/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 35000,
+        "tokens_out": 3000,
+        "duration_minutes": 3.5,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-002",
@@ -37,7 +49,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -53,7 +65,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -67,7 +79,7 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -83,7 +95,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -100,7 +112,7 @@
         "TASK-001",
         "TASK-005"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {

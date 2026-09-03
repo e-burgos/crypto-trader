@@ -84,6 +84,55 @@ describe('locale parity — config.advanced', () => {
   });
 });
 
+describe('locale parity — positions.entries', () => {
+  const esEntries = flattenPaths(subtree(es, 'positions.entries'));
+  const enEntries = flattenPaths(subtree(en, 'positions.entries'));
+
+  it('has the same set of keys in es and en', () => {
+    expect(new Set(esEntries.keys())).toEqual(new Set(enEntries.keys()));
+  });
+
+  it('has no empty string values in es', () => {
+    for (const [path, value] of esEntries) {
+      if (typeof value === 'string') {
+        expect(value.length, `positions.entries.${path} is empty in es`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('has no empty string values in en', () => {
+    for (const [path, value] of enEntries) {
+      if (typeof value === 'string') {
+        expect(value.length, `positions.entries.${path} is empty in en`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('has no value identical to its own key across es and en', () => {
+    for (const [path, value] of esEntries) {
+      if (typeof value === 'string') {
+        expect(value, `positions.entries.${path} in es equals its own key`).not.toBe(path);
+      }
+    }
+    for (const [path, value] of enEntries) {
+      if (typeof value === 'string') {
+        expect(value, `positions.entries.${path} in en equals its own key`).not.toBe(path);
+      }
+    }
+  });
+});
+
+describe('locale parity — positions.tabEntries', () => {
+  it('exists with a non-empty, distinct value in es and en', () => {
+    const esValue = (es as LocaleTree).positions as LocaleTree;
+    const enValue = (en as LocaleTree).positions as LocaleTree;
+    expect(typeof esValue.tabEntries).toBe('string');
+    expect(typeof enValue.tabEntries).toBe('string');
+    expect((esValue.tabEntries as string).length).toBeGreaterThan(0);
+    expect((enValue.tabEntries as string).length).toBeGreaterThan(0);
+  });
+});
+
 describe('locale parity — notificationMessages.entryOrder*', () => {
   it.each(NOTIFICATION_KEYS)('%s exists with a non-empty value in es and en', (key) => {
     const esValue = (es as LocaleTree).notificationMessages as LocaleTree;

@@ -112,6 +112,30 @@ describe.each([
   });
 });
 
+describe('UpdateTradingConfigDto — isActive has no column (FIX-e-burgos-027)', () => {
+  it('rejects isActive as non-whitelisted', async () => {
+    const instance = plainToInstance(UpdateTradingConfigDto, {
+      isActive: true,
+    });
+    const errors = await validate(instance, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+
+    expect(
+      errors.some(
+        (e) => e.property === 'isActive' && !!e.constraints?.whitelistValidation,
+      ),
+    ).toBe(true);
+  });
+
+  it('does not declare isActive as a validated property', () => {
+    expect(validatedProperties(UpdateTradingConfigDto).has('isActive')).toBe(
+      false,
+    );
+  });
+});
+
 describe('trading-config DTOs — cross-DTO field parity', () => {
   const newFields = [
     'entryOrderMode',

@@ -607,14 +607,6 @@ export class UpdateTradingConfigDto {
   intervalMode?: IntervalModeEnum;
 
   @ApiPropertyOptional({
-    example: true,
-    description: 'Activar o desactivar la configuración',
-  })
-  @IsBoolean()
-  @IsOptional()
-  isActive?: boolean;
-
-  @ApiPropertyOptional({
     enum: RiskProfileEnum,
     example: RiskProfileEnum.MODERATE,
     description: 'Risk profile for model selection and prompts',

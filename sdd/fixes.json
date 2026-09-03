@@ -1047,6 +1047,32 @@
         "source": "declared-estimate",
         "model_tier": "claude/fable"
       }
+    },
+    {
+      "id": "FIX-e-burgos-025",
+      "author": "e-burgos",
+      "spec_id": null,
+      "fix_document": "sdd/fixes/fix-e-burgos-025.md",
+      "type": "BUGFIX",
+      "severity": "low",
+      "created_at": "2026-09-02",
+      "resolved_at": null,
+      "validated_at": null,
+      "title": "/market/snapshot y /market/enriched-snapshot responden 500 cuando Binance no es alcanzable",
+      "estimation_hours": 1,
+      "description": "En los runners de GitHub api.binance.com responde 451. Con el upstream caido, GET /api/market/snapshot/:symbol y /api/market/enriched-snapshot/:symbol responden 500 (trazas de red del run E2E 33696910664) en vez de 503 con mensaje o un snapshot degradado.",
+      "justification": "Bug real destapado por la suite E2E en CI; registrado para no perderlo, sin implementar todavia.",
+      "related_modules": [
+        "market",
+        "api"
+      ],
+      "affected_files": [
+        "apps/api/src/market/market.controller.ts",
+        "apps/api/src/market/market.service.ts"
+      ],
+      "test_reference": "Pendiente: test unitario del controller con el cliente de Binance rechazando.",
+      "status": "pending",
+      "cycle": "cycle-02"
     }
   ]
 }

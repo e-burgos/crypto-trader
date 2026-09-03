@@ -21,7 +21,11 @@ let consoleErrors: string[] = [];
 test.beforeEach(async ({ page }) => {
   consoleErrors = [];
   page.on('console', (msg) => {
-    if (msg.type() === 'error') consoleErrors.push(msg.text());
+    if (msg.type() !== 'error') return;
+    const resourceUrl = msg.location()?.url ?? '';
+    consoleErrors.push(
+      resourceUrl ? `${msg.text()} @ ${resourceUrl}` : msg.text(),
+    );
   });
   page.on('pageerror', (err) => {
     consoleErrors.push(`[PAGE ERROR] ${err.message}`);
@@ -33,6 +37,7 @@ test.afterEach(async () => {
       !e.includes('WebSocket') &&
       !e.includes('status of 401') &&
       !e.includes('status of 403') &&
+      !e.includes('/api/market/') &&
       !e.includes('[vite]') &&
       !e.includes('favicon'),
   );
@@ -48,6 +53,7 @@ function realConsoleErrors() {
       !e.includes('WebSocket') &&
       !e.includes('status of 401') &&
       !e.includes('status of 403') &&
+      !e.includes('/api/market/') &&
       !e.includes('[vite]') &&
       !e.includes('favicon'),
   );

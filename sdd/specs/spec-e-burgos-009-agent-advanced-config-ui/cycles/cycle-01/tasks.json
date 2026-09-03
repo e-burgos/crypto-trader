@@ -345,8 +345,18 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/edit-agent-modal.tsx",
+        "apps/web/src/components/config/edit-agent-modal.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 95000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-013",
@@ -362,8 +372,18 @@
       "depends_on": [
         "TASK-012"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/config/edit-agent-modal.tsx",
+        "apps/web/src/components/config/edit-agent-modal.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 35000,
+        "tokens_out": 4000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-014",
@@ -451,7 +471,7 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -470,7 +490,7 @@
         "TASK-016",
         "TASK-017"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     }
   ]

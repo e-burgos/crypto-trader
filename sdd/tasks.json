@@ -120,6 +120,18 @@
           "status": "completed",
           "tasks_total": 18,
           "tasks_done": 18
+        },
+        "cycle-02": {
+          "file": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/tasks.json",
+          "module": "agent-advanced-config-ui",
+          "apps": [
+            "apps/web",
+            "libs/shared",
+            "libs/ui"
+          ],
+          "status": "in-progress",
+          "tasks_total": 19,
+          "tasks_done": 0
         }
       }
     }

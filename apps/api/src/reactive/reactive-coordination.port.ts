@@ -8,4 +8,5 @@ export interface ReactiveCoordinationPort {
   setJson<T>(key: string, value: T, ttlMs: number): Promise<void>;
   getJson<T>(key: string): Promise<T | null>;
   isHealthy(): boolean;
+  isEnabled?(): boolean;
 }

@@ -11,6 +11,7 @@ function createMockRedis() {
   let errorHandler: ((err: Error) => void) | undefined;
   let readyHandler: (() => void) | undefined;
   let failing = false;
+  let failure = new Error('ECONNREFUSED');
 
   function readLive(key: string): StoredEntry | undefined {
     const entry = store.get(key);
@@ -29,7 +30,7 @@ function createMockRedis() {
       if (event === 'ready') readyHandler = handler as unknown as () => void;
     }),
     set: jest.fn(async (key: string, value: string, ...rest: unknown[]) => {
-      if (failing) throw new Error('ECONNREFUSED');
+      if (failing) throw failure;
       const nx = rest.includes('NX');
       const pxIndex = rest.indexOf('PX');
       const ttlMs =
@@ -39,7 +40,7 @@ function createMockRedis() {
       return 'OK';
     }),
     get: jest.fn(async (key: string) => {
-      if (failing) throw new Error('ECONNREFUSED');
+      if (failing) throw failure;
       return readLive(key)?.value ?? null;
     }),
     eval: jest.fn(
@@ -50,7 +51,7 @@ function createMockRedis() {
         holderId: string,
         ttlMs?: number,
       ) => {
-        if (failing) throw new Error('ECONNREFUSED');
+        if (failing) throw failure;
         const entry = readLive(key);
         if (!entry || entry.value !== holderId) return 0;
         if (ttlMs !== undefined) {
@@ -65,8 +66,13 @@ function createMockRedis() {
       failing = true;
       errorHandler?.(err);
     },
+    rejectCommands(err: Error) {
+      failing = true;
+      failure = err;
+    },
     emitReady() {
       failing = false;
+      failure = new Error('ECONNREFUSED');
       readyHandler?.();
     },
   };
@@ -152,15 +158,67 @@ describe('RedisReactiveCoordination', () => {
     expect(await coordination.getJson('rx:v1:health:ETHUSDT')).toBeNull();
   });
 
-  it('starts healthy, turns unhealthy on the client error event, and recovers on ready', () => {
+  it('starts unhealthy until the client reports ready, so the first ownership cycle never runs against a dead client', () => {
     const redis = createMockRedis();
     const coordination = new RedisReactiveCoordination(redis as unknown as Redis);
 
+    expect(coordination.isHealthy()).toBe(false);
+    redis.emitReady();
     expect(coordination.isHealthy()).toBe(true);
+  });
+
+  it('turns unhealthy on the client error event and recovers on ready', () => {
+    const redis = createMockRedis();
+    const coordination = new RedisReactiveCoordination(redis as unknown as Redis);
+    redis.emitReady();
+
     redis.emitError(new Error('connection lost'));
     expect(coordination.isHealthy()).toBe(false);
     redis.emitReady();
     expect(coordination.isHealthy()).toBe(true);
+  });
+
+  it('reports itself as an enabled rail, unlike the disabled driver', () => {
+    const redis = createMockRedis();
+    const coordination = new RedisReactiveCoordination(redis as unknown as Redis);
+
+    expect(coordination.isEnabled()).toBe(true);
+  });
+
+  it('marks itself unhealthy and answers false when the command is rejected because the offline queue is disabled', async () => {
+    const redis = createMockRedis();
+    const coordination = new RedisReactiveCoordination(redis as unknown as Redis);
+    redis.emitReady();
+    redis.rejectCommands(
+      new Error("Stream isn't writeable and enableOfflineQueue options is false"),
+    );
+
+    const acquired = await coordination.tryAcquire(
+      'rx:v1:owner:BTCUSDT',
+      'replica-a',
+      30_000,
+    );
+
+    expect(acquired).toBe(false);
+    expect(coordination.isHealthy()).toBe(false);
+  });
+
+  it('answers a rejected command without waiting for the client to reconnect', async () => {
+    const redis = createMockRedis();
+    const coordination = new RedisReactiveCoordination(redis as unknown as Redis);
+    redis.emitReady();
+    redis.rejectCommands(new Error('Command timed out'));
+
+    const startedAt = Date.now();
+    await Promise.all([
+      coordination.tryAcquire('rx:v1:owner:BTCUSDT', 'replica-a', 30_000),
+      coordination.renew('rx:v1:owner:BTCUSDT', 'replica-a', 30_000),
+      coordination.tryConsumeToken('rx:v1:advance:cfg-1:1700', 5_000),
+      coordination.getJson('rx:v1:health:BTCUSDT'),
+      coordination.release('rx:v1:owner:BTCUSDT', 'replica-a'),
+    ]);
+
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
   });
 
   it('fails closed on every operation while Redis is down: never fabricates a lease, a token or a read from memory', async () => {

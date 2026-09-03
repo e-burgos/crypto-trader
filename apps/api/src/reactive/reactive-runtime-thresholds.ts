@@ -14,6 +14,8 @@ export interface ReactiveRuntimeThresholds {
   degradedNotifyAfterMs: number;
   trailingPersistIntervalMs: number;
   entryFillProbeDebounceMs: number;
+  coordinationCommandTimeoutMs: number;
+  coordinationBootstrapTimeoutMs: number;
 }
 
 export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
@@ -32,4 +34,6 @@ export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
   degradedNotifyAfterMs: 60_000,
   trailingPersistIntervalMs: 30_000,
   entryFillProbeDebounceMs: 15_000,
+  coordinationCommandTimeoutMs: 2_000,
+  coordinationBootstrapTimeoutMs: 5_000,
 };

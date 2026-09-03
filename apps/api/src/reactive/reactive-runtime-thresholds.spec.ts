@@ -18,6 +18,8 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       degradedNotifyAfterMs: 60_000,
       trailingPersistIntervalMs: 30_000,
       entryFillProbeDebounceMs: 15_000,
+      coordinationCommandTimeoutMs: 2_000,
+      coordinationBootstrapTimeoutMs: 5_000,
     });
   });
 
@@ -32,6 +34,20 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.streamTickMaxAgeMs +
         DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.healthPublishIntervalMs,
     );
+  });
+
+  it('lets a coordination command give up before the bootstrap cycle waiting on it does', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.coordinationCommandTimeoutMs,
+    ).toBeLessThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.coordinationBootstrapTimeoutMs,
+    );
+  });
+
+  it('keeps the bootstrap timeout short enough for a container start probe to still get an answer', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.coordinationBootstrapTimeoutMs,
+    ).toBeLessThanOrEqual(10_000);
   });
 
   it('keeps every threshold a positive, finite number', () => {

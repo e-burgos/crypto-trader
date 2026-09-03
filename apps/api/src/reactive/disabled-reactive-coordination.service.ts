@@ -38,4 +38,8 @@ export class DisabledReactiveCoordination implements ReactiveCoordinationPort {
   isHealthy(): boolean {
     return false;
   }
+
+  isEnabled(): boolean {
+    return false;
+  }
 }

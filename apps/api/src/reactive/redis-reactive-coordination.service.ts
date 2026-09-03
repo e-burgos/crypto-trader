@@ -21,7 +21,8 @@ end
 @Injectable()
 export class RedisReactiveCoordination implements ReactiveCoordinationPort {
   private readonly logger = new Logger(RedisReactiveCoordination.name);
-  private healthy = true;
+  private healthy = false;
+  private reportedUnavailable = false;
 
   constructor(private readonly redis: Redis) {
     this.redis.on('error', (err) => this.markUnhealthy(err));
@@ -30,6 +31,10 @@ export class RedisReactiveCoordination implements ReactiveCoordinationPort {
 
   isHealthy(): boolean {
     return this.healthy;
+  }
+
+  isEnabled(): boolean {
+    return true;
   }
 
   async tryAcquire(
@@ -99,16 +104,20 @@ export class RedisReactiveCoordination implements ReactiveCoordinationPort {
   }
 
   private markUnhealthy(err: unknown): void {
-    if (!this.healthy) return;
     this.healthy = false;
+    if (this.reportedUnavailable) return;
+    this.reportedUnavailable = true;
     this.logger.error(
       `Reactive coordination Redis unavailable: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
 
   private markHealthy(): void {
-    if (this.healthy) return;
+    const wasReportedUnavailable = this.reportedUnavailable;
     this.healthy = true;
-    this.logger.log('Reactive coordination Redis connection restored');
+    this.reportedUnavailable = false;
+    if (wasReportedUnavailable) {
+      this.logger.log('Reactive coordination Redis connection restored');
+    }
   }
 }

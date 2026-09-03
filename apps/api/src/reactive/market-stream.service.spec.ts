@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
+import { Logger } from '@nestjs/common';
 import {
+  COORDINATION_UNAVAILABLE_AT_BOOTSTRAP,
   MarketStreamService,
   ownerLeaseKey,
   type MarketStreamRestClient,
@@ -457,6 +459,107 @@ describe('MarketStreamService', () => {
       expect(wsClient.disconnect).toHaveBeenCalledTimes(1);
 
       await service.onApplicationShutdown();
+    });
+  });
+  describe('bootstrap with the coordination rail unreachable', () => {
+    const bootstrapThresholds: ReactiveRuntimeThresholds = {
+      ...DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+      coordinationBootstrapTimeoutMs: 30,
+    };
+
+    function createStalledCoordination(): ReactiveCoordinationPort {
+      return {
+        isHealthy: () => true,
+        isEnabled: () => true,
+        tryAcquire: jest.fn(() => new Promise<boolean>(() => undefined)),
+        renew: jest.fn(() => new Promise<boolean>(() => undefined)),
+        release: jest.fn(async () => undefined),
+        tryConsumeToken: jest.fn(async () => false),
+        setJson: jest.fn(async () => undefined),
+        getJson: jest.fn(async () => null),
+      };
+    }
+
+    it('finishes onModuleInit within the bootstrap timeout when the coordination command never resolves', async () => {
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const coordination = createStalledCoordination();
+      const wsClient = new FakeWsClient();
+      const restClient = createFakeRestClient();
+      const prisma = createFakePrisma([{ asset: 'BTC', pair: 'USDT' }]);
+      const service = buildService(
+        prisma,
+        coordination,
+        wsClient,
+        restClient,
+        'instance-a',
+        bootstrapThresholds,
+      );
+
+      const startedAt = Date.now();
+      await service.onModuleInit();
+      const elapsed = Date.now() - startedAt;
+
+      expect(elapsed).toBeLessThan(1_000);
+      expect(service.isOwner('BTCUSDT')).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining(COORDINATION_UNAVAILABLE_AT_BOOTSTRAP),
+      );
+
+      await service.onApplicationShutdown();
+      errorSpy.mockRestore();
+    });
+
+    it('reports the unreachable rail once and keeps sweeping, instead of failing the bootstrap', async () => {
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const coordination = createSharedFakeCoordination();
+      coordination.setHealthy(false);
+      const wsClient = new FakeWsClient();
+      const restClient = createFakeRestClient();
+      const prisma = createFakePrisma([{ asset: 'BTC', pair: 'USDT' }]);
+      const service = buildService(
+        prisma,
+        coordination,
+        wsClient,
+        restClient,
+        'instance-a',
+        bootstrapThresholds,
+      );
+
+      await service.onModuleInit();
+
+      expect(coordination.tryAcquire).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(COORDINATION_UNAVAILABLE_AT_BOOTSTRAP);
+
+      coordination.setHealthy(true);
+      await service.runOwnershipCycle();
+      expect(service.isOwner('BTCUSDT')).toBe(true);
+
+      await service.onApplicationShutdown();
+      errorSpy.mockRestore();
+    });
+
+    it('stays silent when the rail is disabled by configuration, which is not an outage', async () => {
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const coordination: ReactiveCoordinationPort = {
+        ...createSharedFakeCoordination(),
+        isHealthy: () => false,
+        isEnabled: () => false,
+      };
+      const service = buildService(
+        createFakePrisma([{ asset: 'BTC', pair: 'USDT' }]),
+        coordination,
+        new FakeWsClient(),
+        createFakeRestClient(),
+        'instance-a',
+        bootstrapThresholds,
+      );
+
+      await service.onModuleInit();
+
+      expect(errorSpy).not.toHaveBeenCalled();
+
+      await service.onApplicationShutdown();
+      errorSpy.mockRestore();
     });
   });
 });

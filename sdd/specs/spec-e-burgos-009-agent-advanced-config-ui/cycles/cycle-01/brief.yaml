@@ -1,0 +1,168 @@
+# sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-01/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 1
+module: agent-advanced-config-ui
+phase: shared-wire-and-advanced-config
+date: 2026-09-03
+app_context: sdd/context/apps/web/context_prompt.md
+
+objective: |
+  Que el trader configure desde la SPA, en el alta y en la edición del agente, los 26 interruptores y
+  parámetros que hoy sólo existen por API (protección, señal y tamaño, loop reactivo y entrada),
+  agrupados y explicados, siempre apagados por defecto; y que el wire de configuración viva una sola
+  vez en libs/shared para que el typecheck del monorepo vuelva a proteger a apps/web.
+
+scope:
+  - libs/shared publica el tipo completo del wire de TradingConfig (40 campos del DTO + campos de
+    lectura) y los tipos de alta/edición; apps/web importa de ahí y elimina su interface local.
+  - Stepper de alta (new-agent-stepper-modal.tsx) y modal de edición (edit-agent-modal.tsx) con
+    cuatro secciones nuevas: Protección, Señal y tamaño, Loop reactivo, Entrada. Interruptores
+    apagados en el alta; parámetros dependientes editables sólo con el interruptor encendido; rangos
+    del DTO como validación del cliente.
+  - Reglas de coherencia visibles: entryOrderMode deshabilitado con explicación en SANDBOX;
+    entryTrailingDeltaBips sólo con OCO; el modo de operación global manda sobre mode.
+  - Detalle del agente (agent-detail-modal.tsx) muestra las cuatro secciones.
+  - Locales es/en completos, incluidas las claves entryOrderPlaced, entryOrderFilled y entryOrderMissing.
+  - Tests Vitest de comportamiento sobre fixtures del wire real (CA-001..CA-004, CA-007) y specs E2E
+    headless de las secciones nuevas.
+
+out_of_scope:
+  - La vista de entradas descansando sobre EP-017, el tiempo real por WebSocket y el enlace desde
+    notificaciones: cycle-02.
+  - Cualquier cambio en apps/api (endpoints, DTOs, comportamiento). Un campo ininteligible para la UI
+    se registra como fix.
+  - Cancelar entradas desde la UI (no hay endpoint). Nuevas primitivas en libs/ui salvo exigencia de
+    la regla 3 de frontend-component-rules. Reordenar los pasos existentes del stepper.
+
+dependencies_required:
+  - spec-e-burgos-005-reactive-execution-loop (completed 2026-09-01) — campos reactiveLoopEnabled,
+    maxActionsPerHour, minActionIntervalSec, entryOrderMode, entryOrderTtlMinutes, entryTrailingDeltaBips.
+  - spec-e-burgos-001-agents-simplification (completed) — el resto de los interruptores.
+
+agent_contexts:
+  functional:
+    goal: >
+      Convertir el objetivo en historias de usuario y reglas verificables por sección (Protección,
+      Señal y tamaño, Loop reactivo, Entrada) para el alta, la edición y el detalle. Definir qué ve el
+      trader cuando un interruptor está apagado, qué parámetros se habilitan al encenderlo, cómo se
+      explica cada uno en una línea, y las reglas de coherencia (SANDBOX vs LIVE/TESTNET, OCO vs
+      LIMIT_MAKER). Todo criterio debe ser una PROPIEDAD verificable sobre un fixture del wire o sobre
+      el payload emitido, nunca un valor de mercado.
+    business_context: >
+      El bot sabe proteger, seguir con trailing, tomar ganancia parcial, filtrar señales, operar por
+      evento con caps y colocar entradas en el exchange, pero el trader no puede encender nada de eso
+      desde la SPA: todo se hace por API a mano. La deuda se difirió en spec-001 y en spec-005. Hay un
+      bot TESTNET LIMIT_MAKER corriendo en producción que el dashboard no puede mostrar ni editar.
+      Riesgo central: preseleccionar un interruptor en true en el alta cambiaría el comportamiento de
+      todos los bots nuevos; los interruptores nacen apagados por regla del repo.
+    relevant_spec_sections:
+      - "1. Contexto y diagnóstico — hallazgos A, B, D, E"
+      - "3. Alcance por ciclo — Cycle-01"
+      - "5. Restricciones de diseño"
+      - "6. Criterios de aceptación CA-001 a CA-004 y CA-007"
+
+  planner:
+    goal: >
+      Tasks ordenadas por dependencia: libs/shared (tipos del wire) -> apps/web hooks (importar el
+      wire, eliminar la interface local) -> componentes de sección reutilizables en
+      apps/web/src/components/config/ -> stepper -> edición -> detalle -> locales -> tests Vitest ->
+      E2E headless. Cada task es una unidad que commitea al terminar, con usage.model_tier.
+    output_file: sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-01/planner.md
+
+  architect:
+    goal: >
+      Fijar el contrato: nombre y shape exactos de los tipos en libs/shared (y cómo apps/api los
+      reutiliza sin cambiar su DTO), la estructura de componentes (una sección = un componente con
+      lógica en apps/web/src/components/config/, presenters de libs/ui), el modelo de estado del
+      formulario (qué se envía en el POST del alta con defaults apagados y qué en el PUT de edición:
+      sólo lo cambiado), las reglas de habilitación, las claves i18n (convención
+      seccion.componente.elemento) y el contrato de tests. Sin endpoints nuevos: EP-006 y EP-007.
+    existing_tables: []
+    existing_endpoints:
+      - EP-006 POST /trading/config (implemented, updated in spec-005 cycle-02)
+      - EP-007 PUT /trading/config/{id} (implemented, updated in spec-005 cycle-02)
+      - EP-017 GET /trading/entry-orders (implemented; consumido en cycle-02 de esta spec)
+    output_file: sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-01/architect.md
+
+  implementor_front:
+    goal: >
+      Implementar task por task contra el contrato del architect, con la skill frontend-component-rules
+      (catálogo de libs/ui primero). Sin comentarios narrativos. Tests de comportamiento sobre
+      fixtures del wire. Nunca abrir un browser visible: Vitest y Playwright headless.
+    app: apps/web
+    app_context: sdd/context/apps/web/context_prompt.md
+    libs:
+      - libs/shared
+      - libs/ui
+
+  reviewer:
+    goal: >
+      Validar CA-001..CA-004 y CA-007 por ejecución (typecheck del monorepo, Vitest, E2E headless en
+      CI), confirmar que el alta sin tocar la configuración avanzada emite el mismo POST que hoy, y
+      que ningún interruptor nace en true.
+    output_file: sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-01/cycle.json
+
+verified_facts:
+  - "CreateTradingConfigDto (apps/api/src/trading/dto/trading-config.dto.ts) tiene 40 campos; el
+     stepper y el modal de edición de apps/web exponen 11 (los originales + intervalMode,
+     orderPriceOffsetPct, riskProfile)."
+  - "apps/web/src/hooks/use-trading.ts:11 declara una interface TradingConfig LOCAL con esos campos;
+     libs/shared solo tiene TradingConfigData (interfaces.ts:151, 14 campos, congelada). La
+     constitución de apps/web §3 prohíbe redeclarar el wire."
+  - "libs/shared ya exporta EntryOrderMode = 'MARKET' | 'LIMIT_MAKER' | 'OCO' (interfaces.ts:281)."
+  - "Stepper: apps/web/src/components/config/new-agent-stepper-modal.tsx (648 líneas), pasos
+     preset -> identity -> thresholds -> risk -> timing -> review. Componentes hermanos:
+     edit-agent-modal.tsx, agent-detail-modal.tsx, delete-agent-modal.tsx, constants.tsx."
+  - "El modo de operación es global por usuario (PATCH /users/me/operation-mode, badge Sandbox en el
+     header) y el stepper ya lo respeta; el mode del bot no se elige en el formulario."
+  - "Rangos del DTO para los campos de entrada: entryOrderMode enum MARKET|LIMIT_MAKER|OCO;
+     entryOrderTtlMinutes entero 5..1440 (default 120); entryTrailingDeltaBips entero 10..2000 opcional.
+     El resto de rangos está en los decoradores del DTO (leerlos, no inventarlos)."
+  - "ValidationPipe global con forbidNonWhitelisted: un campo no declarado en el DTO responde 400 al
+     request entero."
+  - "libs/ui disponible: toggle-switch, slider-field, form-field, select, info-tooltip, badge,
+     data-table, filter-pills, pagination, tabs, key-value-row, info-card, stepper, collapsible."
+  - "Locales: apps/web/src/locales/es.ts (3469 líneas) y en.ts (3417); notificationMessages en
+     es.ts:1850. Faltan entryOrderPlaced, entryOrderFilled, entryOrderMissing."
+  - "E2E: suite en verde en CI (188 passed / 69 skipped); e2e/trading.spec.ts y e2e/agent-flow.spec.ts
+     cubren el stepper actual; el proyecto headed-debug está gateado por PLAYWRIGHT_HEADED_DEBUG=1."
+
+decisiones_criticas:
+  - id: D1
+    titulo: Dónde viven los campos avanzados en el alta
+    pregunta: >
+      Un paso "Avanzado" nuevo antes de review (colapsado por sección) versus repartir las secciones en
+      los pasos existentes (Protección en risk, Loop reactivo en timing, Entrada en risk o en un paso
+      propio). Recomendación: un paso "Avanzado" opcional con las cuatro secciones colapsadas y todo
+      apagado, para que el flujo básico no cambie (CA-002).
+  - id: D2
+    titulo: Cómo comparte apps/api el tipo del wire sin duplicar el DTO
+    pregunta: >
+      Definir el tipo en libs/shared y hacer que CreateTradingConfigDto lo implemente
+      (implements) o derivarlo con satisfies, sin tocar los decoradores; o dejar el DTO como está y
+      agregar un test de igualdad de claves. Elegir la opción que haga fallar el typecheck ante un
+      campo nuevo en un solo lado.
+  - id: D3
+    titulo: Edición parcial
+    pregunta: >
+      El PUT actual envía el DTO completo o sólo lo cambiado. Verificar en edit-agent-modal.tsx y
+      trading.service.ts (updateConfig hace spread del DTO). Definir el payload mínimo y cómo se
+      prueba (CA-003).
+
+harness_rules:
+  - "Invocar frontend-component-rules antes de crear o modificar componentes."
+  - "Código sin comentarios narrativos."
+  - "Tipos del wire desde @crypto-trader/shared; ningún tipo local del wire en apps/web."
+  - "Todo texto por t(); claves seccion.componente.elemento en es y en."
+  - "Todo interruptor nace apagado en el alta."
+  - "Nunca abrir browsers visibles: Vitest y Playwright headless."
+  - "Registrar usage (tokens_in/tokens_out/model_tier) al cerrar cada task."
+
+model_tiers:
+  functional: sonnet / medium
+  planner: sonnet / medium
+  architect: opus / high
+  implementor_front: sonnet / medium
+  reviewer: opus / high

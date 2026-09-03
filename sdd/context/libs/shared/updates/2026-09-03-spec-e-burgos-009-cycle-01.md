@@ -5,9 +5,10 @@
 - `src/types/trading-config-wire.ts` (nuevo): el wire completo de configuración del bot vive acá y
   sólo acá. `TradingConfigWire` (lo que devuelve `GET/POST/PUT /trading/config`),
   `CreateTradingConfigInput` (espejo exacto de los 40 campos de `CreateTradingConfigDto`),
-  `UpdateTradingConfigInput` (38: sin `mode` ni `isActive`, que no tiene columna) y
-  `UpdateTradingConfigPayload` (lo que emite la UI, con `null` para limpiar `maxPositionHoldMinutes`
-  y `entryTrailingDeltaBips`). Uniones de literales `TradingAssetWire`, `TradingQuoteWire`,
+  `UpdateTradingConfigInput` (38, espejo de `UpdateTradingConfigDto`: como Create pero sin `asset`
+  ni `pair`; `isActive`, que no tiene columna, ya no existe en el DTO tras FIX-e-burgos-027) y
+  `UpdateTradingConfigPayload` (lo que emite la UI: omite `mode` y admite `null` para limpiar
+  `maxPositionHoldMinutes` y `entryTrailingDeltaBips`). Uniones de literales `TradingAssetWire`, `TradingQuoteWire`,
   `TradingModeWire`, `TradingIntervalModeWire`, `TradingRiskProfileWire`; `entryOrderMode` reusa
   `EntryOrderMode`.
 - Particiones `TRADING_CONFIG_BASE_FIELDS` (15) y `TRADING_CONFIG_ADVANCED_FIELDS` (25) con sus

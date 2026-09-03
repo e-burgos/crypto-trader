@@ -68,7 +68,7 @@
         "libs/ui"
       ],
       "description": "La SPA expone 11 de los 40 campos de configuracion del bot y redeclara el wire localmente; nada consume EP-017 ni los eventos entry-order:*. cycle-01: wire unico en libs/shared y configuracion avanzada (proteccion, senal y tamano, loop reactivo, entrada) en alta, edicion y detalle, siempre apagada por defecto, con locales. cycle-02: vista de entradas descansando sobre EP-017 con tiempo real y notificaciones traducidas.",
-      "cycles_completed": 0
+      "cycles_completed": 1
     }
   ],
   "pending_modules": [],

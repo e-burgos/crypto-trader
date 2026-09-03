@@ -1123,7 +1123,7 @@
       "severity": "high",
       "created_at": "2026-09-03",
       "resolved_at": "2026-09-03",
-      "validated_at": null,
+      "validated_at": "2026-09-03",
       "title": "createConfig descarta 22 de los 25 campos avanzados del DTO: el POST responde 201 y persiste los defaults",
       "estimation_hours": 2,
       "description": "TradingService.createConfig (apps/api/src/trading/trading.service.ts ~255-274) arma el prisma.create campo por campo y solo copia los 15 base mas los 3 de entrada: un POST /trading/config con nativeProtectionEnabled true (o cualquiera de los otros 21 avanzados) responde 201 y persiste false. La edicion (updateConfig, spread del dto) si los toma. Descubierto por el architect de spec-009 cycle-01 (H1) al contrastar el DTO contra el create.",
@@ -1136,7 +1136,7 @@
         "apps/api/src/trading/trading.service.advanced-config.spec.ts"
       ],
       "test_reference": "trading.service.advanced-config.spec.ts (3 tests): los 22 campos avanzados llegan a prisma.tradingConfig.create cuando estan presentes; sin ellos el create reproduce el shape congelado previo al fix (equivalencia CA-002); los 3 campos de entrada siguen persistiendo. 8 suites / 57 tests verdes; commit 30d056d8.",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "usage": {
         "tokens_in": 60000,
@@ -1155,7 +1155,7 @@
       "severity": "low",
       "created_at": "2026-09-03",
       "resolved_at": "2026-09-03",
-      "validated_at": null,
+      "validated_at": "2026-09-03",
       "title": "UpdateTradingConfigDto.isActive no tiene columna en TradingConfig: un PUT que lo incluya responde 500",
       "estimation_hours": 1,
       "description": "UpdateTradingConfigDto declara isActive (trading-config.dto.ts ~615) pero el modelo TradingConfig no tiene esa columna; como updateConfig hace data: { ...dto } con as any, un PUT con isActive termina en PrismaClientValidationError (500). El tipo local de apps/web lo declaraba como si el GET lo devolviera (architect de spec-009, H2).",
@@ -1168,7 +1168,7 @@
         "apps/api/src/trading/dto/trading-config.dto.spec.ts"
       ],
       "test_reference": "trading-config.dto.spec.ts: isActive rechazado como whitelistValidation por el ValidationPipe real y ausente de las propiedades del DTO; body-dto-validation (25 tests) sin regresion; commit 0a277d97. Unico emisor restante: el tipo local de apps/web que spec-009 elimina.",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "usage": {
         "tokens_in": 25000,

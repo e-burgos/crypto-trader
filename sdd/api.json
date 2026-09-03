@@ -229,6 +229,11 @@
             "cycle": 1,
             "date": "2026-09-03",
             "change": "spec-e-burgos-009 cycle-01 (nota de discrepancia, sin cambio de contrato): trading.service.createConfig construye el prisma.create campo por campo y NO incluye 22 de los 25 campos avanzados declarados en el DTO (todos los de proteccion, senal y tamano, gate determinista y loop reactivo). Un POST con nativeProtectionEnabled=true responde 201 y persiste false por el default de la columna: el ValidationPipe lo acepta y el servicio lo descarta en silencio. Los unicos avanzados que el create persiste hoy son entryOrderMode, entryOrderTtlMinutes y entryTrailingDeltaBips. Registrado como FIX (apps/api) por el architect de spec-009; EP-007 no tiene el problema porque updateConfig hace data: { ...dto }."
+          },
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "spec-e-burgos-009 cycle-01 (cierre, sin cambio de contrato): FIX-e-burgos-026 resuelto — createConfig ya persiste los 25 campos avanzados del DTO (commit 30d056d8, cubierto por trading.service.advanced-config.spec.ts). La nota anterior de este ciclo describe el defecto tal como estaba ANTES del fix y queda como historia: hoy un POST con nativeProtectionEnabled=true persiste true. Validado por el reviewer de spec-009 cycle-01."
           }
         ]
       },
@@ -273,6 +278,11 @@
             "cycle": 1,
             "date": "2026-09-03",
             "change": "spec-e-burgos-009 cycle-01 (notas de discrepancia, sin cambio de contrato): (1) UpdateTradingConfigDto declara isActive?: boolean y el modelo Prisma TradingConfig no tiene esa columna; con data: { ...dto } as any un PUT que lo incluya termina en PrismaClientValidationError (500), no en 400 — registrado como FIX y excluido por construccion del payload que emite apps/web. (2) maxPositionHoldMinutes y entryTrailingDeltaBips estan declarados ?: number en el DTO pero el contrato real admite null (columnas Int? y @IsOptional saltea null): enviar null es la unica forma de volver a 'sin limite' / 'nivel fijo' desde la edicion, y funciona hoy. apps/web lo tipa con UpdateTradingConfigPayload en libs/shared para no depender del tipo mas angosto del DTO."
+          },
+          {
+            "cycle": 1,
+            "date": "2026-09-03",
+            "change": "spec-e-burgos-009 cycle-01 (cierre, sin cambio de contrato): FIX-e-burgos-027 resuelto — isActive ya no existe en UpdateTradingConfigDto (commit 0a277d97), asi que un PUT que lo incluya responde 400 por whitelist en vez de 500. La discrepancia (2) de la nota anterior sigue vigente y es intencional: el contrato real de maxPositionHoldMinutes y entryTrailingDeltaBips admite null, y apps/web lo tipa con UpdateTradingConfigPayload en libs/shared. Validado por el reviewer de spec-009 cycle-01."
           }
         ]
       },

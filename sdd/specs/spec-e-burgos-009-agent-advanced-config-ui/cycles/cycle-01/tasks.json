@@ -460,8 +460,8 @@
         "e2e/agent-flow.spec.ts"
       ],
       "usage": {
-        "tokens_in": 150000,
-        "tokens_out": 10000,
+        "tokens_in": 230000,
+        "tokens_out": 14000,
         "duration_minutes": 40,
         "approx": true,
         "source": "declared-estimate",

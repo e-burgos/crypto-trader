@@ -8,7 +8,7 @@
 | **Keyword**   | [IMPROVEMENT]                                 |
 | **Fecha**     | 2026-09-03                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | in-progress                             |
+| **Estado**    | implemented                             |
 | **Spec**      | spec-e-burgos-009-agent-advanced-config-ui (recomendacion del architect, cycle-02) |
 
 ## Problema

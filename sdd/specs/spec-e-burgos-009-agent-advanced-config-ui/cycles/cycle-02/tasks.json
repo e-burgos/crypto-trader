@@ -49,8 +49,17 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/trading/trading.service.ts"
+      ],
+      "usage": {
+        "tokens_in": 35000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-003",

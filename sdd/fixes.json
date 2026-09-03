@@ -1186,7 +1186,7 @@
       "type": "IMPROVEMENT",
       "severity": "low",
       "created_at": "2026-09-03",
-      "resolved_at": null,
+      "resolved_at": "2026-09-03",
       "validated_at": null,
       "title": "Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link no puede abrir la entrada exacta",
       "estimation_hours": 1,
@@ -1199,9 +1199,16 @@
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/trading/entry-order.service.spec.ts"
       ],
-      "test_reference": "entry-order.service.spec.ts: los tres mensajes de notificacion incluyen configId y entryOrderId; las claves previas se conservan.",
-      "status": "in-progress",
-      "cycle": "cycle-02"
+      "test_reference": "entry-order.service.spec.ts: entryOrderPlaced y entryOrderFilled incluyen configId y entryOrderId; test nuevo de markMissing con configId, entryOrderId y symbol; claves previas conservadas. 10 suites / 80 tests verdes; commit 4a4bd546.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 28000,
+        "tokens_out": 5000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "FIX-e-burgos-029",
@@ -1211,7 +1218,7 @@
       "type": "IMPROVEMENT",
       "severity": "low",
       "created_at": "2026-09-03",
-      "resolved_at": null,
+      "resolved_at": "2026-09-03",
       "validated_at": null,
       "title": "El select de listEntryOrders no esta atado al wire compartido: una deriva no falla en typecheck",
       "estimation_hours": 1,
@@ -1223,9 +1230,16 @@
       "affected_files": [
         "apps/api/src/trading/trading.service.ts"
       ],
-      "test_reference": "pnpm typecheck:api falla al agregar una clave al select que no exista en el wire (probe revertido) y pasa en el estado final.",
-      "status": "in-progress",
-      "cycle": "cycle-02"
+      "test_reference": "ENTRY_ORDER_SELECT satisfies Record<EntryOrderWireField,true> + AssertNoKeyDrift. Probe: una clave extra en el select falla pnpm typecheck:api con TS2353 y TS2344; revertido, typecheck limpio. Commit c01504f3.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 35000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     }
   ]
 }

@@ -59,7 +59,7 @@ async function createSandboxAgent(page: Page, name: string) {
   await page.getByRole('button', { name: 'BTC', exact: true }).click();
   await page.getByRole('button', { name: 'USDT', exact: true }).click();
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 5; i++) {
     await page.getByRole('button', { name: 'Next', exact: true }).click();
   }
   await expect(page.getByText('Review and create')).toBeVisible();

@@ -103,6 +103,7 @@ test.describe('Trading Config — New Agent stepper', () => {
       'Decision thresholds',
       'Risk management',
       'Timing and positions',
+      'Advanced settings',
       'Review and create',
     ]) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();

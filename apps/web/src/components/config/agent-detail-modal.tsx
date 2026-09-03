@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { TabModal } from '@crypto-trader/ui';
 import type { TradingConfigWire } from '@crypto-trader/shared';
 import { useUpdateConfig } from '../../hooks/use-trading';
+import { AgentAdvancedSummary } from './advanced/agent-advanced-summary';
 
 export function AgentDetailModal({
   cfg,
@@ -146,6 +147,8 @@ export function AgentDetailModal({
           </div>
         ))}
       </dl>
+
+      <AgentAdvancedSummary cfg={cfg} />
     </div>
   );
 

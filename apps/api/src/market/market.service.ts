@@ -1,4 +1,12 @@
-import { HttpException, Injectable, Logger, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  Logger,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import axios from 'axios';
 import { BinanceRestClient } from '@crypto-trader/data-fetcher';
 import {
   CoinGeckoNewsFetcher,
@@ -610,21 +618,50 @@ ${numbered}`;
 
   // ── OHLCV & Snapshot ──────────────────────────────────────────────────────
 
+  private toHttpError(err: unknown, symbol: string): never {
+    if (axios.isAxiosError(err)) {
+      const reason = err.response
+        ? `HTTP ${err.response.status}`
+        : err.code || err.message;
+      this.logger.warn(
+        `Market data upstream unavailable for ${symbol}: ${reason}`,
+      );
+      throw new ServiceUnavailableException(
+        `Market data upstream unavailable (${reason})`,
+      );
+    }
+    throw err;
+  }
+
+  private async fetchKlines(
+    symbol: string,
+    interval: CandleInterval,
+    limit: number,
+  ) {
+    try {
+      return await this.binance.getKlines(symbol, interval, limit);
+    } catch (err) {
+      this.toHttpError(err, symbol);
+    }
+  }
+
   async getOhlcv(asset: string, interval: string, limit = 200) {
     const assetUpper = asset.toUpperCase();
     const intervalClean = interval.toLowerCase();
 
     if (!VALID_ASSETS.includes(assetUpper)) {
-      throw new Error(`Invalid asset: ${asset}. Must be BTC or ETH`);
+      throw new BadRequestException(
+        `Invalid asset: ${asset}. Must be BTC or ETH`,
+      );
     }
     if (!VALID_INTERVALS.includes(intervalClean)) {
-      throw new Error(
+      throw new BadRequestException(
         `Invalid interval: ${interval}. Must be one of ${VALID_INTERVALS.join(', ')}`,
       );
     }
 
     const symbol = `${assetUpper}USDT`;
-    return this.binance.getKlines(
+    return this.fetchKlines(
       symbol,
       intervalClean as CandleInterval,
       Math.min(limit, 500),
@@ -660,15 +697,11 @@ ${numbered}`;
     const VALID_SYMBOLS = ['BTCUSDT', 'BTCUSDC', 'ETHUSDT', 'ETHUSDC'];
     const sym = symbol.toUpperCase();
     if (!VALID_SYMBOLS.includes(sym)) {
-      throw new Error(
+      throw new BadRequestException(
         `Invalid symbol: ${symbol}. Must be one of ${VALID_SYMBOLS.join(', ')}`,
       );
     }
-    const candles = await this.binance.getKlines(
-      sym,
-      '1h' as CandleInterval,
-      200,
-    );
+    const candles = await this.fetchKlines(sym, '1h' as CandleInterval, 200);
     const currentPrice = candles[candles.length - 1]?.close ?? 0;
     const change24h =
       candles.length >= 24

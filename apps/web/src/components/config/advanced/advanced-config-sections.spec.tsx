@@ -28,6 +28,10 @@ function openProtection() {
   fireEvent.click(screen.getByRole('button', { name: /Protection/ }));
 }
 
+function openSignal() {
+  fireEvent.click(screen.getByRole('button', { name: /Signal & sizing/ }));
+}
+
 describe('AdvancedConfigSections — Protection', () => {
   it('renders every root switch off from DEFAULT_ADVANCED_DRAFT', () => {
     render(<Harness />);
@@ -87,5 +91,46 @@ describe('AdvancedConfigSections — Protection', () => {
     openProtection();
 
     expect(document.body.textContent).not.toMatch(/config\.advanced/);
+  });
+});
+
+describe('AdvancedConfigSections — Signal & sizing', () => {
+  it('keeps lossCut params disabled until lossCutEnabled is on', () => {
+    render(<Harness />);
+    openSignal();
+
+    expect(screen.getByRole('slider', { name: 'Minimum confidence to cut' })).toBeDisabled();
+    expect(screen.getByRole('slider', { name: 'Minimum loss to cut' })).toBeDisabled();
+    expect(screen.getByRole('slider', { name: 'Minimum edge ratio' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Signal loss cut' }));
+
+    expect(screen.getByRole('slider', { name: 'Minimum confidence to cut' })).toBeEnabled();
+    expect(screen.getByRole('slider', { name: 'Minimum loss to cut' })).toBeEnabled();
+    expect(screen.getByRole('slider', { name: 'Minimum edge ratio' })).toBeEnabled();
+  });
+
+  it('keeps reduceSizeFactor disabled until smartSizingEnabled is on', () => {
+    render(<Harness />);
+    openSignal();
+
+    expect(screen.getByRole('slider', { name: 'Reduction factor' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Smart sizing' }));
+
+    expect(screen.getByRole('slider', { name: 'Reduction factor' })).toBeEnabled();
+  });
+
+  it('keeps gatePriceChangePct disabled until deterministicGateEnabled is on, and independent of lossCut', () => {
+    render(<Harness />);
+    openSignal();
+
+    expect(screen.getByRole('slider', { name: 'Price change threshold' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Signal loss cut' }));
+    expect(screen.getByRole('slider', { name: 'Price change threshold' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Deterministic gate' }));
+    expect(screen.getByRole('slider', { name: 'Price change threshold' })).toBeEnabled();
   });
 });

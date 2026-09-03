@@ -1,5 +1,11 @@
+import { Logger } from '@nestjs/common';
 import { EvaluationService, EVALUATION_QUEUE } from './evaluation.service';
 import { EvaluationProcessor } from './evaluation.processor';
+import {
+  QUEUE_BOOTSTRAP_TIMEOUT_MS,
+  QUEUE_SETTLE_AFTER_READY_MS,
+  QUEUE_UNAVAILABLE_AT_BOOTSTRAP,
+} from '../../common/queue-bootstrap';
 
 // ── Mock helpers ────────────────────────────────────────────
 
@@ -24,7 +30,25 @@ function createMockQueue() {
   return {
     add: jest.fn().mockResolvedValue({}),
     removeRepeatable: jest.fn().mockResolvedValue(undefined),
+    isReady: jest.fn().mockResolvedValue({}),
   } as any;
+}
+
+function createStalledQueue() {
+  const stall = <T>(): Promise<T> => new Promise<T>(() => undefined);
+  let ready: (value: unknown) => void = () => undefined;
+  let stalled = true;
+  return {
+    add: jest.fn(() => (stalled ? stall<object>() : Promise.resolve({}))),
+    removeRepeatable: jest.fn(() =>
+      stalled ? stall<void>() : Promise.resolve(undefined),
+    ),
+    isReady: jest.fn(() => new Promise((resolve) => (ready = resolve))),
+    becomeReady() {
+      stalled = false;
+      ready({});
+    },
+  };
 }
 
 function createMockMarketService() {
@@ -469,6 +493,46 @@ describe('EvaluationService', () => {
           jobId: 'evaluation-cleanup',
         },
       );
+    });
+
+    it('does not block the bootstrap when the queue never answers, and registers once Redis returns', async () => {
+      jest.useFakeTimers();
+      const errorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      const queue = createStalledQueue();
+      const { service } = buildService(undefined, queue);
+
+      const bootstrap = service.onModuleInit();
+      await jest.advanceTimersByTimeAsync(QUEUE_BOOTSTRAP_TIMEOUT_MS);
+      await bootstrap;
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining(QUEUE_UNAVAILABLE_AT_BOOTSTRAP),
+      );
+      expect(queue.add).not.toHaveBeenCalled();
+
+      queue.becomeReady();
+      await jest.advanceTimersByTimeAsync(QUEUE_SETTLE_AFTER_READY_MS);
+
+      expect(queue.add).toHaveBeenCalledWith(
+        'schedule-evaluations',
+        {},
+        { repeat: { cron: '*/15 * * * *' }, jobId: 'evaluation-sweep' },
+      );
+      expect(queue.add).toHaveBeenCalledWith(
+        'cleanup',
+        {},
+        { repeat: { cron: '30 3 * * *' }, jobId: 'evaluation-cleanup' },
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Redis is reachable again'),
+      );
+
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+      jest.useRealTimers();
     });
   });
 

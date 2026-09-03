@@ -3,6 +3,7 @@ import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs
 import type { MarketCandleTick, MarketTick } from '@crypto-trader/shared';
 import type { KlineUpdate, SymbolFilters, TickerUpdate } from '@crypto-trader/data-fetcher';
 import type { PrismaService } from '../prisma/prisma.service';
+import { withTimeout } from '../common/with-timeout';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
 import type { ReactiveRuntimeThresholds } from './reactive-runtime-thresholds';
 
@@ -59,20 +60,6 @@ function errorMessage(err: unknown): string {
 
 export const COORDINATION_UNAVAILABLE_AT_BOOTSTRAP =
   'reactive coordination unavailable: Redis not reachable; running without the reactive rail';
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`timed out after ${timeoutMs}ms`)),
-      timeoutMs,
-    );
-    timer.unref?.();
-  });
-  return Promise.race([promise, deadline]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
-}
 
 @Injectable()
 export class MarketStreamService

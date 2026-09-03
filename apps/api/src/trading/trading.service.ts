@@ -51,6 +51,7 @@ import {
   EntryOrderService,
   type EntryOrderCancelReason,
 } from './entry-order.service';
+import { runQueueBootstrapWork } from '../common/queue-bootstrap';
 
 const DEFAULTS = {
   buyThreshold: 70,
@@ -126,13 +127,16 @@ export class TradingService implements OnModuleInit {
     private readonly actionGate: ActionGateService,
   ) {}
 
-  /**
-   * On startup: re-queue any configs that were running before the restart.
-   * The DB is the source of truth for isRunning; BullMQ jobs are ephemeral.
-   * We scan waiting+delayed jobs by configId to avoid duplicates, since
-   * re-queued jobs use Bull-generated IDs (no static jobId).
-   */
   async onModuleInit() {
+    await runQueueBootstrapWork({
+      queue: this.tradingQueue,
+      logger: this.logger,
+      deferredWork: 'startup recovery of running agents',
+      run: () => this.recoverRunningAgents(),
+    });
+  }
+
+  private async recoverRunningAgents() {
     const runningConfigs = await this.prisma.tradingConfig.findMany({
       where: { isRunning: true },
     });

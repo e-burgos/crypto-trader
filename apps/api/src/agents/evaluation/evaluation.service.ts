@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AgentOutcomeStatus } from '../../../generated/prisma/enums';
+import { runQueueBootstrapWork } from '../../common/queue-bootstrap';
 
 export const EVALUATION_QUEUE = 'agent-evaluation';
 const EVALUATION_SWEEP_JOB_ID = 'evaluation-sweep';
@@ -32,6 +33,15 @@ export class EvaluationService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    await runQueueBootstrapWork({
+      queue: this.evaluationQueue,
+      logger: this.logger,
+      deferredWork: 'evaluation repeatable job registration',
+      run: () => this.registerRepeatableJobs(),
+    });
+  }
+
+  private async registerRepeatableJobs() {
     await this.registerRepeatable(
       'schedule-evaluations',
       EVALUATION_SWEEP_CRON,

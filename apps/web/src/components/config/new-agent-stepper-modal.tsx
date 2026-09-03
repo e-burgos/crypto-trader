@@ -35,6 +35,12 @@ import {
   PRESET_META,
   StepperSlider,
 } from './constants';
+import {
+  AdvancedConfigSections,
+  DEFAULT_ADVANCED_DRAFT,
+  diffToCreateInput,
+  useAdvancedDraft,
+} from './advanced';
 
 export function NewAgentStepperModal({
   onClose,
@@ -56,6 +62,11 @@ export function NewAgentStepperModal({
     mode: defaultMode,
   });
   const { mutate: createConfig, isPending } = useCreateConfig();
+  const {
+    draft: advancedDraft,
+    setField: setAdvancedField,
+    changedFields: advancedChangedFields,
+  } = useAdvancedDraft(DEFAULT_ADVANCED_DRAFT);
 
   const totalSteps = STEPS.length;
   const currentStep = STEPS[stepIdx].id;
@@ -87,6 +98,7 @@ export function NewAgentStepperModal({
       minIntervalMinutes: parseInt(form.minIntervalMinutes),
       orderPriceOffsetPct: parseFloat(form.orderPriceOffsetPct) / 100,
       riskProfile: form.riskProfile,
+      ...diffToCreateInput(DEFAULT_ADVANCED_DRAFT, advancedDraft),
     };
     createConfig(dto, { onSuccess: onCreated });
   }
@@ -111,6 +123,10 @@ export function NewAgentStepperModal({
     timing: {
       title: t('config.stepper.stepTiming'),
       subtitle: t('config.stepper.stepTimingHint'),
+    },
+    advanced: {
+      title: t('config.advanced.step.title'),
+      subtitle: t('config.advanced.step.hint'),
     },
     review: {
       title: t('config.stepper.stepReview'),
@@ -516,6 +532,16 @@ export function NewAgentStepperModal({
         </div>
       )}
 
+      {/* STEP: ADVANCED */}
+      {currentStep === 'advanced' && (
+        <AdvancedConfigSections
+          draft={advancedDraft}
+          onChange={setAdvancedField}
+          resolvedMode={form.mode}
+          surface="create"
+        />
+      )}
+
       {/* STEP: REVIEW */}
       {currentStep === 'review' && (
         <div className="space-y-4">
@@ -614,6 +640,18 @@ export function NewAgentStepperModal({
                 </span>
               </div>
             ))}
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+            <span className="text-[10px] text-muted-foreground">
+              {t('config.advanced.summary.title')}
+            </span>
+            <span className="text-sm font-bold tabular-nums">
+              {advancedChangedFields.size === 0
+                ? t('config.advanced.summary.none')
+                : t('config.advanced.summary.count', {
+                    count: advancedChangedFields.size,
+                  })}
+            </span>
           </div>
           <p className="text-xs text-muted-foreground text-center">
             {t('config.stepper.reviewNote')}

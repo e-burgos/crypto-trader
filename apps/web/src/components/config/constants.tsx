@@ -12,6 +12,7 @@ import {
   Wallet,
   Repeat2,
   ArrowUpDown,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { InfoTooltip } from '@crypto-trader/ui';
 import { cn } from '../../lib/utils';
@@ -180,6 +181,7 @@ export type StepId =
   | 'thresholds'
   | 'risk'
   | 'timing'
+  | 'advanced'
   | 'review';
 
 export const STEPS: { id: StepId; icon: typeof Bot }[] = [
@@ -188,6 +190,7 @@ export const STEPS: { id: StepId; icon: typeof Bot }[] = [
   { id: 'thresholds', icon: Target },
   { id: 'risk', icon: Shield },
   { id: 'timing', icon: Clock },
+  { id: 'advanced', icon: SlidersHorizontal },
   { id: 'review', icon: ListChecks },
 ];
 

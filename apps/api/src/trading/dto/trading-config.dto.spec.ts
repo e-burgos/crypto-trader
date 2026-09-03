@@ -1,6 +1,10 @@
 import { plainToInstance } from 'class-transformer';
 import { validate, getMetadataStorage } from 'class-validator';
 import {
+  TRADING_CONFIG_BASE_FIELDS,
+  TRADING_CONFIG_ADVANCED_FIELDS,
+} from '@crypto-trader/shared';
+import {
   CreateTradingConfigDto,
   UpdateTradingConfigDto,
   EntryOrderModeEnum,
@@ -151,5 +155,17 @@ describe('trading-config DTOs — cross-DTO field parity', () => {
       expect(createFields.has(field)).toBe(true);
       expect(updateFields.has(field)).toBe(true);
     }
+  });
+});
+
+describe('CreateTradingConfigDto — runtime key parity with the shared wire (D2)', () => {
+  it('Object.keys of a fully-populated instance equals the wire field partitions', () => {
+    const wireKeys = [...TRADING_CONFIG_BASE_FIELDS, ...TRADING_CONFIG_ADVANCED_FIELDS];
+    const fixture = Object.fromEntries(wireKeys.map((key) => [key, 1]));
+
+    const instance = plainToInstance(CreateTradingConfigDto, fixture);
+
+    expect(wireKeys).toHaveLength(40);
+    expect(new Set(Object.keys(instance))).toEqual(new Set(wireKeys));
   });
 });

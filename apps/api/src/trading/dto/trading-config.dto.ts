@@ -10,6 +10,12 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type {
+  CreateTradingConfigInput,
+  UpdateTradingConfigInput,
+  ExactKeys,
+  AssertNoKeyDrift,
+} from '@crypto-trader/shared';
 
 export enum AssetEnum {
   BTC = 'BTC',
@@ -54,7 +60,7 @@ export enum EntryOrderModeEnum {
   OCO = 'OCO',
 }
 
-export class CreateTradingConfigDto {
+export class CreateTradingConfigDto implements CreateTradingConfigInput {
   @ApiPropertyOptional({
     example: 'BTC Agresivo',
     description: 'Nombre descriptivo del agente',
@@ -498,7 +504,7 @@ export class CreateTradingConfigDto {
   entryTrailingDeltaBips?: number;
 }
 
-export class UpdateTradingConfigDto {
+export class UpdateTradingConfigDto implements UpdateTradingConfigInput {
   @ApiPropertyOptional({
     example: 'BTC Agresivo',
     description: 'Nombre descriptivo del agente',
@@ -888,7 +894,17 @@ export class UpdateTradingConfigDto {
   @Max(2000, { message: 'Trailing delta de entrada no puede superar $constraint1 BIPS' })
   @IsOptional()
   entryTrailingDeltaBips?: number;
+
+  // isActive is type-only: the wire still declares it, but no column and no decorator accept it here (spec-e-burgos-009)
+  declare isActive?: never;
 }
+
+export type _CreateTradingConfigWireIsExact = AssertNoKeyDrift<
+  ExactKeys<CreateTradingConfigDto, CreateTradingConfigInput>
+>;
+export type _UpdateTradingConfigWireIsExact = AssertNoKeyDrift<
+  ExactKeys<UpdateTradingConfigDto, UpdateTradingConfigInput>
+>;
 
 export class StartAgentDto {
   @ApiProperty({ description: 'ID de la configuración del agente' })

@@ -981,7 +981,7 @@
       "type": "BUGFIX",
       "severity": "medium",
       "created_at": "2026-09-02",
-      "resolved_at": null,
+      "resolved_at": "2026-09-03",
       "validated_at": null,
       "title": "La API nunca abre el puerto HTTP si Redis no es alcanzable y app.listen() cuelga sin log",
       "estimation_hours": 1,
@@ -996,12 +996,21 @@
         "apps/api/src/reactive/redis-reactive-coordination.service.ts",
         "apps/api/src/reactive/market-stream.service.ts",
         "apps/api/src/reactive/reactive-runtime-thresholds.ts",
+        "apps/api/src/common/with-timeout.ts",
+        "apps/api/src/common/queue-bootstrap.ts",
         "apps/api/src/agents/evaluation/evaluation.service.ts",
         "apps/api/src/trading/trading.service.ts"
       ],
-      "test_reference": "Pendiente: test unitario del componente/servicio afectado al implementar.",
-      "status": "in-progress",
-      "cycle": "cycle-02"
+      "test_reference": "Reproduccion real con REDIS_URL en puerto cerrado y PORT=3010: antes, 92 s sin bindear el puerto y sin log; despues, /api/health responde 503 {status:degraded, redis:down} a los 14 s con dos lineas ERROR de Bull diferido, y al levantar Redis el trabajo diferido corre una sola vez; con Redis real, 200 ok en 7 s. Specs: queue-bootstrap.spec.ts (5), trading.service.startup-recovery.spec.ts (2), evaluation.service.spec.ts (+1), reactive-coordination.module.spec.ts y redis-reactive-coordination.service.spec.ts. Commits 4a125c74 y ca9a621c.",
+      "status": "implemented",
+      "cycle": "cycle-02",
+      "usage": {
+        "tokens_in": 440000,
+        "tokens_out": 41000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/opus"
+      }
     },
     {
       "id": "FIX-e-burgos-023",

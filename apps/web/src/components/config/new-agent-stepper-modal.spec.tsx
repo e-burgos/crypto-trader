@@ -46,8 +46,18 @@ function renderModal() {
   );
 }
 
-function clickNext() {
-  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+type StepperStep =
+  | 'identity'
+  | 'thresholds'
+  | 'risk'
+  | 'timing'
+  | 'advanced'
+  | 'review';
+
+function advanceThrough(...steps: readonly StepperStep[]) {
+  steps.forEach(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  });
 }
 
 function nameInput() {
@@ -63,14 +73,10 @@ describe('NewAgentStepperModal', () => {
   it('emits the same POST body as before this cycle when the advanced step is never touched (CA-002)', async () => {
     renderModal();
 
-    clickNext(); // preset -> identity
+    advanceThrough('identity');
     fireEvent.change(nameInput(), { target: { value: 'Mi bot' } });
 
-    clickNext(); // identity -> thresholds
-    clickNext(); // thresholds -> risk
-    clickNext(); // risk -> timing
-    clickNext(); // timing -> advanced
-    clickNext(); // advanced -> review
+    advanceThrough('thresholds', 'risk', 'timing', 'advanced', 'review');
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }));
 
@@ -86,20 +92,17 @@ describe('NewAgentStepperModal', () => {
   it('adds exactly the toggled key to the POST body when one advanced switch is turned on', async () => {
     renderModal();
 
-    clickNext(); // preset -> identity
+    advanceThrough('identity');
     fireEvent.change(nameInput(), { target: { value: 'Mi bot' } });
 
-    clickNext(); // identity -> thresholds
-    clickNext(); // thresholds -> risk
-    clickNext(); // risk -> timing
-    clickNext(); // timing -> advanced
+    advanceThrough('thresholds', 'risk', 'timing', 'advanced');
 
     fireEvent.click(screen.getByRole('button', { name: /Protection/ }));
     fireEvent.click(
       screen.getByRole('switch', { name: 'Native OCO protection' }),
     );
 
-    clickNext(); // advanced -> review
+    advanceThrough('review');
     fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }));
 
     await waitFor(() => {

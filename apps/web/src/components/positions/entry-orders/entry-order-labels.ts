@@ -3,6 +3,8 @@ import type {
   EntryOrderLeg,
   EntryOrderMode,
   EntryOrderStatusWire,
+  TradingConfigWire,
+  TradingModeWire,
 } from '@crypto-trader/shared';
 import { ENTRY_ORDER_CANCEL_REASONS, ENTRY_ORDER_STATUSES } from '@crypto-trader/shared';
 import type { BadgeVariant } from '@crypto-trader/ui';
@@ -88,4 +90,32 @@ export function filledLegLabelKey(leg: ResolvedFilledLeg): string | null {
   if (leg === 'LIMIT') return 'positions.entries.fill.legLimit';
   if (leg === 'STOP') return 'positions.entries.fill.legStop';
   return null;
+}
+
+export function resolveBotLabel(configId: string, configs: TradingConfigWire[]): string {
+  const cfg = configs.find((c) => c.id === configId);
+  if (!cfg) return configId;
+  return cfg.name || `${cfg.asset}/${cfg.pair}`;
+}
+
+export function hasKnownConfig(configId: string, configs: TradingConfigWire[]): boolean {
+  return configs.some((c) => c.id === configId);
+}
+
+export function entryOrderModeBadgeClassName(mode: TradingModeWire): string {
+  if (mode === 'LIVE') return 'bg-red-500/10 text-red-500';
+  if (mode === 'TESTNET') return 'bg-sky-500/10 text-sky-400';
+  return 'bg-muted text-muted-foreground';
+}
+
+export function formatEntryOrderNumber(value: number): string {
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2 });
+}
+
+export function formatEntryOrderUsd(value: number): string {
+  return `$${formatEntryOrderNumber(value)}`;
+}
+
+export function formatEntryOrderDateTime(iso: string): string {
+  return new Date(iso).toLocaleString();
 }

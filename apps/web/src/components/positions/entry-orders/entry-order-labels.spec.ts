@@ -9,15 +9,22 @@ import {
   ENTRY_ORDER_CANCEL_REASON_LABEL_KEY,
   ENTRY_ORDER_STATUS_BADGE_VARIANT,
   entryOrderCancelReasonLabelKey,
+  entryOrderModeBadgeClassName,
   entryOrderModeLabelKey,
   entryOrderStatusBadgeVariant,
   entryOrderStatusLabelKey,
   filledLegLabelKey,
+  formatEntryOrderDateTime,
+  formatEntryOrderNumber,
+  formatEntryOrderUsd,
+  hasKnownConfig,
+  resolveBotLabel,
   resolveEntryOrderCancelReason,
   resolveEntryOrderMode,
   resolveEntryOrderStatus,
   resolveFilledLeg,
 } from './entry-order-labels';
+import { makeFixtureConfig } from './fixtures';
 
 function sorted<T>(values: readonly T[]): T[] {
   return [...values].sort();
@@ -129,5 +136,50 @@ describe('resolveFilledLeg / filledLegLabelKey', () => {
   it('degrades an unknown value to null with no label key', () => {
     expect(resolveFilledLeg('SOMETHING_ELSE')).toBeNull();
     expect(filledLegLabelKey(resolveFilledLeg('SOMETHING_ELSE'))).toBeNull();
+  });
+});
+
+describe('resolveBotLabel / hasKnownConfig', () => {
+  const configs = [
+    makeFixtureConfig({ id: 'cfg_named', name: 'BTC Momentum', asset: 'BTC', pair: 'USDT' }),
+    makeFixtureConfig({ id: 'cfg_unnamed', name: '', asset: 'ETH', pair: 'USDT' }),
+  ];
+
+  it('resolves the config name when it has one', () => {
+    expect(resolveBotLabel('cfg_named', configs)).toBe('BTC Momentum');
+    expect(hasKnownConfig('cfg_named', configs)).toBe(true);
+  });
+
+  it('falls back to asset/pair when the config has no name', () => {
+    expect(resolveBotLabel('cfg_unnamed', configs)).toBe('ETH/USDT');
+  });
+
+  it('falls back to the raw configId when no config matches, and reports it as unknown', () => {
+    expect(resolveBotLabel('cfg_ghost', configs)).toBe('cfg_ghost');
+    expect(hasKnownConfig('cfg_ghost', configs)).toBe(false);
+  });
+});
+
+describe('entryOrderModeBadgeClassName', () => {
+  it('gives LIVE and TESTNET their own tone and everything else neutral', () => {
+    expect(entryOrderModeBadgeClassName('LIVE')).toContain('red');
+    expect(entryOrderModeBadgeClassName('TESTNET')).toContain('sky');
+    expect(entryOrderModeBadgeClassName('SANDBOX')).toContain('muted');
+  });
+});
+
+describe('formatting helpers', () => {
+  it('formats a number with two decimals and no currency sign', () => {
+    expect(formatEntryOrderNumber(61250.5)).toBe('61,250.50');
+  });
+
+  it('prefixes the formatted number with a dollar sign', () => {
+    expect(formatEntryOrderUsd(61250.5)).toBe('$61,250.50');
+  });
+
+  it('formats an ISO date into a non-empty, non-raw string', () => {
+    const formatted = formatEntryOrderDateTime('2026-09-03T12:00:00.000Z');
+    expect(formatted.length).toBeGreaterThan(0);
+    expect(formatted).not.toBe('2026-09-03T12:00:00.000Z');
   });
 });

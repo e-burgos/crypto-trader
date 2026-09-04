@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import '../../../lib/i18n';
-import { ENTRY_ORDERS_DEFAULT_FILTERS } from '../../../hooks/use-entry-orders';
+import { ENTRY_ORDERS_DEFAULT_FILTERS, type EntryOrdersFilters } from '../../../hooks/use-entry-orders';
 import { EntryOrdersPanel } from './entry-orders-panel';
 import { ENTRY_ORDERS_ALL_STATES, TRADING_CONFIGS_FOR_ENTRIES } from './fixtures';
 
@@ -41,10 +41,10 @@ function mockUseEntryOrders(overrides: Partial<UseEntryOrdersReturn>) {
   } as UseEntryOrdersReturn);
 }
 
-function renderPanel() {
+function renderPanel(filters: EntryOrdersFilters = ENTRY_ORDERS_DEFAULT_FILTERS) {
   return render(
     <MemoryRouter>
-      <EntryOrdersPanel filters={ENTRY_ORDERS_DEFAULT_FILTERS} onFiltersChange={vi.fn()} />
+      <EntryOrdersPanel filters={filters} onFiltersChange={vi.fn()} />
     </MemoryRouter>,
   );
 }
@@ -85,6 +85,61 @@ describe('EntryOrdersPanel — load more', () => {
     mockUseEntryOrders({ hasNextPage: true });
     renderPanel();
 
+    expect(screen.getByRole('group')).toBeInTheDocument();
+  });
+});
+
+describe('EntryOrdersPanel — loading, empty and error states', () => {
+  beforeEach(() => {
+    vi.mocked(useTradingConfigs).mockReturnValue({
+      data: TRADING_CONFIGS_FOR_ENTRIES,
+    } as ReturnType<typeof useTradingConfigs>);
+  });
+
+  it('shows the table skeleton on first load and no empty-state copy', () => {
+    mockUseEntryOrders({ data: undefined, isPending: true });
+    renderPanel();
+
+    expect(screen.queryByText('No resting entries')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+  });
+
+  it('shows the global empty copy when there is no active filter', () => {
+    mockUseEntryOrders({ data: { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] } });
+    renderPanel(ENTRY_ORDERS_DEFAULT_FILTERS);
+
+    expect(screen.getByText('No resting entries')).toBeInTheDocument();
+    expect(screen.getByText('Your bots have not left any entry on the exchange yet.')).toBeInTheDocument();
+  });
+
+  it('shows the filtered empty copy when a filter is active', () => {
+    mockUseEntryOrders({ data: { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] } });
+    renderPanel({ status: 'MISSING', configId: 'ALL' });
+
+    expect(screen.getByText('No resting entries')).toBeInTheDocument();
+    expect(screen.getByText('No entry matches the filters you picked.')).toBeInTheDocument();
+  });
+
+  it('shows a distinguishable error state with a retry that calls refetch', async () => {
+    const refetch = vi.fn();
+    mockUseEntryOrders({ isError: true, refetch });
+    renderPanel();
+
+    expect(screen.getByText("We couldn't load your entries")).toBeInTheDocument();
+    expect(screen.queryByText('No resting entries')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the filters visible in the empty and error states', () => {
+    mockUseEntryOrders({ isError: true });
+    const { unmount } = renderPanel();
+    expect(screen.getByRole('group')).toBeInTheDocument();
+    unmount();
+
+    mockUseEntryOrders({ data: { pages: [{ items: [], nextCursor: null }], pageParams: [undefined] } });
+    renderPanel();
     expect(screen.getByRole('group')).toBeInTheDocument();
   });
 });

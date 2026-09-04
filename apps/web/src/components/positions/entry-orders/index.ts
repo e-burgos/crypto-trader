@@ -5,3 +5,4 @@ export * from './entry-order-level-cell';
 export * from './entry-order-outcome-cell';
 export * from './entry-orders-table';
 export * from './entry-orders-filters';
+export * from './entry-orders-panel';

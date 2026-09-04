@@ -34,7 +34,17 @@
       ],
       "test_reference": "pnpm sdd:validate en verde con sdd/catalog.json regenerado (validate-sdd.mjs:359-374 compara el catálogo contra el filesystem)",
       "status": "validated",
-      "cycle": "cycle-01"
+      "cycle": "cycle-01",
+      "usage": {
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04",
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "custom",
+        "tokens_in": 40000,
+        "tokens_out": 5000
+      }
     },
     {
       "id": "FIX-e-burgos-002",
@@ -95,7 +105,17 @@
       ],
       "test_reference": "apps/web/src/pages/dashboard/settings/data-sources.spec.tsx — los dos tests nuevos fallan contra el codigo anterior (verificado) y pasan con el fix",
       "status": "validated",
-      "cycle": "cycle-01"
+      "cycle": "cycle-01",
+      "usage": {
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04",
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-front",
+        "tokens_in": 80000,
+        "tokens_out": 10000
+      }
     },
     {
       "id": "FIX-e-burgos-003",

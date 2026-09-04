@@ -3,7 +3,11 @@
   "cycle": 1,
   "module": "agent-advanced-config-ui",
   "spec": "spec-e-burgos-009-agent-advanced-config-ui",
-  "apps": ["apps/web", "libs/shared", "libs/ui"],
+  "apps": [
+    "apps/web",
+    "libs/shared",
+    "libs/ui"
+  ],
   "phase": "shared-wire-and-advanced-config",
   "flow": "full",
   "objectives": [
@@ -115,7 +119,273 @@
           "approx": true,
           "source": "declared-estimate"
         }
-      }
+      },
+      "by_agent": [
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-back",
+          "label": "TASK-001",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 130000,
+          "tokens_out": 9000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-back",
+          "label": "TASK-002",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 55000,
+          "tokens_out": 6000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-003",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 85000,
+          "tokens_out": 6000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-004",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 110000,
+          "tokens_out": 12000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-005",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 85000,
+          "tokens_out": 9000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-006",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 55000,
+          "tokens_out": 9000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-007",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 6000,
+          "tokens_out": 2000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-008",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 5000,
+          "tokens_out": 1500
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-009",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 10000,
+          "tokens_out": 3000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-010",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 55000,
+          "tokens_out": 3000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-011",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 20000,
+          "tokens_out": 2000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-012",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 95000,
+          "tokens_out": 6000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-013",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 35000,
+          "tokens_out": 4000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-014",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 90000,
+          "tokens_out": 9000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-015",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 145000,
+          "tokens_out": 11000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "implementor-front",
+          "label": "TASK-016",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 230000,
+          "tokens_out": 14000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "orchestrator",
+          "label": "TASK-017",
+          "provider_model": "claude/fable",
+          "effort": "high",
+          "tokens_in": 12000,
+          "tokens_out": 2500
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "orchestrator",
+          "label": "TASK-018",
+          "provider_model": "claude/fable",
+          "effort": "high",
+          "tokens_in": 15000,
+          "tokens_out": 3500
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "functional",
+          "label": "functional.md",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 129000,
+          "tokens_out": 9000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "planner",
+          "label": "planner.md",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 129000,
+          "tokens_out": 9000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "architect",
+          "label": "architect.md",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 172000,
+          "tokens_out": 12000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "orchestrator",
+          "label": "cycle coordination (brief, waves, gates)",
+          "provider_model": "claude/fable",
+          "effort": "high",
+          "tokens_in": 360000,
+          "tokens_out": 18000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "reviewer",
+          "label": "cycle review and close",
+          "provider_model": "claude/fable",
+          "effort": "high",
+          "tokens_in": 540000,
+          "tokens_out": 27000
+        },
+        {
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04",
+          "agent": "custom",
+          "label": "implementor remainder not attributed to a single task",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 85000,
+          "tokens_out": 9000
+        }
+      ]
     }
   },
   "tables_created": [],

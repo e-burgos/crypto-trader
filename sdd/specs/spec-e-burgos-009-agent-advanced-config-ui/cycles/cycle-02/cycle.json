@@ -3,7 +3,11 @@
   "cycle": 2,
   "module": "agent-advanced-config-ui",
   "spec": "spec-e-burgos-009-agent-advanced-config-ui",
-  "apps": ["apps/web", "libs/shared", "libs/ui"],
+  "apps": [
+    "apps/web",
+    "libs/shared",
+    "libs/ui"
+  ],
   "phase": "resting-entries-view",
   "flow": "full",
   "objectives": [
@@ -13,17 +17,174 @@
     "Tests Vitest sobre fixtures del wire y E2E headless",
     "Cierre de la spec en dos ciclos"
   ],
-  "status": "in-progress",
+  "status": "completed",
   "started_at": "2026-09-03",
-  "completed_at": null,
+  "completed_at": "2026-09-04",
   "documents": {
-    "brief": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/brief.yaml"
+    "brief": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/tasks.json"
   },
   "artifacts": [],
-  "metrics": null,
+  "metrics": {
+    "tasks_total": 19,
+    "tasks_completed": 19,
+    "tasks_skipped": 0,
+    "story_points": 81,
+    "files_created": [
+      "apps/web/src/components/notifications/notification-utils.spec.ts",
+      "apps/web/src/components/positions/entry-orders/agent-resting-entries.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/agent-resting-entries.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-cancel-reason-legend.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-cancel-reason-legend.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-labels.spec.ts",
+      "apps/web/src/components/positions/entry-orders/entry-order-labels.ts",
+      "apps/web/src/components/positions/entry-orders/entry-order-level-cell.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-outcome-cell.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-outcome-cell.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-status-badge.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-order-status-badge.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders-filters.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders-filters.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders-panel.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders-panel.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders-table.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders-table.tsx",
+      "apps/web/src/components/positions/entry-orders/entry-orders.property.spec.tsx",
+      "apps/web/src/components/positions/entry-orders/fixtures.ts",
+      "apps/web/src/components/positions/entry-orders/index.ts",
+      "apps/web/src/hooks/use-entry-orders.spec.tsx",
+      "apps/web/src/hooks/use-entry-orders.ts",
+      "apps/web/src/hooks/use-websocket.spec.tsx",
+      "apps/web/src/pages/dashboard/positions.spec.tsx",
+      "e2e/entry-orders.spec.ts",
+      "libs/shared/src/types/entry-order-wire.spec.ts",
+      "libs/shared/src/types/entry-order-wire.ts",
+      "libs/ui/src/lib/primitives/badge.spec.tsx",
+      "sdd/context/apps/web/updates/2026-09-03-spec-e-burgos-009-cycle-02.md",
+      "sdd/context/libs/shared/updates/2026-09-03-spec-e-burgos-009-cycle-02.md",
+      "sdd/context/libs/ui/updates/2026-09-03-spec-e-burgos-009-cycle-02.md",
+      "sdd/fixes/fix-e-burgos-028.md",
+      "sdd/fixes/fix-e-burgos-029.md",
+      "sdd/memory/journal/2026-09-03-spec-e-burgos-009-cycle-02.md",
+      "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/architect.md",
+      "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/brief.yaml",
+      "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/functional.md",
+      "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/planner.md",
+      "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/cycles/cycle-02/tasks.json"
+    ],
+    "files_modified": [
+      "apps/api/src/trading/entry-order.service.spec.ts",
+      "apps/api/src/trading/entry-order.service.ts",
+      "apps/api/src/trading/trading.service.ts",
+      "apps/web/src/components/config/agent-detail-modal.tsx",
+      "apps/web/src/components/notifications/notification-utils.ts",
+      "apps/web/src/containers/notifications-dropdown.tsx",
+      "apps/web/src/hooks/use-websocket.ts",
+      "apps/web/src/locales/en.ts",
+      "apps/web/src/locales/es.ts",
+      "apps/web/src/locales/locales-parity.spec.ts",
+      "apps/web/src/pages/dashboard/positions.tsx",
+      "libs/shared/src/types/index.ts",
+      "libs/ui/src/lib/primitives/badge.tsx",
+      "sdd/api.json",
+      "sdd/catalog.json",
+      "sdd/components.json",
+      "sdd/context/constitution.md",
+      "sdd/fixes.json",
+      "sdd/fixes/fix-e-burgos-026.md",
+      "sdd/fixes/fix-e-burgos-027.md",
+      "sdd/fixes/fix-e-burgos-028.md",
+      "sdd/fixes/fix-e-burgos-029.md",
+      "sdd/global.json",
+      "sdd/specs/index.json",
+      "sdd/specs/spec-e-burgos-009-agent-advanced-config-ui/spec-e-burgos-009-agent-advanced-config-ui.spec.md",
+      "sdd/tasks.json"
+    ],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 2314000,
+      "tokens_out": 193000,
+      "duration_minutes": 210,
+      "approx": true,
+      "source": "declared-estimate",
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 1103000,
+          "tokens_out": 110000,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/fable": {
+          "tokens_in": 751000,
+          "tokens_out": 50000,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/opus": {
+          "tokens_in": 460000,
+          "tokens_out": 33000,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      }
+    }
+  },
   "tables_created": [],
   "endpoints_implemented": [],
-  "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "components_created": [
+    "COMP-018",
+    "COMP-019",
+    "COMP-020",
+    "COMP-021",
+    "COMP-022",
+    "COMP-023",
+    "COMP-024",
+    "COMP-025",
+    "COMP-026",
+    "COMP-027",
+    "COMP-028"
+  ],
+  "issues_found": [
+    "libs/ui fue tocado en el ciclo (variante aditiva info del Badge + badge.spec.tsx) y no tenia fragmento de contexto propio: TASK-018 lo contemplaba (\"+ libs/ui si se toco\") y quedo sin escribir. El reviewer escribio sdd/context/libs/ui/updates/2026-09-03-spec-e-burgos-009-cycle-02.md en el cierre; sin el, el CONTEXTO GATE no se cumplia para uno de los tres subproyectos declarados en cycle.json.apps.",
+    "El changelog de COMP-026 en components.json afirmaba que usePositions queda deshabilitada mientras la pestana activa es Entradas. Es falso: positions.tsx llama usePositions(page, PAGE_SIZE, positionsTab) con positionsTab colapsado a OPEN, sin enabled, asi que la consulta de posiciones sigue corriendo detras de la pestana Entradas. Lo unico que Entradas no renderiza es PositionsTable y el paginado por numero. No es un defecto (la consulta ya esta caliente y alimenta el efecto de deep link por positionId), pero el registro decia otra cosa: corregido en el cierre.",
+    "El fragmento de contexto de apps/web declaraba \"486+ tests\"; la medicion del cierre da 493 en 34 archivos (eran 267 al cerrar cycle-01). Corregido.",
+    "Salir de la pestana Entradas borra status, configId y entryOrderId de la URL (handleTabChange), de modo que volver a Entradas arranca sin filtros. Es coherente con la decision de que la URL es la unica fuente de verdad (no hay estado en memoria que sobreviva), y el E2E lo afirma como comportamiento esperado (\"volver a Open ... limpia status/configId de la URL\"), pero ningun criterio del funcional lo declara: queda anotado para que no se lea como regresion.",
+    "Pendiente heredado de cycle-01, no absorbido por este ciclo: agent-state-modal.tsx sigue pasando isActive: false literal a AgentStateModal de libs/ui, asi que la fila Estado muestra Detenido para un agente corriendo aunque el wire ya trae isRunning."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-04",
+    "ca_results": {
+      "CA-005": "PASS — entry-orders.property.spec.tsx verde: la matriz de casos se construye desde ENTRY_ORDER_STATUSES / ENTRY_ORDER_CANCEL_REASONS del wire (\"builds the case matrix from the wire arrays, not from hand-written pairs\"), genera 64 combinaciones estado x modo x motivo/pierna y las renderiza juntas sin lanzar (\"renders all 64 generated rows together without throwing\") mas un test por combinacion. La degradacion a neutro no es una rama de UI sino una funcion pura: resolveEntryOrderStatus / resolveEntryOrderCancelReason / resolveEntryOrderMode devuelven \"unknown\" para todo valor fuera del union, entryOrderStatusBadgeVariant mapea \"unknown\" a neutral y la etiqueta sale siempre de t(), nunca del string crudo. Verificado ademas leyendo el codigo: el fixture con expiresAt en el pasado (fixtures.ts:117) se sigue mostrando RESTING porque NINGUN componente compara fechas contra el reloj — ver hallazgo adversarial (a).",
+      "CA-006": "PASS — use-websocket.spec.tsx, 18 tests verdes. Igualdad de conjunto explicita: \"registers exactly the six events from ENTRY_ORDER_WS_EVENTS, once each — no extra, no missing\"; una invalidacion por evento y exactamente una (\"invalidates the entry-orders root exactly once for entry-order:<evento>\" x6); \"invalidates positions as well on entry-order:filled\" y su contraparte negativa \"does not invalidate positions on events other than filled\"; \"never reloads the page for any of the six events\"; \"invalidates without throwing on entry-order:skipped, which carries no entryOrderId\"; y \"never invalidates a more specific entry-orders key than the shared prefix root\", que es lo que hace que la lista y el bloque del detalle del agente se refresquen con la misma invalidacion. El hook itera ENTRY_ORDER_WS_EVENTS del wire compartido, no una lista escrita a mano (grep \"entry-order:\" en apps/web/src no devuelve ningun literal suelto en codigo de produccion: el unico es el if de filled).",
+      "CA-007": "PASS — locales-parity.spec.ts verde (13 tests): \"locale parity — positions.entries\" afirma el mismo set de claves en es/en, sin valores vacios y sin valor identico a su clave; \"positions.tabEntries exists with a non-empty, distinct value in es and en\"; y las tres de notificacion, entryOrderPlaced / entryOrderFilled / entryOrderMissing, con valor no vacio en ambos locales. Complementado por notification-utils.spec.ts (7 tests): la paridad de rutas recorre TODAS las claves del locale desde una unica fuente de datos del test (\"cada clave del locale resuelve a una ruta del dashboard\") y afirma que las claves previas conservan su ruta.",
+      "CA-008": "PASS — corrida de CI E2E Tests en el HEAD del ciclo (049710c37, run 33828611383): 200 passed, 69 skipped, 0 failed (4.9m). e2e/entry-orders.spec.ts aporta sus 10 tests, los 10 en verde: pestana visible con Open activa por default, click a Entries pasa a ?tab=entries con estado vacio y sin paginado por numero, la pastilla Missing agrega status=MISSING a la URL dejando aria-pressed, las seis pastillas visibles, el select de bot lista las configs sembradas, deep link con status=RESTING + configId preselecciona pastilla y bot, un tab invalido cae en Open sin error de consola, no hay \"cargar mas\" con la lista vacia, sonda de contrato de GET /trading/entry-orders (200 con items array y nextCursor) y volver a Open limpia status/configId. Headless, sin PLAYWRIGHT_HEADED_DEBUG y sin clave externa. El spec afirma pestana/vacio/filtros/deep-link y no el render de filas ni el paginado real porque el trader sembrado opera en SANDBOX y no puede tener entradas (H5, architect §11.3 y §13): el paginado por cursor se verifica en Vitest sobre las dos paginas del fixture.",
+      "CA-001 / CA-002 / CA-003 / CA-004 / CA-007 (cycle-01)": "Validados en cycle-01 (2026-09-03) y no revalidados aqui salvo CA-007, que este ciclo si vuelve a tocar (claves de notificacion enlazadas a la vista) y quedo verde. Las suites de cycle-01 siguen en verde en la corrida completa del cierre: apps/web 34 archivos / 493 tests, apps/api 101 suites / 930 tests."
+    },
+    "tests": {
+      "sdd:validate": "OK — 29 files valid, cross-checks passed (corrido antes de revisar y de nuevo despues de todas las actualizaciones de cierre, incluidos pnpm sdd:rebuild-tasks-index y pnpm sdd:rebuild-catalog)",
+      "lint+typecheck": "pnpm nx run-many -t lint,typecheck --all --exclude=crypto-trader => \"Successfully ran targets lint, typecheck for 11 projects\", exit 0, 0 errores (solo warnings preexistentes: 2 unused eslint-disable en apps/api-e2e). pnpm typecheck:api exit 0.",
+      "test shared": "3 archivos / 20 tests verdes",
+      "test ui": "2 archivos / 4 tests verdes",
+      "test web": "34 archivos / 493 tests verdes (eran 21 archivos / 267 tests al cerrar cycle-01)",
+      "test api": "101 suites / 930 tests verdes; auth.service.spec.ts no fallo en esta corrida",
+      "E2E (CI, HEAD 049710c37)": "E2E Tests success: 200 passed, 69 skipped, 0 failed (4.9m). Los 10 tests de e2e/entry-orders.spec.ts en verde (run 33828611383).",
+      "CI / SDD Validate / Deploy": "CI success y SDD Validate success en 049710c37. Deploy a Hetzner no se dispara en ese SHA porque solo toca sdd/ (deploy.yml filtra por apps/**, libs/**, package.json, pnpm-lock.yaml, docker-compose.prod.yml, infra/**): la ultima corrida de deploy, success en 223ce6bf7 (2026-09-04T01:56), ya contiene TODO el codigo de apps/ y libs/ del ciclo — los dos commits posteriores son e2e/ y sdd/.",
+      "produccion (verificada con la sesion del trader)": "curl https://trader.estebanburgos.com.ar/api/health => {\"status\":\"ok\",\"database\":\"up\",\"redis\":\"up\"}. POST /api/auth/login con las credenciales de .env.production (el DTO pide email, no username) => 200 con accessToken. GET /api/trading/entry-orders?limit=5 => 200 con top-level exactamente [\"items\",\"nextCursor\"], items array, nextCursor null; idem con &status=RESTING. GET /dashboard/positions?tab=entries => 200 (HTML de la SPA, sin autenticar).",
+      "probe de deriva del wire (FIX-029)": "bogusDriftProbe agregado SOLO en libs/shared (ENTRY_ORDER_WIRE_FIELDS + EntryOrderWire): pnpm typecheck:api falla con trading.service.ts(132,3) TS1360 (el satisfies del ENTRY_ORDER_SELECT) y trading.service.ts(135,3) TS2344 \"Type 'bogusDriftProbe' does not satisfy the constraint 'never'\" (AssertNoKeyDrift); pnpm nx typecheck web falla ademas en fixtures.ts:11 TS2322 y fixtures.ts:37 TS1360. Revertido: git status limpio y typecheck:api exit 0.",
+      "verificaciones de architect §15": "(1) getNotificationRoute tiene UNA sola definicion, notification-utils.ts:25 — la copia literal de containers/notifications-dropdown.tsx esta borrada en el diff y el container ahora la importa. (2) grep \"entry-order:\" en apps/web/src no devuelve literales sueltos en produccion: los handlers salen de ENTRY_ORDER_WS_EVENTS. (3) ningun archivo de apps/web declara el shape del response de EP-017 (los unicos \"interface EntryOrder*\" son Props locales y EntryOrdersFilters, que es el filtro de UI). (4) el diff no toca apps/api fuera de los dos FIX registrados y no agrega ninguna clase animate-*/transition-* ni gsap. en codigo de produccion — los unicos animate-* del diff son aserciones de test."
+    },
+    "notes": "Todo lo reportado se verifico EJECUTANDO. Los gates: sdd:validate en verde al abrir y al cerrar; lint+typecheck de los 11 proyectos con exit 0; las cuatro suites unitarias completas; los tres workflows del HEAD del ciclo mas la corrida de deploy que si contiene el codigo; la API de produccion consultada con la sesion real del trader (el login del DTO pide email, no username: la variable USER_USERNAME de .env.production es el email); y el probe de deriva del wire en la direccion que FIX-029 tenia que cubrir, revertido con git status limpio. TELEMETRIA consolidada, no reconstruida: las 19 tasks traian su usage y los dos fixes tambien. claude/sonnet (1.103M in / 110K out) son las 15 tasks de implementacion mas FIX-028 y FIX-029 (63K/11K); claude/fable (751K/50K) son TASK-013, 016, 018 y 019 mas el main loop del orquestador (declarado 700K/40K); claude/opus (460K/33K) es esta revision. Todo approx: true y source declared-estimate — en Claude Code el reporte de uso de la sesion es un comando del cliente y un agente no puede correrlo. Sin tasks skipped: 19 done sobre 19. La interrupcion del ciclo esta documentada y no dejo trabajo sin cerrar: un implementador se corto por el limite de gasto de la cuenta a mitad de una operacion de git, y el orquestador termino TASK-013, TASK-016 y TASK-019 en tier claude/fable — se ve en el usage de esas tres tasks y en los commits 3023caf62, cb4706791 y 223ce6bf7. El incidente mas caro fue de proceso, no de codigo: un implementador paralelo ejecuto git reset y un commit de archivo completo sobre el arbol compartido, barrio el spec de otra task, dejo un borrado staged y tiro un commit de registro del orquestador que hubo que rehacer; esta en el journal del ciclo con la prohibicion explicita como leccion. Regla de codigo sin comentarios: el diff de apps, libs y e2e agrega exactamente dos comentarios, los dos en e2e/entry-orders.spec.ts — el encabezado JSDoc que explica por que el spec no afirma el render de filas (el trader de CI opera en SANDBOX y no puede tener entradas) y el separador de seccion \"// ── Monitor de consola ──\". Los dos son la convencion vigente de e2e/ (agent-flow.spec.ts tiene diez separadores identicos y todos los specs llevan encabezado), la misma decision que tomo el reviewer de cycle-01; cero comentarios narrativos en apps/web, apps/api, libs/shared y libs/ui. No hizo falta commit de chore. CONTEXTO GATE: los fragmentos de apps/web y libs/shared existian y describen el codigo real; falto el de libs/ui, que este ciclo si toco (variante info del Badge), y lo escribi en el cierre — sin el, uno de los tres subprojectos declarados en cycle.json.apps quedaba sin delta. Corregi en el fragmento de apps/web el conteo de tests (declaraba 486+, la medicion da 493 en 34 archivos) y en components.json el changelog de COMP-026, que afirmaba que usePositions queda deshabilitada en la pestana Entradas cuando en realidad sigue corriendo con status colapsado a OPEN. Los archivos base de los subproyectos no se tocaron y actualice solo las tres filas propias de la tabla-snapshot de constitution.md §3 (apps/web, libs/shared, libs/ui). MEMORIA GATE: 2 entradas en journal/, por debajo del umbral de 5, asi que no hay destilacion y lessons.md queda intacto en 114 lineas. sdd/api.json no se modifico: EP-017 ya estaba implemented desde spec-005 cycle-02 y su lista de campos del response coincide clave por clave con los 24 de ENTRY_ORDER_WIRE_FIELDS — no hay discrepancia que corregir, y FIX-029 no cambio el comportamiento del endpoint (mismo objeto en runtime). sdd/schema.json tampoco: el ciclo no creo ni modifico tablas. Cierre de la spec: los dos ciclos estan completed, asi que el modulo agent-advanced-config-ui pasa a completed_modules con cycles_completed 2 y la spec a status completed en specs/index.json.",
+    "follow_ups": [
+      "Cancelar una entrada descansando desde la UI necesita un endpoint nuevo (no existe DELETE /trading/entry-orders/:id): out_of_scope declarado del brief, spec posterior si se justifica.",
+      "Consolidar los 6 fragmentos acumulados en updates/ (apps/web 2, libs/shared 2, libs/ui 2) en los archivos base de cada subproyecto. NO lo hago yo: el umbral de 5 es por directorio y ninguno lo alcanza; lo hace el orquestador al iniciar el proximo ciclo sobre esos subproyectos, en commit dedicado, o el reviewer cuando uno solo llegue a 5.",
+      "Retirar TradingConfigData de libs/shared cuando ningun consumidor la importe: sigue conviviendo con TradingConfigWire y es la unica ambiguedad sobre cual es el wire de configuracion (heredado de cycle-01).",
+      "agent-state-modal.tsx sigue pasando isActive: false literal a AgentStateModal, asi que la fila Estado muestra Detenido para un agente corriendo. El wire ya trae isRunning; es una linea pero cambia comportamiento visible: abrir fix, ya no cabe en esta spec que queda cerrada.",
+      "Consumir isWithinRanges en el stepper de alta (hoy solo la edicion hace el early-return) para que el guard de rango de D7 de cycle-01 sea simetrico entre alta y edicion.",
+      "Cuando exista un bot TESTNET en LIMIT_MAKER u OCO, revisar la pestana con datos reales: el ciclo entero se valido contra fixtures y contra el estado vacio, porque el trader de CI y el de produccion operan en SANDBOX y no pueden tener entradas (H5)."
+    ]
+  }
 }

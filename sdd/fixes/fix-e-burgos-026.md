@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]                                 |
 | **Fecha**     | 2026-09-03                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | spec-e-burgos-009-agent-advanced-config-ui (hallazgo del architect, cycle-01) |
 
 ## Problema
@@ -30,7 +30,14 @@ Bloquea el alta con configuracion avanzada de spec-009 cycle-01 y hoy hace que c
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Cerrado por el sdd-reviewer al cerrar spec-e-burgos-009 cycle-02 (2026-09-04).
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Validado originalmente al cerrar cycle-01 (2026-09-03) con
+> `trading.service.advanced-config.spec.ts` (3 tests): los 22 campos avanzados llegan a
+> `prisma.tradingConfig.create` cuando están presentes, y sin ellos el `create` reproduce el shape
+> congelado previo al fix — la equivalencia que CA-002 exige. Commit `30d056d8`.
+> Reconfirmado en el cierre de cycle-02: `apps/api` corre 101 suites / 930 tests en verde, sin
+> regresión, y `pnpm typecheck:api` sale con exit 0. Sin seguimiento pendiente.

@@ -1,6 +1,6 @@
 # Spec e-burgos-009 — Configuración avanzada del agente y entradas descansando en la SPA
 
-> **Autor:** e-burgos · **Fecha:** 2026-09-03 · **Estado:** in-progress
+> **Autor:** e-burgos · **Fecha:** 2026-09-03 · **Estado:** completed
 > **Módulo:** agent-advanced-config-ui
 > **Subproyectos:** `apps/web`, `libs/shared`, `libs/ui`
 

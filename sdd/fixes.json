@@ -1187,7 +1187,7 @@
       "severity": "low",
       "created_at": "2026-09-03",
       "resolved_at": "2026-09-03",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "Las notificaciones de entradas no traen configId ni entryOrderId: el deep-link no puede abrir la entrada exacta",
       "estimation_hours": 1,
       "description": "Los JSON de notificacion entryOrderPlaced y entryOrderFilled (apps/api/src/trading/entry-order.service.ts) no incluyen configId ni entryOrderId; solo entryOrderMissing trae entryOrderId. La vista de entradas de spec-009 cycle-02 solo puede enlazar por estado. Agregar ambos ids a los tres mensajes (aditivo; apps/web ignora claves extra).",
@@ -1199,8 +1199,8 @@
         "apps/api/src/trading/entry-order.service.ts",
         "apps/api/src/trading/entry-order.service.spec.ts"
       ],
-      "test_reference": "entry-order.service.spec.ts: entryOrderPlaced y entryOrderFilled incluyen configId y entryOrderId; test nuevo de markMissing con configId, entryOrderId y symbol; claves previas conservadas. 10 suites / 80 tests verdes; commit 4a4bd546.",
-      "status": "implemented",
+      "test_reference": "entry-order.service.spec.ts (25 tests verdes, corridos en el cierre): los payloads de entryOrderPlaced, entryOrderFilled y entryOrderMissing incluyen configId y entryOrderId con toMatchObject, y el test nuevo de markMissing afirma configId, entryOrderId y symbol conservando las claves previas. Consumido punta a punta: getNotificationRoute los agrega a la URL solo cuando el payload los trae (notification-utils.spec.ts). Commit 4a4bd546.",
+      "status": "validated",
       "cycle": "cycle-02",
       "usage": {
         "tokens_in": 28000,
@@ -1219,7 +1219,7 @@
       "severity": "low",
       "created_at": "2026-09-03",
       "resolved_at": "2026-09-03",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "El select de listEntryOrders no esta atado al wire compartido: una deriva no falla en typecheck",
       "estimation_hours": 1,
       "description": "TradingService.listEntryOrders (apps/api/src/trading/trading.service.ts) proyecta 24 campos con un select literal sin relacion de tipos con el wire de EP-017 que libs/shared publica en spec-009 cycle-02. Un satisfies (o el patron implements + ExactKeys de cycle-01) hace que agregar o quitar un campo en un solo lado falle en pnpm typecheck:api.",
@@ -1230,8 +1230,8 @@
       "affected_files": [
         "apps/api/src/trading/trading.service.ts"
       ],
-      "test_reference": "ENTRY_ORDER_SELECT satisfies Record<EntryOrderWireField,true> + AssertNoKeyDrift. Probe: una clave extra en el select falla pnpm typecheck:api con TS2353 y TS2344; revertido, typecheck limpio. Commit c01504f3.",
-      "status": "implemented",
+      "test_reference": "ENTRY_ORDER_SELECT satisfies Record<EntryOrderWireField,true> + AssertNoKeyDrift en trading.service.ts:104-137. Probe ejecutado por el reviewer en el cierre: bogusDriftProbe agregado SOLO en libs/shared (ENTRY_ORDER_WIRE_FIELDS + EntryOrderWire) => pnpm typecheck:api falla con TS1360 (satisfies) y TS2344 (AssertNoKeyDrift) en trading.service.ts:132 y :135; pnpm nx typecheck web falla ademas en fixtures.ts:11 (TS2322) y :37 (TS1360). Revertido, git status limpio y typecheck:api exit 0. Commit c01504f3.",
+      "status": "validated",
       "cycle": "cycle-02",
       "usage": {
         "tokens_in": 35000,

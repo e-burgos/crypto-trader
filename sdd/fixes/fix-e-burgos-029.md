@@ -8,7 +8,7 @@
 | **Keyword**   | [IMPROVEMENT]                                 |
 | **Fecha**     | 2026-09-03                              |
 | **Autor**     | e-burgos                                |
-| **Estado**    | implemented                             |
+| **Estado**    | validated                               |
 | **Spec**      | spec-e-burgos-009-agent-advanced-config-ui (recomendacion del architect, cycle-02) |
 
 ## Problema
@@ -29,7 +29,22 @@ Mismo mecanismo de no-deriva que cycle-01 aplico al DTO de configuracion; un tip
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Cerrado por el sdd-reviewer al cerrar spec-e-burgos-009 cycle-02 (2026-09-04).
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia — probe ejecutado y revertido por el reviewer.** El fix extrajo el `select` de
+> `listEntryOrders` a `ENTRY_ORDER_SELECT satisfies Record<EntryOrderWireField, true>` con
+> `AssertNoKeyDrift` (`trading.service.ts:104-137`), mismo objeto en runtime. Para comprobar que la
+> protección es real y no decorativa, agregué `bogusDriftProbe` **sólo en `libs/shared`**
+> (`ENTRY_ORDER_WIRE_FIELDS` + `EntryOrderWire`):
+>
+> - `pnpm typecheck:api` falla con `trading.service.ts(132,3): error TS1360` (el `satisfies` del
+>   select) y `trading.service.ts(135,3): error TS2344: Type '"bogusDriftProbe"' does not satisfy
+>   the constraint 'never'` (el `AssertNoKeyDrift`).
+> - `pnpm nx typecheck web` falla además en `fixtures.ts:11` (`TS2322`) y `fixtures.ts:37`
+>   (`TS1360`), así que la deriva tampoco pasa desapercibida del lado de la SPA.
+>
+> Revertido: `git status` limpio y `pnpm typecheck:api` exit 0. Commit `c01504f3`.
+> Sin seguimiento pendiente.

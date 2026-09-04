@@ -56,9 +56,7 @@
       "description": "Loop de ejecucion dirigido por precio, cerrado en 2 ciclos el 2026-09-01. cycle-01 (2026-08-30) entrego las cinco capas de la SALIDA: despertar por evento material sobre el stream de mercado en vivo, fast path deterministico que ejecuta reflejos sin LLM, caps duros de frecuencia fuera del alcance del LLM y deteccion de staleness del stream con fallback a temporizador + REST; todo nace apagado detras de reactiveLoopEnabled. cycle-02 (2026-09-01) cierra la asimetria empujando tambien la ENTRADA al exchange: LIMIT_MAKER colocable en el soporte, OCO de entrada (LIMIT_MAKER por debajo + STOP_LOSS_LIMIT de ruptura por arriba) y trailingDelta en BIPS sobre la pierna contingente, con la entrada persistida en la tabla entry_orders, su fill reconciliado a Position + Trade + proteccion inicial aunque el servicio haya estado caido, contabilidad en bot_actions sin doble conteo (la colocacion pasa por la puerta como BUY, el fill se audita con source EXCHANGE_TRIGGER y no alimenta los caps) y sonda de fill por tick para acortar la ventana sin proteccion. Todo detras de TradingConfig.entryOrderMode, que nace en MARKET y cierra el ciclo en MARKET: con el default el comportamiento observable es identico al previo. Verificado ejecutando contra Binance TESTNET en tres niveles -- probe crudo con fetch+HMAC, harness del cliente en libs/data-fetcher y spec integrado con Prisma real en apps/api -- sin tocar una sola clave LIVE",
       "cycles_completed": 2,
       "completed_at": "2026-09-01"
-    }
-  ],
-  "in_progress_modules": [
+    },
     {
       "module": "agent-advanced-config-ui",
       "spec": "spec-e-burgos-009-agent-advanced-config-ui",
@@ -67,10 +65,12 @@
         "libs/shared",
         "libs/ui"
       ],
-      "description": "La SPA expone 11 de los 40 campos de configuracion del bot y redeclara el wire localmente; nada consume EP-017 ni los eventos entry-order:*. cycle-01: wire unico en libs/shared y configuracion avanzada (proteccion, senal y tamano, loop reactivo, entrada) en alta, edicion y detalle, siempre apagada por defecto, con locales. cycle-02: vista de entradas descansando sobre EP-017 con tiempo real y notificaciones traducidas.",
-      "cycles_completed": 1
+      "description": "La SPA del trader queda alineada con el backend reactivo, cerrada en 2 ciclos. cycle-01 (2026-09-03) publico el wire de TradingConfig en libs/shared, borro la interface local de apps/web y expuso los 25 campos de configuracion avanzada (proteccion nativa, senal y tamano, loop reactivo, entrada) en alta, edicion y detalle del agente, siempre apagados por defecto y con las reglas de coherencia visibles (SANDBOX vs LIVE/TESTNET, OCO vs LIMIT_MAKER); descubrio y corrigio de paso que el POST persistia solo 18 de los 40 campos del DTO (FIX-026) y que un PUT con isActive respondia 500 (FIX-027). cycle-02 (2026-09-04) consumio EP-017 sin tocar un solo endpoint: tercera pestana Entradas en Posiciones con la URL como fuente de verdad (tab/status/configId/entryOrderId), filtros por estado y por bot server-side, paginado por cursor acumulado, degradacion a neutro de todo estado, motivo o modo fuera del wire, tiempo real por los seis eventos entry-order:* invalidando por prefijo, entrada RESTING vigente en el detalle del agente y las tres notificaciones de entradas enlazando a la vista con un unico getNotificationRoute. Verificado con 493 tests en apps/web (64 combinaciones generadas de estado x modo x motivo/pierna), E2E headless en CI y produccion respondiendo 200 en GET /trading/entry-orders.",
+      "cycles_completed": 2,
+      "completed_at": "2026-09-04"
     }
   ],
+  "in_progress_modules": [],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

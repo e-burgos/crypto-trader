@@ -32,7 +32,7 @@
   y nunca muestra la query string.
 - i18n: `positions.tabEntries` y el árbol `positions.entries.*` en es/en, con paridad afirmada por test.
 - `libs/ui`: variante aditiva `info` del `Badge`.
-- Tests: 486+ en `apps/web`; propiedad sobre 64 combinaciones estado × modo × motivo/pierna,
+- Tests: 493 en `apps/web` (34 archivos; eran 267 al cerrar cycle-01); propiedad sobre 64 combinaciones estado × modo × motivo/pierna,
   invalidación por igualdad de conjunto de eventos, paridad de rutas de notificación.
 
 ## Qué sigue

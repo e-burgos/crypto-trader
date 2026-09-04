@@ -1,8 +1,30 @@
 import type { TFunction } from 'i18next';
 
+interface EntryNotificationPayload {
+  key?: string;
+  configId?: string;
+  entryOrderId?: string;
+}
+
+const ENTRY_NOTIFICATION_STATUS: Record<string, string> = {
+  entryOrderPlaced: 'RESTING',
+  entryOrderFilled: 'FILLED',
+  entryOrderMissing: 'MISSING',
+};
+
+function entryOrdersRoute(
+  status: string,
+  payload: EntryNotificationPayload,
+): string {
+  const params = new URLSearchParams({ tab: 'entries', status });
+  if (payload.configId) params.set('configId', payload.configId);
+  if (payload.entryOrderId) params.set('entryOrderId', payload.entryOrderId);
+  return `/dashboard/positions?${params.toString()}`;
+}
+
 export function getNotificationRoute(type: string, message: string): string {
   try {
-    const parsed = JSON.parse(message) as { key?: string };
+    const parsed = JSON.parse(message) as EntryNotificationPayload;
     const key = parsed?.key ?? '';
 
     if (key === 'tradeBuy' || key === 'tradeSell' || key === 'manualClose') {
@@ -10,6 +32,10 @@ export function getNotificationRoute(type: string, message: string): string {
     }
     if (key === 'stopLoss' || key === 'takeProfit') {
       return '/dashboard/positions';
+    }
+    const entryStatus = ENTRY_NOTIFICATION_STATUS[key];
+    if (entryStatus) {
+      return entryOrdersRoute(entryStatus, parsed);
     }
     if (
       key === 'agentError' ||
@@ -102,7 +128,8 @@ export function routeLabel(route: string, t: TFunction): string {
     '/dashboard/config': t('sidebar.config'),
     '/dashboard': t('sidebar.overview'),
   };
-  return map[route] ?? route;
+  const pathname = route.split('?')[0];
+  return map[pathname] ?? pathname;
 }
 
 export function getMessageKey(message: string): string {

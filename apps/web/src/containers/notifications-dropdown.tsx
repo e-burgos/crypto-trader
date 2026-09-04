@@ -21,6 +21,7 @@ import { cn } from '../lib/utils';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
+import { getNotificationRoute } from '../components/notifications';
 import type { TFunction } from 'i18next';
 
 function timeAgo(iso: string): string {
@@ -54,40 +55,6 @@ const TYPE_COLORS: Record<string, string> = {
   SYSTEM: 'text-blue-500',
   ERROR: 'text-red-500',
 };
-
-function getNotificationRoute(type: string, message: string): string {
-  try {
-    const parsed = JSON.parse(message) as { key?: string };
-    const key = parsed?.key ?? '';
-    if (key === 'tradeBuy' || key === 'tradeSell' || key === 'manualClose')
-      return '/dashboard/history';
-    if (key === 'stopLoss' || key === 'takeProfit')
-      return '/dashboard/positions';
-    if (
-      key === 'agentError' ||
-      key === 'agentNoLLM' ||
-      key === 'agentNoTestnetKeys' ||
-      key === 'agentNetworkError' ||
-      key === 'agentRateLimit' ||
-      key === 'agentLlmError' ||
-      key === 'orderError'
-    )
-      return '/dashboard/config';
-  } catch {
-    /* empty */
-  }
-  switch (type) {
-    case 'TRADE_EXECUTED':
-      return '/dashboard/history';
-    case 'STOP_LOSS_TRIGGERED':
-    case 'TAKE_PROFIT_HIT':
-      return '/dashboard/positions';
-    case 'AGENT_ERROR':
-      return '/dashboard/config';
-    default:
-      return '/dashboard';
-  }
-}
 
 interface NotificationsDropdownProps {
   open: boolean;

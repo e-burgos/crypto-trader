@@ -5,6 +5,7 @@ import { TabModal } from '@crypto-trader/ui';
 import type { TradingConfigWire } from '@crypto-trader/shared';
 import { useUpdateConfig } from '../../hooks/use-trading';
 import { AgentAdvancedSummary } from './advanced/agent-advanced-summary';
+import { AgentRestingEntries } from '../positions/entry-orders/agent-resting-entries';
 
 export function AgentDetailModal({
   cfg,
@@ -149,6 +150,8 @@ export function AgentDetailModal({
       </dl>
 
       <AgentAdvancedSummary cfg={cfg} />
+
+      <AgentRestingEntries configId={cfg.id} />
     </div>
   );
 

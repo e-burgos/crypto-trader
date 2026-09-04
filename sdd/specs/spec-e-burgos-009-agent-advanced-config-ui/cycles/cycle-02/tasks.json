@@ -459,8 +459,18 @@
         "TASK-012",
         "TASK-013"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "e2e/entry-orders.spec.ts"
+      ],
+      "usage": {
+        "tokens_in": 115000,
+        "tokens_out": 9000,
+        "duration_minutes": 15,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-018",

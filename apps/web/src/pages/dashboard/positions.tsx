@@ -1,15 +1,18 @@
 import { useRef, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Briefcase,
   ChevronLeft,
   ChevronRight,
   CircleDot,
   CircleCheck,
+  Clock,
 } from 'lucide-react';
 import { Button, Tabs } from '@crypto-trader/ui';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useTranslation } from 'react-i18next';
+import { ENTRY_ORDER_STATUSES } from '@crypto-trader/shared';
 import {
   usePositions,
   useClosePosition,
@@ -22,20 +25,53 @@ import {
   CloseConfirmDialog,
   PositionsTable,
 } from '../../components/positions';
+import { EntryOrdersPanel } from '../../components/positions/entry-orders';
+import type { EntryOrdersFilters as EntryOrdersFiltersState } from '../../hooks/use-entry-orders';
 
 const PAGE_SIZE = 20;
 
-type StatusTab = 'OPEN' | 'CLOSED';
+type StatusTab = 'OPEN' | 'CLOSED' | 'ENTRIES';
+
+const TAB_PARAM: Record<StatusTab, string> = {
+  OPEN: 'open',
+  CLOSED: 'closed',
+  ENTRIES: 'entries',
+};
+
+const PARAM_TAB: Record<string, StatusTab> = {
+  open: 'OPEN',
+  closed: 'CLOSED',
+  entries: 'ENTRIES',
+};
+
+function parseTab(raw: string | null): StatusTab {
+  return (raw && PARAM_TAB[raw]) || 'OPEN';
+}
+
+function parseEntryFilters(searchParams: URLSearchParams): EntryOrdersFiltersState {
+  const status = searchParams.get('status');
+  const configId = searchParams.get('configId');
+  return {
+    status: status && (ENTRY_ORDER_STATUSES as readonly string[]).includes(status)
+      ? (status as EntryOrdersFiltersState['status'])
+      : 'ALL',
+    configId: configId ?? 'ALL',
+  };
+}
 
 export function PositionsPage() {
   const { t } = useTranslation();
   const { mode: platformMode } = usePlatformMode();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<StatusTab>('OPEN');
+  const tab = parseTab(searchParams.get('tab'));
+  const entryFilters = parseEntryFilters(searchParams);
+  const highlightEntryOrderId = searchParams.get('entryOrderId') ?? undefined;
   const [confirmPos, setConfirmPos] = useState<TradingPosition | null>(null);
   const [detailPos, setDetailPos] = useState<TradingPosition | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { data, isLoading } = usePositions(page, PAGE_SIZE, tab);
+  const positionsTab: 'OPEN' | 'CLOSED' = tab === 'CLOSED' ? 'CLOSED' : 'OPEN';
+  const { data, isLoading } = usePositions(page, PAGE_SIZE, positionsTab);
   const closePosition = useClosePosition();
 
   // Resetear página al cambiar modo global
@@ -60,8 +96,25 @@ export function PositionsPage() {
   useLivePrices(openSymbols);
 
   const handleTabChange = (next: StatusTab) => {
-    setTab(next);
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', TAB_PARAM[next]);
+    if (next !== 'ENTRIES') {
+      params.delete('status');
+      params.delete('configId');
+      params.delete('entryOrderId');
+    }
+    setSearchParams(params, { replace: true });
     setPage(1);
+  };
+
+  const handleEntryFiltersChange = (next: EntryOrdersFiltersState) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', TAB_PARAM.ENTRIES);
+    if (next.status === 'ALL') params.delete('status');
+    else params.set('status', next.status);
+    if (next.configId === 'ALL') params.delete('configId');
+    else params.set('configId', next.configId);
+    setSearchParams(params, { replace: true });
   };
 
   const handleConfirmClose = () => {
@@ -70,6 +123,17 @@ export function PositionsPage() {
       onSettled: () => setConfirmPos(null),
     });
   };
+
+  useEffect(() => {
+    if (isLoading) return;
+    const positionId = searchParams.get('positionId');
+    if (!positionId) return;
+    const match = positions.find((p) => p.id === positionId);
+    if (match) setDetailPos(match);
+    const next = new URLSearchParams(searchParams);
+    next.delete('positionId');
+    setSearchParams(next, { replace: true });
+  }, [isLoading, positions, searchParams, setSearchParams]);
 
   useGSAP(
     () => {
@@ -114,6 +178,11 @@ export function PositionsPage() {
               label: t('positions.tabClosed', { defaultValue: 'Closed' }),
               icon: <CircleCheck className="h-3.5 w-3.5" />,
             },
+            {
+              value: 'ENTRIES',
+              label: t('positions.tabEntries', { defaultValue: 'Entries' }),
+              icon: <Clock className="h-3.5 w-3.5" />,
+            },
           ]}
           value={tab}
           onChange={(v) => handleTabChange(v as StatusTab)}
@@ -121,7 +190,13 @@ export function PositionsPage() {
         />
       </div>
 
-      {isLoading ? (
+      {tab === 'ENTRIES' ? (
+        <EntryOrdersPanel
+          filters={entryFilters}
+          onFiltersChange={handleEntryFiltersChange}
+          highlightEntryOrderId={highlightEntryOrderId}
+        />
+      ) : isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="h-14 animate-pulse rounded-lg bg-muted" />
@@ -138,7 +213,7 @@ export function PositionsPage() {
       ) : (
         <PositionsTable
           positions={positions}
-          tab={tab}
+          tab={positionsTab}
           t={t}
           onDetail={setDetailPos}
           onClose={setConfirmPos}
@@ -146,7 +221,7 @@ export function PositionsPage() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {tab !== 'ENTRIES' && totalPages > 1 && (
         <div className="mt-4 flex items-center justify-center gap-2">
           <Button
             variant="ghost"

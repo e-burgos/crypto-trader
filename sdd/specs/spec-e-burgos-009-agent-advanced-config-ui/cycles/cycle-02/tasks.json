@@ -184,8 +184,25 @@
         "TASK-005",
         "TASK-006"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/positions/entry-orders/entry-order-level-cell.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-order-outcome-cell.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-order-outcome-cell.spec.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-orders-table.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-orders-table.spec.tsx",
+        "apps/web/src/components/positions/entry-orders/fixtures.ts",
+        "apps/web/src/components/positions/entry-orders/entry-order-labels.ts",
+        "apps/web/src/components/positions/entry-orders/entry-order-labels.spec.ts",
+        "apps/web/src/components/positions/entry-orders/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 150000,
+        "tokens_out": 14000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-008",
@@ -200,8 +217,19 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/positions/entry-orders/entry-orders-filters.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-orders-filters.spec.tsx",
+        "apps/web/src/components/positions/entry-orders/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 40000,
+        "tokens_out": 4000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-009",
@@ -216,8 +244,19 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/positions/entry-orders/entry-orders-panel.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-orders-panel.spec.tsx",
+        "apps/web/src/components/positions/entry-orders/index.ts"
+      ],
+      "usage": {
+        "tokens_in": 35000,
+        "tokens_out": 4000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-010",
@@ -231,8 +270,18 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "in-progress",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/web/src/components/positions/entry-orders/entry-orders-panel.tsx",
+        "apps/web/src/components/positions/entry-orders/entry-orders-panel.spec.tsx"
+      ],
+      "usage": {
+        "tokens_in": 30000,
+        "tokens_out": 4000,
+        "approx": true,
+        "source": "declared-estimate",
+        "model_tier": "claude/sonnet"
+      }
     },
     {
       "id": "TASK-011",
@@ -253,7 +302,7 @@
         "TASK-009",
         "TASK-010"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -295,7 +344,7 @@
       "depends_on": [
         "TASK-011"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -314,7 +363,7 @@
         "TASK-006",
         "TASK-007"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -329,7 +378,7 @@
       "depends_on": [
         "TASK-004"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {
@@ -344,7 +393,7 @@
       "depends_on": [
         "TASK-013"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": []
     },
     {

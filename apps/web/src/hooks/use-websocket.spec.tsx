@@ -106,4 +106,49 @@ describe('useWebSocket entry-order:* handlers', () => {
 
     expect(reloadSpy).not.toHaveBeenCalled();
   });
+
+  it('registers exactly the six events from ENTRY_ORDER_WS_EVENTS, once each — no extra, no missing', () => {
+    const registered = [...fakeSocket.handlers.keys()].filter((event) =>
+      event.startsWith('entry-order:'),
+    );
+
+    expect(new Set(registered)).toEqual(new Set(ENTRY_ORDER_WS_EVENTS));
+    expect(registered).toHaveLength(ENTRY_ORDER_WS_EVENTS.length);
+
+    for (const event of ENTRY_ORDER_WS_EVENTS) {
+      expect(fakeSocket.handlers.get(event)).toHaveLength(1);
+    }
+  });
+
+  it.each(ENTRY_ORDER_WS_EVENTS)(
+    'invalidates the entry-orders root exactly once for %s',
+    (event: EntryOrderWsEvent) => {
+      invalidateSpy.mockClear();
+      fakeSocket.emit(event);
+
+      const rootCalls = invalidateSpy.mock.calls.filter(
+        ([arg]) =>
+          Array.isArray((arg as { queryKey?: unknown[] }).queryKey) &&
+          JSON.stringify((arg as { queryKey: unknown[] }).queryKey) ===
+            JSON.stringify(['trading', 'entry-orders']),
+      );
+
+      expect(rootCalls).toHaveLength(1);
+    },
+  );
+
+  it('never invalidates a more specific entry-orders key than the shared prefix root', () => {
+    invalidateSpy.mockClear();
+    for (const event of ENTRY_ORDER_WS_EVENTS) fakeSocket.emit(event);
+
+    const entryOrdersCalls = invalidateSpy.mock.calls.filter(([arg]) => {
+      const queryKey = (arg as { queryKey?: unknown[] }).queryKey;
+      return Array.isArray(queryKey) && queryKey[0] === 'trading' && queryKey[1] === 'entry-orders';
+    });
+
+    expect(entryOrdersCalls.length).toBeGreaterThan(0);
+    for (const [arg] of entryOrdersCalls) {
+      expect((arg as { queryKey: unknown[] }).queryKey).toEqual(['trading', 'entry-orders']);
+    }
+  });
 });

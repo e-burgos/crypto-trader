@@ -16,7 +16,7 @@ export function AgentCurrentStateModal({
 
   return (
     <AgentStateModal
-      config={{ ...config, isActive: false }}
+      config={{ ...config, isActive: config.isRunning }}
       lastDecision={lastDecision}
       onClose={onClose}
       labels={{

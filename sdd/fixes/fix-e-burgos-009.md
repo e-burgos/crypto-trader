@@ -26,3 +26,13 @@ El frontend queda intacto: `apps/web/src/hooks/use-websocket.ts` sigue escuchand
 - `apps/api/src/gateway/app.gateway.spec.ts` (nuevo): `emitPriceUpdate` publica en la sala `price:{symbol}` con el nombre `price:tick`, y un segundo test toma el nombre realmente emitido y comprueba que el hook del frontend se suscribe a ese mismo nombre y que ya no queda `price:update` del lado del cliente.
 - `pnpm exec jest --config apps/api/jest.config.js apps/api/src` → suite completa en verde (682/682 en la corrida de cierre, con los 5 tests nuevos de estos dos fixes).
 - `grep -rn "price:tick\|price:update" apps libs e2e` → un unico nombre en emisor y receptor.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: app.gateway.spec.ts ancla el nombre en ambos lados: emitPriceUpdate emite price:tick a la sala price:{symbol} y el hook use-websocket.ts se suscribe a ese mismo nombre; grep en apps/libs/e2e no deja ninguna ocurrencia de…

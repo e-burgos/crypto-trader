@@ -56,3 +56,13 @@ regex enumera los metodos del camino de salida y `creditSandboxWallet` no es uno
 - `pnpm exec eslint` sobre los cinco archivos tocados — 0 errores (solo warnings `no-explicit-any` preexistentes)
 - `grep -n "PrismaService" apps/api/src/trading/trading.controller.ts` — sin resultados
 - `grep -n "\$transaction" apps/api/src/trading/trading.processor.ts` — sin resultados
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: La suite de apps/api en verde, sin PrismaService en el controller y con un solo credito de wallet sandbox

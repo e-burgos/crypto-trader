@@ -8,7 +8,7 @@
 | **Keyword**   | [BUGFIX]         |
 | **Fecha**     | 2026-08-30       |
 | **Autor**     | e-burgos         |
-| **Estado**    | implemented      |
+| **Estado**    | validated      |
 | **Spec**      | N/A (repo-level) |
 
 ## Problema
@@ -140,11 +140,13 @@ Se confirmó además, con un spec temporal que aserta
 `process.env.BINANCE_KEY_ENCRYPTION_KEY === 'ci-encryption-key-32-chars-long!'` tras correr
 `setupFiles`, que el default (`||=`) no pisa un valor ya presente en el entorno.
 
-### Decisión del Reviewer
+## Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el próximo ciclo]
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
-
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: apps/api/src/users/trader-data-sources.controller.spec.ts (UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should save encrypted key and return masked value); full apps/api suite verified gr…
 ---

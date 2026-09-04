@@ -118,4 +118,10 @@ forma intermitente. Los límites que **CA-050 acota no se tocaron**.
 
 ## Decisión del Reviewer
 
-Pendiente.
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: Verificado con ciclos REALES del agente en produccion, no solo en suite. Progresion medida: antes del fix 4 de 4 sub-agentes fallaban con 'LLM response truncated' y la decision se producia igual; con fail-closed + reason…

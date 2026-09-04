@@ -79,3 +79,13 @@ hacia con `BINANCE_KEY_ENCRYPTION_KEY`: al desaparecer los fallbacks, `auth.serv
 `apps/api/src/common/config/env.config.ts` es un archivo nuevo fuera de la lista original del fix: los
 cuatro consumidores necesitan un unico punto de acceso para no volver a divergir, y `main.ts` no sirve
 como origen porque importarlo dispararia el bootstrap.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: pnpm exec jest --config apps/api/jest.config.js apps/api/src (673/673 green); pnpm nx build api ok; boot without JWT_SECRET exits 1 with the missing-variable list; grep -rn "dev-secret|dev-refresh-secret" apps/api/src re…

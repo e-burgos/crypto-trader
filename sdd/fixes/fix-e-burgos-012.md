@@ -95,3 +95,13 @@ Anotado y **no arreglado a proposito**: arreglar el despliegue actual (Railway +
 - **Drift entre migraciones y `schema.prisma`.** Con la base ya migrada, `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma` reporta que `bot_actions` tiene dos indices con nombre distinto al que genera el schema (`idx_bot_actions_config_occurred` vs `bot_actions_configId_occurredAt_idx`). Es cosmetico hoy, pero mientras exista drift la afirmacion "CI valida el esquema de produccion" no es del todo cierta. Un paso de drift-check es el cierre natural de (e), en otro fix.
 - **El lint por proyecto no cubre el repo entero.** `run-many --target=lint --all` corre `eslint .` dentro de cada proyecto, asi que los directorios que no pertenecen a ninguno quedan afuera. `eslint .` desde la raiz ve 781 archivos y encuentra 7 errores que el gate no mira: `@typescript-eslint/no-empty-function` en `e2e/page-objects/chat-page.ts:56` y seis `no-empty` en `sdd/docs/` (`app.js`, un bundle del visor que deberia estar en `ignores`). El caso que importa es `e2e/`: son 24 specs de Playwright, codigo de test real, sin ningun lint encima. Cerrarlo pide decidir antes que hacer con `sdd/docs/`, y eso es otro fix.
 - `nx.json` tiene `"analytics": true`: cada corrida de Nx intenta llegar a `www.google-analytics.com`. En un runner con egress restringido son reintentos y latencia por tarea.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: GitHub Actions no se puede ejecutar desde el entorno de trabajo, asi que cada comando del workflow se verifico localmente tal cual quedo escrito contra un PostgreSQL 16 con pgvector y un Redis reales: prisma migrate depl…

@@ -56,3 +56,13 @@ Fuera de alcance a proposito: `POST /trading/trigger-analysis` no se gateo — c
 - `apps/api/src/chat/chat.start-agent-ceiling.spec.ts` (nuevo, 2 tests): la rama de `start_agent` que no delega en `TradingService` respeta el mismo techo.
 - `pnpm exec jest --config apps/api/jest.config.js apps/api/src` → 720/720 (682 de linea base + 38 nuevos entre este fix y FIX-e-burgos-010).
 - `pnpm nx build api` compila; `pnpm nx lint api` sin errores.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: trading.service.platform-mode-ceiling.spec.ts: startAgent rechaza un bot LIVE con la plataforma en SANDBOX y en TESTNET sin tocar la cola ni isRunning, arranca el bot cuyo modo coincide y arranca un bot SANDBOX con la pl…

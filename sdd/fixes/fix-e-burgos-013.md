@@ -92,4 +92,10 @@ El verificador vuelve a pasar con la tabla vacía tras limpiar el documento de p
 
 ## Decisión del Reviewer
 
-Pendiente.
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: Verificado contra la base de produccion, no en local. Antes del fix: information_schema devolvia solo 'embedding :: jsonb' y pg_indexes no listaba ningun indice vectorial. Despues: verify-pgvector-index.sh pasa sus 5 che…

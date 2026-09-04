@@ -62,3 +62,13 @@ cablear, que era el atajo, no una propiedad del sistema:
   (`trading.module.ts`); los otros dos son `EVALUATION_QUEUE` y `DOCUMENT_PROCESSING_QUEUE`
 - `grep -rn "new StreamHealthService" apps/api/src` → sin ocurrencias en `trading/`; quedan la
   `useFactory` de `reactive.module.ts` (composition root) y las construcciones de su unit test
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: La suite de apps/api en verde y una sola instancia resuelta por DI para StreamHealthService y para la cola

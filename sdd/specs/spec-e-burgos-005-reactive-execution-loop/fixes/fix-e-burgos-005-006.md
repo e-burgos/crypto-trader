@@ -30,3 +30,13 @@ Los dos eventos dejan de emitirse por `emitToAll` y pasan por `AppGateway.emitTo
 - `stream-health.service.spec.ts`: la transicion llega solo a los usuarios con un bot corriendo ese simbolo (deduplicados) y a nadie cuando no hay ninguno.
 - `pnpm exec jest --config apps/api/jest.config.js apps/api/src` → suite completa en verde (682/682 en la corrida de cierre, con los 5 tests nuevos de estos dos fixes).
 - `grep -rn "emitToAll" apps/api/src/reactive/*.service.ts` → sin coincidencias.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: material-event.service.spec.ts verifica que cada dueno recibe solo el adelanto de su propia config y que emitToAll no se llama; stream-health.service.spec.ts verifica que market:stream-health solo llega a los usuarios co…

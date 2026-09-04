@@ -47,3 +47,13 @@ del test de `trading.processor.reactive-window.spec.ts` que describia el fallbac
 - `pnpm exec jest --config apps/api/jest.config.js apps/api/src` — 78 suites / 670 tests en verde
 - `pnpm nx build api --skip-nx-cache` — compila
 - `grep -rn "PassthroughActionGate" apps/api/src` — sin resultados
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: Los 11 specs de trading en verde con la factoria compartida y sin ningun parametro opcional en el constructor

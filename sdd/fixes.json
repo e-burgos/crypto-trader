@@ -176,7 +176,7 @@
       "severity": "medium",
       "created_at": "2026-08-30",
       "resolved_at": "2026-08-30",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "Un clon fresco no puede correr los tests de apps/api: BINANCE_KEY_ENCRYPTION_KEY no tiene default en el setup de Jest",
       "estimation_hours": 0.5,
       "description": "Detectado por el sdd-reviewer al cerrar spec-e-burgos-005 cycle-01. apps/api/src/users/trader-data-sources.controller.spec.ts falla en todo clon fresco del repo: getKey() (apps/api/src/users/utils/encryption.util.ts:8-13) exige BINANCE_KEY_ENCRYPTION_KEY con exactamente 32 caracteres, y apps/api/jest.config.js no declara setupFiles ni globalSetup que le den un default. En CI pasa porque ci.yml:48 la define en el env del job (FIX-e-burgos-003); en la maquina del autor pasa porque sale del .env; en un clon nuevo no existe y la suite queda 665/666. .env.example:19 la documenta con el placeholder '<exactly-32-chars-secret-key-here>', que ni siquiera tiene 32 caracteres, asi que copiar .env.example tampoco arregla la corrida. Reproducido por el reviewer con: env -u BINANCE_KEY_ENCRYPTION_KEY pnpm exec jest --config apps/api/jest.config.js apps/api/src/users/trader-data-sources.controller.spec.ts -> 1 failed / 4 passed. Es la tercera aparicion de la misma familia que FIX-e-burgos-003 (ci.yml) y FIX-e-burgos-004 (e2e.yml): aquellos corrigieron el VALOR de la clave en los workflows, ninguno la AUSENCIA de un default para la corrida local. Solucion propuesta: apps/api/src/test-setup.ts con process.env.BINANCE_KEY_ENCRYPTION_KEY ||= <32 chars> (solo si no viene del entorno, para no pisar el de CI), declarado como setupFiles en apps/api/jest.config.js, y placeholder de .env.example corregido a 32 caracteres reales.",
@@ -193,7 +193,7 @@
         "sdd/fixes/fix-e-burgos-005.md"
       ],
       "test_reference": "apps/api/src/users/trader-data-sources.controller.spec.ts (UsersController — Trader Data Sources (Phase B) › setMyDataSourceCredential › should save encrypted key and return masked value); full apps/api suite verified green 669/669 both with the var unset and with it pre-set to a different 32-char value",
-      "status": "implemented",
+      "status": "validated",
       "cycle": null,
       "usage": {
         "tokens_in": 55000,
@@ -235,10 +235,11 @@
         "approx": true,
         "source": "declared-estimate"
       },
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-001",
-      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-001.md"
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-001.md",
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -259,7 +260,7 @@
         "apps/api/src/reactive/stream-health.service.spec.ts"
       ],
       "test_reference": "Test que fuerza el rechazo de la escritura y verifica que la siguiente pasada vuelve a intentar la notificacion",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-002",
       "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-002.md",
@@ -269,7 +270,8 @@
         "model_tier": "claude/opus",
         "approx": true,
         "source": "declared-estimate"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -302,7 +304,7 @@
         "apps/api/src/trading/trading.processor.sizing.spec.ts"
       ],
       "test_reference": "Los 11 specs de trading en verde con la factoria compartida y sin ningun parametro opcional en el constructor",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-003",
       "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-003.md",
@@ -312,7 +314,8 @@
         "model_tier": "claude/opus",
         "approx": true,
         "source": "declared-estimate"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -335,7 +338,7 @@
         "apps/api/src/trading/position-action.service.ts"
       ],
       "test_reference": "La suite de apps/api en verde, sin PrismaService en el controller y con un solo credito de wallet sandbox",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-004",
       "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-004.md",
@@ -346,7 +349,8 @@
         "approx": true,
         "source": "declared-estimate",
         "model_tier": "claude/opus"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -367,7 +371,7 @@
         "apps/api/src/orchestrator/cost-harness/reactive-cost-harness.spec.ts"
       ],
       "test_reference": "El harness reactivo con al menos 3 escenarios que adelantan, cubriendo los tres tipos de evento, y el harness hermano en verde",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "usage": {
         "tokens_in": 128000,
@@ -377,7 +381,8 @@
         "model_tier": "claude/opus"
       },
       "id": "FIX-e-burgos-005-005",
-      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-005.md"
+      "fix_document": "sdd/specs/spec-e-burgos-005-reactive-execution-loop/fixes/fix-e-burgos-005-005.md",
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -386,7 +391,7 @@
       "related_modules": [
         "platform-security"
       ],
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-006",
       "spec_id": null,
@@ -409,7 +414,8 @@
         "approx": true,
         "source": "declared-estimate",
         "model_tier": "claude/opus"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -418,7 +424,7 @@
       "related_modules": [
         "platform-security"
       ],
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-007",
       "spec_id": null,
@@ -446,7 +452,8 @@
         "model_tier": "claude/opus",
         "approx": true,
         "source": "declared-estimate"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -455,7 +462,7 @@
       "related_modules": [
         "platform-security"
       ],
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-008",
       "spec_id": null,
@@ -480,7 +487,8 @@
         "approx": true,
         "source": "declared-estimate",
         "model_tier": "claude/opus"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -489,7 +497,7 @@
       "related_modules": [
         "platform-security"
       ],
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-009",
       "spec_id": null,
@@ -511,7 +519,8 @@
         "approx": true,
         "source": "declared-estimate",
         "model_tier": "claude/opus"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "author": "e-burgos",
@@ -520,7 +529,7 @@
       "related_modules": [
         "reactive-execution-loop"
       ],
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "id": "FIX-e-burgos-005-006",
       "spec_id": "spec-e-burgos-005-reactive-execution-loop",
@@ -542,7 +551,8 @@
         "approx": true,
         "source": "declared-estimate",
         "model_tier": "claude/opus"
-      }
+      },
+      "validated_at": "2026-09-04"
     },
     {
       "id": "FIX-e-burgos-010",
@@ -553,7 +563,7 @@
       "severity": "medium",
       "created_at": "2026-08-31",
       "resolved_at": "2026-08-31",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "Endpoints con @Body() de tipo inline saltean el ValidationPipe global: entran campos arbitrarios",
       "estimation_hours": 2,
       "description": "main.ts monta un ValidationPipe global con whitelist y forbidNonWhitelisted, la defensa contra asignacion masiva. El ValidationPipe solo valida cuando el metatype del parametro es una clase con metadata de class-validator: si el @Body() se tipa con un objeto inline el metatype es Object, el pipe hace short-circuit y el body entra crudo, sin validacion de tipos ni descarte de campos de mas. La auditoria lo detecto en apps/api/src/admin/data-sources.controller.ts y el barrido del backend encontro el mismo patron en 8 endpoints repartidos en 5 controllers (admin/data-sources x3, users x1, trading x2, chat x1, market x1). Cada uno debe pasar a una clase DTO con decoradores de class-validator.",
@@ -576,7 +586,7 @@
         "apps/api/src/common/body-dto-validation.spec.ts"
       ],
       "test_reference": "apps/api/src/common/body-dto-validation.spec.ts: corre el ValidationPipe global real (whitelist + forbidNonWhitelisted) contra las 8 clases DTO nuevas — acepta el body legitimo, rechaza el body con campos no declarados y rechaza el body mal tipado o fuera de rango; ademas un guard estatico recorre todos los *.controller.ts de apps/api/src y falla si algun @Body() queda tipado con algo que no sea una clase *Dto",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "usage": {
         "tokens_in": 210000,
@@ -596,7 +606,7 @@
       "severity": "medium",
       "created_at": "2026-08-31",
       "resolved_at": "2026-08-31",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "El modo de plataforma del usuario no se hace cumplir: se puede crear y arrancar un bot por encima de el",
       "estimation_hours": 3,
       "description": "User.platformOperationMode (SANDBOX/TESTNET/LIVE) se valida al cambiarlo -- users.service.ts exige las keys de Binance del modo destino -- pero ningun punto del backend impide crear, editar o arrancar una TradingConfig cuyo mode sea mas riesgoso que el modo de plataforma del usuario. trading.service.ts createConfig, updateConfig y startAgent nunca leen platformOperationMode. Hoy el modo de plataforma es una preferencia de interfaz, no un limite: el frontend lo fuerza en el formulario de alta y detiene los agentes del modo saliente antes de cambiarlo, pero un request directo a la API salta esas dos barreras.",
@@ -615,7 +625,7 @@
         "apps/api/src/chat/chat.start-agent-ceiling.spec.ts"
       ],
       "test_reference": "trading.service.platform-mode-ceiling.spec.ts: startAgent rechaza un bot LIVE con la plataforma en SANDBOX y en TESTNET sin tocar la cola ni isRunning, arranca el bot cuyo modo coincide y arranca un bot SANDBOX con la plataforma en LIVE (techo, no igualdad); createConfig rechaza la config LIVE bajo plataforma SANDBOX; updateConfig rechaza subir el modo por encima del techo. users.service.platform-mode-ceiling.spec.ts: no se puede bajar el modo de plataforma con agentes corriendo por encima del techo nuevo. chat.start-agent-ceiling.spec.ts: la rama de start_agent que no delega en TradingService tambien respeta el techo",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "usage": {
         "tokens_in": 210000,
@@ -635,7 +645,7 @@
       "severity": "high",
       "created_at": "2026-08-31",
       "resolved_at": "2026-08-31",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "CI no protege casi nada: lint con || true, tests solo de api, sin typecheck, y valida un esquema que produccion no usa",
       "estimation_hours": 4,
       "description": "Seis huecos verificados en .github/workflows/. (a) ci.yml:78 terminaba en || true, asi que ningun error de ESLint podia fallar el job. (b) La auditoria reporto que apps/api y apps/web no se lintean por falta de eslint.config propio: es falso positivo, @nx/eslint/plugin infiere el target lint desde la config de la raiz y la corrida procesa 268 archivos en apps/api y 250 en apps/web. (c) ci.yml:81 corria solo pnpm nx test api; los tests de web y de las 5 libs con vite.config.mts no corrian nunca pese a existir el script test:all. (d) Ningun workflow corria typecheck, y el script estaba doblemente roto: run-many --all incluia al proyecto raiz crypto-trader, cuyo target typecheck reinvoca el mismo script (recursion, medida en 34 tsc concurrentes sin terminar a los 10 min), y apps/api no tiene target typecheck asi que el gate cubria 0% del backend. (e) ci.yml:75 y e2e.yml:77 aplicaban el esquema con prisma db push --accept-data-loss mientras produccion corre prisma migrate deploy: las 37 migraciones no se ejercitaban en ningun workflow. (f) e2e.yml estaba restringido a workflow_dispatch por dos motivos ya resueltos (falta /api/health, falta seed E2E), pero ademas le faltaba prisma generate --el cliente esta gitignoreado-- y sus credenciales por defecto (e2e@test.com) no existen en el seed.",
@@ -650,7 +660,7 @@
         "package.json"
       ],
       "test_reference": "GitHub Actions no se puede ejecutar desde el entorno de trabajo, asi que cada comando del workflow se verifico localmente tal cual quedo escrito contra un PostgreSQL 16 con pgvector y un Redis reales: prisma migrate deploy aplica las 37 migraciones (y falla con P3018 sobre postgres:16-alpine, lo que prueba que el cambio a pgvector/pgvector:pg16 es obligatorio), prisma db seed crea los 4 usuarios de e2e/, GET /api/health devuelve 200, POST /api/auth/login da 200 con trader@cryptotrader.dev y 401 con el default viejo e2e@test.com, lint --all da 0 errores en 11 proyectos, test:all con CI=true da 1126 tests en 7 proyectos sin colgarse en watch, y pnpm typecheck termina y reporta los 5 errores preexistentes en vez de recursar",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-01",
       "usage": {
         "tokens_in": 210000,
@@ -669,7 +679,7 @@
       "severity": "medium",
       "created_at": "2026-09-01",
       "resolved_at": "2026-09-01",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "El indice vectorial del RAG no existe: una migracion de Prisma borro la columna pgvector",
       "estimation_hours": 3,
       "description": "La migracion 20260413130000_add_agent_definitions_rag creo por SQL crudo la columna agent_document_chunks.embedding_vec vector(1024) y su indice ivfflat. La migracion siguiente, 20260413184109_add_platform_operation_mode, las BORRO a las dos: su cabecera lo declara ('You are about to drop the column embedding_vec ... All the data in the column will be lost') y su cuerpo hace DROP INDEX mas ALTER TABLE DROP COLUMN. Fue dano colateral de una migracion autogenerada: Prisma no conocia esa columna porque la creo SQL crudo y no estaba en schema.prisma, asi que al regenerar el diff la elimino. El nombre de la migracion no menciona embeddings. Verificado contra la base de produccion: information_schema devuelve solo 'embedding :: jsonb' y pg_indexes no lista ningun indice vectorial. rag.service.ts intenta pgvector y cae a coseno EN MEMORIA sobre los embeddings en JSON, camino por el que viene corriendo en silencio desde entonces. El comentario del modelo Prisma sigue afirmando 'pgvector column added via raw migration', que es lo que impidio detectarlo.",
@@ -684,7 +694,7 @@
         "infra/scripts/verify-pgvector-index.sh"
       ],
       "test_reference": "Verificado contra la base de produccion, no en local. Antes del fix: information_schema devolvia solo 'embedding :: jsonb' y pg_indexes no listaba ningun indice vectorial. Despues: verify-pgvector-index.sh pasa sus 5 chequeos (extension instalada, columna presente, tipo exacto vector(1024), indice ivfflat existente y cero chunks con embedding pero sin vector). Con 2 chunks reales indexados desde OpenRouter se midio vector_dims=1024, vector_norm=1.0001 y la consulta nativa de coseno (1 - (a.embedding_vec <=> b.embedding_vec)) devolvio 0.4720, o sea que el operador de pgvector opera sobre datos reales y no sobre NULLs. El backfill desde el jsonb poblo las 2 filas preexistentes. El verificador vuelve a pasar con la tabla vacia tras limpiar el documento de prueba. prisma generate sigue funcionando con la columna Unsupported.",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-02",
       "usage": {
         "tokens_in": 95000,
@@ -703,7 +713,7 @@
       "severity": "critical",
       "created_at": "2026-09-01",
       "resolved_at": "2026-09-01",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "El gate de riesgo AEGIS falla ABIERTO: si el LLM trunca, el veredicto queda en PASS a tamano completo",
       "estimation_hours": 4,
       "description": "Reproducido en produccion con un ciclo real del agente. Los cuatro sub-agentes (risk, operations, market, blockchain) fallaron con 'LLM response truncated' y AUN ASI se produjo una decision (cmtj2x3ef000h01qgsohx5bih) con 4 evaluaciones agendadas. Causa raiz medida contra OpenRouter con el prompt real: los modelos configurados en admin_agent_configs son de RAZONAMIENTO y consumen todo el presupuesto en tokens de pensamiento antes de emitir el JSON. deepseek/deepseek-v4-pro (agente risk) devuelve finish_reason=length con 350/350 tokens, 1361 caracteres de reasoning y contenido de CERO caracteres; minimax/minimax-m2.7 (blockchain) igual con 1239 caracteres de reasoning. Los limites de AGENT_TASK_MAX_TOKENS (risk_gate 350, sizing_suggestion 350, news_sentiment 500, macro_context 600) se dimensionaron para modelos sin razonamiento. La consecuencia es la grave: aegis-verdict.schema.ts declara verdict con .catch('PASS') y positionSizeMultiplier con .catch(1), asi que una respuesta vacia recorre safeParseJson(raw,{}) -> {} -> defaults del schema -> PASS a tamano completo. Un gate de riesgo que ante su propio fallo autoriza la operacion al maximo es exactamente lo contrario de un gate.",
@@ -723,7 +733,7 @@
         "libs/analysis/src/lib/llm/openrouter.provider.spec.ts"
       ],
       "test_reference": "Verificado con ciclos REALES del agente en produccion, no solo en suite. Progresion medida: antes del fix 4 de 4 sub-agentes fallaban con 'LLM response truncated' y la decision se producia igual; con fail-closed + reasoning apagado quedaron 2 fallando (confianza 0.82); con el reintento para minimax quedo 1 (0.84); con news_sentiment en 1500 quedaron CERO fallados y confianza 0.88. Mediciones contra OpenRouter con el prompt real: deepseek-v4-pro sin tocar da finish_reason=length 350/350 con 1361 chars de reasoning y 0 de contenido, y con reasoning.enabled=false da finish=stop en 136 tokens con JSON valido. reasoning.exclude=true NO sirve: deja contenido vacio en 350/350 porque solo oculta el razonamiento, el modelo igual lo genera y se cobra. minimax-m2.7 responde 400 'Reasoning is mandatory for this endpoint and cannot be disabled', de ahi el reintento sin el flag. Suites: 751/751 en apps/api (87 suites) y 161/161 en libs/analysis, typecheck y lint en verde. CA-050 (risk_gate 300-400) intacto y el harness de costo CA-060/CA-061 sigue pasando.",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-02",
       "usage": {
         "tokens_in": 340000,
@@ -742,7 +752,7 @@
       "severity": "medium",
       "created_at": "2026-09-01",
       "resolved_at": "2026-09-01",
-      "validated_at": null,
+      "validated_at": "2026-09-04",
       "title": "El costo LLM no se guarda en las decisiones disparadas a mano: el dashboard subreporta",
       "estimation_hours": 1,
       "description": "TradingService.triggerAnalysis llama a orchestrateDecision, que devuelve llmCostUsd y llmCallCount, pero su prisma.agentDecision.create OMITE los dos campos. El camino programado (trading.processor.ts:522) si los persiste. Resultado: toda decision disparada desde el boton de analisis manual queda con llmCostUsd NULL y sin llmCallCount, asi que el dashboard de costo subreporta sin ningun error. Medido en produccion: de 5 decisiones reales, la unica con costo ($0.0038725) es la del ciclo programado; las 4 de trigger-analysis quedaron en NULL, pese a que OpenRouter SI publica tarifa para los cinco modelos configurados (verificado contra su catalogo). Es el hallazgo C de spec-001 reapareciendo por un camino que aquel ciclo no cubrio: metadata.manualTrigger:true muestra que se penso distinguir ese origen, pero el costo se olvido.",
@@ -756,7 +766,7 @@
         "apps/api/src/trading/trading.service.trigger-analysis.spec.ts"
       ],
       "test_reference": "Verificado en produccion con dos decisiones reales creadas por el MISMO endpoint. Antes: conf 0.88, llmCostUsd NULL, llmCallCount 0, manualTrigger true. Despues: conf 0.72, llmCostUsd 0.006398032088, llmCallCount 5, manualTrigger true. El guard estatico trading.service.trigger-analysis.spec.ts (4 asserts) exige que el create persista llmCostUsd y llmCallCount, que use ?? null y NO ?? 0 para el costo —la columna es nullable justamente para distinguir 'gratis' de 'no se pudo tarifar'— y que los contadores caigan a 0 porque su columna es Int no-nullable. Suite completa 755/755 en 88 suites, typecheck y lint en verde.",
-      "status": "implemented",
+      "status": "validated",
       "cycle": "cycle-03",
       "usage": {
         "tokens_in": 120000,

@@ -73,4 +73,10 @@ detectó ejecutar el endpoint contra producción, no el typecheck: Prisma tipa e
 
 ## Decisión del Reviewer
 
-Pendiente.
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: Verificado en produccion con dos decisiones reales creadas por el MISMO endpoint. Antes: conf 0.88, llmCostUsd NULL, llmCallCount 0, manualTrigger true. Despues: conf 0.72, llmCostUsd 0.006398032088, llmCallCount 5, manu…

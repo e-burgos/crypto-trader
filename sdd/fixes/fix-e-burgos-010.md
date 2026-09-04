@@ -55,3 +55,13 @@ Dos decisiones de alcance:
 - El mismo spec cierra con un guard estatico que recorre todos los `*.controller.ts` de `apps/api/src` y falla si algun `@Body()` vuelve a quedar tipado con algo que no sea una clase `*Dto` — la regresion no puede reintroducirse en silencio.
 - `pnpm exec jest --config apps/api/jest.config.js apps/api/src` → 720/720 (682 de linea base + 38 nuevos entre este fix y FIX-e-burgos-011).
 - `pnpm nx build api` compila; `pnpm nx lint api` sin errores.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: apps/api/src/common/body-dto-validation.spec.ts: corre el ValidationPipe global real (whitelist + forbidNonWhitelisted) contra las 8 clases DTO nuevas — acepta el body legitimo, rechaza el body con campos no declarados y…

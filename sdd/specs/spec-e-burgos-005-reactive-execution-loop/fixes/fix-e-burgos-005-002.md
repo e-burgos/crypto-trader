@@ -73,9 +73,12 @@ Test Suites: 78 passed, 78 total
 Tests:       671 passed, 671 total
 ```
 
-## Decision del Reviewer
+## Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el proximo ciclo]
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
-> - [ ] `absorbed` — debe formalizarse en proxima spec: SPEC-XXX
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: Test que fuerza el rechazo de la escritura y verifica que la siguiente pasada vuelve a intentar la notificacion

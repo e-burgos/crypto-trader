@@ -40,3 +40,13 @@ Los escenarios nuevos NO entran en `SCENARIOS`: `llm-cost-harness.spec.ts` verif
 - `pnpm exec jest --config apps/api/jest.config.js apps/api/src/orchestrator` -> 10 suites, 104 tests en verde (102 previos + 2 asserts nuevos), con el harness hermano incluido.
 - No-vacuidad: 3 adelantos sobre 14 escenarios — `broken-price-spike` (PRICE_MOVED), `level-break-under-price-threshold` (LEVEL_BREAK), `volume-spike-with-flat-price` (VOLUME_SPIKE).
 - Assert nuevo por tipo: cada escenario que adelanta matchea el tipo declarado en `EXPECTED_ADVANCE_EVENT`, y el conjunto de tipos ejercitados es exactamente los tres.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: El harness reactivo con al menos 3 escenarios que adelantan, cubriendo los tres tipos de evento, y el harness hermano en verde

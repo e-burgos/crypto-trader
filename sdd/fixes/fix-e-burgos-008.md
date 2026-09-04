@@ -70,3 +70,13 @@ sin ser throttleados.
   y `REDIS_URL`).
 - El limite es por IP, no por cuenta: no frena un ataque de password spraying distribuido. El
   complemento natural es un lockout o backoff por cuenta, fuera del alcance de este fix.
+
+## Decisión del Reviewer
+
+> Validado el 2026-09-04 en la limpieza de deuda de proceso post-cierre de ciclos (los ciclos que debían validarlo ya estaban cerrados).
+>
+> - [x] `validated` — fix correcto, no requiere seguimiento
+> - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
+>
+> **Evidencia.** Fix mergeado en `main` (36a89c135). Suite de `apps/api` en verde sobre ese commit: 101 suites, 930 tests.
+> Referencia de test declarada al resolverlo: apps/api/src/auth/auth.rate-limit.spec.ts

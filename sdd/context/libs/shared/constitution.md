@@ -1,7 +1,7 @@
 # Constitución — libs/shared
 
-> Versión 1.4 | Última actualización: cycle-02 | Fecha: 2026-09-03
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-005 cycle-02 (2026-09-01)
+> Versión 1.5 | Última actualización: cycle-02 | Fecha: 2026-09-04
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-005 cycle-02 (2026-09-01) + spec-e-burgos-009 cycle-01 (2026-09-03) + spec-e-burgos-009 cycle-02 (2026-09-04)
 
 ## 1. Propósito
 
@@ -26,9 +26,14 @@
 - `IndicatorSnapshot` (`src/types/interfaces.ts`) **no tiene `close`** — solo `Candle` lo tiene. Al consumirlo, pasar el precio de cierre explícito desde el último candle; no castear esperando un campo que en runtime nunca está poblado.
 - **Vocabulario de órdenes de entrada** (spec-005 cycle-02), junto a `ExchangeOrderState`/`ExchangeOrderStatus` y por la misma razón (que `libs/trading-engine` tipe su port sin depender de `libs/data-fetcher`): `EntryOrderMode` (`MARKET | LIMIT_MAKER | OCO`), `RestingEntryMode`, `EntryOrderLeg` (`LIMIT | STOP`), `EntryOrderRequest`, `EntryOrderRef`, `EntryOrderResult`, `EntryOrderExchangeState` (`RESTING | FILLED | CANCELLED | MISSING` — sin `EXPIRED`: el vencimiento es regla del bot, no del exchange) y `EntryOrderExchangeStatus` (con `partial`, `remainingQuantity`, `filledLeg`). El nombre es deliberado: `EntryOrderStatus` es el enum de Prisma y ambos conviven en `reconciliation.service.ts` de `apps/api`.
 
+- `src/types/trading-config-wire.ts` (spec-009 cycle-01): el wire completo de configuración del bot vive acá y sólo acá. `TradingConfigWire` (respuesta de `GET/POST/PUT /trading/config`), `CreateTradingConfigInput` (espejo exacto de los 40 campos de `CreateTradingConfigDto`), `UpdateTradingConfigInput` (38: sin `asset` ni `pair`; `isActive` ya no existe en el DTO tras FIX-e-burgos-027) y `UpdateTradingConfigPayload` (lo que emite la UI: omite `mode` y admite `null` para limpiar `maxPositionHoldMinutes` y `entryTrailingDeltaBips`). Uniones `TradingAssetWire`, `TradingQuoteWire`, `TradingModeWire`, `TradingIntervalModeWire`, `TradingRiskProfileWire`; `entryOrderMode` reusa `EntryOrderMode`.
+- Particiones `TRADING_CONFIG_BASE_FIELDS` (15) y `TRADING_CONFIG_ADVANCED_FIELDS` (25) con sus tipos derivados, y los helpers de compilación `ExactKeys`/`AssertNoKeyDrift`: `apps/api` ata sus DTOs con `implements` + un alias de exactitud de claves, y `apps/web` deriva su catálogo y su draft de la partición. **Un campo agregado en un solo lado rompe el typecheck** (`TS2344`). `TradingConfigData` (14 campos, previa) sigue existiendo para los consumidores viejos; los nuevos usan el wire.
+- `src/types/entry-order-wire.ts` (spec-009 cycle-02): el wire de EP-017 (`GET /trading/entry-orders`). `EntryOrderWire` (los 24 campos del `select` de `listEntryOrders`, fechas como ISO string), `EntryOrderStatusWire` (`RESTING | FILLED | CANCELLED | EXPIRED | MISSING`, distinto de `EntryOrderExchangeState` que no tiene `EXPIRED`), `EntryOrderCancelReasonWire` (8 motivos), `EntryOrdersPageWire { items, nextCursor }`, `ListEntryOrdersQuery`; reusa `EntryOrderMode`, `EntryOrderLeg` y `TradingModeWire`. Listas congeladas para exhaustividad en la UI: `ENTRY_ORDER_STATUSES`, `ENTRY_ORDER_CANCEL_REASONS`, `ENTRY_ORDER_WIRE_FIELDS` (24), `ENTRY_ORDER_WS_EVENTS` (los seis `entry-order:*`). `apps/api` ata su `select` con `ENTRY_ORDER_SELECT satisfies Record<EntryOrderWireField, true>` (FIX-e-burgos-029).
+
 ## 4. Convenciones propias
 
 - No introducir dependencias de React ni NestJS acá. Tests: `pnpm nx test shared`.
+- Todo wire nuevo que consuman `apps/api` y `apps/web` nace acá con su lista congelada de campos y se ata en ambos lados con `ExactKeys`/`AssertNoKeyDrift` o `satisfies`: la deriva tiene que fallar en typecheck, no en producción.
 
 > Las actualizaciones por ciclo/fix van como fragmentos aditivos en `updates/` —
 > este archivo base solo lo modifica la consolidación (ver `sdd/context/context_prompt.md` sección 6).

@@ -175,30 +175,67 @@ agentes SDD referencian estos tiers abstractos, no modelos concretos):
   contexto releyendo lo ya establecido ni narrando opciones que no vas a seguir.
 - **Si el repo tiene grafo de graphify** (regla anterior, opcional), consultalo antes de
   pagar lecturas a ciegas: es parte de la misma optimización de tokens.
+- **Registro de consumo por agente: obligatorio — fuente y formato.** Todo agente que
+  consuma tokens en un flujo SDD o un fix registra su consumo al **cerrar su unidad de
+  trabajo** (task, documento, ciclo, fix) — no es una estimación reconstruida al final,
+  es un registro por unidad. Ver la subsección **Telemetría de uso** debajo para el
+  contrato completo: quién escribe qué y cuándo, y la tabla de fuentes por arnés.
 
-**Telemetría de uso (dashboard de Costos — OBLIGATORIA en todos los arneses):** al cerrar
-cada ciclo, registrar el consumo en `cycle.json` → `metrics.usage` (`tokens_in`/`tokens_out`,
-y `by_tier` con claves `proveedor/modelo`: `claude/opus`, `gemini/pro`,
-`copilot/claude-sonnet`); por task en `tasks.json` → `usage.model_tier`; y todo fix cerrado
-por FIX GATE registra su `usage` en `sdd/fixes.json`. **Declarar proveedor y modelo no es
-opcional** — el modelo siempre se conoce, es el que estás usando.
+**Telemetría de uso (dashboard de Costos — OBLIGATORIA en todos los arneses):** contrato
+v0.11.0 — todo agente que participe de un flujo SDD o de un fix y consuma tokens registra,
+al **cerrar su unidad de trabajo**, `provider_model` (`claude/sonnet`, `gemini/pro`,
+`copilot/claude-sonnet`), `effort`/thinking, `tokens_in`, `tokens_out`, `source` y `approx`.
+Sin ese registro la unidad no está cerrada. Modelo y effort se declaran ANTES de ejecutar
+(regla ⚙️ de arriba); los tokens se registran AL CERRAR.
 
-De dónde sale el número: `/stats` en Gemini CLI (`source: stats-command`); el reporte de uso
-de la sesión en Claude Code (`session-report`). Ambos son comandos del cliente: un agente no
-puede ejecutarlos, se los pide al dev.
+**Quién escribe qué, y cuándo:**
 
-**Quien ejecuta registra; el reviewer consolida.** El consumo se anota al cerrar cada unidad de
-trabajo —task, fix— y el total del ciclo se **suma** de eso, no se reconstruye de memoria al
-final. El reviewer solo estima lo que ninguna unidad cubrió. En **Copilot y Antigravity no existe contador por
-sesión**: ahí va una estimación de orden de magnitud con `approx: true` y
-`source: "declared-estimate"`. Antigravity registra bajo `gemini/*` — corre modelos Gemini.
+- **Task** → `tasks.json → tasks[].usage` (quien la ejecuta, al cerrarla):
+  `{provider_model, effort, tokens_in, tokens_out, approx, source, recorded_at, agent,
+  tokens_total?}`. `model_tier` es el alias legacy — se lee, no se escribe.
+- **Documentos** functional/planner/architect → una entrada en
+  `cycle.json → metrics.usage.by_agent[]` al terminar el documento. El orquestador crea
+  `metrics` con contadores en 0 y `usage: {tokens_in: 0, tokens_out: 0, by_agent: []}` al
+  abrir el ciclo.
+- **Ciclo** → el reviewer **consolida `by_agent`, no estima el total**: `by_agent[]` = una
+  entrada por unidad `{agent, label?, provider_model, effort, tokens_in, tokens_out,
+  tokens_total?, approx, source, recorded_at}`; `by_tier` se **deriva** de `by_agent`
+  agrupando por `provider_model` (no se llena a mano); el top-level es la suma. El
+  reviewer agrega su propia entrada (la revisión también consume tokens) y no cierra el
+  ciclo sin `by_agent` completo y la suma consistente.
+- **Fix** → `sdd/fixes.json → fixes[].usage`, mismos campos; si trabajaron varios
+  agentes, `by_agent[]` con una entrada por agente. El FIX GATE no cierra un fix sin
+  `usage`.
+- `agent` ∈ `functional | planner | architect | implementor-back | implementor-front |
+  reviewer | orchestrator | steward | hermes | custom`.
 
-**Sin contador se estima; no se omite.** El visor muestra las estimaciones marcadas como
-**estimado** en la columna Origen: no las esconde ni las hace pasar por medidas. Lo prohibido
-es inventar un número preciso y presentarlo como medido (`approx: false` sin contador detrás).
-Un ciclo cerrado sin `usage` es un cierre incompleto y `pnpm sdd:validate` lo avisa. Alimenta
-la vista **Costos** del visor SDD (comparativa contra la estimación tradicional de las tasks);
-las tarifas por proveedor se editan en `sdd/pricing.json`.
+**De dónde sale el número — tabla de fuentes por arnés:**
+
+| Arnés                                     | Fuente                                                                                                                                                             | `source`                   | `approx` |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- | -------- |
+| Claude Code — subagente vía tool `Agent`  | notificación al padre al terminar: `<usage><subagent_tokens>N</subagent_tokens><tool_uses>…</tool_uses><duration_ms>…</duration_ms></usage>` — exacta, sin pedirle nada al dev; `tokens_total: N`, split por defecto 85/15 en in/out | `agent-usage-notification` | `false`  |
+| Claude Code — main loop                   | reporte de uso de la sesión (comando del cliente: se lo pide al dev)                                                                                               | `session-report`            | `false`  |
+| Gemini CLI — main loop                    | `/stats` (comando del cliente)                                                                                                                                     | `stats-command`             | `false`  |
+| Gemini CLI — subagentes                   | sin reporte separado → estimación declarada                                                                                                                        | `declared-estimate`         | `true`   |
+| GitHub Copilot (CLI, coding agent, custom agents) | sin contador → estimación declarada                                                                                                                        | `declared-estimate`         | `true`   |
+| Antigravity                               | sin contador → estimación declarada (registra bajo `gemini/*`)                                                                                                     | `declared-estimate`         | `true`   |
+
+> [!NOTE]
+> **Gemini CLI — ojo con el alcance de `/stats`:** solo cubre el **main loop** de la
+> sesión. Los **subagentes** que lanzás desde Gemini CLI no tienen contador propio y van
+> con estimación declarada (`declared-estimate`, `approx: true`) — no asumas que `/stats`
+> cubre el consumo del ciclo completo si hubo subagentes en el medio.
+
+`approx: false` con `source: declared-estimate` es **ERROR** del validador — nunca inventar
+un número preciso y presentarlo como medido.
+
+**Reglas del validador (`pnpm sdd:validate`):** error si un ciclo `completed` (con
+`completed_at` ≥ 2026-09-02) o un fix resuelto (`resolved_at` ≥ 2026-09-02) no tiene
+`usage` con proveedor/modelo y tokens; warning si falta `by_agent` o
+`sum(by_agent) ≠ by_tier`; registros anteriores a esa fecha: warning, no error.
+
+Alimenta la vista **Costos** del visor SDD (comparativa contra la estimación tradicional de
+las tasks); las tarifas por proveedor se editan en `sdd/pricing.json`.
 
 ## ✍️ Código sin comentarios (OBLIGATORIO — el código se explica solo)
 
@@ -370,6 +407,13 @@ entradas destiladas** y lo commitea como cambio dedicado
 10. ¿Existe sdd/context/[apps|libs|tools]/[nombre]/constitution.md?                              → SI / NO
 ```
 
+> [!NOTE]
+> `harness add spec` crea la spec con `status: "draft"` y registra el módulo en
+> `pending_modules` de `global.json` — no en `in_progress_modules`. El orquestador la pasa
+> a `in-progress` (y el módulo de `pending_modules` a `in_progress_modules`) recién al
+> abrir `cycle-01`. La pregunta 3 de este gate se responde sobre `in_progress_modules`; una
+> spec `draft` sin ciclo abierto no la satisface.
+
 **Convención de naming (INVIOLABLE):**
 
 - Spec: `spec-[gh-user]-[NNN]-[slug]` donde `[NNN]` es el contador personal del dev (no global)
@@ -397,6 +441,12 @@ Todos los `*.json` de `sdd/` tienen JSON Schema estricto en `sdd/schemas/` y dec
 pnpm sdd:validate            # valida TODOS los registros + reglas cruzadas
 pnpm sdd:rebuild-tasks-index # regenera sdd/tasks.json desde los tasks.json per-cycle
 ```
+
+> [!NOTE]
+> Si `NX_WORKSPACE_ROOT_PATH` está definida en el entorno y no apunta al cwd, cualquier
+> `nx …` (`pnpm sdd:validate`, `nx run-many -t lint test build`, etc.) corre contra OTRO
+> repo, sin ningún error visible — desactivá la variable o verificá
+> `echo $NX_WORKSPACE_ROOT_PATH` antes de correr `nx` o los scripts `sdd:*`.
 
 - `sdd/tasks.json` es **solo un índice** generado — las tasks canónicas viven en
   `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json`. **Nunca editar detalle de tasks en el índice.**

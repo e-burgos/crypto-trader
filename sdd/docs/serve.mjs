@@ -7,6 +7,17 @@ import { fileURLToPath, URL } from 'node:url';
 const DEFAULT_PORT = 4310;
 const HOST = '127.0.0.1';
 
+// With NX_WORKSPACE_ROOT_PATH pointing elsewhere, every `nx …` run from here targets THAT
+// workspace and reports success — warned on the first line, before anything else.
+{
+  const nxRoot = process.env.NX_WORKSPACE_ROOT_PATH;
+  if (nxRoot && path.resolve(nxRoot) !== path.resolve(fileURLToPath(new URL('../..', import.meta.url)))) {
+    console.warn(
+      `[sdd:docs] ⚠ NX_WORKSPACE_ROOT_PATH=${nxRoot} is not this repo (${path.resolve(fileURLToPath(new URL('../..', import.meta.url)))}) — any \`nx\` command run here targets THAT workspace.`,
+    );
+  }
+}
+
 const CONTENT_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',

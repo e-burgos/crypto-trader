@@ -196,11 +196,28 @@ Si alguna verificación falla → comunicar explícitamente qué falta y NO cont
 ### PASO 3 — Registrar ciclo
 
 7. Crear el archivo `sdd/specs/{spec-id}/cycles/cycle-[XX]/brief.yaml` con el cycle_brief completo en formato YAML
-8. Crear `sdd/specs/{spec-id}/cycles/cycle-[XX]/cycle.json` con `status: "in-progress"`
-   (template canónico en `sdd-file-structure` §3.2 — valida contra `sdd/schemas/cycle.schema.json`)
+8. Crear `sdd/specs/{spec-id}/cycles/cycle-[XX]/cycle.json` con `status: "in-progress"` y
+   `metrics` **con contadores en 0 y `usage: { tokens_in: 0, tokens_out: 0, by_agent: [] }`**
+   (nunca `metrics: null` desde v0.11.0 — es el receptáculo donde cada agente hace push de su
+   entrada al cerrar su unidad de trabajo; template canónico en `sdd-file-structure` §3.2 —
+   valida contra `sdd/schemas/cycle.schema.json`)
+8b. Si este es el `cycle-01` de la spec y su entrada en `sdd/specs/index.json` tiene
+    `status: "draft"` → pasarla a `"in-progress"` (no tocar otro campo de la entrada)
 9. El Planner creará `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` — el índice `sdd/tasks.json` se regenera con `pnpm sdd:rebuild-tasks-index` (nunca editarlo a mano)
 10. Leer el contexto del subproyecto afectado en `sdd/context/[apps|libs|tools]/[nombre]/context_prompt.md` y adjuntarlo al brief para los agentes especializados
 11. Correr `pnpm sdd:validate` — el ciclo no queda registrado hasta que esté en verde
+
+### Telemetría de los subagentes que disparás
+
+Cuando dispares functional/planner/architect/implementor-\* como subagentes (ej. tool `Agent`
+de Claude Code), la notificación de cierre trae el conteo exacto de tokens
+(`<usage><subagent_tokens>N</subagent_tokens>…</usage>` → `source: agent-usage-notification`,
+`approx: false`). Capturalo al recibirla y volcalo en dos lugares: la entrada de
+`cycle.json → metrics.usage.by_agent[]` correspondiente a ese agente, y — si el subagente era un
+implementor — en `usage` de su task en `tasks.json` (sobrescribiendo la estimación propia del
+implementor si la tenía, porque este número es exacto). **No marqués ni des por cerrada una task
+como `done` sin que su `usage` esté escrito** — si el implementor cerró sin registrarlo, el
+ciclo queda con una unidad de trabajo sin telemetría y el reviewer no puede cerrar limpio.
 
 ### Formato del archivo cycle_brief
 
@@ -311,3 +328,14 @@ cycle_brief:
 - Crear SIEMPRE `sdd/specs/{spec-id}/cycles/cycle-[XX]/brief.yaml` antes de invocar cualquier otro agente
 - Leer SIEMPRE el contexto del subproyecto afectado en `sdd/context/[apps|libs|tools]/[nombre]/` e incluirlo en el brief
 - Los documentos de ciclo siguen la convención: `sdd/specs/{spec-id}/cycles/cycle-[XX]/brief.yaml`, `functional.md`, `planner.md`, `architect.md`, `cycle.json`. Documentos de soporte adicionales van en `cycle-[XX]/artifacts/`
+
+## Registro de consumo (obligatorio)
+
+Al abrir el ciclo creás `cycle.json → metrics` con contadores en 0 y `usage.by_agent: []` (PASO
+3.8) — nunca `metrics: null`. Cada notificación de subagente que recibas (`agent-usage-notification`)
+la volcás en `by_agent` y en la `usage` de la task correspondiente; una task no está cerrada sin
+ese registro. Tu propio trabajo de coordinación (brief, clasificación FIX/SPEC GATE, consolidación
+de contexto) también es una unidad: declará `provider_model`/`effort` antes de arrancar y, al
+cerrar tu participación en el ciclo, hacé push de tu entrada `{ "agent": "orchestrator", ... }`
+en `by_agent` si el reviewer todavía no la agregó. Fuentes válidas del número según el arnés:
+ver tabla en `sdd/dual-harness/AGENTS.md` § Selección de modelo y esfuerzo.

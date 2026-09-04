@@ -146,7 +146,8 @@ Recordá actualizar:
   - affected_files en sdd/fixes.json (FIX-XXX)
   - status → "implemented" al terminar
   - test_reference si escribiste un test
-  - usage (tokens_in/tokens_out + model_tier "proveedor/modelo") con el consumo del fix
+  - usage (provider_model "proveedor/modelo", effort, tokens_in/tokens_out, approx,
+    source, recorded_at) con el consumo del fix — sin esto el fix NO se da por cerrado
 ───────────────────────────────────────────
 ```
 
@@ -160,9 +161,13 @@ Después de implementar, el desarrollador actualiza en `sdd/fixes.json`:
 - `resolved_at`: fecha de implementación
 - `status`: `"implemented"`
 - `test_reference`: referencia al test (si aplica)
-- `usage`: consumo del fix — `tokens_in`/`tokens_out`, `duration_minutes` y `model_tier`
+- `usage`: consumo del fix, obligatorio para dar el fix por cerrado — `provider_model`
   con clave `proveedor/modelo` (`claude/sonnet`, `gemini/flash`, `copilot/claude-sonnet`;
-  Antigravity bajo `gemini/*`). Alimenta la vista Costos del visor. **Declarar el modelo es
+  Antigravity bajo `gemini/*`), `effort`, `tokens_in`/`tokens_out`, `approx`, `source` y
+  `recorded_at` (`model_tier` es el alias legacy: se lee, ya no se escribe). Si más de un
+  agente trabajó el fix, listar cada unidad en `usage.by_agent[]` (mismos campos + `agent`)
+  y dejar los `tokens_in`/`tokens_out` top-level como la suma. El FIX GATE no da por
+  resuelto un fix sin `usage`. Alimenta la vista Costos del visor. **Declarar el modelo es
   obligatorio, y se registra al resolver el fix** — el reviewer consolida el total del ciclo
   sumando lo que fixes y tasks ya anotaron, no reconstruyéndolo al final. Fuente del número: `/stats` en Gemini CLI, reporte de sesión en Claude Code
   — comandos del cliente que el agente no puede ejecutar — y estimación declarada en

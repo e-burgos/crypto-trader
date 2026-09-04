@@ -75,3 +75,12 @@ Crear `sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json` (schema: `sdd/schemas/c
 - Siempre identificar qué bloquea qué (camino crítico)
 - Las tasks de frontend que consumen un endpoint NO pueden empezar antes de que ese endpoint esté implementado
 - El archivo `sdd/specs/{spec-id}/cycles/cycle-[XX]/planner.md` es obligatorio antes de que el implementador pueda comenzar
+
+## Registro de consumo (obligatorio)
+
+No tenés fila propia en `tasks.json`: al terminar `planner.md` (y crear `tasks.json`) hacé push
+de tu entrada en `cycle.json` → `metrics.usage.by_agent[]` (el orquestador ya creó `metrics` con
+`by_agent: []` al abrir el ciclo). Entrada: `{ "agent": "planner", "provider_model", "effort",
+"tokens_in", "tokens_out", "approx", "source", "recorded_at" }`. Declará modelo y effort ANTES de
+planificar; registrá tokens AL CERRAR. Fuente del número según el arnés: tabla en
+`sdd/dual-harness/AGENTS.md` § Selección de modelo y esfuerzo.

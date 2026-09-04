@@ -61,7 +61,7 @@ description: >
   "file": "sdd/specs/spec-[gh-user]-[NNN]-[slug]/spec-[gh-user]-[NNN]-[slug].spec.md",
   "module": "[nombre-módulo]",
   "app": "apps/[nombre-app]",
-  "status": "in-progress | completed | cancelled",
+  "status": "draft | in-progress | completed | cancelled",
   "title": "Título legible (máx 80 chars)",
   "created_at": "YYYY-MM-DD",
   "completed_at": "YYYY-MM-DD | null",
@@ -74,7 +74,11 @@ description: >
 - `id` = nombre exacto de la carpeta bajo `sdd/specs/`
 - `[NNN]` = contador **personal del dev** (001, 002…). No global.
 - `depends_on` = array vacío `[]` si no hay dependencias
-- `completed_at` = `null` mientras `status: "in-progress"`
+- `status` nace `"draft"` (spec escrita o en escritura, sin ciclo abierto — desde v0.11.0;
+  `harness add spec` la crea así y registra el módulo en `pending_modules` de `sdd/global.json`).
+  El sdd-orchestrator la pasa a `"in-progress"` al crear `cycle-01` de esa spec. Índices previos
+  a v0.11.0 tienen `"in-progress"` para specs sin ciclo — el validador sugiere la migración, nunca reescribe datos.
+- `completed_at` = `null` mientras `status` es `draft` o `in-progress`
 - **Registrar ANTES de crear los archivos del ciclo**
 
 ---
@@ -379,9 +383,12 @@ pending_modules → in_progress_modules → completed_modules
     "tokens_in": 42000,
     "tokens_out": 8000,
     "duration_minutes": 25,
-    "model_tier": "copilot/claude-sonnet",
+    "provider_model": "copilot/claude-sonnet",
+    "effort": "medium",
+    "agent": "implementor-back",
     "approx": true,
-    "source": "declared-estimate"
+    "source": "declared-estimate",
+    "recorded_at": "YYYY-MM-DD"
   }
 }
 ```
@@ -389,7 +396,12 @@ pending_modules → in_progress_modules → completed_modules
 > ⛔ **TODOS los campos de TaskEntry son obligatorios excepto `usage`** (`additionalProperties: false`
 > en el schema). Una task sin `estimation_hours` o `story_points` no pasa `pnpm sdd:validate`.
 > `usage` es opcional en el schema para que los registros escritos antes de v0.9.0 sigan validando,
-> pero **el protocolo lo exige**: ver §8.1.
+> pero **desde v0.11.0 el protocolo lo exige**: ver §8.1. `provider_model` es el nombre vigente
+> del campo (`proveedor/modelo`); `model_tier` es el alias legacy pre-0.11 — se sigue leyendo, ya
+> no se escribe. Cuando el harness reporta el consumo del subagente que ejecutó la task
+> (`agent-usage-notification`, ej. Claude Code `Agent`), quien recibe la notificación (típicamente
+> el orquestador) vuelca ese número exacto acá — `tokens_total` + split 85/15 documentado en
+> `tokens_in`/`tokens_out`, `approx: false`.
 
 ### Reglas de TaskEntry
 
@@ -403,7 +415,7 @@ pending_modules → in_progress_modules → completed_modules
 | `depends_on`       | `[]` si no tiene dependencias. Solo IDs del mismo archivo.                                                          | sdd-planner        |
 | `status`           | `pending` al crear; `in-progress`/`done` durante la implementación. `skipped` = **resuelta / no aplica** (requisito caído, trabajo absorbido por otra task, alcance movido): es un cierre válido, no un pendiente. | sdd-implementor-\* |
 | `files`            | Lista todos los archivos creados o modificados. Completar al terminar la task.                                      | sdd-implementor-\* |
-| `usage`            | Telemetría de la task: tokens + `model_tier` (`proveedor/modelo`). Sin contador → estimación con `approx: true`. Ver §8.1. | sdd-implementor-\* |
+| `usage`            | Telemetría de la task: tokens + `provider_model` (`proveedor/modelo`) + `agent` + `recorded_at`. Sin contador → estimación con `approx: true`. Ver §8.1. | sdd-implementor-\* |
 | Marcar como done   | Cambiar `status: "done"`, completar `files[]` y correr `pnpm sdd:rebuild-tasks-index`                               | sdd-implementor-\* |
 
 ### Escala de Story Points recomendada
@@ -458,7 +470,17 @@ pending_modules → in_progress_modules → completed_modules
   "affected_files": ["path/to/file1.ts", "path/to/file2.java"],
   "test_reference": "referencia al test que valida el fix | null",
   "status": "pending | in-progress | implemented | validated | absorbed",
-  "cycle": "cycle-[XX] | null"
+  "cycle": "cycle-[XX] | null",
+  "usage": {
+    "tokens_in": 15000,
+    "tokens_out": 3000,
+    "provider_model": "claude/sonnet",
+    "effort": "medium",
+    "agent": "implementor-back",
+    "approx": false,
+    "source": "session-report",
+    "recorded_at": "YYYY-MM-DD"
+  }
 }
 ```
 
@@ -470,6 +492,9 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
 
 - `implemented` exige `resolved_at` (validado por `pnpm sdd:validate`)
 - `validated` = el Reviewer confirmó el fix; `absorbed` = la solución se formaliza en la próxima spec
+- `usage` — **obligatorio al resolver** (mismos campos que TaskEntry, ver §8.1). Lo registra
+  quien resuelve el fix, no el reviewer que lo absorbe. Si participó más de un agente, cada uno
+  va en `usage.by_agent[]` y el nivel superior (`tokens_in`/`tokens_out`) es la suma
 
 ### Convención de ID de fix
 
@@ -509,7 +534,15 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
     "tasks": "sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json"
   },
   "artifacts": [],
-  "metrics": null,
+  "metrics": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "story_points": 0,
+    "files_created": [],
+    "files_modified": [],
+    "files_deleted": [],
+    "usage": { "tokens_in": 0, "tokens_out": 0, "by_agent": [] }
+  },
   "tables_created": [],
   "endpoints_implemented": [],
   "components_created": [],
@@ -520,6 +553,11 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
 
 - `apps` es **siempre array**. Campos opcionales: `phase`, `flow` (`"reduced"` para refactors sin HUs), `objectives`.
 - En `documents` solo se listan archivos que existen (un ciclo `flow: "reduced"` puede omitir functional/planner/architect).
+- **`metrics` no nace `null` desde v0.11.0**: el orquestador lo crea con contadores en 0 y
+  `usage.by_agent: []` al abrir el ciclo — es el receptáculo donde cada agente (functional,
+  planner, architect, cada task, el propio orquestador) hace push de su entrada al cerrar su
+  unidad de trabajo. `tokens_in`/`tokens_out` son obligatorios dentro de `usage` por schema, por
+  eso arrancan en `0`; el reviewer los recalcula como suma de `by_agent` al cerrar (§8.1).
 
 ### Al CERRAR el ciclo (sdd-reviewer)
 
@@ -549,13 +587,15 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
       "duration_minutes": 190,
       "approx": true,
       "source": "declared-estimate",
+      "by_agent": [
+        { "agent": "functional", "provider_model": "claude/sonnet", "effort": "medium", "tokens_in": 30000, "tokens_out": 4000, "approx": false, "source": "session-report", "recorded_at": "YYYY-MM-DD" },
+        { "agent": "implementor-back", "label": "TASK-001", "provider_model": "copilot/claude-sonnet", "effort": "medium", "tokens_in": 420000, "tokens_out": 55000, "approx": true, "source": "declared-estimate", "recorded_at": "YYYY-MM-DD" },
+        { "agent": "reviewer", "provider_model": "claude/opus", "effort": "high", "tokens_in": 30000, "tokens_out": 3000, "approx": false, "source": "session-report", "recorded_at": "YYYY-MM-DD" }
+      ],
       "by_tier": {
-        "copilot/claude-sonnet": {
-          "tokens_in": 480000,
-          "tokens_out": 62000,
-          "approx": true,
-          "source": "declared-estimate"
-        }
+        "claude/sonnet": { "tokens_in": 30000, "tokens_out": 4000, "approx": false, "source": "session-report" },
+        "copilot/claude-sonnet": { "tokens_in": 420000, "tokens_out": 55000, "approx": true, "source": "declared-estimate" },
+        "claude/opus": { "tokens_in": 30000, "tokens_out": 3000, "approx": false, "source": "session-report" }
       }
     }
   },
@@ -597,28 +637,39 @@ pending → in-progress → implemented (dev) → validated | absorbed (sdd-revi
 > (horas × tarifa) contra el costo real del modo agéntico. Sin telemetría, el ahorro que
 > justifica la metodología no tiene evidencia.
 
-El bloque `usage` vive en tres lugares, con la misma forma:
+El bloque `usage` vive en tres lugares:
 
-| Dónde                              | Campo                        | Quién lo escribe                  | Cuándo             |
-| ---------------------------------- | ---------------------------- | --------------------------------- | ------------------ |
-| `tasks.json` (por task)            | `usage` (+`model_tier`)      | sdd-implementor-\*                | al cerrar la task  |
-| `sdd/fixes.json` (por fix)         | `usage` (+`model_tier`)      | quien resuelve el fix             | al resolverlo      |
-| `cycle.json`                       | `metrics.usage` (+`by_tier`) | sdd-reviewer, **consolidando**    | al cerrar el ciclo |
+| Dónde                       | Campo                                      | Quién lo escribe                                              | Cuándo              |
+| ---------------------------- | ------------------------------------------- | --------------------------------------------------------------- | -------------------- |
+| `tasks.json` (por task)      | `usage` (+`provider_model`, `agent`)        | sdd-implementor-\* (o el orquestador si captura la notificación del subagente) | al cerrar la task    |
+| `sdd/fixes.json` (por fix)   | `usage` (+`provider_model`, `agent`)        | quien resuelve el fix                                            | al resolverlo        |
+| `cycle.json`                 | `metrics.usage` (+`by_agent`, `by_tier`)    | cada agente hace push de su entrada en `by_agent`; sdd-reviewer cierra | al terminar cada documento / al cerrar el ciclo |
 
-> **Quien ejecuta registra; el reviewer consolida.** El total del ciclo no se reconstruye al
-> final: se suma de lo que tasks y fixes ya escribieron, agrupado por `proveedor/modelo`. El
-> reviewer solo estima lo que ninguna unidad cubrió (su propia revisión, coordinación,
-> documentos). Una suma que mezcla medido con estimado queda `approx: true`.
+> **Quien ejecuta registra; nadie reconstruye al final.** `functional`, `planner` y `architect`
+> no tienen fila propia en `tasks.json` — al terminar su documento hacen push de su entrada en
+> `cycle.json → metrics.usage.by_agent[]` (el orquestador ya creó `metrics` con `by_agent: []` al
+> abrir el ciclo, ver §8). `by_agent` es la **fuente de verdad**: una entrada por unidad de
+> trabajo (cada task, cada documento, la coordinación del orquestador, la revisión del reviewer).
+> `by_tier` se **deriva** de `by_agent` agrupando por `provider_model` — nunca se llena a mano
+> por separado. El reviewer, al cerrar, verifica que `by_agent` tenga una entrada por task `done`
+> + una por documento + orquestador + reviewer, deriva `by_tier`, y solo entonces suma
+> `tokens_in`/`tokens_out` de nivel superior. Su propia estimación cubre únicamente lo que
+> ninguna unidad registró. Una suma que mezcla medido con estimado queda `approx: true` en esa
+> entrada de `by_tier`: un total es tan honesto como su parte más floja.
 
 ### Campos
 
 | Campo             | Regla                                                                                                       |
 | ----------------- | ----------------------------------------------------------------------------------------------------------- |
 | `tokens_in/out`   | **Obligatorios** dentro de `usage`. Enteros ≥ 0.                                                            |
+| `tokens_total`    | Total exacto cuando la fuente reporta un único número (`agent-usage-notification`). `tokens_in`/`tokens_out` llevan igual el split documentado 85/15 para que la fórmula de costo funcione; el visor muestra `tokens_total`. |
 | `duration_minutes`| Opcional.                                                                                                    |
-| `by_tier` / `model_tier` | **Proveedor y modelo son obligatorios.** Claves `proveedor/modelo`: `claude/opus`, `gemini/pro`, `copilot/claude-sonnet`. Antigravity registra bajo `gemini/*` (corre modelos Gemini). Claves legacy sueltas (`haiku`, `sonnet`, `opus`, `fable`) se leen como `claude/*`. |
+| `provider_model` / `model_tier` | **Proveedor y modelo son obligatorios.** Claves `proveedor/modelo`: `claude/opus`, `gemini/pro`, `copilot/claude-sonnet`. Antigravity registra bajo `gemini/*` (corre modelos Gemini). Claves legacy sueltas (`haiku`, `sonnet`, `opus`, `fable`) se leen como `claude/*`. `model_tier` es el alias legacy pre-0.11: se sigue leyendo, ya no se escribe. |
+| `effort`          | Nivel de esfuerzo/razonamiento **declarado antes de ejecutar** (regla ⚙️): `low\|medium\|high\|xhigh\|max` en Claude, `minimal\|low\|medium\|high` en Gemini. |
+| `agent`           | Rol SDD que hizo el trabajo (`functional\|planner\|architect\|implementor-back\|implementor-front\|reviewer\|orchestrator\|steward\|hermes\|custom`). Obligatorio en `by_agent[]`; `custom` lleva `label`. |
+| `recorded_at`     | Fecha (o datetime ISO) en que se cerró la unidad. |
 | `approx`          | `true` = estimación declarada; `false`/ausente = leído de un contador. El visor muestra **estimado** en la columna Origen. |
-| `source`          | `session-report` (Claude Code) · `stats-command` (`/stats` de Gemini CLI) · `api-usage` · `declared-estimate` (Copilot, Antigravity). |
+| `source`          | `session-report` (Claude Code) · `stats-command` (`/stats` de Gemini CLI) · `api-usage` · `agent-usage-notification` (Claude Code: conteo exacto que el harness reporta al padre al terminar un subagente — `<usage><subagent_tokens>N</subagent_tokens>…</usage>`, `approx: false`) · `declared-estimate` (Copilot, Antigravity, o cualquier caso sin contador — `approx: true` obligatorio). |
 
 ### La regla que reemplaza al "ante la duda, omitir"
 
@@ -627,16 +678,22 @@ El bloque `usage` vive en tres lugares, con la misma forma:
 por sesión (**GitHub Copilot**, **Antigravity**) registran una estimación declarada:
 
 ```json
-"usage": { "tokens_in": 480000, "tokens_out": 62000, "approx": true, "source": "declared-estimate", "by_tier": { ... } }
+"usage": { "tokens_in": 480000, "tokens_out": 62000, "provider_model": "copilot/claude-sonnet", "effort": "medium", "agent": "implementor-back", "approx": true, "source": "declared-estimate", "recorded_at": "YYYY-MM-DD" }
 ```
 
 `/stats` (Gemini CLI) y el reporte de uso de la sesión (Claude Code) son comandos del cliente:
 un agente **no puede ejecutarlos**. Pedíselos al dev si querés el número medido; si no están a
 mano, registrá la estimación y seguí — un ciclo cerrado sin `usage` es un cierre incompleto.
 
+En Claude Code, cuando un agente dispara un subagente con la tool `Agent`, la notificación de
+cierre trae el conteo exacto (`agent-usage-notification`) — quien la recibe (orquestador o
+reviewer) lo vuelca directo en `tasks[].usage` y en `by_agent`, sin pedirle nada al dev.
+
 Lo único prohibido es **inventar un número preciso y presentarlo como medido**: `approx: false`
-sin contador detrás. `pnpm sdd:validate` avisa (warning, no error) cuando un ciclo `completed`
-no tiene `metrics.usage` o lo tiene sin `by_tier`.
+sin contador detrás (y `approx: false` combinado con `source: declared-estimate` es un error
+del validador, no un warning). `pnpm sdd:validate` marca **error** si un ciclo `completed` (o un
+fix resuelto) desde el 2026-09-02 no tiene `usage` con proveedor/modelo y tokens; **warning** si
+`by_agent` falta o `sum(by_agent) ≠ by_tier`. Registros anteriores a esa fecha solo generan warning.
 
 ---
 
@@ -644,7 +701,7 @@ no tiene `metrics.usage` o lo tiene sin `by_tier`.
 
 | Registro                | Status válidos                                                   | Progresión                                                  |
 | ----------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------- |
-| `index.json` (specs)    | `in-progress`, `completed`, `cancelled`                          | in-progress → completed                                     |
+| `index.json` (specs)    | `draft`, `in-progress`, `completed`, `cancelled`                 | draft → in-progress (orquestador al abrir cycle-01) → completed |
 | `api.json` (endpoints)  | `defined`, `implemented`, `updated`, `deprecated`                | defined → implemented → updated\*                           |
 | `schema.json` (tablas)  | `defined`, `migrated`, `updated`, `deprecated`                   | defined → migrated → updated\*                              |
 | `components.json`       | `defined`, `implemented`, `updated`, `deprecated`                | defined → implemented → updated\*                           |

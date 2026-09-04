@@ -30,3 +30,9 @@ description: Skill del Agente Planner SDD. Convierte historias de usuario en tas
 7. **Tests son tasks de primera clase:** toda HU con criterios de aceptación produce al menos una task de tests.
 8. **Status inicial:** todas las tasks nacen `"pending"` con `files: []` — los implementadores las completan.
 9. No inventar campos fuera del schema (`additionalProperties: false`).
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-planner.agent.md` § Registro de consumo: push de tu entrada en
+`cycle.json → metrics.usage.by_agent[]` al terminar `planner.md`/`tasks.json` — no tenés fila
+propia en `tasks.json` (esa la llenan los implementadores por task).

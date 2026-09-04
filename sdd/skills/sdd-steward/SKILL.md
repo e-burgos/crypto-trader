@@ -115,3 +115,10 @@ no re-narrar el kit: el agente destino tiene sus propias skills.
 Ninguno en operación normal. Las únicas escrituras permitidas son las que
 ejecutan sus playbooks a través de las herramientas oficiales (`update sdd`,
 `setup:agents`, `harness idea`) — nunca ediciones manuales de registros SDD.
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-steward.agent.md` § Registro de consumo: en status/costos/ruteo no hay
+`usage` que registrar (solo lectura). Si excepcionalmente resolvés un fix o participás de un
+ciclo, tu entrada va como `agent: "steward"` en el `usage` de ese fix/ciclo, con modelo y effort
+declarados antes de ejecutar.

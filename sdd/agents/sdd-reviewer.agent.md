@@ -88,7 +88,8 @@ Sos el último paso antes de que el ciclo se marque como completado.
 **Declarar proveedor y modelo es OBLIGATORIO en todo cierre.** No existe la opción de omitir
 por no tener un contador exacto: si no hay contador, se registra una **estimación declarada**.
 
-En `cycle.json` → `metrics.usage`:
+En `cycle.json` → `metrics.usage`, la fuente de verdad es `by_agent` — `by_tier` se **deriva**
+de ahí, nunca se llena aparte:
 
 ```json
 "usage": {
@@ -97,32 +98,40 @@ En `cycle.json` → `metrics.usage`:
   "duration_minutes": 190,
   "approx": true,
   "source": "declared-estimate",
+  "by_agent": [
+    { "agent": "functional", "provider_model": "claude/sonnet", "effort": "medium", "tokens_in": 20000, "tokens_out": 3000, "approx": false, "source": "session-report", "recorded_at": "YYYY-MM-DD" },
+    { "agent": "implementor-back", "label": "TASK-001", "provider_model": "copilot/claude-sonnet", "effort": "medium", "tokens_in": 460000, "tokens_out": 59000, "approx": true, "source": "declared-estimate", "recorded_at": "YYYY-MM-DD" },
+    { "agent": "reviewer", "provider_model": "claude/opus", "effort": "high", "tokens_in": 0, "tokens_out": 0, "approx": false, "source": "session-report", "recorded_at": "YYYY-MM-DD" }
+  ],
   "by_tier": {
-    "copilot/claude-sonnet": {
-      "tokens_in": 480000,
-      "tokens_out": 62000,
-      "approx": true,
-      "source": "declared-estimate"
-    }
+    "claude/sonnet": { "tokens_in": 20000, "tokens_out": 3000, "approx": false, "source": "session-report" },
+    "copilot/claude-sonnet": { "tokens_in": 460000, "tokens_out": 59000, "approx": true, "source": "declared-estimate" },
+    "claude/opus": { "tokens_in": 0, "tokens_out": 0, "approx": false, "source": "session-report" }
   }
 }
 ```
 
-- `by_tier` usa claves `proveedor/modelo` — **es el campo que no se puede omitir**. El modelo
-  siempre se conoce: es el que estuviste usando.
-- `approx: true` marca el registro como estimación declarada; el visor lo muestra como
-  **estimado**, no lo esconde ni lo hace pasar por medido.
-- Si el ciclo mezcló proveedores (implementación en uno, review en otro), cada entrada de
-  `by_tier` lleva su propio `approx`/`source`.
+- `by_agent` es **el campo que no se puede omitir**: una entrada por cada unidad de trabajo del
+  ciclo (cada task `done`, cada documento functional/planner/architect, tu propia revisión, la
+  coordinación del orquestador si no la agregó ella misma). **No cerrás el ciclo sin `by_agent`
+  completo.**
+- `by_tier` agrupa `by_agent` por `provider_model` — es una suma, no una declaración
+  independiente. Si `sum(by_agent) ≠ by_tier`, algo se agregó a mano y está mal.
+- El modelo siempre se conoce: es el que estuviste usando. `approx: true` marca una entrada como
+  estimación declarada; el visor la muestra como **estimado**, no la esconde ni la hace pasar
+  por medida.
+- Tu propia entrada (`agent: "reviewer"`) va siempre en `by_agent`. Tu estimación libre — la que
+  no sale de ningún contador — se limita a lo que ninguna task, fix ni documento ya cubrió.
 
 ### De dónde sale el número, por arnés
 
-| Arnés            | Fuente                                              | `source`             | `approx` |
-| ---------------- | --------------------------------------------------- | -------------------- | -------- |
-| **Claude Code**  | reporte de uso de la sesión (pedírselo al dev)      | `session-report`     | `false`  |
-| **Gemini CLI**   | `/stats` — lo corre el dev, vos no podés invocarlo  | `stats-command`      | `false`  |
-| **GitHub Copilot** | no expone contador → estimación declarada          | `declared-estimate`  | `true`   |
-| **Antigravity**  | no expone contador → estimación declarada           | `declared-estimate`  | `true`   |
+| Arnés            | Fuente                                              | `source`                    | `approx` |
+| ---------------- | --------------------------------------------------- | ---------------------------- | -------- |
+| **Claude Code**  | notificación de cierre de subagente (`Agent`)       | `agent-usage-notification`  | `false`  |
+| **Claude Code**  | reporte de uso de la sesión (pedírselo al dev)      | `session-report`             | `false`  |
+| **Gemini CLI**   | `/stats` — lo corre el dev, vos no podés invocarlo  | `stats-command`              | `false`  |
+| **GitHub Copilot** | no expone contador → estimación declarada          | `declared-estimate`          | `true`   |
+| **Antigravity**  | no expone contador → estimación declarada           | `declared-estimate`          | `true`   |
 
 > Antigravity corre modelos Gemini: registra bajo `gemini/*`, no bajo una clave propia.
 
@@ -137,24 +146,27 @@ escritos, iteraciones de review, tamaño de los documentos) y declaralo. Una est
 de 500K tokens vale; un `0` o un campo ausente no. Lo que está prohibido es **inventar un
 número preciso y presentarlo como medido** (`approx` en `false` sin contador detrás).
 
-### Quien ejecuta registra; vos consolidás
+### Quien ejecuta registra; vos cerrás `by_agent`
 
-La telemetría **no se reconstruye al final**: se registra al cerrar cada unidad de trabajo y
-vos la sumás. Cuando llegás al cierre, la mayor parte del número ya está escrita.
+La telemetría **no se reconstruye al final**: se registra al cerrar cada unidad de trabajo, en
+`by_agent`. Cuando llegás al cierre, la mayor parte de las entradas ya están escritas.
 
-| Unidad | Dónde                                  | Quién lo escribe        | Cuándo                  |
-| ------ | -------------------------------------- | ----------------------- | ----------------------- |
-| task   | `tasks.json` → `usage` (+`model_tier`) | el implementador        | al cerrar la task       |
-| fix    | `sdd/fixes.json` → `usage`             | quien resuelve el fix   | al resolverlo           |
-| ciclo  | `cycle.json` → `metrics.usage`         | **vos, consolidando**   | al cerrar el ciclo      |
+| Unidad     | Dónde                                          | Quién lo escribe                          | Cuándo                   |
+| ---------- | ----------------------------------------------- | ------------------------------------------ | ------------------------- |
+| task       | `tasks.json` → `usage` (+`provider_model`)      | el implementador (u orquestador si captura la notificación) | al cerrar la task |
+| documento  | `cycle.json` → `metrics.usage.by_agent[]`       | functional / planner / architect          | al terminar su documento |
+| fix        | `sdd/fixes.json` → `usage`                      | quien resuelve el fix                     | al resolverlo             |
+| ciclo      | `cycle.json` → `metrics.usage` (`by_agent`, `by_tier`, sumas) | **vos, cerrando**            | al cerrar el ciclo        |
 
-**Consolidar = sumar lo ya registrado**, agrupando por `proveedor/modelo` en `by_tier`. Si una
-entrada de `by_tier` mezcla algo medido con algo estimado, la suma queda `approx: true`: un
-total es tan honesto como su parte más floja.
+**Cerrar = verificar `by_agent` completo, agregar tu propia entrada, derivar `by_tier`
+agrupando por `provider_model`, y solo entonces sumar `tokens_in`/`tokens_out` de nivel
+superior.** Si una entrada de `by_tier` mezcla algo medido con algo estimado, esa entrada queda
+`approx: true`: un total es tan honesto como su parte más floja.
 
-Tu trabajo de estimación se limita a **lo que ninguna task ni fix cubrió** — tu propia revisión,
-la coordinación, lo que se fue en documentos. Si llegás al cierre y no hay nada registrado, algo
-falló aguas arriba: anotalo en `reviewer_report.notes` además de estimar el total.
+Tu trabajo de estimación se limita a **lo que ninguna task, fix ni documento cubrió** — tu propia
+revisión, la coordinación que el orquestador no haya registrado. Si llegás al cierre y falta una
+entrada de `by_agent`, algo falló aguas arriba: anotalo en `reviewer_report.notes` además de
+completar el registro.
 
 ---
 
@@ -234,3 +246,13 @@ Usar el template canónico de cierre de `sdd-file-structure` §3.3 — valida co
 Claves del `reviewer_report`: `approved` (bool), `date`, `ca_results` (un PASS/FAIL con evidencia
 por cada `CA-[NNN]` del functional.md), `tests` (incluida la clave `"sdd:validate"`), `notes`,
 `follow_ups` (opcional).
+
+## Registro de consumo (obligatorio)
+
+No cerrás el ciclo (`status: "completed"`) sin `metrics.usage.by_agent[]` completo (ver
+TELEMETRÍA GATE arriba) y `by_tier` derivado correctamente. Tu propia unidad de trabajo —la
+revisión— entra como `{ "agent": "reviewer", "provider_model", "effort", "tokens_in",
+"tokens_out", "approx", "source", "recorded_at" }`; declará modelo y effort antes de arrancar la
+revisión y registrala al cerrar. Tu estimación libre cubre solo lo que ninguna task, fix o
+documento ya registró. Fuentes válidas del número según el arnés: tabla arriba y
+`sdd/dual-harness/AGENTS.md` § Selección de modelo y esfuerzo.

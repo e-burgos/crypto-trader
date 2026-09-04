@@ -26,15 +26,25 @@ Si el reviewer aprueba — realizar EN ESTE ORDEN:
    cuenta en metrics.tasks_skipped). skipped es un cierre válido, no un pendiente: nunca
    marcar "done" algo que no se hizo. Cierra cuando tasks_completed + tasks_skipped == tasks_total
    + regenerar índice (pnpm sdd:rebuild-tasks-index)
-4c. ⛔ TELEMETRÍA GATE — OBLIGATORIO: registrar cycle.json → metrics.usage con
-   tokens_in/tokens_out y by_tier con claves proveedor/modelo (claude/opus, gemini/pro,
-   copilot/claude-sonnet; Antigravity va bajo gemini/*). Declarar proveedor y modelo no es
-   opcional: el modelo siempre se conoce.
-   → con contador (reporte de sesión en Claude Code, /stats en Gemini CLI — pedíselos al dev,
-     el agente no puede ejecutarlos): approx false + source correspondiente
-   → sin contador (Copilot, Antigravity): estimación de orden de magnitud con
-     approx: true y source: "declared-estimate". NUNCA omitir el campo
-   → además: usage por task en tasks.json y usage en cada fix validado/absorbido este ciclo
+4c. ⛔ TELEMETRÍA GATE — OBLIGATORIO: consolidar cycle.json → metrics.usage. No es una
+   estimación nueva del reviewer — es la SUMA de lo que cada unidad ya registró al cerrar:
+   → Verificar que metrics.usage.by_agent[] está completo: una entrada por cada task
+     "done" de tasks.json, una por cada documento del ciclo (functional/planner/architect),
+     una del orquestador (si consumió tokens propios coordinando) y, al final, la del
+     reviewer mismo. Si falta alguna, volver al agente responsable — no inventarla acá.
+   → Agregar la propia entrada del reviewer: { "agent": "reviewer", "provider_model",
+     "effort", "tokens_in", "tokens_out", "approx", "source", "recorded_at" }.
+   → Derivar by_tier agrupando by_agent por provider_model (claude/opus, gemini/pro,
+     copilot/claude-sonnet; Antigravity va bajo gemini/*) — nunca escribir by_tier a mano.
+   → Sumar tokens_in/tokens_out top-level de metrics.usage a partir de by_agent.
+   → Declarar proveedor y modelo no es opcional: el modelo siempre se conoce.
+     Con contador (reporte de sesión en Claude Code, /stats en Gemini CLI — pedíselos al
+     dev, el agente no puede ejecutarlos): approx false + source correspondiente. Sin
+     contador (Copilot, Antigravity): estimación de orden de magnitud con approx: true y
+     source: "declared-estimate". NUNCA omitir el campo.
+   → El ciclo NO se cierra ("completed") sin metrics.usage con by_agent completo y la
+     suma consistente (sum(by_agent) == by_tier == top-level).
+   → Además: usage en cada fix validado/absorbido este ciclo (ver hotfix-bypass-gate.prompt.md)
 4b. ⛔ VALIDATION GATE (post-cierre): pnpm sdd:validate DEBE quedar en verde
    → registrar el resultado en reviewer_report.tests["sdd:validate"]
    → el mismo check corre en CI (sdd-validate.yml): un cierre en rojo rompe el PR

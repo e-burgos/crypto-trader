@@ -51,3 +51,14 @@ invocás, jamás los reemplazás ni los bypasseás.
    para una consulta.
 5. Toda operación que corras deja el kit **validable**: si tocaste algo,
    `pnpm sdd:validate` tiene que quedar verde antes de reportar éxito.
+
+## Registro de consumo (obligatorio)
+
+En operación normal (status, costos, dudas, ruteo) solo leés — no consumís tokens significativos
+de una unidad SDD y no hay dónde registrar nada (no tocás ningún fix ni ciclo). Si en cambio
+resolvés vos mismo un fix o participás de un ciclo (excepcional: el steward no ejecuta código),
+registrá tu entrada como `{ "agent": "steward", "provider_model", "effort", "tokens_in",
+"tokens_out", "approx", "source", "recorded_at" }` en el `usage` del fix o en
+`cycle.json → metrics.usage.by_agent[]` que corresponda, con la misma regla de declarar modelo
+y effort antes de ejecutar. Fuente del número según el arnés: tabla en
+`sdd/dual-harness/AGENTS.md` § Selección de modelo y esfuerzo.

@@ -54,6 +54,17 @@ Si algo **bloquea la decisión de stack**, hacer UNA ronda de preguntas concreta
 Todo lo demás se asume con defaults y se anota como supuesto en la spec — no
 interrogar al usuario por lo que una spec puede fijar después.
 
+Escribir lo relevado en `harness.idea.md` (no en la cabeza ni en cada spec después):
+
+- **`## Evidencia del descubrimiento`**: tabla `Fuente | Estado de acceso | Dato medido
+  | Fecha` — una fila por cada dato que sostiene una decisión de dominio/módulo/necesidad
+  técnica (repo existente inspeccionado, API externa, entrevista, métrica).
+- **`## Decisiones del dev`**: una entrada con fecha por cada respuesta que el usuario dio
+  en la ronda de preguntas.
+
+Las specs de FASE 4 **citan** estas secciones (referencia a la fila/fecha) en vez de
+copiar la evidencia a mano — una sola fuente, sin duplicación que se desincroniza.
+
 ## FASE 2 — Decisión de stack (matriz → propuesta → checkpoint)
 
 | Necesidad detectada                          | Pieza                                     |
@@ -99,6 +110,22 @@ se genera nada.
 npx @e-burgos/sdd-harness init --config ./harness.config.json
 ```
 
+`init --config` genera **en el cwd** cuando el cwd ya contiene el `harness.config.json`
+indicado, o `basename(cwd) == project.name`, o se pasa `--here` — si no, crea
+`<project.name>/` aparte. `harness.idea.md`, `harness.config.json` y su `.schema.json`
+quedan dentro del workspace generado (son la entrada del protocolo Hermes). Si el cwd ya
+es repo git, `init` NO corre `git init`: commitea sobre la rama actual.
+
+`init` termina corriendo el gate de FASE 3 automáticamente — `sdd:validate` +
+`nx run-many -t lint test build` (modo nx) o los scripts `lint`/`test`/`build` que
+existan en el `package.json` (standalone) — y **falla** si algo queda rojo. Usar
+`--skip-verify` solo con justificación explícita (por ejemplo, un servicio externo que
+el sandbox no puede levantar); nunca para apurar el checkpoint.
+
+Si `NX_WORKSPACE_ROOT_PATH` está definida y no apunta al cwd, `init` lo advierte en la
+primera línea de salida — un `nx run-many` corrido con esa variable mal seteada ejecuta
+contra OTRO repo sin error visible. Verificarla antes de confiar en el resultado del gate.
+
 **Repo existente sin SDD** → instalarlo sin tocar el código, sin prompts:
 
 ```bash
@@ -114,20 +141,35 @@ npx @e-burgos/sdd-harness configure sdd --name mi-proyecto --description "Qué e
 > prompt interactivo que **no se puede responder por stdin** (se cuelga). Pasá siempre
 > los flags, y `harness <comando> --help` lista los que faltan.
 
-**Verificación de fase (gate):** `pnpm sdd:validate` verde + build del workspace
-verde. Rojo → arreglar antes de seguir; nunca sembrar specs sobre base rota.
+**Verificación de fase (gate):** `pnpm sdd:validate` verde + build del workspace verde.
+Con `init --config` (sin `--skip-verify`) ya corrió solo; con `configure sdd` sobre un
+repo existente, correrlo a mano. Rojo → arreglar antes de seguir; nunca sembrar specs
+sobre base rota.
 
 ## FASE 4 — Sembrar el backlog SDD
 
-Por cada módulo core, en orden de dependencia:
+Dos caminos — usar el que corresponda a cómo se armó `harness.config.json` en FASE 3:
 
-1. `harness add spec <slug-del-modulo> --author <gh-user> --title "<título>" --app apps/<subproyecto>`
-   — crea la estructura y registra en `sdd/specs/index.json`. Sin `--title`/`--app`
-   el comando queda esperando input.
+**A. Un `add spec` por módulo** (camino por defecto), en orden de dependencia:
+
+1. `harness add spec <slug-del-modulo> --author <gh-user> --title "<título>" --app apps/<subproyecto> [--apps apps/a,libs/b] [--depends-on <spec-id|slug>]...`
+   — crea la estructura, registra la spec en `sdd/specs/index.json` con
+   `status: "draft"` (incluyendo `depends_on`) y registra el módulo en
+   `pending_modules` de `sdd/global.json` **automáticamente**
+   (`{module, spec, apps, cycles_completed: 0, description}`). No hay paso manual de
+   `pending_modules` — el comando ya lo hace.
 2. Redactar el `.spec.md` desde el descubrimiento: objetivo, alcance del primer
-   ciclo, criterios de aceptación de alto nivel, supuestos asumidos en FASE 1.
-3. Registrar el módulo en `pending_modules` de `sdd/global.json` (module + spec +
-   apps, según `sdd/schemas/global.schema.json`).
+   ciclo, criterios de aceptación de alto nivel; citar la evidencia/decisiones de
+   `harness.idea.md` (FASE 1) en vez de copiarlas a mano.
+
+**B. Sembrado por config** (alternativa, cuando `sdd.modules` ya se declaró en el
+`harness.config.json` de FASE 3): cada módulo (string o `{name, title?, app?, apps?,
+depends_on?}`) de `sdd.modules` se convierte en spec `draft` + entrada en
+`pending_modules` al correr `init` — no hace falta repetir `add spec` por módulo, solo
+redactar el `.spec.md` de cada uno (paso 2 de arriba).
+
+En ambos caminos la spec queda `draft` hasta que el **orquestador** abre cycle-01 en
+FASE 5 (`draft → in-progress`) — Hermes nunca cambia ese status por su cuenta.
 
 **Checkpoint por spec:** la spec es el contrato — el usuario la aprueba (o edita)
 antes de que el loop la implemente. En modo full-auto explícitamente pedido, se
@@ -168,22 +210,32 @@ explícitos en Claude Code, subagentes de modelo económico/estándar en Gemini 
 custom agents con `model:` pinneado en Copilot, y en Antigravity verificar el dropdown
 antes de cada fase (regla ⚙️).
 
-**Telemetría del loop (obligatoria al cerrar cada ciclo):** el reviewer registra
-`cycle.json → metrics.usage` con `by_tier` en claves `proveedor/modelo` (`claude/opus`,
-`gemini/pro`, `copilot/claude-sonnet`; Antigravity bajo `gemini/*`) y todo fix generado
-dentro del loop registra su `usage` en `sdd/fixes.json`. Fuente del número: `/stats` en
-Gemini CLI, reporte de sesión en Claude Code — ambos comandos del cliente que el agente no
-puede ejecutar — y estimación declarada en Antigravity/Copilot, que no tienen contador.
-**Hermes no cierra un ciclo sin este registro.** Sin contador se estima con `approx: true`
-y `source: "declared-estimate"`; no existe la opción de omitir.
+**Telemetría del loop (obligatoria al cerrar cada ciclo):** cada agente registra su
+propia unidad en `cycle.json → metrics.usage.by_agent[]` al cerrarla — la task
+implementada, el documento (functional/planner/architect), la coordinación del
+orquestador. Cuando Hermes o el orquestador lanzan un subagente vía la tool `Agent`
+(Claude Code), la notificación `agent-usage-notification`
+(`<usage><subagent_tokens>N</subagent_tokens>…</usage>`) del padre es la fuente exacta
+para esa entrada — `approx: false`, split 85/15 en `tokens_in`/`tokens_out`. El
+**reviewer**, al cerrar, verifica que `by_agent` esté completo, agrega su propia
+entrada, deriva `by_tier` agrupando por `provider_model` (`claude/opus`, `gemini/pro`,
+`copilot/claude-sonnet`; Antigravity bajo `gemini/*`) y suma el total top-level — nunca
+lo reconstruye a estimación. Todo fix generado dentro del loop registra su `usage` (y
+`by_agent` si participó más de un agente) en `sdd/fixes.json` al resolverse. Fuente del
+número: `/stats` en Gemini CLI, reporte de sesión en Claude Code — ambos comandos del
+cliente que el agente no puede ejecutar — y estimación declarada en Antigravity/Copilot,
+que no tienen contador. **Hermes no cierra un ciclo sin este registro.** Sin contador se
+estima con `approx: true` y `source: "declared-estimate"`; no existe la opción de omitir.
 
 ## Automatización del loop (opcional — por proveedor)
 
 El loop es retomable por diseño: todo el estado vive en los registros SDD, así que
 cualquier sesión nueva puede continuarlo con `sdd/prompts/hermes-resume.prompt.md`
-(prompt standalone: carga lessons + global.json, diagnostica la posición y sigue).
-`setup:agents` ya lo expone en cada arnés; sobre esa base, cada proveedor tiene su
-mecanismo:
+(prompt standalone: carga lessons + `harness.idea.md` + global.json, declara la FASE
+actual y sigue desde ahí). Para un repaso rápido sin abrir archivos,
+`harness idea --show` imprime la idea, la evidencia del descubrimiento y las
+decisiones del dev ya registradas. `setup:agents` ya lo expone en cada arnés; sobre
+esa base, cada proveedor tiene su mecanismo:
 
 | Proveedor          | Retomar el loop                                        | Automatización disponible                                                                 |
 | ------------------ | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
@@ -217,6 +269,26 @@ mecanismo:
 
 ## Archivos que modifica
 
-Hermes en sí solo escribe `harness.config.json` (FASE 3) y los `.spec.md` +
-`pending_modules` (FASE 4). Todo lo demás lo escriben los agentes SDD de cada fase
-bajo sus propias reglas — ver "Archivos que modifica" de cada skill.
+Hermes en sí escribe `harness.idea.md` (idea + evidencia + decisiones del dev, FASE 1),
+`harness.config.json` (FASE 3) y los `.spec.md` (FASE 4). `pending_modules` de
+`sdd/global.json` y el `status: "draft"` de cada spec en `sdd/specs/index.json` ya no
+los escribe Hermes a mano: los registra la CLI (`add spec`, o el sembrado de
+`sdd.modules` en `init`) al correr FASE 4. Todo lo demás lo escriben los agentes SDD
+de cada fase bajo sus propias reglas — ver "Archivos que modifica" de cada skill.
+
+## Registro de consumo (obligatorio)
+
+Hermes también consume tokens coordinando fases — ese consumo se registra, no se
+descarta por ser "solo orquestación":
+
+- **Dentro de un ciclo o de un fix que Hermes conduce**: su unidad va en
+  `metrics.usage.by_agent[]` del ciclo (o `usage`/`usage.by_agent[]` del fix) con
+  `agent: "hermes"`, igual que cualquier otro agente — ver review-cycle.prompt.md
+  paso 4c y hotfix-bypass-gate.prompt.md.
+- **FASE 1–4, fuera de cualquier ciclo** (descubrimiento, decisión de stack,
+  configuración del workspace, redacción de specs): no hay `cycle.json` donde anotarlo
+  todavía. Si el proveedor no expone otro mecanismo de registro en ese momento, anotar
+  el consumo como una línea de costo declarado dentro de `## Decisiones del dev` o
+  `## Evidencia del descubrimiento` de `harness.idea.md` (proveedor/modelo, tokens u
+  orden de magnitud, `approx: true` si no hay contador) — se retoma y consolida en el
+  `by_agent` del primer ciclo que abra el orquestador (FASE 5).

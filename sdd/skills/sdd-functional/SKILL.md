@@ -31,3 +31,8 @@ Traduce el objetivo de negocio en historias de usuario y requisitos funcionales 
 
 - `sdd/specs/{spec-id}/cycles/cycle-[XX]/functional.md` (template en `sdd-file-structure` §3.4)
 - Si `cycles/cycle-[XX]/tasks.json` ya existe, setear `"user_stories_generated": true` (si no, lo hará el Planner)
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-functional.agent.md` § Registro de consumo: push de tu entrada en
+`cycle.json → metrics.usage.by_agent[]` al terminar el documento — no tenés fila en `tasks.json`.

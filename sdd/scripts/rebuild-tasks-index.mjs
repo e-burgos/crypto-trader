@@ -18,6 +18,17 @@ const SPECS_DIR = join(SDD_ROOT, 'specs');
 const INDEX_PATH = join(SDD_ROOT, 'tasks.json');
 const CHECK_ONLY = process.argv.includes('--check');
 
+// With NX_WORKSPACE_ROOT_PATH pointing elsewhere, every `nx …` run from here targets THAT
+// workspace and reports success — warned on the first line, before anything else.
+{
+  const nxRoot = process.env.NX_WORKSPACE_ROOT_PATH;
+  if (!CHECK_ONLY && nxRoot && resolve(nxRoot) !== resolve(SDD_ROOT, '..')) {
+    console.warn(
+      `[rebuild-tasks-index] ⚠ NX_WORKSPACE_ROOT_PATH=${nxRoot} is not this repo (${resolve(SDD_ROOT, '..')}) — any \`nx\` command run here targets THAT workspace.`,
+    );
+  }
+}
+
 const specs = {};
 const specIds = readdirSync(SPECS_DIR, { withFileTypes: true })
   .filter((e) => e.isDirectory() && e.name.startsWith('spec-'))

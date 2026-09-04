@@ -63,6 +63,12 @@ contra sus schemas.
    pnpm setup:agents
    ```
 
+   El script **nunca destruye** lo que ya tenías: si `.claude/agents`, `.claude/skills`,
+   `.claude/commands` o `.github/agents` son directorios reales del equipo, se conservan y los
+   ítems del kit se enlazan adentro; si un nombre colisiona (tu propia
+   `.github/skills/sdd-reviewer/`, un `AGENTS.md` raíz escrito a mano), lo tuyo queda y la
+   versión del kit aparece al lado como `<nombre>.new`, listada al final para que la fusiones.
+
 4. **Completar las plantillas** — buscar los marcadores `[...]`:
    - `sdd/global.json` → `project`, `description`, `monorepo` (apps/libs reales).
      **`project` y `description` son la única fuente de verdad del nombre y la descripción:

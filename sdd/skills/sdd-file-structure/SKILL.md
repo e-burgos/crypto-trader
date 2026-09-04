@@ -267,7 +267,15 @@ agent_contexts:
     "brief": "sdd/specs/{spec-id}/cycles/cycle-[XX]/brief.yaml"
   },
   "artifacts": [],
-  "metrics": null,
+  "metrics": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "story_points": 0,
+    "files_created": [],
+    "files_modified": [],
+    "files_deleted": [],
+    "usage": { "tokens_in": 0, "tokens_out": 0, "by_agent": [] }
+  },
   "tables_created": [],
   "endpoints_implemented": [],
   "components_created": [],
@@ -279,6 +287,11 @@ agent_contexts:
 > ⛔ `cycle.json` **DEBE EXISTIR con `status: "in-progress"` ANTES de que cualquier
 > agente implementador escriba una línea de código.**
 > Ningún ciclo puede iniciarse sin este archivo.
+>
+> Desde v0.11.0, `metrics` **no nace `null`**: el orquestador lo crea con contadores en 0 y
+> `usage.by_agent: []` — es donde cada agente (functional, planner, architect, cada task, el
+> orquestador y el reviewer) hace push de su entrada al cerrar su unidad de trabajo. Detalle
+> completo en `sdd-data-schemas` §8.1.
 
 ---
 
@@ -313,7 +326,13 @@ agent_contexts:
     "story_points": 0,
     "files_created": [],
     "files_modified": [],
-    "files_deleted": []
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "by_agent": ["<una entrada por task done + documento + orquestador + reviewer>"],
+      "by_tier": "<derivado de by_agent, agrupado por provider_model>"
+    }
   },
   "tables_created": [],
   "endpoints_implemented": ["EP-001"],
@@ -588,11 +607,13 @@ SPEC GATE:
 
 CYCLE DOCS:
 [ ] 6. Crear sdd/specs/{spec-id}/cycles/cycle-[XX]/brief.yaml ← sdd-orchestrator
-[ ] 7. Crear sdd/specs/{spec-id}/cycles/cycle-[XX]/cycle.json ← status: "in-progress"
+[ ] 7. Crear sdd/specs/{spec-id}/cycles/cycle-[XX]/cycle.json ← status: "in-progress",
+       metrics con contadores en 0 y usage.by_agent: []
 [ ] 8. Actualizar sdd/global.json ← mover módulo a in_progress
 [ ] 9. Crear sdd/specs/{spec-id}/cycles/cycle-[XX]/tasks.json (Planner) y correr pnpm sdd:rebuild-tasks-index
+[ ] 10. Si es cycle-01 de la spec y su status en sdd/specs/index.json es "draft" → pasarlo a "in-progress"
 
-→ Solo si TODO ES SI y pasos 6-9 completados: invocar sdd-functional
+→ Solo si TODO ES SI y pasos 6-10 completados: invocar sdd-functional
 
 ```
 

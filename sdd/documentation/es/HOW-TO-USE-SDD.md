@@ -606,9 +606,9 @@ protocolo vive en `sdd/skills/sdd-hermes/SKILL.md`; la entrada es un comando:
 
 ```bash
 # Repo vacío — registrar la idea y dejar todo listo para el agente:
-npx @e-burgos/sdd-harness idea "una app de turnos para peluquerías con recordatorios"
+npx @e-burgos/sdd-harness idea "una app de turnos para peluquerías con recordatorios" --author gh-user
 # → harness.idea.md          (la idea + el protocolo a seguir, con checkpoints humanos)
-# → harness.config.json      (stub del stack, lo completa el agente)
+# → harness.config.json      (stub del stack, lo completa el agente; --author → sdd.author)
 # → harness.config.schema.json (para validar el config sin correr la CLI)
 
 # El agente decide el stack (checkpoint humano), y genera el workspace sin un solo prompt:
@@ -616,11 +616,39 @@ npx @e-burgos/sdd-harness init --config ./harness.config.json
 
 # Workspace existente — la misma entrada, protocolo de gaps:
 harness idea "sumar reportes de ventas"   # → harness.idea.md con análisis vs el stack instalado
+
+# Releer la idea vigente sin volver a generarla:
+harness idea --show   # imprime la idea + Evidencia del descubrimiento + Decisiones del dev
 ```
+
+`harness.idea.md` no es solo la idea: durante la FASE 1 el agente completa
+**`## Evidencia del descubrimiento`** (tabla `Fuente | Estado de acceso | Dato medido |
+Fecha`) y **`## Decisiones del dev`** (con fecha) — las specs citan esas secciones en
+vez de copiar los datos a mano. Si `harness.config.json` trae `sdd.modules`, `init`
+siembra una spec `draft` por módulo (más su entrada en `pending_modules`) al generar el
+workspace; si trae `npm.scopes[]`, genera el `.npmrc` del repo
+(`@org:registry=https://npm.pkg.github.com`) sin la credencial — esa va en el
+`~/.npmrc` local del dev y en `NODE_AUTH_TOKEN` en CI, nunca en el `.npmrc` versionado.
+
+`init --config` genera en el cwd cuando el cwd ya contiene el config, cuando
+`basename(cwd) == project.name`, o con `--here` explícito; si el cwd ya es un repo git
+no corre `git init` — commitea en la rama actual. `harness.idea.md`,
+`harness.config.json` y `harness.config.schema.json` quedan dentro del workspace
+generado (no se borran). Al final corre el gate: `sdd:validate` +
+`nx run-many -t lint test build`, y **falla si algo queda rojo** — `--skip-verify` lo
+omite si hace falta saltarlo a propósito.
+
+> Si el entorno tiene `NX_WORKSPACE_ROOT_PATH` apuntando a otro repo, `init`, `add`,
+> `update` y los scripts `sdd:*` lo avisan en la primera línea — sin esa variable
+> alineada, un `nx run-many -t build` corrido "dentro" del repo nuevo puede terminar
+> buildeando OTRO repo, sin ningún error visible.
 
 Dentro del workspace, el agente sigue las fases 4–5 de la skill: una spec por
 módulo (`harness add spec`, checkpoint humano) y el loop de ciclos de siempre —
-Hermes **no bypassea ningún gate**, solo encadena fases.
+Hermes **no bypassea ningún gate**, solo encadena fases. `harness add spec` crea cada
+spec con `status: "draft"` y registra su módulo en `pending_modules` de
+`sdd/global.json` (con `--apps`/`--depends-on`); el orquestador la pasa a
+`in-progress` (módulo incluido) recién al abrir `cycle-01` — ver Paso 1 más arriba.
 
 **Retomar en cualquier sesión** (el estado vive en los registros, no en la sesión):
 pegarle al agente `sdd/prompts/hermes-resume.prompt.md` — diagnostica la posición
@@ -654,25 +682,48 @@ aviso de destilación pendiente y el del cap de 120 líneas cuando corresponde. 
 
 ### 10.3 Telemetría y dashboard de Costos
 
-Al cerrar cada ciclo, el reviewer registra el consumo. **Es obligatorio y declarar
-proveedor/modelo no es opcional**: el modelo siempre se conoce, es el que estuvo
-corriendo. Las claves de `by_tier` llevan namespace de proveedor (`proveedor/modelo` —
-los tiers legacy sin namespace como `sonnet`/`opus` siguen siendo válidos y se leen
-como `claude/*`; Antigravity registra bajo `gemini/*` porque corre modelos Gemini):
+Contrato v0.11.0: **todo agente que consuma tokens en un flujo SDD o un fix registra,
+al cerrar su unidad de trabajo** (task, documento, ciclo, fix), `provider_model`
+(`claude/sonnet`, `gemini/pro`, `copilot/claude-sonnet`), `effort`, `tokens_in`,
+`tokens_out`, `source` y `approx`. Modelo/effort se declaran ANTES de ejecutar (regla
+⚙️); los tokens se registran AL CERRAR. La tabla completa de fuentes por arnés
+(`session-report`, `stats-command`, `agent-usage-notification`, `declared-estimate`) y
+el detalle campo por campo viven en `sdd/dual-harness/AGENTS.md` (sección ⚙️ →
+Telemetría de uso) — acá solo el resumen:
+
+- **Task** → `tasks.json → tasks[].usage`, la escribe quien la ejecuta al cerrarla.
+- **Documento** (functional/planner/architect) → una entrada en
+  `cycle.json → metrics.usage.by_agent[]` al terminar.
+- **Ciclo** → el reviewer **consolida `by_agent`, no estima el total**: agrega su
+  propia entrada y deriva `by_tier` agrupando `by_agent` por `provider_model` — no lo
+  llena a mano.
+- **Fix** → `sdd/fixes.json → fixes[].usage` (`by_agent[]` si trabajó más de un
+  agente); el FIX GATE no cierra un fix sin `usage`.
 
 ```jsonc
-// cycle.json → metrics
+// cycle.json → metrics.usage (el reviewer consolida, no reconstruye de memoria)
 "usage": {
   "tokens_in": 980000, "tokens_out": 151000, "duration_minutes": 65,
   "by_tier": { "claude/sonnet": { "tokens_in": 830000, "tokens_out": 130000 },
-               "claude/opus":   { "tokens_in": 150000, "tokens_out": 21000 } }
+               "claude/opus":   { "tokens_in": 150000, "tokens_out": 21000 } },
+  "by_agent": [
+    { "agent": "implementor-back", "label": "TASK-003", "provider_model": "claude/sonnet",
+      "effort": "medium", "tokens_in": 210000, "tokens_out": 34000,
+      "approx": false, "source": "agent-usage-notification", "recorded_at": "2026-09-02" },
+    { "agent": "reviewer", "provider_model": "claude/opus", "effort": "high",
+      "tokens_in": 150000, "tokens_out": 21000,
+      "approx": false, "source": "session-report", "recorded_at": "2026-09-02" }
+  ]
 }
 ```
 
-**Cuando no hay contador, se estima — no se omite.** `/stats` (Gemini CLI) y el reporte
-de uso de la sesión (Claude Code) son comandos del cliente: el agente no puede
-ejecutarlos, se los pide al dev. En **GitHub Copilot y Antigravity no existe contador
-por sesión**. En todos esos casos el registro va marcado como estimación declarada:
+**Cuando no hay contador, se estima — no se omite.** `/stats` (Gemini CLI, solo cubre
+el main loop) y el reporte de uso de la sesión (Claude Code) son comandos del cliente:
+el agente no puede ejecutarlos, se los pide al dev. En subagentes de Gemini CLI y en
+**GitHub Copilot y Antigravity no existe contador**: en Claude Code, en cambio, cada
+subagente lanzado con la tool `Agent` sí trae una medición exacta y gratuita
+(`agent-usage-notification`, la notificación `<subagent_tokens>` que el harness manda
+al padre al terminar). Sin contador, el registro va marcado como estimación declarada:
 
 ```jsonc
 "usage": {
@@ -686,17 +737,12 @@ por sesión**. En todos esos casos el registro va marcado como estimación decla
 
 El visor muestra esas filas como **estimado** en la columna *Origen* de «Consumo por
 proveedor»: la estimación se declara, no se esconde ni se hace pasar por medida. Lo
-único prohibido es inventar un número preciso y presentarlo como medido (`approx: false`
-sin contador detrás). `pnpm sdd:validate` avisa —warning, no error— cuando un ciclo
-cerrado no tiene `metrics.usage` o lo tiene sin `by_tier`.
-
-**Quien ejecuta registra; el reviewer consolida.** El consumo se anota al cerrar cada unidad de
-trabajo: cada task lleva su `usage` en `tasks.json` (lo escribe el implementador) y cada fix
-cerrado por el FIX GATE lleva el suyo en `sdd/fixes.json` → `usage`, con la misma forma
-singular (`tokens_in`/`tokens_out`/`duration_minutes`/`model_tier`/`approx`/`source`). El total
-del ciclo se **suma** de eso, agrupado por `proveedor/modelo`; no se reconstruye de memoria al
-final. El reviewer solo estima lo que ninguna unidad cubrió —su propia revisión, coordinación,
-documentos— y una suma que mezcla medido con estimado queda `approx: true`.
+único prohibido es `approx: false` con `source: declared-estimate` — inventar un número
+preciso y presentarlo como medido. `pnpm sdd:validate` es **error** si un ciclo
+`completed` (`completed_at` ≥ 2026-09-02) o un fix resuelto (`resolved_at` ≥
+2026-09-02) no tiene `usage` con proveedor/modelo y tokens; **warning** si falta
+`by_agent` o `sum(by_agent) ≠ by_tier`; registros anteriores a esa fecha quedan en
+warning.
 
 Con eso, `pnpm sdd:docs` → vista **Costos**: comparativa del costo agéntico
 (tokens × tarifa por proveedor/tier) contra la estimación tradicional (`estimation_hours`

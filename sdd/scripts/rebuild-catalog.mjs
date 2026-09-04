@@ -6,11 +6,22 @@ import {
   existsSync,
   realpathSync,
 } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SDD_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CATALOG_PATH = join(SDD_ROOT, 'catalog.json');
+
+// With NX_WORKSPACE_ROOT_PATH pointing elsewhere, every `nx …` run from here targets THAT
+// workspace and reports success — warned on the first line, before anything else.
+{
+  const nxRoot = process.env.NX_WORKSPACE_ROOT_PATH;
+  if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url) && nxRoot && resolve(nxRoot) !== join(SDD_ROOT, '..')) {
+    console.warn(
+      `[rebuild-catalog] ⚠ NX_WORKSPACE_ROOT_PATH=${nxRoot} is not this repo (${join(SDD_ROOT, '..')}) — any \`nx\` command run here targets THAT workspace.`,
+    );
+  }
+}
 
 export function buildCatalog() {
   const skillsDir = join(SDD_ROOT, 'skills');

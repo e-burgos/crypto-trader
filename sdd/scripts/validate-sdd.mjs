@@ -13,6 +13,16 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const SDD = resolve(__dirname, '..');
 const REPO = resolve(SDD, '..');
 
+// First line on purpose: with NX_WORKSPACE_ROOT_PATH pointing elsewhere (an IDE session
+// whose primary directory is another repo), every `nx …` run from here executes the targets
+// of THAT workspace and reports success. The registries below are fine; the build is not.
+const NX_ROOT_ENV = process.env.NX_WORKSPACE_ROOT_PATH;
+if (NX_ROOT_ENV && resolve(NX_ROOT_ENV) !== REPO) {
+  console.warn(
+    `[validate-sdd] ⚠ NX_WORKSPACE_ROOT_PATH=${NX_ROOT_ENV} is not this repo (${REPO}) — any \`nx\` command run here targets THAT workspace. Unset it before lint/test/build.`,
+  );
+}
+
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
 
@@ -24,6 +34,9 @@ const warn = (file, msg) => warnings.push(`${file}: ${msg}`);
 function loadJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
+
+const sample = (files) =>
+  files.slice(0, 3).join(', ') + (files.length > 3 ? `, +${files.length - 3} more` : '');
 
 const compiledCache = new Map();
 function compiled(schemaFile) {
@@ -124,10 +137,19 @@ try {
 }
 
 // ---- 4. specs/index.json ↔ filesystem ↔ global.json ↔ cycle.json ----
+const draftCandidates = [];
 if (specsIndex && globalJson) {
   const completedModules = new Map(
     globalJson.completed_modules.map((m) => [m.spec, m]),
   );
+  // Every module registered in global.json must point at a spec of the index; a spec
+  // created by `harness add spec` lands in pending_modules automatically since v0.11.0.
+  for (const bucket of ['pending_modules', 'in_progress_modules', 'completed_modules']) {
+    for (const m of globalJson[bucket] ?? []) {
+      if (!specsIndex.specs.some((x) => x.id === m.spec))
+        warn('global.json', `${bucket}: module ${m.module} points at unknown spec ${m.spec}`);
+    }
+  }
   for (const s of specsIndex.specs) {
     if (!existsSync(join(REPO, s.folder)))
       fail('specs/index.json', `${s.id}: folder does not exist`);
@@ -137,6 +159,17 @@ if (specsIndex && globalJson) {
       fail('specs/index.json', `${s.id}: completed without completed_at`);
     if (s.status === 'in-progress' && s.completed_at)
       fail('specs/index.json', `${s.id}: in-progress with completed_at set`);
+    if (s.status === 'draft' && s.completed_at)
+      fail('specs/index.json', `${s.id}: draft with completed_at set`);
+    const hasCycles =
+      existsSync(join(REPO, s.folder, 'cycles')) &&
+      readdirSync(join(REPO, s.folder, 'cycles')).some((d) => /^cycle-\d{2}$/.test(d));
+    if (s.status === 'draft' && hasCycles)
+      warn(
+        'specs/index.json',
+        `${s.id}: has cycles but status is draft — the orchestrator sets in-progress when it opens cycle-01`,
+      );
+    if (s.status === 'in-progress' && !hasCycles) draftCandidates.push(s.id);
     if (s.status === 'completed' && !completedModules.has(s.id))
       fail(
         'specs/index.json',
@@ -161,10 +194,40 @@ if (specsIndex && globalJson) {
       );
   }
 }
+// Specs registered before v0.11.0 were born in-progress; since then they are born draft and
+// the orchestrator promotes them when it opens cycle-01. Never rewritten here — suggested.
+if (draftCandidates.length)
+  warn(
+    'specs/index.json',
+    `${draftCandidates.length} spec(s) in-progress without any cycle — since v0.11.0 a spec with no cycle is "draft"; set status: draft (${sample(draftCandidates)})`,
+  );
 
-// ---- 5. cycle.json rules ----
+// ---- 5. cycle.json rules + TELEMETRÍA GATE ----
+// Telemetry became mandatory in the protocol in v0.9.0 and per-agent in v0.11.0. Units closed
+// before the cutoff keep validating green (warnings only): nobody can rewrite history. Units
+// closed from the cutoff on fail without provider/model + tokens.
+const TELEMETRY_GATE_CUTOFF = '2026-09-02';
+const isGatedUnit = (date) => typeof date === 'string' && date >= TELEMETRY_GATE_CUTOFF;
+const providerOf = (u) => u?.provider_model ?? u?.model_tier ?? null;
+const canonicalModel = (key) =>
+  /^(haiku|sonnet|opus|fable)$/.test(key) ? `claude/${key}` : key;
+const hasTokens = (u) =>
+  Number.isInteger(u?.tokens_in) && Number.isInteger(u?.tokens_out);
+
 const cyclesWithoutTelemetry = [];
 const cyclesWithoutProvider = [];
+const cyclesWithoutByAgent = [];
+const cyclesIncompleteUsage = [];
+const tasksWithoutUsage = [];
+
+function checkDeclaredEstimate(file, where, u) {
+  if (u && u.approx === false && u.source === 'declared-estimate')
+    fail(
+      file,
+      `${where}: approx: false with source: declared-estimate — a declared estimate is approximate by definition (set approx: true or record the real source)`,
+    );
+}
+
 for (const [file, c] of cycles) {
   if (!c) continue;
   if (c.status === 'completed') {
@@ -187,11 +250,94 @@ for (const [file, c] of cycles) {
         );
     }
     // Outside the metrics guard on purpose: a cycle closed with metrics: null has no
-    // telemetry either, and that is exactly what this warning is for.
+    // telemetry either, and that is exactly what this gate is for.
     const usage = c.metrics?.usage;
-    if (!usage) cyclesWithoutTelemetry.push(file);
-    else if (!usage.by_tier || Object.keys(usage.by_tier).length === 0)
-      cyclesWithoutProvider.push(file);
+    const gated = isGatedUnit(c.completed_at);
+    const byAgent = Array.isArray(usage?.by_agent) ? usage.by_agent : [];
+    const byTier = usage?.by_tier ?? {};
+    const hasProvider =
+      Object.keys(byTier).length > 0 || byAgent.some((a) => providerOf(a));
+
+    if (!usage) {
+      if (gated)
+        fail(
+          file,
+          'completed without metrics.usage — since v0.11.0 a cycle is not closed until every agent recorded provider/model + tokens (by_agent) and the reviewer summed them into by_tier; with no counter, declare an estimate with approx: true',
+        );
+      else cyclesWithoutTelemetry.push(file);
+    } else {
+      if (!hasProvider) {
+        if (gated)
+          fail(
+            file,
+            'metrics.usage has no provider/model — declare by_agent[].provider_model (claude/sonnet, gemini/pro, copilot/claude-sonnet) and derive by_tier from it',
+          );
+        else cyclesWithoutProvider.push(file);
+      }
+      if (gated && !hasTokens(usage)) fail(file, 'metrics.usage without tokens_in/tokens_out');
+      if (gated && byAgent.length === 0) cyclesWithoutByAgent.push(file);
+      if (gated && (typeof usage.approx !== 'boolean' || !usage.source))
+        cyclesIncompleteUsage.push(file);
+
+      checkDeclaredEstimate(file, 'metrics.usage', usage);
+      for (const [tier, u] of Object.entries(byTier))
+        checkDeclaredEstimate(file, `metrics.usage.by_tier.${tier}`, u);
+      byAgent.forEach((a, i) =>
+        checkDeclaredEstimate(file, `metrics.usage.by_agent[${i}] (${a.agent})`, a),
+      );
+
+      // by_tier is derived from by_agent: same totals, same per-model split.
+      if (byAgent.length > 0 && Object.keys(byTier).length > 0) {
+        const fromAgents = {};
+        for (const a of byAgent) {
+          const key = canonicalModel(a.provider_model);
+          fromAgents[key] ??= { tokens_in: 0, tokens_out: 0 };
+          fromAgents[key].tokens_in += a.tokens_in ?? 0;
+          fromAgents[key].tokens_out += a.tokens_out ?? 0;
+        }
+        const tiers = {};
+        for (const [key, u] of Object.entries(byTier)) {
+          const k = canonicalModel(key);
+          tiers[k] ??= { tokens_in: 0, tokens_out: 0 };
+          tiers[k].tokens_in += u.tokens_in ?? 0;
+          tiers[k].tokens_out += u.tokens_out ?? 0;
+        }
+        const keys = new Set([...Object.keys(fromAgents), ...Object.keys(tiers)]);
+        const mismatched = [...keys].filter(
+          (k) =>
+            (fromAgents[k]?.tokens_in ?? 0) !== (tiers[k]?.tokens_in ?? 0) ||
+            (fromAgents[k]?.tokens_out ?? 0) !== (tiers[k]?.tokens_out ?? 0),
+        );
+        if (mismatched.length)
+          warn(
+            file,
+            `sum(by_agent) != by_tier for ${mismatched.join(', ')} — by_tier is derived from by_agent; re-sum at close`,
+          );
+      }
+      // Top-level totals must be the sum of the per-agent (or per-tier) breakdown.
+      const breakdown = byAgent.length > 0 ? byAgent : Object.values(byTier);
+      if (breakdown.length > 0 && hasTokens(usage)) {
+        const sumIn = breakdown.reduce((n, u) => n + (u.tokens_in ?? 0), 0);
+        const sumOut = breakdown.reduce((n, u) => n + (u.tokens_out ?? 0), 0);
+        if (sumIn !== usage.tokens_in || sumOut !== usage.tokens_out)
+          warn(
+            file,
+            `metrics.usage tokens (${usage.tokens_in}/${usage.tokens_out}) differ from the sum of ${byAgent.length > 0 ? 'by_agent' : 'by_tier'} (${sumIn}/${sumOut})`,
+          );
+      }
+    }
+
+    // Per-task: whoever executes records when the task closes. Gated cycles list the
+    // done tasks that never got their usage (the orchestrator should not have marked them done).
+    if (gated) {
+      const ct = cycleTasks.get(file.replace(/cycle\.json$/, 'tasks.json'));
+      for (const t of ct?.tasks ?? []) {
+        if (t.status !== 'done') continue;
+        if (!t.usage || !providerOf(t.usage) || !hasTokens(t.usage))
+          tasksWithoutUsage.push(`${file.replace(/\/cycle\.json$/, '')}#${t.id}`);
+        checkDeclaredEstimate(file, `tasks.json ${t.id}.usage`, t.usage);
+      }
+    }
   }
   for (const doc of Object.values(c.documents)) {
     if (!existsSync(join(REPO, doc)))
@@ -203,11 +349,7 @@ for (const [file, c] of cycles) {
   }
 }
 
-// Telemetry is mandatory in the protocol but never a hard error here: cycles closed
-// before the field existed must keep validating green. Aggregated so an old repo gets
-// one line instead of a wall.
-const sample = (files) =>
-  files.slice(0, 3).join(', ') + (files.length > 3 ? `, +${files.length - 3} more` : '');
+// Aggregated so an old repo gets one line instead of a wall.
 if (cyclesWithoutTelemetry.length)
   warn(
     'cycle.json',
@@ -217,6 +359,21 @@ if (cyclesWithoutProvider.length)
   warn(
     'cycle.json',
     `${cyclesWithoutProvider.length} completed cycle(s) with metrics.usage but no by_tier — declare the model as provider/model, e.g. copilot/claude-sonnet (${sample(cyclesWithoutProvider)})`,
+  );
+if (cyclesWithoutByAgent.length)
+  warn(
+    'cycle.json',
+    `${cyclesWithoutByAgent.length} completed cycle(s) without metrics.usage.by_agent — every agent records its unit when it closes (agent, provider_model, effort, tokens, approx, source); the reviewer sums, never reconstructs (${sample(cyclesWithoutByAgent)})`,
+  );
+if (cyclesIncompleteUsage.length)
+  warn(
+    'cycle.json',
+    `${cyclesIncompleteUsage.length} completed cycle(s) whose metrics.usage lacks an explicit approx and/or source (${sample(cyclesIncompleteUsage)})`,
+  );
+if (tasksWithoutUsage.length)
+  warn(
+    'tasks.json',
+    `${tasksWithoutUsage.length} done task(s) in cycles closed since ${TELEMETRY_GATE_CUTOFF} without usage.provider_model + tokens — the executor records when the task closes and the orchestrator does not mark done without it (${sample(tasksWithoutUsage)})`,
   );
 
 // A cycle that closed with skipped tasks must say so in metrics.tasks_skipped, or the
@@ -235,9 +392,10 @@ for (const [file, ct] of cycleTasks) {
     );
 }
 
-// ---- 6. fixes.json rules ----
+// ---- 6. fixes.json rules + FIX GATE telemetry ----
 if (fixesJson) {
   const ids = new Set();
+  const fixesWithoutUsage = [];
   for (const f of fixesJson.fixes) {
     if (ids.has(f.id)) fail('fixes.json', `duplicate fix id ${f.id}`);
     ids.add(f.id);
@@ -246,12 +404,40 @@ if (fixesJson) {
         'fixes.json',
         `${f.id}: fix_document does not exist (${f.fix_document})`,
       );
-    if (
-      ['implemented', 'validated', 'absorbed'].includes(f.status) &&
-      !f.resolved_at
-    )
+    const resolved = ['implemented', 'validated', 'absorbed'].includes(f.status);
+    if (resolved && !f.resolved_at)
       fail('fixes.json', `${f.id}: status ${f.status} without resolved_at`);
+    if (resolved) {
+      const complete = f.usage && providerOf(f.usage) && hasTokens(f.usage);
+      if (!complete) {
+        if (isGatedUnit(f.resolved_at))
+          fail(
+            'fixes.json',
+            `${f.id}: resolved without usage.provider_model + tokens — the FIX GATE does not close a fix until whoever resolved it recorded provider/model, effort, tokens, approx and source (declared estimate with approx: true when there is no counter)`,
+          );
+        else fixesWithoutUsage.push(f.id);
+      }
+      checkDeclaredEstimate('fixes.json', `${f.id}.usage`, f.usage);
+      const byAgent = Array.isArray(f.usage?.by_agent) ? f.usage.by_agent : [];
+      byAgent.forEach((a, i) =>
+        checkDeclaredEstimate('fixes.json', `${f.id}.usage.by_agent[${i}] (${a.agent})`, a),
+      );
+      if (byAgent.length > 0 && hasTokens(f.usage)) {
+        const sumIn = byAgent.reduce((n, u) => n + (u.tokens_in ?? 0), 0);
+        const sumOut = byAgent.reduce((n, u) => n + (u.tokens_out ?? 0), 0);
+        if (sumIn !== f.usage.tokens_in || sumOut !== f.usage.tokens_out)
+          warn(
+            'fixes.json',
+            `${f.id}: usage tokens (${f.usage.tokens_in}/${f.usage.tokens_out}) differ from the sum of by_agent (${sumIn}/${sumOut})`,
+          );
+      }
+    }
   }
+  if (fixesWithoutUsage.length)
+    warn(
+      'fixes.json',
+      `${fixesWithoutUsage.length} resolved fix(es) without usage.provider_model + tokens (closed before ${TELEMETRY_GATE_CUTOFF}, kept as warning) (${sample(fixesWithoutUsage)})`,
+    );
 }
 
 // ---- 7. Cycle root whitelist (6 allowed files) ----

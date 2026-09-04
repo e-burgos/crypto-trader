@@ -85,23 +85,36 @@ Si alguna condición NO se cumple → DETENER y notificar al Orquestador.
   "usage": {
     "tokens_in": 42000,
     "tokens_out": 8000,
-    "model_tier": "copilot/claude-sonnet",
+    "provider_model": "copilot/claude-sonnet",
+    "effort": "medium",
+    "agent": "implementor-front",
     "approx": true,
-    "source": "declared-estimate"
+    "source": "declared-estimate",
+    "recorded_at": "YYYY-MM-DD"
   }
   ```
 
   Se registra **al cerrar esta task**, no al final del ciclo: el reviewer consolida sumando lo
   que vos y los fixes ya escribieron. Si no lo anotás acá, alguien lo tiene que reconstruir de
-  memoria después.
+  memoria después — y el Orquestador no marca la task `done` sin este campo.
 
-  `model_tier` es `proveedor/modelo` (`claude/sonnet`, `gemini/pro`, `copilot/gpt-5-mini`;
+  `provider_model` es `proveedor/modelo` (`claude/sonnet`, `gemini/pro`, `copilot/gpt-5-mini`;
   Antigravity registra bajo `gemini/*`) y **siempre se conoce**: es el modelo con el que
-  estuviste trabajando. Si el arnés no expone contador (Copilot, Antigravity), declarar una
-  estimación de orden de magnitud con `approx: true` — **no omitir el campo**. Con contador
-  (reporte de sesión en Claude Code, `/stats` en Gemini CLI) va `approx: false` y el `source`
+  estuviste trabajando (declarado ANTES de tomar la task, junto con `effort`, regla ⚙️). Si el
+  arnés no expone contador (Copilot, Antigravity), declarar una estimación de orden de magnitud
+  con `approx: true` — **no omitir el campo**. Con contador (reporte de sesión en Claude Code,
+  `/stats` en Gemini CLI, o la notificación exacta que recibe el orquestador si te disparó como
+  subagente — `source: agent-usage-notification`) va `approx: false` y el `source`
   correspondiente.
 - Si la implementación introdujo un **patrón nuevo** no documentado en el contexto del subproyecto
   (nueva convención de componentes, nueva dependencia UI, nueva estructura de carpetas),
   **anotarlo en una sección `## Pendiente de documentar en contexto`** al final de `sdd/specs/{spec-id}/cycles/cycle-[XX]/planner.md`
   para que el Reviewer lo incorpore al cerrar el ciclo.
+
+## Registro de consumo (obligatorio)
+
+Ya está detallado arriba ("Al finalizar cada task"): `tasks.json → usage` con `provider_model`,
+`effort`, `agent: "implementor-front"` y `recorded_at`, escrito al cerrar CADA task — nunca
+diferido al cierre del ciclo. Declará modelo y effort antes de tomar la task; registrá tokens al
+cerrarla. Fuente del número según el arnés: tabla en `sdd/dual-harness/AGENTS.md`
+§ Selección de modelo y esfuerzo.

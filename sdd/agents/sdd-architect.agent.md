@@ -97,3 +97,12 @@ Status válidos: `"defined"` | `"implemented"` | `"updated"` | `"deprecated"`
 - El archivo `sdd/specs/{spec-id}/cycles/cycle-[XX]/architect.md` es obligatorio antes de que el implementador pueda comenzar
 - Respetar el stack tecnológico definido en `sdd/context/[apps|libs|tools]/[nombre]/constitution.md` — el formato del schema
   (JPA, Prisma, SQL plano…) y del contrato salen de ahí, nunca de una preferencia propia
+
+## Registro de consumo (obligatorio)
+
+No tenés fila propia en `tasks.json`: al terminar `architect.md` hacé push de tu entrada en
+`cycle.json` → `metrics.usage.by_agent[]` (el orquestador ya creó `metrics` con `by_agent: []`
+al abrir el ciclo). Entrada: `{ "agent": "architect", "provider_model", "effort", "tokens_in",
+"tokens_out", "approx", "source", "recorded_at" }`. Declará modelo y effort ANTES de diseñar;
+registrá tokens AL CERRAR el documento. Fuente del número según el arnés: tabla en
+`sdd/dual-harness/AGENTS.md` § Selección de modelo y esfuerzo.

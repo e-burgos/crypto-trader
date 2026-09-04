@@ -1152,6 +1152,24 @@ button {
   background: rgb(var(--rgb-sky-400));
 }
 
+.badge--origin-exact {
+  color: rgb(var(--rgb-emerald-400));
+  background: rgb(var(--rgb-emerald-500) / 0.08);
+  border-color: rgb(var(--rgb-emerald-500) / 0.18);
+}
+
+.badge--origin-estimated {
+  color: rgb(var(--rgb-amber-400));
+  background: rgb(var(--rgb-amber-500) / 0.1);
+  border-color: rgb(var(--rgb-amber-500) / 0.2);
+}
+
+.badge--origin-mixed {
+  color: rgb(var(--rgb-sky-400));
+  background: rgb(var(--rgb-sky-500) / 0.1);
+  border-color: rgb(var(--rgb-sky-500) / 0.2);
+}
+
 .badge--strict {
   padding: 2px 6px;
   font-size: var(--text-9);

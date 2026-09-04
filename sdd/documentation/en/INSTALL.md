@@ -63,6 +63,12 @@ contexts from any project. Every registry is empty and validates against its sch
    pnpm setup:agents
    ```
 
+   The script **never destroys** what you already had: if `.claude/agents`, `.claude/skills`,
+   `.claude/commands` or `.github/agents` are real directories of your team, they are kept and
+   the kit items are linked inside them; on a name collision (your own
+   `.github/skills/sdd-reviewer/`, a hand-written root `AGENTS.md`) yours stays and the kit
+   version lands next to it as `<name>.new`, listed at the end for you to merge.
+
 4. **Fill in the templates** — look for the `[...]` markers:
    - `sdd/global.json` → `project`, `description`, `monorepo` (real apps/libs).
      **`project` and `description` are the single source of truth for the name and the

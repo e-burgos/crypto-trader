@@ -60,3 +60,8 @@ description: Skill del Agente Implementador Frontend SDD. Implementa una task fr
   ]
 }
 ```
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-implementor-front.agent.md` § Registro de consumo: `tasks.json → usage` con
+`provider_model`, `effort`, `agent: "implementor-front"` y `recorded_at`, al cerrar CADA task.

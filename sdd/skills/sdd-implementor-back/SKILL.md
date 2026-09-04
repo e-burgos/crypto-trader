@@ -44,3 +44,8 @@ real distinto al asumido): implementar la alternativa mínima razonable y **docu
 únicamente con una entrada en `## Pendiente de documentar en contexto` del `planner.md` (nunca como
 comentario en el código — ver "Estilo de código" del agente) para que el Reviewer la evalúe al
 cerrar. Nunca desviarse en silencio.
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-implementor-back.agent.md` § Registro de consumo: `tasks.json → usage` con
+`provider_model`, `effort`, `agent: "implementor-back"` y `recorded_at`, al cerrar CADA task.

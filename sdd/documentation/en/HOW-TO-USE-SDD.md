@@ -613,9 +613,9 @@ lives in `sdd/skills/sdd-hermes/SKILL.md`; the entry point is one command:
 
 ```bash
 # Empty repo — register the idea and leave everything ready for the agent:
-npx @e-burgos/sdd-harness idea "a booking app for hair salons with reminders"
+npx @e-burgos/sdd-harness idea "a booking app for hair salons with reminders" --author gh-user
 # → harness.idea.md          (the idea + the protocol to follow, with human checkpoints)
-# → harness.config.json      (stack stub, the agent completes it)
+# → harness.config.json      (stack stub, the agent completes it; --author → sdd.author)
 # → harness.config.schema.json (to validate the config without running the CLI)
 
 # The agent decides the stack (human checkpoint), and generates the workspace without a single prompt:
@@ -623,11 +623,39 @@ npx @e-burgos/sdd-harness init --config ./harness.config.json
 
 # Existing workspace — same entry point, gap protocol:
 harness idea "add sales reports"   # → harness.idea.md with an analysis vs the installed stack
+
+# Re-read the current idea without regenerating it:
+harness idea --show   # prints the idea + Discovery evidence + Dev decisions
 ```
+
+`harness.idea.md` is not just the idea: during PHASE 1 the agent fills in
+**`## Discovery evidence`** (a `Source | Access status | Measured data | Date` table) and
+**`## Dev decisions`** (dated) — specs cite those sections instead of copying the data by
+hand. If `harness.config.json` carries `sdd.modules`, `init` seeds one `draft` spec per
+module (plus its `pending_modules` entry) when it generates the workspace; if it carries
+`npm.scopes[]`, it generates the repo's `.npmrc`
+(`@org:registry=https://npm.pkg.github.com`) without the credential — that goes in the
+dev's local `~/.npmrc` and in `NODE_AUTH_TOKEN` in CI, never in the committed `.npmrc`.
+
+`init --config` generates in the cwd when the cwd already contains the config, when
+`basename(cwd) == project.name`, or with explicit `--here`; if the cwd is already a git
+repo it skips `git init` — it commits on the current branch instead. `harness.idea.md`,
+`harness.config.json` and `harness.config.schema.json` stay inside the generated
+workspace (they are not deleted). At the end it runs the gate: `sdd:validate` +
+`nx run-many -t lint test build`, and **fails if anything is red** — `--skip-verify`
+skips it when you need to bypass it on purpose.
+
+> If the environment has `NX_WORKSPACE_ROOT_PATH` pointing at another repo, `init`,
+> `add`, `update` and the `sdd:*` scripts warn about it on the first line — without that
+> variable aligned, an `nx run-many -t build` run "inside" the new repo can end up
+> building a DIFFERENT repo, with no visible error.
 
 Inside the workspace, the agent follows phases 4–5 of the skill: one spec per module
 (`harness add spec`, human checkpoint) and the usual cycle loop — Hermes **bypasses no
-gate**, it only chains phases.
+gate**, it only chains phases. `harness add spec` creates each spec with
+`status: "draft"` and registers its module in `pending_modules` of `sdd/global.json`
+(with `--apps`/`--depends-on`); the orchestrator moves it to `in-progress` (module
+included) only when it opens `cycle-01` — see Step 1 above.
 
 **Resume in any session** (state lives in the registries, not in the session): hand the agent
 `sdd/prompts/hermes-resume.prompt.md` — it diagnoses the position (open cycle → continue;
@@ -661,25 +689,48 @@ does things the way it does.
 
 ### 10.3 Telemetry and the Costs dashboard
 
-On closing each cycle, the reviewer records the consumption. **It is mandatory, and
-declaring provider/model is not optional**: the model is always known — it is the one that
-was running. `by_tier` keys are provider-namespaced (`provider/model` — bare legacy tiers
-like `sonnet`/`opus` are still accepted and read as `claude/*`; Antigravity records under
-`gemini/*` because it runs Gemini models):
+v0.11.0 contract: **every agent that consumes tokens in an SDD flow or a fix records, on
+closing its unit of work** (task, document, cycle, fix), `provider_model`
+(`claude/sonnet`, `gemini/pro`, `copilot/claude-sonnet`), `effort`, `tokens_in`,
+`tokens_out`, `source` and `approx`. Model/effort are declared BEFORE executing (rule
+⚙️); tokens are recorded ON CLOSE. The full table of sources per harness
+(`session-report`, `stats-command`, `agent-usage-notification`, `declared-estimate`) and
+the field-by-field detail live in `sdd/dual-harness/AGENTS.md` (section ⚙️ → Usage
+telemetry) — here's just the summary:
+
+- **Task** → `tasks.json → tasks[].usage`, written by whoever executes it on closing.
+- **Document** (functional/planner/architect) → one entry in
+  `cycle.json → metrics.usage.by_agent[]` on finishing it.
+- **Cycle** → the reviewer **consolidates `by_agent`, it does not estimate the total**:
+  it appends its own entry and derives `by_tier` by grouping `by_agent` by
+  `provider_model` — it does not fill it in by hand.
+- **Fix** → `sdd/fixes.json → fixes[].usage` (`by_agent[]` when more than one agent
+  worked on it); the FIX GATE does not close a fix without `usage`.
 
 ```jsonc
-// cycle.json → metrics
+// cycle.json → metrics.usage (the reviewer consolidates, it never reconstructs from memory)
 "usage": {
   "tokens_in": 980000, "tokens_out": 151000, "duration_minutes": 65,
   "by_tier": { "claude/sonnet": { "tokens_in": 830000, "tokens_out": 130000 },
-               "claude/opus":   { "tokens_in": 150000, "tokens_out": 21000 } }
+               "claude/opus":   { "tokens_in": 150000, "tokens_out": 21000 } },
+  "by_agent": [
+    { "agent": "implementor-back", "label": "TASK-003", "provider_model": "claude/sonnet",
+      "effort": "medium", "tokens_in": 210000, "tokens_out": 34000,
+      "approx": false, "source": "agent-usage-notification", "recorded_at": "2026-09-02" },
+    { "agent": "reviewer", "provider_model": "claude/opus", "effort": "high",
+      "tokens_in": 150000, "tokens_out": 21000,
+      "approx": false, "source": "session-report", "recorded_at": "2026-09-02" }
+  ]
 }
 ```
 
-**When there is no counter, estimate — do not omit.** `/stats` (Gemini CLI) and the session
-usage report (Claude Code) are client-side commands: the agent cannot run them, it asks the
-dev. **GitHub Copilot and Antigravity expose no per-session counter at all.** In every one of
-those cases the record is marked as a declared estimate:
+**When there is no counter, estimate — do not omit.** `/stats` (Gemini CLI, main loop
+only) and the session usage report (Claude Code) are client-side commands: the agent
+cannot run them, it asks the dev. Gemini CLI subagents and **GitHub Copilot and
+Antigravity expose no counter at all**: Claude Code, by contrast, gets an exact and free
+measurement for every subagent launched with the `Agent` tool
+(`agent-usage-notification`, the `<subagent_tokens>` notification the harness sends the
+parent on completion). With no counter, the record is marked as a declared estimate:
 
 ```jsonc
 "usage": {
@@ -692,18 +743,12 @@ those cases the record is marked as a declared estimate:
 ```
 
 The viewer shows those rows as **estimated** in the *Source* column of "Usage by provider":
-the estimate is declared, not hidden and not passed off as measured. The only forbidden thing
-is inventing a precise number and presenting it as measured (`approx: false` with no counter
-behind it). `pnpm sdd:validate` warns — a warning, not an error — when a closed cycle has no
-`metrics.usage`, or has it without `by_tier`.
-
-**Whoever executes records; the reviewer consolidates.** Usage is written when each unit of work
-closes: every task carries its `usage` in `tasks.json` (written by the implementor) and every fix
-closed under the FIX GATE carries its own in `sdd/fixes.json` → `usage`, same shape, singular
-(`tokens_in`/`tokens_out`/`duration_minutes`/`model_tier`/`approx`/`source`). The cycle total is
-**summed** from those, grouped by provider/model; it is never reconstructed from memory at the
-end. The reviewer only estimates what no unit covered — the review itself, coordination,
-documents — and a sum mixing measured with estimated comes out `approx: true`.
+the estimate is declared, not hidden and not passed off as measured. The only forbidden
+thing is `approx: false` with `source: declared-estimate` — inventing a precise number and
+presenting it as measured. `pnpm sdd:validate` is an **error** when a `completed` cycle
+(`completed_at` ≥ 2026-09-02) or a resolved fix (`resolved_at` ≥ 2026-09-02) has no
+`usage` with provider/model and tokens; a **warning** when `by_agent` is missing or
+`sum(by_agent) ≠ by_tier`; records from before that date stay a warning.
 
 With that, `pnpm sdd:docs` → **Costs** view: agentic cost (tokens × per-provider/tier rate)
 compared against the traditional estimation (`estimation_hours` of the tasks × hourly rate),

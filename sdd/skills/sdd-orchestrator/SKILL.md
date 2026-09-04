@@ -85,7 +85,7 @@ Mismo patrón y mismo actor único que la consolidación de contexto, aplicado a
 ## Archivos que modifica
 
 - `sdd/global.json` — mueve el módulo a `in_progress_modules`
-- `sdd/specs/index.json` — registra la spec si aún no está (append-only)
+- `sdd/specs/index.json` — registra la spec si aún no está (append-only); en `cycle-01` pasa su `status` de `"draft"` a `"in-progress"`
 - `sdd/specs/{spec-id}/cycles/cycle-[XX]/cycle.json` — creado al inicio con `status: "in-progress"`
 - `sdd/fixes.json` — solo cuando se activa el FIX GATE
 - `sdd/context/[apps|libs|tools]/[nombre]/constitution.md` y `context_prompt.md` —
@@ -101,7 +101,23 @@ Mismo patrón y mismo actor único que la consolidación de contexto, aplicado a
 Usar el template canónico de `sdd/skills/sdd-file-structure/SKILL.md` §3.2
 (valida contra `sdd/schemas/cycle.schema.json`). Campos clave al inicio:
 `status: "in-progress"`, `started_at`, `completed_at: null`, `apps: []` (siempre array),
-`metrics: null`, `reviewer_report: null`.
+`metrics` **con contadores en 0 y `usage: { tokens_in: 0, tokens_out: 0, by_agent: [] }`**
+(nunca `metrics: null` desde v0.11.0), `reviewer_report: null`.
 
 > El sdd-reviewer es el único agente que cambia `status` a `"completed"`
 > y completa el `reviewer_report` al cerrar el ciclo.
+
+## Transición de status de la spec
+
+Si el ciclo que estás creando es el `cycle-01` de la spec y su entrada en
+`sdd/specs/index.json` tiene `status: "draft"` (valor inicial que le da `harness add spec`),
+pasala a `"in-progress"` como parte del PASO 6/7 de arriba. No tocar ningún otro campo de la
+entrada. Ciclos posteriores de la misma spec (`cycle-02`, `cycle-03`…) no vuelven a tocar este
+campo.
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-orchestrator.agent.md` § Registro de consumo — creás `metrics` con
+`by_agent: []` al abrir el ciclo, capturás la notificación exacta (`agent-usage-notification`)
+de cada subagente que dispares y la volcás en `by_agent` + `usage` de su task, y registrás tu
+propia entrada `{ "agent": "orchestrator", ... }` si el reviewer todavía no la agregó.

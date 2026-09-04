@@ -365,12 +365,12 @@ const EN_STRINGS = {
   Agéntico: 'Agentic',
   '{specId} — estimación tradicional: {cost} (horas de tasks × tarifa {rate}/h)':
     '{specId} — traditional estimate: {cost} (task hours × {rate}/h rate)',
-  '{specId} — costo agéntico aproximado: {cost} (tokens × tarifa por tier)':
-    '{specId} — approximate agentic cost: {cost} (tokens × tier rate)',
+  '{specId} — costo agéntico aproximado: {cost} (tokens × tarifa del modelo)':
+    '{specId} — approximate agentic cost: {cost} (tokens × model rate)',
   '{specId} — sin telemetría de tokens todavía': '{specId} — no token telemetry yet',
   'Costo por spec — tradicional vs agéntico': 'Cost per spec — traditional vs agentic',
-  'Estimación tradicional (horas × tarifa) contra el costo aproximado de tokens del modo agéntico.':
-    'Traditional estimate (hours × rate) against the approximate token cost of agentic mode.',
+  'Estimación tradicional (horas × tarifa) contra el costo aproximado de tokens del modo agéntico. Incluye ciclos y fixes.':
+    'Traditional estimate (hours × rate) against the approximate token cost of agentic mode. Cycles and fixes included.',
   Entrada: 'Input',
   Salida: 'Output',
   'Tokens por ciclo': 'Tokens per cycle',
@@ -378,18 +378,40 @@ const EN_STRINGS = {
     'No telemetry yet. It gets recorded when each cycle closes: <code>cycle.json → metrics.usage</code> (done by sdd-reviewer) or per task in <code>tasks.json → usage</code>.',
   '{specId} {cycleId} — entrada: {tokensIn} tokens · salida: {tokensOut} tokens':
     '{specId} {cycleId} — input: {tokensIn} tokens · output: {tokensOut} tokens',
-  'Detalle por ciclo': 'Detail per cycle',
+  'Detalle por ciclo y fix': 'Detail per cycle and fix',
+  '{cycles} ciclos y {fixes} fixes en una sola tabla: horas estimadas contra tokens y costo agéntico registrado.':
+    '{cycles} cycles and {fixes} fixes in a single table: estimated hours against recorded tokens and agentic cost.',
+  Unidad: 'Unit',
+  Unidades: 'Units',
+  Tokens: 'Tokens',
   'Horas est.': 'Est. hours',
   'Costo trad.': 'Trad. cost',
   'Tokens in/out': 'Tokens in/out',
   'Costo agéntico': 'Agentic cost',
   Ahorro: 'Savings',
-  'Consumo por proveedor': 'Usage by provider',
+  'Consumo por proveedor y modelo': 'Usage by provider and model',
+  Modelo: 'Model',
+  'Sin modelo declarado': 'No model declared',
+  'Subtotal {provider}': 'Subtotal {provider}',
+  'Consumo por agente': 'Usage by agent',
+  Agente: 'Agent',
+  'Sin agente declarado': 'No agent declared',
+  Otro: 'Other',
+  Funcional: 'Functional',
+  Arquitecto: 'Architect',
+  'Implementor back': 'Implementor back',
+  'Implementor front': 'Implementor front',
+  Orquestador: 'Orchestrator',
+  'Uso por agente ({count})': 'Usage by agent ({count})',
+  'Sin telemetría por agente todavía. Se registra en <code>metrics.usage.by_agent</code> de cada ciclo y en el <code>usage</code> de cada fix.':
+    'No per-agent telemetry yet. It is recorded in each cycle\u2019s <code>metrics.usage.by_agent</code> and in each fix\u2019s <code>usage</code>.',
+  'Tokens y costo agrupados por rol SDD, a partir de las entradas <code>by_agent</code> de ciclos y fixes y del <code>usage</code> por task.':
+    'Tokens and cost grouped by SDD role, from the <code>by_agent</code> entries of cycles and fixes and from the per-task <code>usage</code>.',
   'Sin telemetría con proveedor declarado todavía. Las claves de {field} llevan la forma {example}.':
     'No telemetry with a declared provider yet. {field} keys use the form {example}.',
   'Sin proveedor declarado': 'No provider declared',
-  'Tokens y costo agéntico agregados por proveedor (ciclos + fixes), según las claves proveedor/modelo de la telemetría.':
-    'Tokens and agentic cost aggregated by provider (cycles + fixes), based on the provider/model keys in the telemetry.',
+  'Tokens y costo agéntico por modelo completo (proveedor/modelo), con subtotal por proveedor. Incluye ciclos y fixes.':
+    'Tokens and agentic cost per full model (provider/model), with a subtotal per provider. Cycles and fixes included.',
   // Descripciones del kit (frontmatter de agentes y skills, catálogo de prompts).
   'Agente Arquitecto SDD. Define schema de DB, contratos de API y decisiones técnicas del módulo. Invocar después del Funcional, en paralelo con el Planner.':
     'SDD Architect agent. Defines the DB schema, the API contracts and the module\'s technical decisions. Invoke after the Functional agent, in parallel with the Planner.',
@@ -488,27 +510,26 @@ const EN_STRINGS = {
   Proveedor: 'Provider',
   'Modelos usados': 'Models used',
   Origen: 'Source',
-  medido: 'measured',
+  exacto: 'exact',
   estimado: 'estimated',
-  'parcialmente estimado': 'partly estimated',
-  '<strong>Origen</strong>: medido = leído de un contador de la sesión; estimado = aproximación declarada por el agente (arneses sin contador, como Copilot o Antigravity).':
-    '<strong>Source</strong>: measured = read from a session counter; estimated = approximation declared by the agent (harnesses with no counter, such as Copilot or Antigravity).',
+  mixto: 'mixed',
+  '<strong>Origen</strong>: exacto = leído de un contador de la sesión (por ejemplo <code>agent-usage-notification</code>, el conteo por subagente que reporta el arnés); estimado = aproximación declarada por el agente (arneses sin contador, como Copilot o Antigravity); mixto = mezcla de ambos.':
+    '<strong>Source</strong>: exact = read from a session counter (for example <code>agent-usage-notification</code>, the per-subagent count the harness reports); estimated = an approximation declared by the agent (harnesses with no counter, such as Copilot or Antigravity); mixed = a blend of both.',
   ' · {n} omitida{suffix}': ' · {n} skipped',
   'skipped — resuelta / no aplica': 'skipped — resolved / not applicable',
   'Tokens in': 'Tokens in',
   'Tokens out': 'Tokens out',
   'Costo aprox.': 'Approx. cost',
-  'Costos de fixes': 'Fix costs',
-  '{count} fixes registrados, {withUsage} con telemetría. El usage se registra al cerrar cada fix (FIX GATE).':
-    '{count} fixes registered, {withUsage} with telemetry. Usage is recorded when each fix closes (FIX GATE).',
   'Metodología y tarifas': 'Methodology and rates',
   'Σ estimation_hours de las tasks × {rate}/h.': 'Σ estimation_hours of the tasks × {rate}/h.',
-  'tokens registrados × tarifa del tier (USD por millón de tokens).':
-    'tokens recorded × tier rate (USD per million tokens).',
-  'La telemetría la escribe el sdd-reviewer al cerrar cada ciclo (<code>metrics.usage</code>) o los implementadores por task; es obligatoria y, cuando el arnés no expone contador, se registra como estimación declarada (<code>approx: true</code>) — nunca se omite.':
-    'The telemetry is written by sdd-reviewer when each cycle closes (<code>metrics.usage</code>) or by the implementers per task; it is mandatory and, when the harness exposes no counter, it is recorded as a declared estimate (<code>approx: true</code>) — never omitted.',
-  '* Tokens sin tier declarado se tarifan como <code>{tier}</code>.':
-    '* Tokens with no declared tier are priced as <code>{tier}</code>.',
+  'tokens registrados × tarifa del modelo (USD por millón de tokens).':
+    'tokens recorded × model rate (USD per million tokens).',
+  'Prioridad de fuentes por ciclo: <code>metrics.usage.by_agent</code> → <code>metrics.usage.by_tier</code> → <code>tasks[].usage</code> → tokens top-level de <code>metrics.usage</code>.':
+    'Source priority per cycle: <code>metrics.usage.by_agent</code> → <code>metrics.usage.by_tier</code> → <code>tasks[].usage</code> → top-level tokens of <code>metrics.usage</code>.',
+  'La telemetría la escribe cada agente al cerrar su unidad de trabajo y el sdd-reviewer la consolida al cerrar el ciclo (<code>metrics.usage</code>); es obligatoria y, cuando el arnés no expone contador, se registra como estimación declarada (<code>approx: true</code>) — nunca se omite.':
+    'Each agent writes the telemetry when it closes its unit of work and sdd-reviewer consolidates it at cycle close (<code>metrics.usage</code>); it is mandatory and, when the harness exposes no counter, it is recorded as a declared estimate (<code>approx: true</code>) — never omitted.',
+  '* Tokens sin modelo declarado (o con un modelo sin tarifa) se tarifan como <code>{tier}</code>.':
+    '* Tokens with no declared model (or with a model that has no rate) are priced as <code>{tier}</code>.',
   'No hay <code>sdd/pricing.json</code> — usando tarifas por defecto del kit.':
     'There is no <code>sdd/pricing.json</code> — using the kit’s default rates.',
   'Tarifas editables en <code>sdd/pricing.json</code>.': 'Rates editable in <code>sdd/pricing.json</code>.',
@@ -3995,8 +4016,9 @@ function cycleActivityFeed(cycle, tasks, cycleId) {
 
   for (const task of tasks?.tasks ?? []) {
     const u = task.usage;
+    const model = u ? (u.provider_model ?? u.model_tier ?? null) : null;
     const tokens = u
-      ? ` · ${costsTokensFormat().format((u.tokens_in ?? 0) + (u.tokens_out ?? 0))} tokens${u.model_tier ? ` (${u.model_tier})` : ''}`
+      ? ` · ${costsTokensFormat().format(u.tokens_total ?? (u.tokens_in ?? 0) + (u.tokens_out ?? 0))} tokens${model ? ` (${model})` : ''}`
       : '';
     const tone =
       task.status === 'done'
@@ -4037,6 +4059,36 @@ function cycleActivityFeed(cycle, tasks, cycleId) {
   return `
     <div>
       <p style="${CYCLE_EYEBROW_STYLE}">${t('Actividad del ciclo — derivada de los registros')}</p>
+      <div style="display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--border); border-radius: var(--radius-lg)">${lines}</div>
+    </div>
+  `;
+}
+
+function cycleAgentUsageBlock(cycle) {
+  const byAgent = cycle?.metrics?.usage?.by_agent;
+  if (!Array.isArray(byAgent) || byAgent.length === 0) return '';
+  const lines = byAgent
+    .map((entry) => {
+      const bucket = { agent: entry.agent ?? null, label: entry.label ?? null };
+      const model = normalizeTierKey(entry.provider_model ?? null) ?? '—';
+      const tokens = costsTokensFormat().format(
+        entry.tokens_total ?? (entry.tokens_in ?? 0) + (entry.tokens_out ?? 0),
+      );
+      const origin = originBadge(
+        entry.approx === true ? COSTS_ORIGIN_ESTIMATED : COSTS_ORIGIN_EXACT,
+      );
+      const effort = entry.effort ? ` · ${entry.effort}` : '';
+      return `
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; min-width:0">
+          <span style="flex:0 0 auto; font-family: var(--font-mono); font-size: var(--text-11); color: rgb(var(--rgb-emerald-400))">${escapeHtml(costsAgentLabel(bucket))}</span>
+          <span style="font-family: var(--font-mono); font-size: var(--text-11); color: var(--text-muted)">${escapeHtml(`${model}${effort} · ${tokens} tokens`)}</span>
+          ${origin}
+        </div>`;
+    })
+    .join('');
+  return `
+    <div>
+      <p style="${CYCLE_EYEBROW_STYLE}">${escapeHtml(t('Uso por agente ({count})', { count: byAgent.length }))}</p>
       <div style="display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--border); border-radius: var(--radius-lg)">${lines}</div>
     </div>
   `;
@@ -4122,6 +4174,7 @@ function cycleModalResumenView(specId, cycleId, cycle, files, onTabIndex, tasks)
       </div>
       ${dateFields.length ? `<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px">${dateFields.join('')}</div>` : ''}
       ${cycleActivityFeed(cycle, tasks, cycleId)}
+      ${cycleAgentUsageBlock(cycle)}
       ${docsBlock}
       ${artifactsBlock}
     </div>
@@ -6802,101 +6855,298 @@ async function loadPricing() {
   }
 }
 
+const COSTS_ORIGIN_EXACT = 'exacto';
+const COSTS_ORIGIN_ESTIMATED = 'estimado';
+const COSTS_ORIGIN_MIXED = 'mixto';
+const COSTS_NO_AGENT = '_no_agent';
+
+const COSTS_AGENT_LABELS = {
+  functional: 'Funcional',
+  planner: 'Planner',
+  architect: 'Arquitecto',
+  'implementor-back': 'Implementor back',
+  'implementor-front': 'Implementor front',
+  reviewer: 'Reviewer',
+  orchestrator: 'Orquestador',
+  steward: 'Steward',
+  hermes: 'Hermes',
+  custom: 'Otro',
+};
+
 function emptyCostUsage() {
   return {
     tokensIn: 0,
     tokensOut: 0,
+    tokensDisplay: 0,
+    hasExplicitTotal: false,
     durationMinutes: 0,
     byTier: {},
+    entries: [],
+    exactUnits: 0,
+    approxUnits: 0,
     hasData: false,
     approx: false,
+    basis: null,
   };
 }
 
-function addTierTokens(usage, tier, tokensIn, tokensOut, approx = false) {
+function addTierTokens(
+  usage,
+  tier,
+  tokensIn,
+  tokensOut,
+  approx = false,
+  tokensTotal = null,
+) {
   const key = normalizeTierKey(tier) ?? COSTS_UNTIERED;
-  usage.byTier[key] ??= { tokensIn: 0, tokensOut: 0, approx: false };
-  usage.byTier[key].tokensIn += tokensIn;
-  usage.byTier[key].tokensOut += tokensOut;
-  usage.byTier[key].approx ||= approx;
+  usage.byTier[key] ??= {
+    tokensIn: 0,
+    tokensOut: 0,
+    tokensDisplay: 0,
+    approx: false,
+    exactUnits: 0,
+    approxUnits: 0,
+  };
+  const hasTotal = typeof tokensTotal === 'number' && tokensTotal >= 0;
+  const display = hasTotal ? tokensTotal : tokensIn + tokensOut;
+  const bucket = usage.byTier[key];
+  bucket.tokensIn += tokensIn;
+  bucket.tokensOut += tokensOut;
+  bucket.tokensDisplay += display;
+  bucket.approx ||= approx;
+  if (approx) bucket.approxUnits += 1;
+  else bucket.exactUnits += 1;
   usage.tokensIn += tokensIn;
   usage.tokensOut += tokensOut;
+  usage.tokensDisplay += display;
+  usage.hasExplicitTotal ||= hasTotal;
+  if (approx) usage.approxUnits += 1;
+  else usage.exactUnits += 1;
   usage.hasData = true;
   usage.approx ||= approx;
 }
 
-function usageFromCycleMetrics(metricsUsage) {
+function pushUsageEntry(usage, entry) {
+  const providerModel = normalizeTierKey(entry.providerModel ?? null);
+  const approx = entry.approx === true;
+  const tokensIn = entry.tokensIn ?? 0;
+  const tokensOut = entry.tokensOut ?? 0;
+  const tokensTotal =
+    typeof entry.tokensTotal === 'number' ? entry.tokensTotal : null;
+  usage.entries.push({
+    agent: entry.agent ?? null,
+    label: entry.label ?? null,
+    providerModel,
+    effort: entry.effort ?? null,
+    tokensIn,
+    tokensOut,
+    tokensTotal,
+    tokensDisplay: tokensTotal ?? tokensIn + tokensOut,
+    approx,
+    source: entry.source ?? null,
+    recordedAt: entry.recordedAt ?? null,
+    unitLabel: entry.unitLabel ?? null,
+  });
+  addTierTokens(usage, providerModel, tokensIn, tokensOut, approx, tokensTotal);
+}
+
+function usageOrigin(counts) {
+  const exact = counts?.exactUnits ?? 0;
+  const approx = counts?.approxUnits ?? 0;
+  if (exact > 0 && approx > 0) return COSTS_ORIGIN_MIXED;
+  if (approx > 0) return COSTS_ORIGIN_ESTIMATED;
+  if (exact > 0) return COSTS_ORIGIN_EXACT;
+  return null;
+}
+
+function originBadge(origin) {
+  if (!origin) return '—';
+  if (origin === COSTS_ORIGIN_EXACT)
+    return badge(COSTS_ORIGIN_EXACT, 'badge--origin-exact');
+  if (origin === COSTS_ORIGIN_MIXED)
+    return badge(COSTS_ORIGIN_MIXED, 'badge--origin-mixed');
+  return badge(COSTS_ORIGIN_ESTIMATED, 'badge--origin-estimated');
+}
+
+function usageFromAgentList(byAgent, unitLabel) {
   const usage = emptyCostUsage();
-  if (!metricsUsage) return usage;
-  usage.durationMinutes = metricsUsage.duration_minutes ?? 0;
-  const parentApprox = metricsUsage.approx === true;
-  const byTier = metricsUsage.by_tier ?? null;
-  if (byTier && Object.keys(byTier).length > 0) {
-    for (const [tier, tokens] of Object.entries(byTier)) {
-      addTierTokens(
-        usage,
-        tier,
-        tokens.tokens_in ?? 0,
-        tokens.tokens_out ?? 0,
-        tokens.approx ?? parentApprox,
-      );
-    }
-  } else {
-    addTierTokens(
-      usage,
-      null,
-      metricsUsage.tokens_in ?? 0,
-      metricsUsage.tokens_out ?? 0,
-      parentApprox,
-    );
+  for (const item of byAgent ?? []) {
+    usage.durationMinutes += item.duration_minutes ?? 0;
+    pushUsageEntry(usage, {
+      agent: item.agent ?? null,
+      label: item.label ?? null,
+      providerModel: item.provider_model ?? null,
+      effort: item.effort ?? null,
+      tokensIn: item.tokens_in ?? 0,
+      tokensOut: item.tokens_out ?? 0,
+      tokensTotal: item.tokens_total ?? null,
+      approx: item.approx === true,
+      source: item.source ?? null,
+      recordedAt: item.recorded_at ?? null,
+      unitLabel: item.label ?? unitLabel ?? null,
+    });
   }
+  return usage;
+}
+
+function usageFromTierMap(byTier, parentApprox, parentSource, unitLabel) {
+  const usage = emptyCostUsage();
+  for (const [tier, tokens] of Object.entries(byTier ?? {})) {
+    pushUsageEntry(usage, {
+      providerModel: tier,
+      tokensIn: tokens.tokens_in ?? 0,
+      tokensOut: tokens.tokens_out ?? 0,
+      approx: tokens.approx ?? parentApprox,
+      source: tokens.source ?? parentSource,
+      unitLabel,
+    });
+  }
+  return usage;
+}
+
+function usageFromTopLevelMetrics(metricsUsage, unitLabel) {
+  const usage = emptyCostUsage();
+  usage.durationMinutes = metricsUsage.duration_minutes ?? 0;
+  pushUsageEntry(usage, {
+    providerModel: null,
+    tokensIn: metricsUsage.tokens_in ?? 0,
+    tokensOut: metricsUsage.tokens_out ?? 0,
+    tokensTotal: metricsUsage.tokens_total ?? null,
+    approx: metricsUsage.approx === true,
+    source: metricsUsage.source ?? null,
+    unitLabel,
+  });
   return usage;
 }
 
 function usageFromTasks(tasks) {
   const usage = emptyCostUsage();
-  for (const task of tasks) {
-    if (!task.usage) continue;
-    usage.durationMinutes += task.usage.duration_minutes ?? 0;
-    addTierTokens(
-      usage,
-      task.usage.model_tier ?? null,
-      task.usage.tokens_in ?? 0,
-      task.usage.tokens_out ?? 0,
-      task.usage.approx === true,
-    );
+  for (const task of tasks ?? []) {
+    const entry = task.usage;
+    if (!entry) continue;
+    usage.durationMinutes += entry.duration_minutes ?? 0;
+    pushUsageEntry(usage, {
+      agent: entry.agent ?? null,
+      label: entry.agent === 'custom' ? (task.id ?? null) : null,
+      providerModel: entry.provider_model ?? entry.model_tier ?? null,
+      effort: entry.effort ?? null,
+      tokensIn: entry.tokens_in ?? 0,
+      tokensOut: entry.tokens_out ?? 0,
+      tokensTotal: entry.tokens_total ?? null,
+      approx: entry.approx === true,
+      source: entry.source ?? null,
+      recordedAt: entry.recorded_at ?? null,
+      unitLabel: task.id ?? null,
+    });
   }
   return usage;
 }
 
+/**
+ * Prioridad de fuentes para un ciclo, de más específica a más gruesa:
+ * metrics.usage.by_agent → metrics.usage.by_tier → tasks[].usage → tokens
+ * top-level de metrics.usage. by_tier puede faltar o estar desincronizado en
+ * datos viejos, por eso by_agent manda cuando existe.
+ */
+function resolveCycleUsage(cycle, tasks) {
+  const metricsUsage = cycle?.metrics?.usage ?? null;
+  if (
+    Array.isArray(metricsUsage?.by_agent) &&
+    metricsUsage.by_agent.length > 0
+  ) {
+    const usage = usageFromAgentList(metricsUsage.by_agent);
+    if (usage.durationMinutes === 0)
+      usage.durationMinutes = metricsUsage.duration_minutes ?? 0;
+    usage.basis = 'by_agent';
+    return usage;
+  }
+  if (
+    metricsUsage?.by_tier &&
+    Object.keys(metricsUsage.by_tier).length > 0
+  ) {
+    const usage = usageFromTierMap(
+      metricsUsage.by_tier,
+      metricsUsage.approx === true,
+      metricsUsage.source ?? null,
+    );
+    usage.durationMinutes = metricsUsage.duration_minutes ?? 0;
+    usage.basis = 'by_tier';
+    return usage;
+  }
+  const fromTasks = usageFromTasks(tasks);
+  if (fromTasks.hasData) {
+    if (fromTasks.durationMinutes === 0)
+      fromTasks.durationMinutes = metricsUsage?.duration_minutes ?? 0;
+    fromTasks.basis = 'tasks';
+    return fromTasks;
+  }
+  if (metricsUsage) {
+    const usage = usageFromTopLevelMetrics(metricsUsage);
+    usage.basis = 'metrics';
+    return usage;
+  }
+  return emptyCostUsage();
+}
+
 function usageFromFixEntry(fix) {
+  const entry = fix?.usage;
+  if (!entry) return emptyCostUsage();
+  if (Array.isArray(entry.by_agent) && entry.by_agent.length > 0) {
+    const usage = usageFromAgentList(entry.by_agent, fix.id);
+    if (usage.durationMinutes === 0)
+      usage.durationMinutes = entry.duration_minutes ?? 0;
+    usage.basis = 'by_agent';
+    return usage;
+  }
   const usage = emptyCostUsage();
-  if (!fix.usage) return usage;
-  usage.durationMinutes = fix.usage.duration_minutes ?? 0;
-  addTierTokens(
-    usage,
-    fix.usage.model_tier ?? null,
-    fix.usage.tokens_in ?? 0,
-    fix.usage.tokens_out ?? 0,
-    fix.usage.approx === true,
-  );
+  usage.durationMinutes = entry.duration_minutes ?? 0;
+  pushUsageEntry(usage, {
+    agent: entry.agent ?? null,
+    label: entry.agent === 'custom' ? (fix.id ?? null) : null,
+    providerModel: entry.provider_model ?? entry.model_tier ?? null,
+    effort: entry.effort ?? null,
+    tokensIn: entry.tokens_in ?? 0,
+    tokensOut: entry.tokens_out ?? 0,
+    tokensTotal: entry.tokens_total ?? null,
+    approx: entry.approx === true,
+    source: entry.source ?? null,
+    recordedAt: entry.recorded_at ?? null,
+    unitLabel: fix.id ?? null,
+  });
+  usage.basis = 'fix';
   return usage;
+}
+
+function modelCostUsd(tier, tokensIn, tokensOut, pricing) {
+  const key = normalizeTierKey(tier);
+  let prices = key ? pricing.model_prices_per_mtok[key] : null;
+  let assumed = false;
+  if (!prices) {
+    prices =
+      pricing.model_prices_per_mtok[COSTS_ASSUMED_TIER] ??
+      COSTS_FALLBACK_PRICING.model_prices_per_mtok[COSTS_ASSUMED_TIER];
+    assumed = true;
+  }
+  return {
+    cost:
+      (tokensIn / 1_000_000) * prices.input +
+      (tokensOut / 1_000_000) * prices.output,
+    assumed,
+  };
 }
 
 function agenticCostUsd(usage, pricing) {
   let cost = 0;
   let assumed = false;
   for (const [tier, tokens] of Object.entries(usage.byTier)) {
-    let prices = pricing.model_prices_per_mtok[tier];
-    if (!prices) {
-      prices =
-        pricing.model_prices_per_mtok[COSTS_ASSUMED_TIER] ??
-        COSTS_FALLBACK_PRICING.model_prices_per_mtok[COSTS_ASSUMED_TIER];
-      assumed = true;
-    }
-    cost +=
-      (tokens.tokensIn / 1_000_000) * prices.input +
-      (tokens.tokensOut / 1_000_000) * prices.output;
+    const priced = modelCostUsd(
+      tier === COSTS_UNTIERED ? null : tier,
+      tokens.tokensIn,
+      tokens.tokensOut,
+      pricing,
+    );
+    cost += priced.cost;
+    assumed ||= priced.assumed;
   }
   return { cost, assumed };
 }
@@ -6926,15 +7176,16 @@ async function loadCostsData() {
   for (const result of results) {
     if (result.status !== 'fulfilled') continue;
     const { specId, cycleId, cycle, tasks } = result.value;
-    const usage = cycle.metrics?.usage
-      ? usageFromCycleMetrics(cycle.metrics.usage)
-      : usageFromTasks(tasks);
+    const usage = resolveCycleUsage(cycle, tasks);
     const estimationHours = tasks.reduce(
       (sum, task) => sum + (task.estimation_hours ?? 0),
       0,
     );
     const agentic = agenticCostUsd(usage, pricing);
     rows.push({
+      kind: 'cycle',
+      id: `${specId} · ${cycleId}`,
+      href: '#/cycles',
       specId,
       cycleId,
       module: cycle.module ?? specId,
@@ -6959,8 +7210,12 @@ async function loadCostsData() {
     const agentic = agenticCostUsd(usage, pricing);
     const estimationHours = fix.estimation_hours ?? 0;
     return {
+      kind: 'fix',
+      id: fix.id,
+      href: '#/fixes',
       fixId: fix.id,
       title: fix.title ?? fix.id,
+      module: fix.title ?? fix.id,
       type: fix.type ?? 'FIX',
       status: fix.status ?? 'pending',
       specId: fix.spec_id,
@@ -6975,35 +7230,132 @@ async function loadCostsData() {
   return { pricing, rows, fixRows };
 }
 
-function providerTotals(rows, fixRows, pricing) {
+function costsAgentKey(entry) {
+  if (entry.agent === 'custom') return `custom:${entry.label ?? ''}`;
+  return entry.agent ?? COSTS_NO_AGENT;
+}
+
+function costsAgentLabel(bucket) {
+  if (!bucket.agent) return t('Sin agente declarado');
+  if (bucket.agent === 'custom') return bucket.label ?? t('Otro');
+  return t(COSTS_AGENT_LABELS[bucket.agent] ?? bucket.agent);
+}
+
+function costsAgentAggregation(rows, fixRows, pricing) {
   const totals = new Map();
   const accumulate = (usage) => {
-    for (const [tier, tokens] of Object.entries(usage.byTier)) {
-      const provider = providerOfTier(tier) ?? COSTS_UNTIERED;
-      const entry = totals.get(provider) ?? {
+    for (const entry of usage.entries) {
+      const key = costsAgentKey(entry);
+      const bucket = totals.get(key) ?? {
+        key,
+        agent: entry.agent ?? null,
+        label: entry.label ?? null,
+        units: 0,
         tokensIn: 0,
         tokensOut: 0,
+        tokensDisplay: 0,
         cost: 0,
         models: new Set(),
-        approx: false,
-        measured: false,
+        exactUnits: 0,
+        approxUnits: 0,
+        assumed: false,
       };
-      entry.tokensIn += tokens.tokensIn;
-      entry.tokensOut += tokens.tokensOut;
-      if (tokens.approx) entry.approx = true;
-      else entry.measured = true;
-      const partial = emptyCostUsage();
-      partial.byTier[tier] = tokens;
-      entry.cost += agenticCostUsd(partial, pricing).cost;
-      if (provider !== COSTS_UNTIERED) {
-        entry.models.add(tier.slice(provider.length + 1));
-      }
-      totals.set(provider, entry);
+      bucket.units += 1;
+      bucket.tokensIn += entry.tokensIn;
+      bucket.tokensOut += entry.tokensOut;
+      bucket.tokensDisplay += entry.tokensDisplay;
+      const priced = modelCostUsd(
+        entry.providerModel,
+        entry.tokensIn,
+        entry.tokensOut,
+        pricing,
+      );
+      bucket.cost += priced.cost;
+      bucket.assumed ||= priced.assumed;
+      if (entry.providerModel) bucket.models.add(entry.providerModel);
+      if (entry.approx) bucket.approxUnits += 1;
+      else bucket.exactUnits += 1;
+      totals.set(key, bucket);
     }
   };
   for (const row of rows) accumulate(row.usage);
   for (const fix of fixRows) accumulate(fix.usage);
-  return totals;
+  return [...totals.values()].sort((a, b) => b.cost - a.cost);
+}
+
+function costsModelAggregation(rows, fixRows, pricing) {
+  const totals = new Map();
+  const accumulate = (usage) => {
+    for (const [tier, tokens] of Object.entries(usage.byTier)) {
+      const bucket = totals.get(tier) ?? {
+        model: tier,
+        provider: providerOfTier(tier) ?? COSTS_UNTIERED,
+        units: 0,
+        tokensIn: 0,
+        tokensOut: 0,
+        tokensDisplay: 0,
+        cost: 0,
+        exactUnits: 0,
+        approxUnits: 0,
+        assumed: false,
+      };
+      bucket.units += tokens.exactUnits + tokens.approxUnits;
+      bucket.tokensIn += tokens.tokensIn;
+      bucket.tokensOut += tokens.tokensOut;
+      bucket.tokensDisplay += tokens.tokensDisplay;
+      bucket.exactUnits += tokens.exactUnits;
+      bucket.approxUnits += tokens.approxUnits;
+      const priced = modelCostUsd(
+        tier === COSTS_UNTIERED ? null : tier,
+        tokens.tokensIn,
+        tokens.tokensOut,
+        pricing,
+      );
+      bucket.cost += priced.cost;
+      bucket.assumed ||= priced.assumed;
+      totals.set(tier, bucket);
+    }
+  };
+  for (const row of rows) accumulate(row.usage);
+  for (const fix of fixRows) accumulate(fix.usage);
+  return [...totals.values()];
+}
+
+function costsProviderGroups(modelRows) {
+  const groups = new Map();
+  for (const model of modelRows) {
+    const group = groups.get(model.provider) ?? {
+      provider: model.provider,
+      models: [],
+      tokensIn: 0,
+      tokensOut: 0,
+      tokensDisplay: 0,
+      cost: 0,
+      exactUnits: 0,
+      approxUnits: 0,
+    };
+    group.models.push(model);
+    group.tokensIn += model.tokensIn;
+    group.tokensOut += model.tokensOut;
+    group.tokensDisplay += model.tokensDisplay;
+    group.cost += model.cost;
+    group.exactUnits += model.exactUnits;
+    group.approxUnits += model.approxUnits;
+    groups.set(model.provider, group);
+  }
+  const list = [...groups.values()];
+  for (const group of list) group.models.sort((a, b) => b.cost - a.cost);
+  return list.sort((a, b) => b.cost - a.cost);
+}
+
+function providerLabel(provider) {
+  if (provider === COSTS_UNTIERED) return t('Sin proveedor declarado');
+  return COSTS_PROVIDER_LABELS[provider] ?? provider;
+}
+
+function costsModelShortName(model) {
+  if (model.model === COSTS_UNTIERED) return t('Sin modelo declarado');
+  return model.model;
 }
 
 function costsMoneyFormatter(currency) {
@@ -7066,18 +7418,30 @@ function shortSpecLabel(specId) {
   return specId.replace(/^spec-/, '');
 }
 
-function costsComparisonCard(rows, pricing, money) {
+const COSTS_REPO_LEVEL_KEY = '__repo__';
+
+function costsComparisonCard(rows, fixRows, pricing, money) {
   const bySpec = new Map();
-  for (const row of rows) {
-    const entry = bySpec.get(row.specId) ?? {
+  const bucketFor = (key) => {
+    const entry = bySpec.get(key) ?? {
       traditional: 0,
       agentic: 0,
       hasUsage: false,
     };
+    bySpec.set(key, entry);
+    return entry;
+  };
+  for (const row of rows) {
+    const entry = bucketFor(row.specId);
     entry.traditional += row.traditionalCost;
     entry.agentic += row.agenticCost;
     entry.hasUsage ||= row.usage.hasData;
-    bySpec.set(row.specId, entry);
+  }
+  for (const fix of fixRows) {
+    const entry = bucketFor(fix.specId ?? COSTS_REPO_LEVEL_KEY);
+    entry.traditional += fix.traditionalCost;
+    entry.agentic += fix.agenticCost;
+    entry.hasUsage ||= fix.usage.hasData;
   }
   const max = Math.max(
     1e-9,
@@ -7088,10 +7452,13 @@ function costsComparisonCard(rows, pricing, money) {
   );
   const blocks = [...bySpec.entries()]
     .map(([specId, entry]) => {
+      const isRepo = specId === COSTS_REPO_LEVEL_KEY;
+      const label = isRepo ? t('Fixes globales (sin spec asociada)') : specId;
+      const href = isRepo ? '#/fixes' : '#/cycles';
       const agenticLabel = entry.hasUsage ? money.format(entry.agentic) : '—';
       return `
         <div style="display:grid;gap:2px;margin-bottom:14px">
-          <a href="#/cycles" style="font-family:var(--font-mono);font-size:var(--text-12);color:var(--text-strong);text-decoration:none;margin-bottom:2px">${escapeHtml(specId)}</a>
+          <a href="${href}" style="font-family:var(--font-mono);font-size:var(--text-12);color:var(--text-strong);text-decoration:none;margin-bottom:2px">${escapeHtml(label)}</a>
           ${costBarRow({
             label: t('Tradicional'),
             valueLabel: money.format(entry.traditional),
@@ -7102,7 +7469,7 @@ function costsComparisonCard(rows, pricing, money) {
             tip: t(
               '{specId} — estimación tradicional: {cost} (horas de tasks × tarifa {rate}/h)',
               {
-                specId,
+                specId: label,
                 cost: money.format(entry.traditional),
                 rate: money.format(pricing.traditional_hourly_rate),
               },
@@ -7115,10 +7482,12 @@ function costsComparisonCard(rows, pricing, money) {
             max,
             tip: entry.hasUsage
               ? t(
-                  '{specId} — costo agéntico aproximado: {cost} (tokens × tarifa por tier)',
-                  { specId, cost: money.format(entry.agentic) },
+                  '{specId} — costo agéntico aproximado: {cost} (tokens × tarifa del modelo)',
+                  { specId: label, cost: money.format(entry.agentic) },
                 )
-              : t('{specId} — sin telemetría de tokens todavía', { specId }),
+              : t('{specId} — sin telemetría de tokens todavía', {
+                  specId: label,
+                }),
           })}
         </div>`;
     })
@@ -7126,7 +7495,7 @@ function costsComparisonCard(rows, pricing, money) {
   return `
     <section class="card" style="margin-bottom:16px">
       <div class="card-header"><span class="card-title">${t('Costo por spec — tradicional vs agéntico')}</span></div>
-      <p class="card-subtitle">${t('Estimación tradicional (horas × tarifa) contra el costo aproximado de tokens del modo agéntico.')}</p>
+      <p class="card-subtitle">${t('Estimación tradicional (horas × tarifa) contra el costo aproximado de tokens del modo agéntico. Incluye ciclos y fixes.')}</p>
       ${costsLegend([
         { label: t('Tradicional'), color: COSTS_SERIES.traditional },
         { label: t('Agéntico'), color: COSTS_SERIES.agentic },
@@ -7153,9 +7522,7 @@ function costsTokensCard(rows) {
       costBarRow({
         label: `${shortSpecLabel(row.specId)} · ${row.cycleId}`,
         href: '#/cycles',
-        valueLabel: costsTokensFormat().format(
-          row.usage.tokensIn + row.usage.tokensOut,
-        ),
+        valueLabel: costsTokensFormat().format(row.usage.tokensDisplay),
         segments: [
           { value: row.usage.tokensIn, color: COSTS_SERIES.tokensIn },
           { value: row.usage.tokensOut, color: COSTS_SERIES.tokensOut },
@@ -7184,115 +7551,139 @@ function costsTokensCard(rows) {
     </section>`;
 }
 
-function costsTableCard(rows, money) {
-  const body = rows
-    .map((row) => {
-      const tokens = row.usage.hasData
-        ? `${costsExactFormat().format(row.usage.tokensIn)} / ${costsExactFormat().format(row.usage.tokensOut)}`
-        : '—';
-      const agentic = row.usage.hasData
-        ? money.format(row.agenticCost) + (row.tierAssumed ? ' *' : '')
-        : '—';
-      const saving = row.usage.hasData
-        ? money.format(row.traditionalCost - row.agenticCost)
-        : '—';
+function costsUnitRow(row, money) {
+  const tokens = row.usage.hasData
+    ? `${costsExactFormat().format(row.usage.tokensIn)} / ${costsExactFormat().format(row.usage.tokensOut)}`
+    : '—';
+  const total = row.usage.hasData
+    ? costsExactFormat().format(row.usage.tokensDisplay)
+    : '—';
+  const agentic = row.usage.hasData
+    ? money.format(row.agenticCost) + (row.tierAssumed ? ' *' : '')
+    : '—';
+  const saving = row.usage.hasData
+    ? money.format(row.traditionalCost - row.agenticCost)
+    : '—';
+  const typeBadge =
+    row.kind === 'cycle'
+      ? badge('ciclo', 'badge--sky')
+      : badge('fix', 'badge--amber');
+  return `
+    <tr>
+      <td><a href="${row.href}" style="color:var(--text-bright)">${escapeHtml(row.id)}</a></td>
+      <td>${typeBadge}</td>
+      <td>${escapeHtml(row.module)}</td>
+      <td style="text-align:right">${costsExactFormat().format(row.estimationHours)} h</td>
+      <td style="text-align:right">${money.format(row.traditionalCost)}</td>
+      <td style="text-align:right">${escapeHtml(tokens)}</td>
+      <td style="text-align:right">${escapeHtml(total)}</td>
+      <td>${originBadge(usageOrigin(row.usage))}</td>
+      <td style="text-align:right">${escapeHtml(agentic)}</td>
+      <td style="text-align:right">${escapeHtml(saving)}</td>
+    </tr>`;
+}
+
+function costsUnitsTableCard(rows, fixRows, money) {
+  const units = [...rows, ...fixRows];
+  if (units.length === 0) return '';
+  const body = units.map((row) => costsUnitRow(row, money)).join('');
+  return `
+    <section class="card" style="margin-bottom:16px">
+      <div class="card-header"><span class="card-title">${t('Detalle por ciclo y fix')}</span></div>
+      <p class="card-subtitle">${t('{cycles} ciclos y {fixes} fixes en una sola tabla: horas estimadas contra tokens y costo agéntico registrado.', { cycles: rows.length, fixes: fixRows.length })}</p>
+      <div class="table-wrapper"><table class="data-table">
+        <thead><tr><th>${t('Unidad')}</th><th>${t('Tipo')}</th><th>${t('Módulo')}</th><th style="text-align:right">${t('Horas est.')}</th><th style="text-align:right">${t('Costo trad.')}</th><th style="text-align:right">${t('Tokens in/out')}</th><th style="text-align:right">${t('Tokens')}</th><th>${t('Origen')}</th><th style="text-align:right">${t('Costo agéntico')}</th><th style="text-align:right">${t('Ahorro')}</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+    </section>`;
+}
+
+function costsAgentsCard(rows, fixRows, pricing, money) {
+  const buckets = costsAgentAggregation(rows, fixRows, pricing);
+  if (buckets.length === 0) {
+    return `
+      <section class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">${t('Consumo por agente')}</span></div>
+        <p class="card-hint">${t('Sin telemetría por agente todavía. Se registra en <code>metrics.usage.by_agent</code> de cada ciclo y en el <code>usage</code> de cada fix.')}</p>
+      </section>`;
+  }
+  const body = buckets
+    .map((bucket) => {
+      const models =
+        bucket.models.size > 0 ? [...bucket.models].sort().join(', ') : '—';
       return `
         <tr>
-          <td><a href="#/cycles" style="color:var(--text-bright)">${escapeHtml(row.specId)} · ${escapeHtml(row.cycleId)}</a></td>
-          <td>${escapeHtml(row.module)}</td>
-          <td style="text-align:right">${costsExactFormat().format(row.estimationHours)} h</td>
-          <td style="text-align:right">${money.format(row.traditionalCost)}</td>
-          <td style="text-align:right">${escapeHtml(tokens)}</td>
-          <td style="text-align:right">${escapeHtml(agentic)}</td>
-          <td style="text-align:right">${escapeHtml(saving)}</td>
+          <td>${escapeHtml(costsAgentLabel(bucket))}</td>
+          <td style="text-align:right">${costsExactFormat().format(bucket.units)}</td>
+          <td>${escapeHtml(models)}</td>
+          <td style="text-align:right">${costsExactFormat().format(bucket.tokensIn)}</td>
+          <td style="text-align:right">${costsExactFormat().format(bucket.tokensOut)}</td>
+          <td style="text-align:right">${costsExactFormat().format(bucket.tokensDisplay)}</td>
+          <td>${originBadge(usageOrigin(bucket))}</td>
+          <td style="text-align:right">${escapeHtml(money.format(bucket.cost) + (bucket.assumed ? ' *' : ''))}</td>
         </tr>`;
     })
     .join('');
   return `
     <section class="card" style="margin-bottom:16px">
-      <div class="card-header"><span class="card-title">${t('Detalle por ciclo')}</span></div>
+      <div class="card-header"><span class="card-title">${t('Consumo por agente')}</span></div>
+      <p class="card-subtitle">${t('Tokens y costo agrupados por rol SDD, a partir de las entradas <code>by_agent</code> de ciclos y fixes y del <code>usage</code> por task.')}</p>
       <div class="table-wrapper"><table class="data-table">
-        <thead><tr><th>${t('Ciclo')}</th><th>${t('Módulo')}</th><th style="text-align:right">${t('Horas est.')}</th><th style="text-align:right">${t('Costo trad.')}</th><th style="text-align:right">${t('Tokens in/out')}</th><th style="text-align:right">${t('Costo agéntico')}</th><th style="text-align:right">${t('Ahorro')}</th></tr></thead>
+        <thead><tr><th>${t('Agente')}</th><th style="text-align:right">${t('Unidades')}</th><th>${t('Modelos usados')}</th><th style="text-align:right">${t('Tokens in')}</th><th style="text-align:right">${t('Tokens out')}</th><th style="text-align:right">${t('Tokens')}</th><th>${t('Origen')}</th><th style="text-align:right">${t('Costo aprox.')}</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>
     </section>`;
 }
 
 function costsProvidersCard(rows, fixRows, pricing, money) {
-  const totals = providerTotals(rows, fixRows, pricing);
-  if (totals.size === 0) {
+  const modelRows = costsModelAggregation(rows, fixRows, pricing);
+  if (modelRows.length === 0) {
     return `
       <section class="card" style="margin-bottom:16px">
-        <div class="card-header"><span class="card-title">${t('Consumo por proveedor')}</span></div>
-        <p class="card-hint">${t('Sin telemetría con proveedor declarado todavía. Las claves de {field} llevan la forma {example}.', { field: '<code>by_tier</code> / <code>model_tier</code>', example: '<code>proveedor/modelo</code> (<code>claude/opus</code>, <code>gemini/pro</code>, <code>copilot/gpt-5-mini</code>)' })}</p>
+        <div class="card-header"><span class="card-title">${t('Consumo por proveedor y modelo')}</span></div>
+        <p class="card-hint">${t('Sin telemetría con proveedor declarado todavía. Las claves de {field} llevan la forma {example}.', { field: '<code>by_agent.provider_model</code> / <code>by_tier</code>', example: '<code>proveedor/modelo</code> (<code>claude/opus</code>, <code>gemini/pro</code>, <code>copilot/gpt-5-mini</code>)' })}</p>
       </section>`;
   }
-  const body = [...totals.entries()]
-    .sort((a, b) => b[1].cost - a[1].cost)
-    .map(([provider, entry]) => {
-      const label =
-        provider === COSTS_UNTIERED
-          ? t('Sin proveedor declarado')
-          : (COSTS_PROVIDER_LABELS[provider] ?? provider);
-      const models =
-        entry.models.size > 0 ? [...entry.models].sort().join(', ') : '—';
-      const origin = entry.approx
-        ? badge(
-            entry.measured ? 'parcialmente estimado' : 'estimado',
-            'status--skipped',
-          )
-        : badge('medido', 'status--done');
-      return `
+  const groups = costsProviderGroups(modelRows);
+  const body = groups
+    .map((group) => {
+      const modelLines = group.models
+        .map(
+          (model) => `
         <tr>
-          <td>${escapeHtml(label)}</td>
-          <td>${escapeHtml(models)}</td>
-          <td>${origin}</td>
-          <td style="text-align:right">${costsExactFormat().format(entry.tokensIn)}</td>
-          <td style="text-align:right">${costsExactFormat().format(entry.tokensOut)}</td>
-          <td style="text-align:right">${money.format(entry.cost)}</td>
-        </tr>`;
+          <td>${escapeHtml(providerLabel(group.provider))}</td>
+          <td><code>${escapeHtml(costsModelShortName(model))}</code></td>
+          <td style="text-align:right">${costsExactFormat().format(model.units)}</td>
+          <td>${originBadge(usageOrigin(model))}</td>
+          <td style="text-align:right">${costsExactFormat().format(model.tokensIn)}</td>
+          <td style="text-align:right">${costsExactFormat().format(model.tokensOut)}</td>
+          <td style="text-align:right">${costsExactFormat().format(model.tokensDisplay)}</td>
+          <td style="text-align:right">${escapeHtml(money.format(model.cost) + (model.assumed ? ' *' : ''))}</td>
+        </tr>`,
+        )
+        .join('');
+      const subtotal =
+        group.models.length > 1
+          ? `
+        <tr style="background:rgb(var(--rgb-zinc-900) / 0.25)">
+          <td colspan="2" style="color:var(--text-dim)">${escapeHtml(t('Subtotal {provider}', { provider: providerLabel(group.provider) }))}</td>
+          <td style="text-align:right">${costsExactFormat().format(group.models.reduce((sum, model) => sum + model.units, 0))}</td>
+          <td>${originBadge(usageOrigin(group))}</td>
+          <td style="text-align:right">${costsExactFormat().format(group.tokensIn)}</td>
+          <td style="text-align:right">${costsExactFormat().format(group.tokensOut)}</td>
+          <td style="text-align:right">${costsExactFormat().format(group.tokensDisplay)}</td>
+          <td style="text-align:right">${escapeHtml(money.format(group.cost))}</td>
+        </tr>`
+          : '';
+      return modelLines + subtotal;
     })
     .join('');
   return `
     <section class="card" style="margin-bottom:16px">
-      <div class="card-header"><span class="card-title">${t('Consumo por proveedor')}</span></div>
-      <p class="card-subtitle">${t('Tokens y costo agéntico agregados por proveedor (ciclos + fixes), según las claves proveedor/modelo de la telemetría.')} ${t('<strong>Origen</strong>: medido = leído de un contador de la sesión; estimado = aproximación declarada por el agente (arneses sin contador, como Copilot o Antigravity).')}</p>
+      <div class="card-header"><span class="card-title">${t('Consumo por proveedor y modelo')}</span></div>
+      <p class="card-subtitle">${t('Tokens y costo agéntico por modelo completo (proveedor/modelo), con subtotal por proveedor. Incluye ciclos y fixes.')} ${t('<strong>Origen</strong>: exacto = leído de un contador de la sesión (por ejemplo <code>agent-usage-notification</code>, el conteo por subagente que reporta el arnés); estimado = aproximación declarada por el agente (arneses sin contador, como Copilot o Antigravity); mixto = mezcla de ambos.')}</p>
       <div class="table-wrapper"><table class="data-table">
-        <thead><tr><th>${t('Proveedor')}</th><th>${t('Modelos usados')}</th><th>${t('Origen')}</th><th style="text-align:right">${t('Tokens in')}</th><th style="text-align:right">${t('Tokens out')}</th><th style="text-align:right">${t('Costo aprox.')}</th></tr></thead>
-        <tbody>${body}</tbody>
-      </table></div>
-    </section>`;
-}
-
-function costsFixesCard(fixRows, money) {
-  if (fixRows.length === 0) return '';
-  const withUsage = fixRows.filter((fix) => fix.usage.hasData).length;
-  const body = fixRows
-    .map((fix) => {
-      const tokens = fix.usage.hasData
-        ? `${costsExactFormat().format(fix.usage.tokensIn)} / ${costsExactFormat().format(fix.usage.tokensOut)}`
-        : '—';
-      const agentic = fix.usage.hasData
-        ? money.format(fix.agenticCost) + (fix.tierAssumed ? ' *' : '')
-        : '—';
-      return `
-        <tr>
-          <td><a href="#/fixes" style="color:var(--text-bright)">${escapeHtml(fix.fixId)}</a></td>
-          <td>${escapeHtml(fix.title)}</td>
-          <td>${escapeHtml(fix.type)}</td>
-          <td style="text-align:right">${costsExactFormat().format(fix.estimationHours)} h</td>
-          <td style="text-align:right">${money.format(fix.traditionalCost)}</td>
-          <td style="text-align:right">${escapeHtml(tokens)}</td>
-          <td style="text-align:right">${escapeHtml(agentic)}</td>
-        </tr>`;
-    })
-    .join('');
-  return `
-    <section class="card" style="margin-bottom:16px">
-      <div class="card-header"><span class="card-title">${t('Costos de fixes')}</span></div>
-      <p class="card-subtitle">${t('{count} fixes registrados, {withUsage} con telemetría. El usage se registra al cerrar cada fix (FIX GATE).', { count: fixRows.length, withUsage })}</p>
-      <div class="table-wrapper"><table class="data-table">
-        <thead><tr><th>Fix</th><th>${t('Título')}</th><th>${t('Tipo')}</th><th style="text-align:right">${t('Horas est.')}</th><th style="text-align:right">${t('Costo trad.')}</th><th style="text-align:right">${t('Tokens in/out')}</th><th style="text-align:right">${t('Costo agéntico')}</th></tr></thead>
+        <thead><tr><th>${t('Proveedor')}</th><th>${t('Modelo')}</th><th style="text-align:right">${t('Unidades')}</th><th>${t('Origen')}</th><th style="text-align:right">${t('Tokens in')}</th><th style="text-align:right">${t('Tokens out')}</th><th style="text-align:right">${t('Tokens')}</th><th style="text-align:right">${t('Costo aprox.')}</th></tr></thead>
         <tbody>${body}</tbody>
       </table></div>
     </section>`;
@@ -7310,13 +7701,15 @@ function costsMethodologyCard(pricing, anyAssumed, money) {
       <div class="card-header"><span class="card-title">${t('Metodología y tarifas')}</span></div>
       <p class="card-hint">
         <strong>${t('Tradicional')}</strong> = ${t('Σ estimation_hours de las tasks × {rate}/h.', { rate: money.format(pricing.traditional_hourly_rate) })}
-        <strong>${t('Agéntico')}</strong> = ${t('tokens registrados × tarifa del tier (USD por millón de tokens).')}
-        ${t('La telemetría la escribe el sdd-reviewer al cerrar cada ciclo (<code>metrics.usage</code>) o los implementadores por task; es obligatoria y, cuando el arnés no expone contador, se registra como estimación declarada (<code>approx: true</code>) — nunca se omite.')}
-        ${anyAssumed ? t('* Tokens sin tier declarado se tarifan como <code>{tier}</code>.', { tier: COSTS_ASSUMED_TIER }) : ''}
+        <strong>${t('Agéntico')}</strong> = ${t('tokens registrados × tarifa del modelo (USD por millón de tokens).')}
+        ${t('Prioridad de fuentes por ciclo: <code>metrics.usage.by_agent</code> → <code>metrics.usage.by_tier</code> → <code>tasks[].usage</code> → tokens top-level de <code>metrics.usage</code>.')}
+        ${t('La telemetría la escribe cada agente al cerrar su unidad de trabajo y el sdd-reviewer la consolida al cerrar el ciclo (<code>metrics.usage</code>); es obligatoria y, cuando el arnés no expone contador, se registra como estimación declarada (<code>approx: true</code>) — nunca se omite.')}
+        ${t('<strong>Origen</strong>: exacto = leído de un contador de la sesión (por ejemplo <code>agent-usage-notification</code>, el conteo por subagente que reporta el arnés); estimado = aproximación declarada por el agente (arneses sin contador, como Copilot o Antigravity); mixto = mezcla de ambos.')}
+        ${anyAssumed ? t('* Tokens sin modelo declarado (o con un modelo sin tarifa) se tarifan como <code>{tier}</code>.', { tier: COSTS_ASSUMED_TIER }) : ''}
         ${pricing.missing ? t('No hay <code>sdd/pricing.json</code> — usando tarifas por defecto del kit.') : t('Tarifas editables en <code>sdd/pricing.json</code>.')}
       </p>
       <div class="table-wrapper"><table class="data-table">
-        <thead><tr><th>Tier</th><th style="text-align:right">Input /MTok</th><th style="text-align:right">Output /MTok</th></tr></thead>
+        <thead><tr><th>${t('Modelo')}</th><th style="text-align:right">Input /MTok</th><th style="text-align:right">Output /MTok</th></tr></thead>
         <tbody>${tierRows}</tbody>
       </table></div>
     </section>`;
@@ -7377,7 +7770,7 @@ async function renderCosts(container) {
     (acc, row) => {
       acc.hours += row.estimationHours;
       acc.traditional += row.traditionalCost;
-      acc.tokens += row.usage.tokensIn + row.usage.tokensOut;
+      acc.tokens += row.usage.tokensDisplay;
       acc.agentic += row.agenticCost;
       acc.hasUsage ||= row.usage.hasData;
       acc.anyAssumed ||= row.tierAssumed;
@@ -7441,11 +7834,11 @@ async function renderCosts(container) {
       ),
     })}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:20px">${kpis}</div>
-    ${costsComparisonCard(rows, pricing, money)}
+    ${costsComparisonCard(rows, fixRows, pricing, money)}
+    ${costsAgentsCard(rows, fixRows, pricing, money)}
     ${costsProvidersCard(rows, fixRows, pricing, money)}
     ${costsTokensCard(rows)}
-    ${costsTableCard(rows, money)}
-    ${costsFixesCard(fixRows, money)}
+    ${costsUnitsTableCard(rows, fixRows, money)}
     ${costsMethodologyCard(pricing, totals.anyAssumed, money)}
   `;
   attachCostsTooltip(container);

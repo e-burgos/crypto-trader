@@ -26,6 +26,14 @@ ESTADO DE PRERREQUISITOS:
         → SPEC-ID: SPEC-___
         → Estado: REGISTRADA / NO REGISTRADA
 
+[ ] 1c. Status de la spec en sdd/specs/index.json ≠ "draft"
+        → Estados posibles: draft / in-progress / completed / cancelled
+        → Estado actual: _____________
+        → ⚠️ "draft" = spec escrita pero sin ciclo abierto todavía: una spec "draft"
+           NO se implementa. Primero el sdd-orchestrator abre cycle-01 y la pasa a
+           "in-progress" (ver start-sdd-cycle.prompt.md) — recién ahí puede continuar
+           el SPEC GATE.
+
 [ ] 2. Módulo registrado en sdd/global.json
         → En pending_modules: SI / NO
         → En in_progress_modules: SI / NO

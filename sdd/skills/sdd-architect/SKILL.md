@@ -63,3 +63,9 @@ Estructura de ambos archivos es **agrupada por app**:
 Status válidos: `"defined"` | `"implemented"` | `"updated"` | `"deprecated"`
 
 > ⛔ Después de escribir en `api.json` / `schema.json`: `pnpm sdd:validate` en verde.
+
+## Registro de consumo (obligatorio)
+
+Ver `sdd/agents/sdd-architect.agent.md` § Registro de consumo: push de tu entrada en
+`cycle.json → metrics.usage.by_agent[]` al terminar `architect.md` — no tenés fila propia en
+`tasks.json`.

@@ -1,0 +1,59 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 1,
+  "module": "user-data-stream-fills",
+  "spec": "spec-e-burgos-010-user-data-stream-fills",
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/shared"
+  ],
+  "phase": "exchange-event-driven-fills",
+  "objectives": [
+    "Detectar el fill de una orden de entrada descansando por executionReport del user data stream de Binance en vez de por la sonda por tick",
+    "Ciclo de vida del listenKey por credencial y modo: crear, keepalive antes del vencimiento, cerrar en shutdown, renegociar cuando el exchange lo invalida",
+    "Reconciliacion idempotente compartida con la sonda y el barrido de arranque: un fill visto dos veces produce una sola Position, un solo Trade y una sola fila de bot_actions",
+    "Degradacion explicita: con el stream caido o stale la sonda por tick sigue cubriendo los fills y el estado degradado es observable",
+    "Entregar todo detras de un interruptor apagado, sin cambiar los seis eventos entry-order:*, EP-017 ni la SPA"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-09-04",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/brief.yaml"
+  },
+  "artifacts": [
+    "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/artifacts/existing-fill-path-map.md"
+  ],
+  "metrics": {
+    "tasks_total": 0,
+    "tasks_completed": 0,
+    "story_points": 0,
+    "files_created": [],
+    "files_modified": [],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 115725,
+      "tokens_out": 20422,
+      "by_agent": [
+        {
+          "agent": "custom",
+          "label": "code-map-exploration (insumo del brief)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 115725,
+          "tokens_out": 20422,
+          "tokens_total": 136147,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        }
+      ]
+    }
+  },
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

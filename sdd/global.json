@@ -70,7 +70,19 @@
       "completed_at": "2026-09-04"
     }
   ],
-  "in_progress_modules": [],
+  "in_progress_modules": [
+    {
+      "module": "user-data-stream-fills",
+      "spec": "spec-e-burgos-010-user-data-stream-fills",
+      "apps": [
+        "apps/api",
+        "libs/data-fetcher",
+        "libs/shared"
+      ],
+      "cycles_completed": 0,
+      "description": "Deteccion de fills de ordenes de entrada por el user data stream de Binance (listenKey + executionReport) en lugar de la sonda por tick, con reconciliacion idempotente, fallback a la sonda cuando el stream no esta sano y todo detras de un interruptor que nace apagado"
+    }
+  ],
   "pending_modules": [],
   "monorepo": {
     "tool": "Nx",

@@ -79,6 +79,23 @@
         "spec-e-burgos-001-agents-simplification",
         "spec-e-burgos-005-reactive-execution-loop"
       ]
+    },
+    {
+      "id": "spec-e-burgos-010-user-data-stream-fills",
+      "author": "e-burgos",
+      "slug": "user-data-stream-fills",
+      "folder": "sdd/specs/spec-e-burgos-010-user-data-stream-fills",
+      "file": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/spec-e-burgos-010-user-data-stream-fills.spec.md",
+      "module": "user-data-stream-fills",
+      "app": "apps/api",
+      "status": "in-progress",
+      "title": "Fills de entrada detectados por el user data stream de Binance",
+      "created_at": "2026-09-04",
+      "completed_at": null,
+      "depends_on": [
+        "spec-e-burgos-005-reactive-execution-loop",
+        "spec-e-burgos-009-agent-advanced-config-ui"
+      ]
     }
   ]
 }

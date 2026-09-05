@@ -1,0 +1,187 @@
+# sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 1
+module: user-data-stream-fills
+phase: exchange-event-driven-fills
+date: 2026-09-04
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Que el fill de una orden de entrada descansando (LIMIT_MAKER / OCO, tabla entry_orders) se
+  detecte por evento del exchange — user data stream de Binance: listenKey + executionReport —
+  en vez de por la sonda por tick, con reconciliacion idempotente compartida con la sonda,
+  fallback explicito a la sonda cuando el stream no esta sano, y todo detras de un interruptor
+  que se entrega apagado para que el comportamiento observable por default sea identico.
+
+scope:
+  - Ciclo de vida del listenKey por credencial y modo (POST crear, PUT keepalive antes de los 60 min, DELETE en shutdown), con base URL de testnet y de live separadas y el listenKey tratado como material sensible
+  - Cliente de user data stream en libs/data-fetcher, sobre el patron ya probado de BinanceWsClient (autoReconnect + backoff), con renegociacion del listenKey cuando el exchange lo invalida
+  - Consumidor en apps/api con ciclo de vida propio: una sola suscripcion viva por credencial aunque varios bots del mismo dueno esten activos
+  - Correlacion del executionReport con la fila entry_orders RESTING por clientOrderId, con orderId / orderListId como respaldo
+  - Reconciliacion del fill por el MISMO camino que ya usan la sonda y el barrido de arranque (Position + Trade + proteccion inicial + bot_actions con source EXCHANGE_TRIGGER), nunca por un camino paralelo
+  - Idempotencia verificada: mismo fill por stream x2, por stream + sonda, y por sonda + barrido de arranque produce una sola Position, un solo Trade y una sola fila de bot_actions
+  - Deteccion de staleness de la suscripcion (edad del ultimo evento / ultimo keepalive) y estado degradado observable, con la sonda por tick siguiendo como red de contencion
+  - Interruptor que se entrega apagado (ver decision D1-1: por default NO es una columna de TradingConfig)
+  - Verificacion contra Binance TESTNET local (crear/renovar/cerrar listenKey y recibir al menos un executionReport real), mas doble de transporte para la suite que corre en CI sin red
+
+out_of_scope:
+  - Cualquier cambio en la SPA, en EP-017 o en los seis eventos entry-order:* — el requisito es que NO cambien
+  - Reconciliacion por stream de las ordenes de proteccion (prefijo prot-) y de las ventas
+  - Invalidacion inmediata del cache de posiciones del fast path (deuda anotada por spec-005 cycle-02)
+  - Fills simulados en SANDBOX: la capa es LIVE/TESTNET, igual que spec-005 cycle-02
+  - Endpoints REST nuevos
+  - Cualquier operacion contra Binance LIVE
+
+dependencies_required:
+  - spec-e-burgos-005-reactive-execution-loop (completed — entry_orders, entry-fill-watch, ReconciliationService, StreamHealthService)
+  - spec-e-burgos-009-agent-advanced-config-ui (completed — consumidor de los eventos entry-order:* que este ciclo no debe romper)
+
+artifacts:
+  # Mapa read-only del camino de fill vigente, verificado por el orquestador ANTES de abrir el
+  # ciclo. Todo agente lo lee ANTES de explorar el codigo por su cuenta: incluye los simbolos
+  # exactos, el mecanismo de idempotencia que YA existe y ocho landmines.
+  - sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/artifacts/existing-fill-path-map.md
+
+decisions:
+  # Decisiones tomadas por el orquestador al abrir el ciclo, para que no se resuelvan en silencio.
+  D1-1:
+    hueco: >
+      Donde vive el interruptor. El patron del repo para un interruptor de trading es una columna
+      de TradingConfig (reactiveLoopEnabled, entryOrderMode), pero eso arrastra
+      libs/shared/src/types/trading-config-wire.ts y el registro declarativo
+      apps/web/src/components/config/advanced/advanced-fields.ts + locales — es decir, la SPA.
+    decision: >
+      El interruptor NACE a nivel plataforma (variable de entorno, precedente
+      SHARED_SIGNAL_CACHE_ENABLED de spec-001 cycle-03), NO como columna por bot. Se entrega en
+      false. Sin migracion, sin cambio de wire, sin cambio en la SPA.
+    razonamiento: >
+      El user data stream es infraestructura de deteccion por CREDENCIAL (userId + isTestnet), no
+      una eleccion de estrategia por bot: dos bots del mismo dueno comparten forzosamente la misma
+      suscripcion, asi que un flag por bot ni siquiera expresa la unidad correcta. Ademas el
+      requisito explicito del ciclo es que la SPA no cambie.
+    si_el_architect_disiente: >
+      DETENER y reportar al orquestador antes de implementar. Una columna por bot contradice un
+      requisito declarado del ciclo — no se resuelve por criterio del architect.
+  D1-2:
+    hueco: >
+      La idempotencia ya existe y no hay que inventarla (settleFill hace un claim CAS
+      updateMany where status RESTING y devuelve ALREADY_SETTLED al segundo observador).
+    decision: >
+      El consumidor del stream llama al MISMO settleFill. Prohibido escribir un camino de
+      reconciliacion paralelo. El trabajo del ciclo es la correlacion executionReport -> fila
+      RESTING y no duplicar efectos de borde (notificacion, evento WS, llamadas REST redundantes).
+    razonamiento: >
+      Un segundo camino que cree Position/Trade por su cuenta reintroduce exactamente el doble
+      conteo que spec-005 cycle-02 cerro.
+
+agent_contexts:
+  functional:
+    goal: >
+      Escribir las historias de usuario y las reglas de negocio del ciclo desde la perspectiva del
+      trader y del operador de la plataforma. El eje NO es una pantalla nueva: es una garantia de
+      tiempo (la posicion queda protegida en segundos desde el fill, no en el proximo tick) y una
+      garantia de consistencia (un fill nunca se cuenta dos veces, aunque lo vean dos detectores).
+      Cubrir tambien el comportamiento degradado y el default apagado.
+    business_context: >
+      Hoy el bot puede dejar una orden de compra descansando en Binance. Cuando esa orden se llena,
+      el sistema se entera porque una sonda pregunta al exchange en cada tick de mercado del simbolo.
+      Entre el fill y esa pregunta existe una ventana en la que el trader tiene la moneda comprada
+      pero el sistema todavia no le puso stop loss ni take profit: si el precio se da vuelta en esa
+      ventana, la perdida no tiene freno. Ademas la ventana se alarga justo cuando el simbolo esta
+      quieto o cuando el stream de mercado esta degradado. Binance publica un canal propio que avisa
+      el fill en el momento; el sistema no lo escucha. La contracara es que con dos detectores del
+      mismo hecho aparece el riesgo de contar la misma compra dos veces, y eso corrompe posiciones,
+      trades y los caps de frecuencia del bot.
+    relevant_spec_sections:
+      - "§1 Hallazgos A, B y D (la ventana sin proteccion y de que depende)"
+      - "§2 Objetivo (latencia y previsibilidad; la sonda no se elimina)"
+      - "§3 Cycle-01, puntos 3 a 6 (reconciliacion, idempotencia, degradacion, interruptor)"
+      - "§6 CA-001 a CA-008"
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/functional.md
+
+  planner:
+    goal: >
+      Convertir las historias en tasks tecnicas ordenadas y estimadas, con carriles de archivos
+      disjuntos para poder ejecutar oleadas en paralelo sin colisiones. Separar explicitamente:
+      (a) transporte y ciclo de vida del listenKey en libs/data-fetcher, (b) vocabulario compartido
+      en libs/shared si hace falta, (c) consumidor, correlacion y supervision en apps/api,
+      (d) idempotencia de la reconciliacion, (e) interruptor + DTOs, (f) verificacion TESTNET.
+      Dar dueno explicito al composition root (modulos de Nest) — lo que no es carril de nadie queda
+      huerfano. Cada task debe cerrar por si sola y ser commiteable.
+    note: "Recibe output del Funcional, no necesita la especificacion completa"
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/planner.md
+
+  architect:
+    goal: >
+      Definir el contrato tecnico: forma del cliente de user data stream en libs/data-fetcher
+      (metodos, eventos que emite, politica de reconexion y de renegociacion del listenKey), el
+      contrato del consumidor en apps/api, la clave de correlacion executionReport -> entry_orders,
+      el mecanismo concreto de idempotencia (transicion RESTING -> FILLED como punto de
+      serializacion; decidir y justificar si alcanza con un update condicional por status o hace
+      falta constraint/lock, y si se necesita columna o indice nuevo en entry_orders), el flag de
+      el interruptor (respetando D1-1) y el modelo de salud/staleness de la suscripcion. Reescribir
+      como criterio ejecutable cualquier criterio de aceptacion que mida un valor en vez de una
+      propiedad. Decidir explicitamente el comportamiento multi-instancia: si hay mas de una replica,
+      un mismo executionReport no puede producir dos reconciliaciones.
+    must_resolve:
+      - "Lease por credencial: Binance admite UN listenKey activo por API key y crear uno nuevo invalida el socket anterior. Definir un key space propio (el de MarketStreamService es por simbolo y NO sirve) sobre ReactiveCoordinationPort, y que pasa cuando Redis esta caido o DisabledReactiveCoordination esta en juego"
+      - "Donde vive el listenKey: memoria vs Redis con TTL. Prohibido Postgres en claro. Justificar la eleccion"
+      - "Helper REST nuevo con key y SIN firma para POST/PUT/DELETE /api/v3/userDataStream, mas entradas en ENDPOINT_WEIGHTS"
+      - "Cliente WS nuevo para el endpoint single-stream del listenKey — BinanceWsClient solo entiende el envelope del combined stream — construido por credencial y por modo, con la URL de testnet separada de la de live"
+      - "Que pasa con la sonda por tick y con reconcileEntryOrder cuando el stream esta sano: se gatean o siguen corriendo. Cuantificar el costo (peso de rate limit, notificaciones que parecen duplicadas) y decidir"
+      - "Deduplicacion de entregas repetidas del mismo executionReport por el propio WS (Binance reentrega tras reconectar): el claim CAS de settleFill cubre la BD, pero NO la notificacion ni el evento WS"
+      - "Umbrales nuevos (intervalo de keepalive, colchon antes del vencimiento de 60 min, edad maxima sin evento) centralizados en reactive-runtime-thresholds.ts, no dispersos"
+    note: "Leer PRIMERO el artifact existing-fill-path-map.md — trae los simbolos exactos y los 8 landmines ya verificados. No re-explorar lo que ya esta mapeado ahi."
+    existing_tables:
+      - entry_orders
+      - positions
+      - trades
+      - bot_actions
+      - trading_configs
+    existing_endpoints:
+      - EP-006 POST /trading/config (los campos nuevos de TradingConfig pasan por aca)
+      - EP-015 GET /trading/stream-health (precedente del modelo de salud de stream)
+      - EP-017 GET /trading/entry-orders (contrato que NO debe cambiar)
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/architect.md
+
+  implementor_back:
+    goal: >
+      Implementar el ciclo completo: cliente y ciclo de vida del listenKey en libs/data-fetcher,
+      consumidor + correlacion + supervision + staleness en apps/api, idempotencia de la
+      reconciliacion compartida con la sonda existente, y el interruptor de TradingConfig apagado
+      por default. Una task a la vez.
+    app: apps/api
+    also_touches:
+      - libs/data-fetcher
+      - libs/shared
+    app_context: sdd/context/apps/api/context_prompt.md
+    note: "Recibe una task a la vez del Planner. Prohibido tocar sdd/** — el registro SDD tiene un solo escritor: el orquestador"
+
+  implementor_front:
+    goal: "N/A — este ciclo no tiene frontend. El requisito explicito es que la SPA no cambie."
+
+  reviewer:
+    goal: Validar todo el output del ciclo y ejecutar los gates de cierre
+    checklist: sdd/skills/sdd-reviewer/checklist.md
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/cycle.json
+
+constraints:
+  - Nunca LIVE — solo credenciales de TESTNET del .env; no arrancar un bot LIVE, no colocar ordenes LIVE, no abrir un user data stream contra la base URL de produccion de Binance
+  - CI no llega a Binance (HTTP 451): la suite no puede depender de red; la corrida TESTNET es local y su evidencia se registra en el ciclo
+  - Todo interruptor de comportamiento de trading nace apagado y cierra el ciclo apagado
+  - Un campo nuevo de TradingConfig va en CreateTradingConfigDto Y UpdateTradingConfigDto (forbidNonWhitelisted -> 400 si falta en uno)
+  - libs/trading-engine nunca depende de libs/data-fetcher; el vocabulario comun vive en libs/shared
+  - Sin comentarios narrativos en el codigo (regla ✍️ del dual-harness)
+  - Prohibido testear sobre el texto fuente de un rango entre dos simbolos
+  - El listenKey y las claves de API no van a logs, ni a la BD en claro, ni a payloads de WS hacia la SPA
+  - Antes de cerrar cualquier unidad de trabajo: pnpm nx run-many -t typecheck lint test sobre los proyectos tocados, y pnpm sdd:validate en verde
+
+model_policy:
+  functional: claude/sonnet — effort medium
+  planner: claude/sonnet — effort medium
+  architect: claude/opus — effort high
+  implementor_back: claude/sonnet — effort medium
+  reviewer: claude/opus — effort high
+  orchestrator: claude/opus — effort high

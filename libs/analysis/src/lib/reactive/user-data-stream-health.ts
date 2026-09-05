@@ -3,12 +3,12 @@ import { StreamHealthState, UserDataStreamHealthRecord } from '@crypto-trader/sh
 export type UserDataStreamHealthReason =
   | 'NO_RECORD'
   | 'HEARTBEAT_STALE'
-  | 'KEEPALIVE_STALE'
+  | 'SESSION_AUTH_STALE'
   | null;
 
 export interface UserDataStreamHealthThresholds {
   heartbeatMaxAgeMs: number;
-  keepaliveMaxAgeMs: number;
+  sessionAuthMaxAgeMs: number;
 }
 
 export interface ResolveUserDataStreamHealthInput {
@@ -33,8 +33,8 @@ export function resolveUserDataStreamHealth(
   if (now - record.lastHeartbeatAtMs > thresholds.heartbeatMaxAgeMs) {
     return { state: 'DEGRADED', reason: 'HEARTBEAT_STALE' };
   }
-  if (now - record.lastKeepaliveAtMs > thresholds.keepaliveMaxAgeMs) {
-    return { state: 'DEGRADED', reason: 'KEEPALIVE_STALE' };
+  if (now - record.lastSessionAuthAtMs > thresholds.sessionAuthMaxAgeMs) {
+    return { state: 'DEGRADED', reason: 'SESSION_AUTH_STALE' };
   }
 
   return { state: 'HEALTHY', reason: null };

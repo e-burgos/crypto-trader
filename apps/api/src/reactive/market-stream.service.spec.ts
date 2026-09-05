@@ -532,4 +532,32 @@ describe('MarketStreamService', () => {
       errorSpy.mockRestore();
     });
   });
+
+  describe('ws transport error resilience (D-18)', () => {
+    it('survives an error emitted by the ws client, logging only its message via warn', async () => {
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const coordination = createSharedFakeCoordination();
+      const wsClient = new FakeWsClient();
+      const restClient = createFakeRestClient();
+      const prisma = createFakePrisma([{ asset: 'BTC', pair: 'USDT' }]);
+      const service = buildService(prisma, coordination, wsClient, restClient, 'instance-a');
+      await service.onModuleInit();
+
+      expect(() => wsClient.emit('error', new Error('socket reset'))).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith('socket reset');
+
+      wsClient.emit('ticker', {
+        symbol: 'BTCUSDT',
+        price: 65_000,
+        volume: 1,
+        change24h: 0,
+        timestamp: 42,
+      } as TickerUpdate);
+
+      expect(service.getHealthSnapshot('BTCUSDT')?.lastTickAtMs).toBe(42);
+
+      await service.onApplicationShutdown();
+      warnSpy.mockRestore();
+    });
+  });
 });

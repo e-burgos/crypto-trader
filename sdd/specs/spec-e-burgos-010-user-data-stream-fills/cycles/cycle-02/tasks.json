@@ -18,254 +18,559 @@
     {
       "id": "TASK-001",
       "title": "Ed25519Signer — firma pura de session.logon (libs/data-fetcher)",
-      "user_stories": ["HU-04", "HU-06"],
+      "user_stories": [
+        "HU-04",
+        "HU-06"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/ed25519-signer.ts",
         "libs/data-fetcher/src/lib/binance/ed25519-signer.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 75039,
+        "tokens_out": 13242,
+        "tokens_total": 88281,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-002",
       "title": "execution-report.ts — extractor de envoltura + parser movido de cycle-01",
-      "user_stories": ["HU-01"],
+      "user_stories": [
+        "HU-01"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/execution-report.ts",
         "libs/data-fetcher/src/lib/binance/execution-report.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 75038,
+        "tokens_out": 13242,
+        "tokens_total": 88280,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-003",
       "title": "Umbrales del transporte nuevo en reactive-runtime-thresholds.ts (D-20)",
-      "user_stories": ["HU-04", "HU-05"],
+      "user_stories": [
+        "HU-04",
+        "HU-05"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/reactive-runtime-thresholds.ts",
         "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 57684,
+        "tokens_out": 10179,
+        "tokens_total": 67863,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-004",
       "title": "BoundedTtlCache — caché acotada FIFO+TTL genérica (D-19)",
-      "user_stories": ["HU-09"],
+      "user_stories": [
+        "HU-09"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/bounded-ttl-cache.ts",
         "apps/api/src/reactive/bounded-ttl-cache.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 57683,
+        "tokens_out": 10179,
+        "tokens_total": 67862,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-005",
       "title": "Renombre lastKeepaliveAtMs → lastSessionAuthAtMs en UserDataStreamHealthRecord (D-15)",
-      "user_stories": ["HU-05", "HU-06"],
+      "user_stories": [
+        "HU-05",
+        "HU-06"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/shared/src/types/interfaces.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 48622,
+        "tokens_out": 8580,
+        "tokens_total": 57202,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-006",
       "title": "user-data-stream-health.ts — razón SESSION_AUTH_STALE (D-15)",
-      "user_stories": ["HU-05"],
+      "user_stories": [
+        "HU-05"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
-      "depends_on": ["TASK-005"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-005"
+      ],
+      "status": "done",
       "files": [
         "libs/analysis/src/lib/reactive/user-data-stream-health.ts",
         "libs/analysis/src/lib/reactive/user-data-stream-health.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 48620,
+        "tokens_out": 8580,
+        "tokens_total": 57200,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-007",
       "title": "UserStreamAuthCredentialPort — puerto + símbolo + tipos de resolución (D-12)",
-      "user_stories": ["HU-08"],
+      "user_stories": [
+        "HU-08"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-stream-auth-credential.port.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 48620,
+        "tokens_out": 8580,
+        "tokens_total": 57200,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-008",
       "title": "EnvUserStreamAuthCredentialResolver — resolución por entorno, RESOLVED/ABSENT/INVALID (D-12)",
-      "user_stories": ["HU-08", "HU-06"],
+      "user_stories": [
+        "HU-08",
+        "HU-06"
+      ],
       "estimation_hours": 4,
       "story_points": 5,
-      "depends_on": ["TASK-001", "TASK-007"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-001",
+        "TASK-007"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/env-user-stream-auth-credential.resolver.ts",
         "apps/api/src/reactive/env-user-stream-auth-credential.resolver.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 90761,
+        "tokens_out": 16017,
+        "tokens_total": 106778,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-009",
       "title": "isUserDataStreamFillsEnabled() — contrato estricto === 'true' (D-08, issue-7)",
-      "user_stories": ["HU-03"],
+      "user_stories": [
+        "HU-03"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream-flag.ts",
         "apps/api/src/reactive/user-data-stream-flag.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 57683,
+        "tokens_out": 10179,
+        "tokens_total": 67862,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-010",
       "title": "BinanceWsApiClient — transporte nuevo sobre la WebSocket API (D-10)",
-      "user_stories": ["HU-01", "HU-04", "HU-09", "HU-06"],
+      "user_stories": [
+        "HU-01",
+        "HU-04",
+        "HU-09",
+        "HU-06"
+      ],
       "estimation_hours": 6,
       "story_points": 8,
-      "depends_on": ["TASK-001", "TASK-002"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-ws-api.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-ws-api.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 88349,
+        "tokens_out": 15591,
+        "tokens_total": 103940,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-011",
       "title": "Puerto tipado por evento + FakeUserStreamWsApiClient (test double, §4.2/§11.1)",
-      "user_stories": ["HU-04"],
+      "user_stories": [
+        "HU-04"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-001", "TASK-002"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-001",
+        "TASK-002"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-stream-ws-api.test-double.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 90760,
+        "tokens_out": 16017,
+        "tokens_total": 106777,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-012",
       "title": "libs/data-fetcher/index.ts — agregar exports del transporte nuevo",
-      "user_stories": ["HU-01", "HU-04"],
+      "user_stories": [
+        "HU-01",
+        "HU-04"
+      ],
       "estimation_hours": 0.5,
       "story_points": 1,
-      "depends_on": ["TASK-001", "TASK-002", "TASK-010"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-001",
+        "TASK-002",
+        "TASK-010"
+      ],
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/index.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 88349,
+        "tokens_out": 15591,
+        "tokens_total": 103940,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-013",
       "title": "UserDataStreamService — máquina de estados de sesión: connect/logon/subscribe/relogon/reconexión/cierre (D-13)",
-      "user_stories": ["HU-04", "HU-08", "HU-06"],
+      "user_stories": [
+        "HU-04",
+        "HU-08",
+        "HU-06"
+      ],
       "estimation_hours": 6,
       "story_points": 8,
-      "depends_on": ["TASK-001", "TASK-003", "TASK-006", "TASK-007", "TASK-008", "TASK-010", "TASK-011"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-001",
+        "TASK-003",
+        "TASK-006",
+        "TASK-007",
+        "TASK-008",
+        "TASK-010",
+        "TASK-011"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.ts",
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 287475,
+        "tokens_out": 50731,
+        "tokens_total": 338206,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-014",
       "title": "failSession único + backoff del sweep (D-16, issues 2 y 3)",
-      "user_stories": ["HU-04"],
+      "user_stories": [
+        "HU-04"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-013"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-013"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.ts",
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 105194,
+        "tokens_out": 18564,
+        "tokens_total": 123758,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-015",
       "title": "Correlación executionReport → entry_orders con guarda de userId (D-05 endurecida, §4.5)",
-      "user_stories": ["HU-01", "HU-02"],
+      "user_stories": [
+        "HU-01",
+        "HU-02"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-014"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-014"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.ts",
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 105193,
+        "tokens_out": 18563,
+        "tokens_total": 123756,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-016",
       "title": "Dedupe seenEvents/inFlightEvents — marcar vista solo tras settle exitoso (D-17, issue-6)",
-      "user_stories": ["HU-02"],
+      "user_stories": [
+        "HU-02"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-015"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-015"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.ts",
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 105193,
+        "tokens_out": 18563,
+        "tokens_total": 123756,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-017",
       "title": "Listener de 'error' sobre el cliente WS de UserDataStreamService (D-18 parte 1, issue-4)",
-      "user_stories": ["HU-09"],
+      "user_stories": [
+        "HU-09"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
-      "depends_on": ["TASK-016"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-016"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.ts",
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 105173,
+        "tokens_out": 18560,
+        "tokens_total": 123733,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-018",
       "title": "Cachés acotadas (BoundedTtlCache) + UserStreamTradingConfig tipado, fin de los any (D-19, issue-8)",
-      "user_stories": ["HU-09"],
+      "user_stories": [
+        "HU-09"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-017", "TASK-004"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-017",
+        "TASK-004"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.ts",
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 105173,
+        "tokens_out": 18560,
+        "tokens_total": 123733,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-019",
       "title": "Composition root — reactive.module.ts + .env.example (§8)",
-      "user_stories": ["HU-01", "HU-03", "HU-04"],
+      "user_stories": [
+        "HU-01",
+        "HU-03",
+        "HU-04"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
-      "depends_on": ["TASK-003", "TASK-007", "TASK-008", "TASK-009", "TASK-010", "TASK-018"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-003",
+        "TASK-007",
+        "TASK-008",
+        "TASK-009",
+        "TASK-010",
+        "TASK-018"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/reactive.module.ts",
         "apps/api/src/reactive/reactive-module-wiring.spec.ts",
         ".env.example"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 201700,
+        "tokens_out": 35594,
+        "tokens_total": 237294,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-020",
       "title": "Borrar ciclo de vida REST del listenKey en BinanceRestClient (D-09)",
-      "user_stories": ["HU-04"],
+      "user_stories": [
+        "HU-04"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
-      "depends_on": ["TASK-019"],
+      "depends_on": [
+        "TASK-019"
+      ],
       "status": "pending",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
@@ -275,10 +580,15 @@
     {
       "id": "TASK-021",
       "title": "Borrar cliente WS single-stream de cycle-01 y su harness TESTNET muerto",
-      "user_stories": ["HU-01"],
+      "user_stories": [
+        "HU-01"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
-      "depends_on": ["TASK-002", "TASK-019"],
+      "depends_on": [
+        "TASK-002",
+        "TASK-019"
+      ],
       "status": "pending",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts",
@@ -289,10 +599,16 @@
     {
       "id": "TASK-022",
       "title": "Finalizar libs/data-fetcher/index.ts — quitar exports del transporte retirado",
-      "user_stories": ["HU-01"],
+      "user_stories": [
+        "HU-01"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
-      "depends_on": ["TASK-012", "TASK-020", "TASK-021"],
+      "depends_on": [
+        "TASK-012",
+        "TASK-020",
+        "TASK-021"
+      ],
       "status": "pending",
       "files": [
         "libs/data-fetcher/src/lib/binance/index.ts"
@@ -301,47 +617,98 @@
     {
       "id": "TASK-023",
       "title": "Centinela de seguridad — clave, firma y apiKey nunca en logs (HU-06, tres centinelas)",
-      "user_stories": ["HU-06"],
+      "user_stories": [
+        "HU-06"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-018"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-018"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/user-data-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 209196,
+        "tokens_out": 36917,
+        "tokens_total": 246113,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-024",
       "title": "Test de comportamiento HU-05 CA-2 — sonda cubre en DEGRADED (issue-5)",
-      "user_stories": ["HU-05"],
+      "user_stories": [
+        "HU-05"
+      ],
       "estimation_hours": 2,
       "story_points": 2,
-      "depends_on": ["TASK-018", "TASK-006"],
-      "status": "pending",
+      "depends_on": [
+        "TASK-018",
+        "TASK-006"
+      ],
+      "status": "done",
       "files": [
         "apps/api/src/reactive/entry-fill-watch.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 122352,
+        "tokens_out": 21591,
+        "tokens_total": 143943,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-025",
       "title": "Listener de 'error' sobre BinanceWsClient en MarketStreamService (D-18 parte 2, issue-4 preexistente)",
-      "user_stories": ["HU-09"],
+      "user_stories": [
+        "HU-09"
+      ],
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
+      "status": "done",
       "files": [
         "apps/api/src/reactive/market-stream.service.ts",
         "apps/api/src/reactive/market-stream.service.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 105767,
+        "tokens_out": 18665,
+        "tokens_total": 124432,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-026",
       "title": "Verificación end-to-end contra Binance TESTNET (opt-in, bloqueable por ausencia de clave Ed25519)",
-      "user_stories": ["HU-07"],
+      "user_stories": [
+        "HU-07"
+      ],
       "estimation_hours": 3,
       "story_points": 3,
-      "depends_on": ["TASK-019", "TASK-020", "TASK-021", "TASK-022"],
+      "depends_on": [
+        "TASK-019",
+        "TASK-020",
+        "TASK-021",
+        "TASK-022"
+      ],
       "status": "pending",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-ws-api.testnet.spec.ts"

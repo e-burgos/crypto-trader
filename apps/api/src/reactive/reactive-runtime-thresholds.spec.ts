@@ -24,11 +24,7 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       userStreamOwnerRenewIntervalMs: 10_000,
       userStreamSweepIntervalMs: 10_000,
       userStreamSubscriptionRefreshIntervalMs: 30_000,
-      userStreamKeyExpiryMs: 3_600_000,
-      userStreamKeepaliveIntervalMs: 900_000,
-      userStreamKeepaliveGraceMs: 600_000,
       userStreamHeartbeatMaxAgeMs: 240_000,
-      userStreamKeepaliveMaxAgeMs: 2_400_000,
       userStreamHealthPublishIntervalMs: 5_000,
       userStreamHealthTtlMs: 25_000,
       userStreamReconnectBaseDelayMs: 1_000,
@@ -36,6 +32,18 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       userStreamReconnectAttemptsBeforeRenegotiate: 3,
       userStreamSeenEventTtlMs: 600_000,
       userStreamSeenEventCacheSize: 500,
+      userStreamSessionMaxAgeMs: 3_600_000,
+      userStreamRelogonIntervalMs: 1_800_000,
+      userStreamRelogonGraceMs: 900_000,
+      userStreamSessionAuthMaxAgeMs: 2_400_000,
+      userStreamSessionPingIntervalMs: 180_000,
+      userStreamRequestTimeoutMs: 10_000,
+      userStreamConnectTimeoutMs: 15_000,
+      userStreamNegotiateBaseDelayMs: 10_000,
+      userStreamNegotiateMaxDelayMs: 300_000,
+      userStreamAuthRejectedCooldownMs: 3_600_000,
+      userStreamMissingCredentialLogIntervalMs: 3_600_000,
+      userStreamResolverCacheSize: 200,
     });
   });
 
@@ -66,27 +74,6 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
     ).toBeLessThanOrEqual(10_000);
   });
 
-  it('renegotiates the listenKey before its 60-minute expiry, even after the last keepalive attempt lands right at the grace window', () => {
-    expect(
-      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveIntervalMs +
-        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveGraceMs,
-    ).toBeLessThan(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeyExpiryMs);
-  });
-
-  it('declares the keepalive channel stale strictly before the listenKey itself would expire', () => {
-    expect(
-      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveMaxAgeMs,
-    ).toBeLessThan(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeyExpiryMs);
-  });
-
-  it('gives the keepalive timer room for multiple ticks before its own staleness threshold trips', () => {
-    expect(
-      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveIntervalMs,
-    ).toBeLessThan(
-      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveMaxAgeMs,
-    );
-  });
-
   it('lets the user stream owner renew its lease well before that lease would lapse', () => {
     expect(
       DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamOwnerRenewIntervalMs,
@@ -100,6 +87,51 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHealthTtlMs,
     ).toBeGreaterThan(
       DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHealthPublishIntervalMs,
+    );
+  });
+
+  it('leaves room for a relogon and its grace window to land before the self-imposed session ceiling', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamRelogonIntervalMs +
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamRelogonGraceMs,
+    ).toBeLessThan(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionMaxAgeMs);
+  });
+
+  it('declares the session auth stale strictly before the self-imposed session ceiling is reached', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionAuthMaxAgeMs,
+    ).toBeLessThan(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionMaxAgeMs);
+  });
+
+  it('gives the relogon timer room for at least one attempt before session auth staleness trips', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamRelogonIntervalMs,
+    ).toBeLessThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionAuthMaxAgeMs,
+    );
+  });
+
+  it('keeps the application heartbeat faster than the threshold that would declare it stale', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionPingIntervalMs,
+    ).toBeLessThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHeartbeatMaxAgeMs,
+    );
+  });
+
+  it('bounds a single request below the heartbeat cadence so requests never overlap', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamRequestTimeoutMs,
+    ).toBeLessThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionPingIntervalMs,
+    );
+  });
+
+  it('paces the negotiation backoff no faster than the sweep that drives it', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamNegotiateBaseDelayMs,
+    ).toBeGreaterThanOrEqual(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSweepIntervalMs,
     );
   });
 

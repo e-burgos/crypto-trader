@@ -84,6 +84,7 @@ export class MarketStreamService
     this.wsClient.on('ticker', (update: TickerUpdate) => this.handleTicker(update));
     this.wsClient.on('kline', (update: KlineUpdate) => this.handleKline(update));
     this.wsClient.on('heartbeat', (payload: { at: number }) => this.handleHeartbeat(payload));
+    this.wsClient.on('error', (err: unknown) => this.logger.warn(errorMessage(err)));
   }
 
   async onModuleInit(): Promise<void> {

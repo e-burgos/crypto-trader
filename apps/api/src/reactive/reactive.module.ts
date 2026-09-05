@@ -2,11 +2,7 @@ import { Module } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { getQueueToken } from '@nestjs/bull';
 import type { Queue } from 'bull';
-import {
-  BinanceRestClient,
-  BinanceWsClient,
-  BinanceUserDataStreamClient,
-} from '@crypto-trader/data-fetcher';
+import { BinanceRestClient, BinanceWsClient, BinanceWsApiClient } from '@crypto-trader/data-fetcher';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { GatewayModule } from '../gateway/gateway.module';
@@ -34,13 +30,16 @@ import { StreamHealthController } from './stream-health.controller';
 import { FastPathService } from './fast-path.service';
 import { EntryFillWatchService } from './entry-fill-watch.service';
 import { MaterialEventService } from './material-event.service';
+import { UserDataStreamService } from './user-data-stream.service';
 import {
-  USER_STREAM_REST_FACTORY,
-  USER_STREAM_WS_FACTORY,
-  UserDataStreamService,
-  type UserStreamRestFactory,
-  type UserStreamWsFactory,
-} from './user-data-stream.service';
+  USER_STREAM_AUTH_CREDENTIAL,
+  type UserStreamAuthCredentialPort,
+} from './user-stream-auth-credential.port';
+import { EnvUserStreamAuthCredentialResolver } from './env-user-stream-auth-credential.resolver';
+import {
+  USER_STREAM_WS_API_FACTORY,
+  type UserStreamWsApiFactory,
+} from './user-stream-ws-api.test-double';
 import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
 
 @Module({
@@ -176,15 +175,14 @@ import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
       ],
     },
     {
-      provide: USER_STREAM_REST_FACTORY,
-      useFactory: (): UserStreamRestFactory =>
-        ({ apiKey, apiSecret, testnet }) => new BinanceRestClient({ apiKey, apiSecret, testnet }),
+      provide: USER_STREAM_AUTH_CREDENTIAL,
+      useFactory: (): UserStreamAuthCredentialPort => new EnvUserStreamAuthCredentialResolver(),
     },
     {
-      provide: USER_STREAM_WS_FACTORY,
-      useFactory: (): UserStreamWsFactory =>
+      provide: USER_STREAM_WS_API_FACTORY,
+      useFactory: (): UserStreamWsApiFactory =>
         ({ testnet }) =>
-          new BinanceUserDataStreamClient({
+          new BinanceWsApiClient({
             testnet,
             wsPingIntervalMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.wsPingIntervalMs,
             wsPongTimeoutMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.wsPongTimeoutMs,
@@ -192,6 +190,8 @@ import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
             reconnectMaxDelayMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamReconnectMaxDelayMs,
             reconnectAttemptsBeforeExhaustion:
               DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamReconnectAttemptsBeforeRenegotiate,
+            requestTimeoutMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamRequestTimeoutMs,
+            connectTimeoutMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamConnectTimeoutMs,
           }),
     },
     {
@@ -201,8 +201,8 @@ import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
         coordination: ReactiveCoordinationPort,
         entryOrders: EntryOrderService,
         fastPath: FastPathService,
-        restFactory: UserStreamRestFactory,
-        wsFactory: UserStreamWsFactory,
+        authCredentials: UserStreamAuthCredentialPort,
+        wsApiFactory: UserStreamWsApiFactory,
       ): UserDataStreamService | null =>
         isUserDataStreamFillsEnabled()
           ? new UserDataStreamService(
@@ -210,8 +210,8 @@ import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
               coordination,
               entryOrders,
               fastPath,
-              restFactory,
-              wsFactory,
+              authCredentials,
+              wsApiFactory,
               DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
               randomUUID(),
             )
@@ -221,8 +221,8 @@ import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
         REACTIVE_COORDINATION,
         EntryOrderService,
         FastPathService,
-        USER_STREAM_REST_FACTORY,
-        USER_STREAM_WS_FACTORY,
+        USER_STREAM_AUTH_CREDENTIAL,
+        USER_STREAM_WS_API_FACTORY,
       ],
     },
   ],

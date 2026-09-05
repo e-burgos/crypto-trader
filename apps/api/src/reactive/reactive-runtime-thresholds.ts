@@ -20,11 +20,7 @@ export interface ReactiveRuntimeThresholds {
   userStreamOwnerRenewIntervalMs: number;
   userStreamSweepIntervalMs: number;
   userStreamSubscriptionRefreshIntervalMs: number;
-  userStreamKeyExpiryMs: number;
-  userStreamKeepaliveIntervalMs: number;
-  userStreamKeepaliveGraceMs: number;
   userStreamHeartbeatMaxAgeMs: number;
-  userStreamKeepaliveMaxAgeMs: number;
   userStreamHealthPublishIntervalMs: number;
   userStreamHealthTtlMs: number;
   userStreamReconnectBaseDelayMs: number;
@@ -32,6 +28,18 @@ export interface ReactiveRuntimeThresholds {
   userStreamReconnectAttemptsBeforeRenegotiate: number;
   userStreamSeenEventTtlMs: number;
   userStreamSeenEventCacheSize: number;
+  userStreamSessionMaxAgeMs: number;
+  userStreamRelogonIntervalMs: number;
+  userStreamRelogonGraceMs: number;
+  userStreamSessionAuthMaxAgeMs: number;
+  userStreamSessionPingIntervalMs: number;
+  userStreamRequestTimeoutMs: number;
+  userStreamConnectTimeoutMs: number;
+  userStreamNegotiateBaseDelayMs: number;
+  userStreamNegotiateMaxDelayMs: number;
+  userStreamAuthRejectedCooldownMs: number;
+  userStreamMissingCredentialLogIntervalMs: number;
+  userStreamResolverCacheSize: number;
 }
 
 export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
@@ -56,11 +64,7 @@ export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
   userStreamOwnerRenewIntervalMs: 10_000,
   userStreamSweepIntervalMs: 10_000,
   userStreamSubscriptionRefreshIntervalMs: 30_000,
-  userStreamKeyExpiryMs: 3_600_000,
-  userStreamKeepaliveIntervalMs: 900_000,
-  userStreamKeepaliveGraceMs: 600_000,
   userStreamHeartbeatMaxAgeMs: 240_000,
-  userStreamKeepaliveMaxAgeMs: 2_400_000,
   userStreamHealthPublishIntervalMs: 5_000,
   userStreamHealthTtlMs: 25_000,
   userStreamReconnectBaseDelayMs: 1_000,
@@ -68,4 +72,16 @@ export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
   userStreamReconnectAttemptsBeforeRenegotiate: 3,
   userStreamSeenEventTtlMs: 600_000,
   userStreamSeenEventCacheSize: 500,
+  userStreamSessionMaxAgeMs: 3_600_000,
+  userStreamRelogonIntervalMs: 1_800_000,
+  userStreamRelogonGraceMs: 900_000,
+  userStreamSessionAuthMaxAgeMs: 2_400_000,
+  userStreamSessionPingIntervalMs: 180_000,
+  userStreamRequestTimeoutMs: 10_000,
+  userStreamConnectTimeoutMs: 15_000,
+  userStreamNegotiateBaseDelayMs: 10_000,
+  userStreamNegotiateMaxDelayMs: 300_000,
+  userStreamAuthRejectedCooldownMs: 3_600_000,
+  userStreamMissingCredentialLogIntervalMs: 3_600_000,
+  userStreamResolverCacheSize: 200,
 };

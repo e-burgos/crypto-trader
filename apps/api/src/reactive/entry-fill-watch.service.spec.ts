@@ -1,7 +1,10 @@
-import type { MarketTick } from '@crypto-trader/shared';
+import type { MarketTick, UserDataStreamHealthRecord } from '@crypto-trader/shared';
 import { TradingMode } from '@crypto-trader/shared';
+import { resolveUserDataStreamHealth } from '@crypto-trader/analysis';
 import { EntryFillWatchService } from './entry-fill-watch.service';
 import { DEFAULT_REACTIVE_RUNTIME_THRESHOLDS } from './reactive-runtime-thresholds';
+import { createSharedFakeCoordination } from './reactive-coordination.test-double';
+import { userStreamHealthKey } from './user-data-stream.service';
 
 jest.mock('@crypto-trader/data-fetcher', () => ({
   BinanceRestClient: jest.fn().mockImplementation(() => ({})),
@@ -306,5 +309,47 @@ describe('EntryFillWatchService', () => {
 
     const { LiveOrderExecutor } = jest.requireMock('@crypto-trader/trading-engine') as any;
     expect(LiveOrderExecutor).not.toHaveBeenCalled();
+  });
+
+  it('con el user data stream en DEGRADED, la sonda igual liquida el fill y nunca consulta su salud (HU-05 CA-2, issue-5)', async () => {
+    const now = Date.now();
+    const degradedRecord: UserDataStreamHealthRecord = {
+      credentialKey: 'user-1:live',
+      ownerId: 'other-instance',
+      connectedAt: now - 3_600_000,
+      lastHeartbeatAtMs: now - 3_600_000,
+      lastSessionAuthAtMs: now - 3_600_000,
+      lastEventAtMs: null,
+      publishedAt: now - 3_600_000,
+    };
+    expect(
+      resolveUserDataStreamHealth({
+        now,
+        record: degradedRecord,
+        thresholds: {
+          heartbeatMaxAgeMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHeartbeatMaxAgeMs,
+          sessionAuthMaxAgeMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSessionAuthMaxAgeMs,
+        },
+      }).state,
+    ).toBe('DEGRADED');
+
+    const coordination = createSharedFakeCoordination();
+    await coordination.setJson(
+      userStreamHealthKey('user-1', 'live'),
+      degradedRecord,
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHealthTtlMs,
+    );
+
+    const { service, entryOrderService } = buildService();
+    const tick: MarketTick = { symbol: 'BTCUSDT', price: 100, timestamp: 1 };
+    await service.handleTick(tick);
+
+    expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+
+    expect(coordination.getJson).not.toHaveBeenCalled();
+    const healthKeyReads = (coordination.getJson as jest.Mock).mock.calls.filter(([key]) =>
+      String(key).startsWith('rx:v1:uds:health:'),
+    );
+    expect(healthKeyReads).toHaveLength(0);
   });
 });

@@ -1,12 +1,8 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
-import type {
-  EntryOrderExchangeStatus,
-  StreamHealthState,
-  UserDataStreamHealthRecord,
-} from '@crypto-trader/shared';
+import type { StreamHealthState, UserDataStreamHealthRecord } from '@crypto-trader/shared';
 import { TradingMode } from '@crypto-trader/shared';
-import { getBinanceErrorCode, BinanceRestClient } from '@crypto-trader/data-fetcher';
-import type { ExecutionReportEvent } from '@crypto-trader/data-fetcher';
+import { BinanceRestClient, BinanceWsApiError } from '@crypto-trader/data-fetcher';
+import type { Ed25519Signer, ExecutionReportEvent } from '@crypto-trader/data-fetcher';
 import { LiveOrderExecutor, type OrderExecutorPort } from '@crypto-trader/trading-engine';
 import {
   resolveUserDataStreamHealth,
@@ -24,9 +20,9 @@ import type { FastPathService } from './fast-path.service';
 import { toEntryFillStatus } from './execution-report-fill';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
 import type { ReactiveRuntimeThresholds } from './reactive-runtime-thresholds';
-
-export const USER_STREAM_REST_FACTORY = Symbol('USER_STREAM_REST_FACTORY');
-export const USER_STREAM_WS_FACTORY = Symbol('USER_STREAM_WS_FACTORY');
+import type { UserStreamAuthCredentialPort } from './user-stream-auth-credential.port';
+import type { UserStreamWsApiClient, UserStreamWsApiFactory } from './user-stream-ws-api.test-double';
+import { BoundedTtlCache } from './bounded-ttl-cache';
 
 const OWNER_KEY_PREFIX = 'rx:v1:uds:owner:';
 const HEALTH_KEY_PREFIX = 'rx:v1:uds:health:';
@@ -56,37 +52,37 @@ function seenEventIdentity(report: ExecutionReportEvent): string {
   return `${report.symbol}:${report.orderId}:${report.orderStatus}:${report.cumulativeFilledQuantity}`;
 }
 
-export interface UserStreamRestClient {
-  createListenKey(): Promise<string>;
-  keepAliveListenKey(listenKey: string): Promise<void>;
-  closeListenKey(listenKey: string): Promise<void>;
-  getBaseUrl(): string;
+const AUTH_REJECTED_ERROR_CODES = new Set<number>([-1022, -2015, -1102]);
+const SESSION_UNAUTHENTICATED_ERROR_CODE = -1193;
+
+type WsApiFailureClass = 'AUTH_REJECTED' | 'SESSION_UNAUTHENTICATED' | 'TRANSIENT';
+
+function classifyWsApiError(err: unknown): WsApiFailureClass {
+  if (!(err instanceof BinanceWsApiError) || err.code === null) return 'TRANSIENT';
+  if (AUTH_REJECTED_ERROR_CODES.has(err.code)) return 'AUTH_REJECTED';
+  if (err.code === SESSION_UNAUTHENTICATED_ERROR_CODE) return 'SESSION_UNAUTHENTICATED';
+  return 'TRANSIENT';
 }
 
-export interface UserStreamWsClient {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  on(event: string, listener: (...args: any[]) => void): unknown;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  off(event: string, listener: (...args: any[]) => void): unknown;
-  connect(listenKey: string): void;
-  disconnect(): void;
-  isConnected(): boolean;
-  getBaseUrl(): string;
+type NegotiationFailureClass = 'TRANSIENT' | 'AUTH_REJECTED' | 'ABSENT' | 'INVALID';
+
+function negotiationFailureClassForError(err: unknown): NegotiationFailureClass {
+  return classifyWsApiError(err) === 'AUTH_REJECTED' ? 'AUTH_REJECTED' : 'TRANSIENT';
 }
 
-export type UserStreamRestFactory = (creds: {
-  apiKey: string;
-  apiSecret: string;
-  testnet: boolean;
-}) => UserStreamRestClient;
-
-export type UserStreamWsFactory = (opts: { testnet: boolean }) => UserStreamWsClient;
+interface NegotiationBackoff {
+  attempts: number;
+  nextAttemptAtMs: number;
+  failureClass: NegotiationFailureClass;
+}
 
 export type CredentialReleaseReason =
   | 'INACTIVE'
   | 'LEASE_LOST'
   | 'COORDINATION_UNHEALTHY'
-  | 'SHUTDOWN';
+  | 'SHUTDOWN'
+  | 'SESSION_LOST'
+  | 'AUTH_REJECTED';
 
 interface ActiveCredential {
   userId: string;
@@ -94,63 +90,60 @@ interface ActiveCredential {
 }
 
 interface OwnedCredentialListeners {
-  heartbeat: (payload: { at: number }) => void;
   connected: () => void;
-  reconnecting: () => void;
+  disconnected: () => void;
+  heartbeat: (payload: { at: number }) => void;
   executionReport: (report: ExecutionReportEvent) => void;
-  streamExpired: (payload: { reason: string }) => void;
+  sessionLost: () => void;
+  error: (err: Error) => void;
 }
 
 interface OwnedCredentialStream {
   userId: string;
   env: CredentialEnv;
-  listenKey: string;
-  ws: UserStreamWsClient;
-  rest: UserStreamRestClient;
+  apiKey: string;
+  signer: Ed25519Signer;
+  ws: UserStreamWsApiClient;
+  serverTimeOffsetMs: number;
   connectedAt: number;
   lastHeartbeatAtMs: number;
-  lastKeepaliveAtMs: number;
+  lastSessionAuthAtMs: number;
   lastEventAtMs: number | null;
-  keepaliveTimer: ReturnType<typeof setInterval> | null;
+  relogonTimer: ReturnType<typeof setInterval> | null;
+  pingTimer: ReturnType<typeof setInterval> | null;
   reconnectAttempts: number;
+  authenticating: boolean;
   listeners?: OwnedCredentialListeners;
 }
 
-interface CredentialsCacheEntry {
-  apiKey: string;
-  apiSecret: string;
-  fetchedAt: number;
-}
-
-interface ConfigCacheEntry {
-  config: any;
-  fetchedAt: number;
-}
-
-interface ExecutorCacheEntry {
-  executor: OrderExecutorPort;
-  fetchedAt: number;
+export interface UserStreamTradingConfig {
+  id: string;
+  userId: string;
+  mode: TradingMode;
+  asset: string;
+  pair: string;
+  nativeProtectionEnabled: boolean;
+  stopLossPct: number;
+  takeProfitPct: number;
+  stopLimitOffsetPct: number;
+  closeOnProtectionFailure: boolean;
 }
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-function restErrorSummary(err: unknown): string {
-  return `code=${getBinanceErrorCode(err)} message=${errorMessage(err)}`;
-}
-
-const LISTEN_KEY_MISSING_ERROR_CODE = -1125;
-
 @Injectable()
 export class UserDataStreamService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(UserDataStreamService.name);
   private readonly ownedCredentials = new Map<string, OwnedCredentialStream>();
-  private readonly credentialsCache = new Map<string, CredentialsCacheEntry>();
-  private readonly configCache = new Map<string, ConfigCacheEntry>();
-  private readonly executorCache = new Map<string, ExecutorCacheEntry>();
+  private readonly credentialsCache: BoundedTtlCache<{ apiKey: string; apiSecret: string }>;
+  private readonly configCache: BoundedTtlCache<UserStreamTradingConfig>;
+  private readonly executorCache: BoundedTtlCache<OrderExecutorPort>;
   private readonly seenEvents = new Map<string, number>();
+  private readonly inFlightEvents = new Set<string>();
   private readonly lastKnownHealthState = new Map<string, StreamHealthState>();
+  private readonly negotiationBackoff = new Map<string, NegotiationBackoff>();
   private uncorrelatedEventCount = 0;
   private activeCredentials = new Map<string, ActiveCredential>();
   private subscriptionRefreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -163,11 +156,24 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     private readonly coordination: ReactiveCoordinationPort,
     private readonly entryOrders: EntryOrderService,
     private readonly fastPath: FastPathService,
-    private readonly restFactory: UserStreamRestFactory,
-    private readonly wsFactory: UserStreamWsFactory,
+    private readonly authCredentials: UserStreamAuthCredentialPort,
+    private readonly wsApiFactory: UserStreamWsApiFactory,
     private readonly thresholds: ReactiveRuntimeThresholds,
     private readonly instanceId: string,
-  ) {}
+  ) {
+    this.credentialsCache = new BoundedTtlCache(
+      thresholds.userStreamResolverCacheSize,
+      thresholds.userStreamSubscriptionRefreshIntervalMs,
+    );
+    this.configCache = new BoundedTtlCache(
+      thresholds.userStreamResolverCacheSize,
+      thresholds.userStreamSubscriptionRefreshIntervalMs,
+    );
+    this.executorCache = new BoundedTtlCache(
+      thresholds.userStreamResolverCacheSize,
+      thresholds.userStreamSubscriptionRefreshIntervalMs,
+    );
+  }
 
   async onModuleInit(): Promise<void> {
     await this.refreshActiveCredentials();
@@ -261,8 +267,19 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     }
     this.coordinationUnavailableLogged = false;
 
+    this.purgeStaleNegotiationBackoff(Date.now());
     await this.renewOwnedLeases();
     await this.acquireActiveCredentials();
+  }
+
+  private purgeStaleNegotiationBackoff(now: number): void {
+    for (const [key, backoff] of this.negotiationBackoff) {
+      const expiredForMs = now - backoff.nextAttemptAtMs;
+      const isStale = expiredForMs > this.thresholds.userStreamNegotiateMaxDelayMs;
+      if (isStale && !this.activeCredentials.has(key)) {
+        this.negotiationBackoff.delete(key);
+      }
+    }
   }
 
   private reportCoordinationUnavailable(): void {
@@ -286,15 +303,61 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
   }
 
   private async acquireActiveCredentials(): Promise<void> {
+    const now = Date.now();
     for (const [key, active] of this.activeCredentials) {
       if (this.ownedCredentials.has(key)) continue;
+      if (this.isNegotiationBackoffActive(key, now)) continue;
+
+      const resolution = await this.authCredentials.resolve(active.userId, active.env);
+      if (resolution.kind === 'ABSENT') {
+        this.logger.warn(
+          `No Ed25519 credential configured for ${key} — the user data stream stays off; the tick probe and reconciliation keep covering it`,
+        );
+        this.registerNegotiationFailure(key, 'ABSENT');
+        continue;
+      }
+      if (resolution.kind === 'INVALID') {
+        this.logger.warn(
+          `Invalid Ed25519 credential for ${key} (${resolution.reason}) — the user data stream stays off`,
+        );
+        this.registerNegotiationFailure(key, 'INVALID');
+        continue;
+      }
+
       const acquired = await this.coordination.tryAcquire(
         userStreamOwnerLeaseKey(active.userId, active.env),
         this.instanceId,
         this.thresholds.userStreamOwnerLeaseTtlMs,
       );
-      if (acquired) await this.negotiateAndConnect(key, active);
+      if (acquired) {
+        await this.connectCredential(key, active, resolution.apiKey, resolution.signer);
+      }
     }
+  }
+
+  private isNegotiationBackoffActive(key: string, now: number): boolean {
+    const backoff = this.negotiationBackoff.get(key);
+    return backoff !== undefined && backoff.nextAttemptAtMs > now;
+  }
+
+  private registerNegotiationFailure(key: string, failureClass: NegotiationFailureClass): void {
+    const now = Date.now();
+    const attempts = (this.negotiationBackoff.get(key)?.attempts ?? 0) + 1;
+    const nextAttemptAtMs = now + this.negotiationBackoffDelayMs(failureClass, attempts);
+    this.negotiationBackoff.set(key, { attempts, nextAttemptAtMs, failureClass });
+  }
+
+  private negotiationBackoffDelayMs(failureClass: NegotiationFailureClass, attempts: number): number {
+    if (failureClass === 'AUTH_REJECTED' || failureClass === 'INVALID') {
+      return this.thresholds.userStreamAuthRejectedCooldownMs;
+    }
+    if (failureClass === 'ABSENT') {
+      return this.thresholds.userStreamMissingCredentialLogIntervalMs;
+    }
+    const uncappedDelayMs = this.thresholds.userStreamNegotiateBaseDelayMs * 2 ** (attempts - 1);
+    const cappedDelayMs = Math.min(uncappedDelayMs, this.thresholds.userStreamNegotiateMaxDelayMs);
+    const jitterRatio = 1 + (Math.random() * 0.4 - 0.2);
+    return Math.max(0, Math.round(cappedDelayMs * jitterRatio));
   }
 
   private async releaseAllOwned(reason: CredentialReleaseReason): Promise<void> {
@@ -308,10 +371,8 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
   ): Promise<{ apiKey: string; apiSecret: string } | null> {
     const now = Date.now();
     const cacheKey = `${userId}:${isTestnet}`;
-    const cached = this.credentialsCache.get(cacheKey);
-    if (cached && now - cached.fetchedAt < this.thresholds.userStreamSubscriptionRefreshIntervalMs) {
-      return { apiKey: cached.apiKey, apiSecret: cached.apiSecret };
-    }
+    const cached = this.credentialsCache.get(cacheKey, now);
+    if (cached) return cached;
 
     const record = await this.prisma.binanceCredential.findUnique({
       where: { userId_isTestnet: { userId, isTestnet } },
@@ -320,122 +381,206 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
 
     const apiKey = decrypt(record.apiKeyEncrypted, record.apiKeyIv);
     const apiSecret = decrypt(record.secretEncrypted, record.secretIv);
-    this.credentialsCache.set(cacheKey, { apiKey, apiSecret, fetchedAt: now });
-    return { apiKey, apiSecret };
+    const credentials = { apiKey, apiSecret };
+    this.credentialsCache.set(cacheKey, credentials, now);
+    return credentials;
   }
 
-  private async releaseLeaseOnly(active: ActiveCredential): Promise<void> {
-    try {
-      await this.coordination.release(
-        userStreamOwnerLeaseKey(active.userId, active.env),
-        this.instanceId,
-      );
-    } catch (err) {
-      this.logger.warn(
-        `Failed to release the lease for ${credentialKeyOf(active.userId, active.env)}: ${errorMessage(err)}`,
-      );
-    }
+  private releaseReasonForError(err: unknown): CredentialReleaseReason {
+    return classifyWsApiError(err) === 'AUTH_REJECTED' ? 'AUTH_REJECTED' : 'SESSION_LOST';
   }
 
-  private async negotiateAndConnect(key: string, active: ActiveCredential): Promise<void> {
-    const testnet = active.env === 'testnet';
-    const credentials = await this.resolveCredentials(active.userId, testnet);
-    if (!credentials) {
-      this.logger.warn(`No ${active.env} credentials for user ${active.userId} — releasing the user data stream lease`);
-      await this.releaseLeaseOnly(active);
-      return;
-    }
-
-    const rest = this.restFactory({ apiKey: credentials.apiKey, apiSecret: credentials.apiSecret, testnet });
-
-    let listenKey: string;
-    try {
-      listenKey = await rest.createListenKey();
-    } catch (err) {
-      this.logger.warn(`Failed to create the listenKey for ${key}: ${restErrorSummary(err)}`);
-      await this.releaseLeaseOnly(active);
-      return;
-    }
-
-    const ws = this.wsFactory({ testnet });
+  private async connectCredential(
+    key: string,
+    active: ActiveCredential,
+    apiKey: string,
+    signer: Ed25519Signer,
+  ): Promise<void> {
+    const ws = this.wsApiFactory({ testnet: active.env === 'testnet' });
     const now = Date.now();
     const state: OwnedCredentialStream = {
       userId: active.userId,
       env: active.env,
-      listenKey,
+      apiKey,
+      signer,
       ws,
-      rest,
+      serverTimeOffsetMs: 0,
       connectedAt: now,
       lastHeartbeatAtMs: now,
-      lastKeepaliveAtMs: now,
+      lastSessionAuthAtMs: now,
       lastEventAtMs: null,
-      keepaliveTimer: null,
+      relogonTimer: null,
+      pingTimer: null,
       reconnectAttempts: 0,
+      authenticating: false,
     };
 
     this.ownedCredentials.set(key, state);
     this.attachWsListeners(key, state);
-    ws.connect(listenKey);
-    this.startKeepalive(key, state);
+
+    try {
+      await ws.connect();
+    } catch (err) {
+      this.logger.warn(`Failed to open the user data stream socket for ${key}: ${errorMessage(err)}`);
+      await this.failSession(key, this.releaseReasonForError(err), negotiationFailureClassForError(err));
+      return;
+    }
+
     this.logger.log(`Acquired the user data stream lease for ${key}`);
   }
 
   private attachWsListeners(key: string, state: OwnedCredentialStream): void {
+    const connected = () => {
+      this.authenticateAndSubscribe(key, state).catch((err) =>
+        this.logger.error(
+          `Unexpected user data stream authentication failure for ${key}: ${errorMessage(err)}`,
+        ),
+      );
+    };
+    const disconnected = () => {
+      this.clearSessionTimers(state);
+    };
     const heartbeat = (payload: { at: number }) => {
       state.lastHeartbeatAtMs = payload?.at ?? Date.now();
-    };
-    const connected = () => {
-      state.reconnectAttempts = 0;
-    };
-    const reconnecting = () => {
-      state.reconnectAttempts += 1;
     };
     const executionReport = (report: ExecutionReportEvent) => {
       this.handleExecutionReport(state, report);
     };
-    const streamExpired = (payload: { reason: string }) => {
-      this.handleStreamExpired(key, payload?.reason).catch((err) =>
-        this.logger.error(`Renegotiation failed for ${key}: ${errorMessage(err)}`),
+    const sessionLost = () => {
+      this.logger.warn(`User data stream session lost for ${key}`);
+      this.failSession(key, 'SESSION_LOST', 'TRANSIENT').catch((err) =>
+        this.logger.error(`Failed to release ${key} after session-lost: ${errorMessage(err)}`),
       );
     };
+    const error = (err: Error) => {
+      this.logger.warn(err.message);
+    };
 
-    state.ws.on('heartbeat', heartbeat);
     state.ws.on('connected', connected);
-    state.ws.on('reconnecting', reconnecting);
+    state.ws.on('disconnected', disconnected);
+    state.ws.on('heartbeat', heartbeat);
     state.ws.on('execution-report', executionReport);
-    state.ws.on('stream-expired', streamExpired);
+    state.ws.on('session-lost', sessionLost);
+    state.ws.on('error', error);
 
-    state.listeners = { heartbeat, connected, reconnecting, executionReport, streamExpired };
+    state.listeners = { connected, disconnected, heartbeat, executionReport, sessionLost, error };
   }
 
   private detachWsListeners(state: OwnedCredentialStream): void {
     if (!state.listeners) return;
-    state.ws.off('heartbeat', state.listeners.heartbeat);
     state.ws.off('connected', state.listeners.connected);
-    state.ws.off('reconnecting', state.listeners.reconnecting);
+    state.ws.off('disconnected', state.listeners.disconnected);
+    state.ws.off('heartbeat', state.listeners.heartbeat);
     state.ws.off('execution-report', state.listeners.executionReport);
-    state.ws.off('stream-expired', state.listeners.streamExpired);
+    state.ws.off('session-lost', state.listeners.sessionLost);
+    state.ws.off('error', state.listeners.error);
+  }
+
+  private async authenticateAndSubscribe(key: string, state: OwnedCredentialStream): Promise<void> {
+    if (state.authenticating) return;
+    state.authenticating = true;
+
+    try {
+      const serverTimeMs = await state.ws.time();
+      state.serverTimeOffsetMs = serverTimeMs - Date.now();
+      await state.ws.logon({ apiKey: state.apiKey, signer: state.signer });
+      await state.ws.subscribeUserDataStream();
+
+      const authenticatedAt = Date.now();
+      state.lastSessionAuthAtMs = authenticatedAt;
+      state.lastHeartbeatAtMs = authenticatedAt;
+      state.reconnectAttempts = 0;
+      this.negotiationBackoff.delete(key);
+      this.scheduleRelogon(key, state);
+      this.schedulePing(key, state);
+    } catch (err) {
+      this.logger.warn(`User data stream session negotiation failed for ${key}: ${errorMessage(err)}`);
+      await this.failSession(key, this.releaseReasonForError(err), negotiationFailureClassForError(err));
+    } finally {
+      state.authenticating = false;
+    }
+  }
+
+  private scheduleRelogon(key: string, state: OwnedCredentialStream): void {
+    this.clearRelogonTimer(state);
+    state.relogonTimer = setInterval(() => {
+      this.runRelogonTick(key).catch((err) =>
+        this.logger.error(`Relogon tick failed for ${key}: ${errorMessage(err)}`),
+      );
+    }, this.thresholds.userStreamRelogonIntervalMs);
+  }
+
+  private schedulePing(key: string, state: OwnedCredentialStream): void {
+    this.clearPingTimer(state);
+    state.pingTimer = setInterval(() => {
+      this.runPingTick(key).catch((err) =>
+        this.logger.error(`Heartbeat ping failed for ${key}: ${errorMessage(err)}`),
+      );
+    }, this.thresholds.userStreamSessionPingIntervalMs);
+  }
+
+  private async runRelogonTick(key: string): Promise<void> {
+    const state = this.ownedCredentials.get(key);
+    if (!state) return;
+
+    try {
+      await state.ws.logon({ apiKey: state.apiKey, signer: state.signer });
+      state.lastSessionAuthAtMs = Date.now();
+      this.negotiationBackoff.delete(key);
+    } catch (err) {
+      this.logger.warn(`Relogon failed for ${key}: ${errorMessage(err)}`);
+      await this.failSession(key, this.releaseReasonForError(err), negotiationFailureClassForError(err));
+    }
+  }
+
+  private async runPingTick(key: string): Promise<void> {
+    const state = this.ownedCredentials.get(key);
+    if (!state) return;
+
+    try {
+      await state.ws.ping();
+      state.lastHeartbeatAtMs = Date.now();
+    } catch (err) {
+      this.logger.debug(`Heartbeat ping failed for ${key}: ${errorMessage(err)}`);
+    }
+  }
+
+  private clearRelogonTimer(state: OwnedCredentialStream): void {
+    if (state.relogonTimer) {
+      clearInterval(state.relogonTimer);
+      state.relogonTimer = null;
+    }
+  }
+
+  private clearPingTimer(state: OwnedCredentialStream): void {
+    if (state.pingTimer) {
+      clearInterval(state.pingTimer);
+      state.pingTimer = null;
+    }
+  }
+
+  private clearSessionTimers(state: OwnedCredentialStream): void {
+    this.clearRelogonTimer(state);
+    this.clearPingTimer(state);
   }
 
   private handleExecutionReport(state: OwnedCredentialStream, report: ExecutionReportEvent): void {
     const now = Date.now();
     state.lastEventAtMs = now;
 
-    if (this.isSeenEvent(report, now)) return;
-    this.recordSeenEvent(report, now);
+    const identity = seenEventIdentity(report);
+    if (this.isSeenEvent(identity, now)) return;
+    if (this.inFlightEvents.has(identity)) return;
 
-    const fillStatus = toEntryFillStatus(report);
-    if (!fillStatus) return;
-
-    this.settleExecutionReport(state, report, fillStatus).catch((err) =>
+    this.inFlightEvents.add(identity);
+    this.settleExecutionReport(state, report, identity).catch((err) =>
       this.logger.error(
         `Failed to settle the execution report for ${credentialKeyOf(state.userId, state.env)}: ${errorMessage(err)}`,
       ),
     );
   }
 
-  private isSeenEvent(report: ExecutionReportEvent, now: number): boolean {
-    const identity = seenEventIdentity(report);
+  private isSeenEvent(identity: string, now: number): boolean {
     const seenAt = this.seenEvents.get(identity);
     if (seenAt === undefined) return false;
     if (now - seenAt > this.thresholds.userStreamSeenEventTtlMs) {
@@ -445,8 +590,8 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     return true;
   }
 
-  private recordSeenEvent(report: ExecutionReportEvent, now: number): void {
-    this.seenEvents.set(seenEventIdentity(report), now);
+  private recordSeenEvent(identity: string, now: number): void {
+    this.seenEvents.set(identity, now);
     while (this.seenEvents.size > this.thresholds.userStreamSeenEventCacheSize) {
       const oldestIdentity = this.seenEvents.keys().next().value;
       if (oldestIdentity === undefined) break;
@@ -461,53 +606,67 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
   private async settleExecutionReport(
     state: OwnedCredentialStream,
     report: ExecutionReportEvent,
-    status: EntryOrderExchangeStatus,
+    identity: string,
   ): Promise<void> {
-    const credentialKey = credentialKeyOf(state.userId, state.env);
-    const order = await this.correlateRestingOrder(state.userId, report);
-    if (!order) {
-      this.uncorrelatedEventCount += 1;
-      this.logger.debug(
-        `Execution report for ${credentialKey} did not correlate with any RESTING entry order (uncorrelated so far: ${this.uncorrelatedEventCount})`,
-      );
-      return;
-    }
+    try {
+      const fillStatus = toEntryFillStatus(report);
+      if (!fillStatus) {
+        this.recordSeenEvent(identity, Date.now());
+        return;
+      }
 
-    const config = await this.resolveTradingConfig(order.configId);
-    if (!config) {
-      this.logger.warn(
-        `No trading config ${order.configId} for the entry order correlated to an execution report on ${credentialKey} — skipping settle`,
-      );
-      return;
-    }
+      const credentialKey = credentialKeyOf(state.userId, state.env);
+      const order = await this.correlateRestingOrder(state.userId, report);
+      if (!order) {
+        this.uncorrelatedEventCount += 1;
+        this.logger.debug(
+          `Execution report for ${credentialKey} did not correlate with any RESTING entry order (uncorrelated so far: ${this.uncorrelatedEventCount})`,
+        );
+        this.recordSeenEvent(identity, Date.now());
+        return;
+      }
 
-    const executor = await this.resolveOrderExecutor(state.userId, state.env === 'testnet');
-    if (!executor) {
-      this.logger.warn(`No ${state.env} credentials for ${credentialKey} — skipping settle`);
-      return;
-    }
+      const config = await this.resolveTradingConfig(order.configId);
+      if (!config) {
+        this.logger.warn(
+          `No trading config ${order.configId} for the entry order correlated to an execution report on ${credentialKey} — skipping settle`,
+        );
+        return;
+      }
 
-    const outcome: SettleFillOutcome = await this.entryOrders.settleFill({
-      userId: state.userId,
-      config,
-      symbol: report.symbol,
-      mode: config.mode,
-      executor,
-      order,
-      status,
-    });
+      const executor = await this.resolveOrderExecutor(state.userId, state.env === 'testnet');
+      if (!executor) {
+        this.logger.warn(`No ${state.env} credentials for ${credentialKey} — skipping settle`);
+        return;
+      }
 
-    if (outcome === 'SETTLED') {
-      this.fastPath.invalidateOpenPositions(order.configId);
+      const outcome: SettleFillOutcome = await this.entryOrders.settleFill({
+        userId: state.userId,
+        config,
+        symbol: report.symbol,
+        mode: config.mode,
+        executor,
+        order,
+        status: fillStatus,
+      });
+
+      this.recordSeenEvent(identity, Date.now());
+      if (outcome === 'SETTLED') {
+        this.fastPath.invalidateOpenPositions(order.configId);
+      }
+    } finally {
+      this.inFlightEvents.delete(identity);
     }
   }
 
   private isAcceptableEntryOrderMatch(
-    row: { status: string; symbol: string } | null,
+    row: { userId: string; status: string; symbol: string } | null,
     report: ExecutionReportEvent,
+    userId: string,
   ): boolean {
     return (
       row !== null &&
+      row.userId === userId &&
       report.side === 'BUY' &&
       row.status === 'RESTING' &&
       row.symbol === report.symbol
@@ -522,7 +681,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     const byClientOrderId = await this.prisma.entryOrder.findUnique({
       where: { clientOrderId: normalizedClientOrderId },
     });
-    if (this.isAcceptableEntryOrderMatch(byClientOrderId, report)) {
+    if (this.isAcceptableEntryOrderMatch(byClientOrderId, report, userId)) {
       return byClientOrderId as unknown as RestingEntryOrder;
     }
 
@@ -539,24 +698,25 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
         ],
       },
     });
-    if (this.isAcceptableEntryOrderMatch(byBackupIdentifier, report)) {
+    if (this.isAcceptableEntryOrderMatch(byBackupIdentifier, report, userId)) {
       return byBackupIdentifier as unknown as RestingEntryOrder;
     }
 
     return null;
   }
 
-  private async resolveTradingConfig(configId: string): Promise<any | null> {
+  private async resolveTradingConfig(configId: string): Promise<UserStreamTradingConfig | null> {
     const now = Date.now();
-    const cached = this.configCache.get(configId);
-    if (cached && now - cached.fetchedAt < this.thresholds.userStreamSubscriptionRefreshIntervalMs) {
-      return cached.config;
-    }
+    const cached = this.configCache.get(configId, now);
+    if (cached) return cached;
 
-    const config = await this.prisma.tradingConfig.findUnique({ where: { id: configId } });
-    if (!config) return null;
+    const row = await this.prisma.tradingConfig.findUnique({ where: { id: configId } });
+    if (!row) return null;
 
-    this.configCache.set(configId, { config, fetchedAt: now });
+    // Prisma's generated TradingMode is a plain string union; the shared TradingMode is a
+    // nominal enum with the same values, so the field needs an explicit conversion here.
+    const config: UserStreamTradingConfig = { ...row, mode: row.mode as TradingMode };
+    this.configCache.set(configId, config, now);
     return config;
   }
 
@@ -566,10 +726,8 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
   ): Promise<OrderExecutorPort | null> {
     const now = Date.now();
     const cacheKey = `${userId}:${isTestnet}`;
-    const cached = this.executorCache.get(cacheKey);
-    if (cached && now - cached.fetchedAt < this.thresholds.userStreamSubscriptionRefreshIntervalMs) {
-      return cached.executor;
-    }
+    const cached = this.executorCache.get(cacheKey, now);
+    if (cached) return cached;
 
     const credentials = await this.resolveCredentials(userId, isTestnet);
     if (!credentials) return null;
@@ -581,7 +739,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
         testnet: isTestnet,
       }),
     );
-    this.executorCache.set(cacheKey, { executor, fetchedAt: now });
+    this.executorCache.set(cacheKey, executor, now);
     return executor;
   }
 
@@ -602,7 +760,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
       record,
       thresholds: {
         heartbeatMaxAgeMs: this.thresholds.userStreamHeartbeatMaxAgeMs,
-        keepaliveMaxAgeMs: this.thresholds.userStreamKeepaliveMaxAgeMs,
+        sessionAuthMaxAgeMs: this.thresholds.userStreamSessionAuthMaxAgeMs,
       },
     });
   }
@@ -613,7 +771,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
       ownerId: this.instanceId,
       connectedAt: state.connectedAt,
       lastHeartbeatAtMs: state.lastHeartbeatAtMs,
-      lastKeepaliveAtMs: state.lastKeepaliveAtMs,
+      lastSessionAuthAtMs: state.lastSessionAuthAtMs,
       lastEventAtMs: state.lastEventAtMs,
       publishedAt: Date.now(),
     };
@@ -653,103 +811,10 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     );
   }
 
-  private async handleStreamExpired(key: string, _reason: string): Promise<void> {
-    await this.renegotiate(key);
-  }
-
-  private startKeepalive(key: string, state: OwnedCredentialStream): void {
-    state.keepaliveTimer = setInterval(() => {
-      this.runKeepaliveTick(key).catch((err) =>
-        this.logger.error(`Keepalive tick failed for ${key}: ${errorMessage(err)}`),
-      );
-    }, this.thresholds.userStreamKeepaliveIntervalMs);
-  }
-
-  private stopKeepalive(state: OwnedCredentialStream): void {
-    if (state.keepaliveTimer) {
-      clearInterval(state.keepaliveTimer);
-      state.keepaliveTimer = null;
-    }
-  }
-
-  private async runKeepaliveTick(key: string): Promise<void> {
-    const state = this.ownedCredentials.get(key);
-    if (!state) return;
-
-    const stillOwner = await this.coordination.renew(
-      userStreamOwnerLeaseKey(state.userId, state.env),
-      this.instanceId,
-      this.thresholds.userStreamOwnerLeaseTtlMs,
-    );
-    if (!stillOwner) {
-      this.handleLeaseLost(key);
-      return;
-    }
-
-    const now = Date.now();
-    const staleThresholdMs = this.thresholds.userStreamKeyExpiryMs - this.thresholds.userStreamKeepaliveGraceMs;
-    if (now - state.lastKeepaliveAtMs > staleThresholdMs) {
-      await this.renegotiate(key);
-      return;
-    }
-
-    try {
-      await state.rest.keepAliveListenKey(state.listenKey);
-      state.lastKeepaliveAtMs = Date.now();
-    } catch (err) {
-      const code = getBinanceErrorCode(err);
-      this.logger.warn(`keepAliveListenKey failed for ${key}: ${restErrorSummary(err)}`);
-      if (code === LISTEN_KEY_MISSING_ERROR_CODE) {
-        await this.renegotiate(key);
-      }
-    }
-  }
-
-  private async renegotiate(key: string): Promise<void> {
-    const state = this.ownedCredentials.get(key);
-    if (!state) return;
-
-    const stillOwner = await this.coordination.renew(
-      userStreamOwnerLeaseKey(state.userId, state.env),
-      this.instanceId,
-      this.thresholds.userStreamOwnerLeaseTtlMs,
-    );
-    if (!stillOwner) {
-      this.handleLeaseLost(key);
-      return;
-    }
-
-    this.stopKeepalive(state);
-    state.ws.disconnect();
-
-    try {
-      await state.rest.closeListenKey(state.listenKey);
-    } catch (err) {
-      this.logger.debug(`Stale closeListenKey failed for ${key}: ${restErrorSummary(err)}`);
-    }
-
-    let newListenKey: string;
-    try {
-      newListenKey = await state.rest.createListenKey();
-    } catch (err) {
-      this.logger.warn(`Failed to renegotiate the listenKey for ${key}: ${restErrorSummary(err)}`);
-      return;
-    }
-
-    const now = Date.now();
-    state.listenKey = newListenKey;
-    state.connectedAt = now;
-    state.lastKeepaliveAtMs = now;
-    state.lastHeartbeatAtMs = now;
-    state.ws.connect(newListenKey);
-    this.startKeepalive(key, state);
-    this.logger.log(`Renegotiated the user data stream listenKey for ${key}`);
-  }
-
   private handleLeaseLost(key: string): void {
     const state = this.ownedCredentials.get(key);
     if (!state) return;
-    this.stopKeepalive(state);
+    this.clearSessionTimers(state);
     state.ws.disconnect();
     this.detachWsListeners(state);
     this.ownedCredentials.delete(key);
@@ -757,19 +822,69 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     this.logger.log(`Released the user data stream for ${key} (LEASE_LOST)`);
   }
 
+  private withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`operation timed out after ${ms}ms`)), ms);
+      promise.then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
+      );
+    });
+  }
+
+  private async failSession(
+    key: string,
+    reason: CredentialReleaseReason,
+    failureClass: NegotiationFailureClass,
+  ): Promise<void> {
+    const state = this.ownedCredentials.get(key);
+    if (!state) return;
+
+    this.clearSessionTimers(state);
+    this.detachWsListeners(state);
+    state.ws.disconnect();
+
+    try {
+      await this.coordination.release(userStreamOwnerLeaseKey(state.userId, state.env), this.instanceId);
+    } catch (err) {
+      this.logger.warn(`Failed to release the lease for ${key}: ${errorMessage(err)}`);
+    }
+
+    this.ownedCredentials.delete(key);
+    this.lastKnownHealthState.delete(key);
+    this.registerNegotiationFailure(key, failureClass);
+    this.logger.log(`Released the user data stream for ${key} (${reason})`);
+  }
+
   private async releaseCredential(key: string, reason: CredentialReleaseReason): Promise<void> {
     const state = this.ownedCredentials.get(key);
     if (!state) return;
 
-    this.stopKeepalive(state);
-    state.ws.disconnect();
-    this.detachWsListeners(state);
+    this.clearSessionTimers(state);
 
     try {
-      await state.rest.closeListenKey(state.listenKey);
+      await this.withTimeout(
+        state.ws.unsubscribeUserDataStream(),
+        this.thresholds.userStreamRequestTimeoutMs,
+      );
     } catch (err) {
-      this.logger.debug(`closeListenKey failed for ${key}: ${restErrorSummary(err)}`);
+      this.logger.debug(`unsubscribeUserDataStream failed for ${key}: ${errorMessage(err)}`);
     }
+
+    try {
+      await this.withTimeout(state.ws.logout(), this.thresholds.userStreamRequestTimeoutMs);
+    } catch (err) {
+      this.logger.debug(`logout failed for ${key}: ${errorMessage(err)}`);
+    }
+
+    state.ws.disconnect();
+    this.detachWsListeners(state);
 
     try {
       await this.coordination.release(userStreamOwnerLeaseKey(state.userId, state.env), this.instanceId);

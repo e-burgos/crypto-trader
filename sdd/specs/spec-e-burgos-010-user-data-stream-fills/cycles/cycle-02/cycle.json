@@ -30,14 +30,14 @@
   "artifacts": [],
   "metrics": {
     "tasks_total": 26,
-    "tasks_completed": 0,
+    "tasks_completed": 22,
     "story_points": 66,
     "files_created": [],
     "files_modified": [],
     "files_deleted": [],
     "usage": {
-      "tokens_in": 537834,
-      "tokens_out": 94911,
+      "tokens_in": 2817458,
+      "tokens_out": 497196,
       "by_agent": [
         {
           "agent": "functional",
@@ -71,6 +71,150 @@
           "approx": false,
           "source": "agent-usage-notification",
           "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-1 lane data-fetcher pure (TASK-001 Ed25519Signer + TASK-002 execution-report)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 150077,
+          "tokens_out": 26484,
+          "tokens_total": 176561,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-1 lane api pure (TASK-003 thresholds + TASK-004 BoundedTtlCache + TASK-009 flag)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 173049,
+          "tokens_out": 30538,
+          "tokens_total": 203587,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-1 lane shared/analysis/port (TASK-005 + TASK-006 + TASK-007)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 145862,
+          "tokens_out": 25740,
+          "tokens_total": 171602,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-1 TASK-025 error listener on MarketStreamService",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 105767,
+          "tokens_out": 18665,
+          "tokens_total": 124432,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-2 lane data-fetcher transport (TASK-010 BinanceWsApiClient + TASK-012 barrel add)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 176698,
+          "tokens_out": 31182,
+          "tokens_total": 207880,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-2 lane api credential+double (TASK-008 Ed25519 resolver + TASK-011 fake ws-api client)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 181522,
+          "tokens_out": 32033,
+          "tokens_total": 213555,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-3 TASK-013 UserDataStreamService session state machine",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 287475,
+          "tokens_out": 50731,
+          "tokens_total": 338206,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-4 TASK-014 failSession+backoff / TASK-015 userId guard / TASK-016 dedupe after settle",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 315580,
+          "tokens_out": 55690,
+          "tokens_total": 371270,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-5 TASK-017 error listener test / TASK-018 bounded caches + typed config",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 210346,
+          "tokens_out": 37120,
+          "tokens_total": 247466,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-6 TASK-019 composition root + .env.example",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 201700,
+          "tokens_out": 35594,
+          "tokens_total": 237294,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-6 TASK-023 three security sentinels",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 209196,
+          "tokens_out": 36917,
+          "tokens_total": 246113,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-6 TASK-024 HU-05 CA-2 behavioural test",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 122352,
+          "tokens_out": 21591,
+          "tokens_total": 143943,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
         }
       ]
     }

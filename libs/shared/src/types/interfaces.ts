@@ -367,13 +367,13 @@ export interface UserDataStreamHealthRecord {
   ownerId: string;
   connectedAt: number;
   lastHeartbeatAtMs: number;
-  lastKeepaliveAtMs: number;
+  lastSessionAuthAtMs: number;
   lastEventAtMs: number | null;
   publishedAt: number;
 }
 
 export const USER_DATA_STREAM_HEALTH_FIELDS = [
-  'credentialKey', 'ownerId', 'connectedAt', 'lastHeartbeatAtMs', 'lastKeepaliveAtMs',
+  'credentialKey', 'ownerId', 'connectedAt', 'lastHeartbeatAtMs', 'lastSessionAuthAtMs',
   'lastEventAtMs', 'publishedAt',
 ] as const;
 

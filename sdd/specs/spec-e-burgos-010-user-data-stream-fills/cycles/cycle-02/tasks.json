@@ -742,7 +742,7 @@
         "TASK-021",
         "TASK-022"
       ],
-      "status": "in-progress",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-ws-api.testnet.spec.ts"
       ],

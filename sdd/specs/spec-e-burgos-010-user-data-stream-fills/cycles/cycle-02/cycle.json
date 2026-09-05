@@ -17,9 +17,9 @@
     "Absorber los follow-ups de cycle-01 que sobreviven al cambio de transporte: liberacion del lease en la renegociacion fallida, listener de 'error', backoff, dedupe tras el settle, alineacion del flag con D-08, purga de caches y el test de HU-05 CA-2",
     "Dejar evidencia de una corrida real contra Binance TESTNET, nunca LIVE, sin cambiar la SPA, EP-017 ni los seis eventos entry-order:*"
   ],
-  "status": "in-progress",
+  "status": "completed",
   "started_at": "2026-09-04",
-  "completed_at": null,
+  "completed_at": "2026-09-05",
   "documents": {
     "brief": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/brief.yaml",
     "functional": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/functional.md",
@@ -32,14 +32,51 @@
   ],
   "metrics": {
     "tasks_total": 26,
-    "tasks_completed": 25,
+    "tasks_completed": 26,
     "story_points": 66,
-    "files_created": [],
-    "files_modified": [],
-    "files_deleted": [],
+    "files_created": [
+      "apps/api/src/reactive/bounded-ttl-cache.ts",
+      "apps/api/src/reactive/bounded-ttl-cache.spec.ts",
+      "apps/api/src/reactive/env-user-stream-auth-credential.resolver.ts",
+      "apps/api/src/reactive/env-user-stream-auth-credential.resolver.spec.ts",
+      "apps/api/src/reactive/user-stream-auth-credential.port.ts",
+      "apps/api/src/reactive/user-stream-ws-api.test-double.ts",
+      "libs/data-fetcher/src/lib/binance/binance-ws-api.client.ts",
+      "libs/data-fetcher/src/lib/binance/binance-ws-api.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-ws-api.testnet.spec.ts",
+      "libs/data-fetcher/src/lib/binance/ed25519-signer.ts",
+      "libs/data-fetcher/src/lib/binance/ed25519-signer.spec.ts",
+      "libs/data-fetcher/src/lib/binance/execution-report.ts",
+      "libs/data-fetcher/src/lib/binance/execution-report.spec.ts"
+    ],
+    "files_modified": [
+      ".env.example",
+      "apps/api/src/reactive/entry-fill-watch.service.spec.ts",
+      "apps/api/src/reactive/market-stream.service.ts",
+      "apps/api/src/reactive/market-stream.service.spec.ts",
+      "apps/api/src/reactive/reactive-module-wiring.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts",
+      "apps/api/src/reactive/reactive.module.ts",
+      "apps/api/src/reactive/user-data-stream-flag.ts",
+      "apps/api/src/reactive/user-data-stream-flag.spec.ts",
+      "apps/api/src/reactive/user-data-stream.service.ts",
+      "apps/api/src/reactive/user-data-stream.service.spec.ts",
+      "libs/analysis/src/lib/reactive/user-data-stream-health.ts",
+      "libs/analysis/src/lib/reactive/user-data-stream-health.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/index.ts",
+      "libs/shared/src/types/interfaces.ts"
+    ],
+    "files_deleted": [
+      "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts",
+      "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-user-data-stream.testnet.spec.ts"
+    ],
     "usage": {
-      "tokens_in": 3107970,
-      "tokens_out": 548463,
+      "tokens_in": 3554931,
+      "tokens_out": 627339,
       "by_agent": [
         {
           "agent": "functional",
@@ -241,13 +278,123 @@
           "approx": false,
           "source": "agent-usage-notification",
           "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "orchestrator",
+          "label": "cierre de cycle-01 + sonda del transporte + consolidacion de contexto + brief y coordinacion de 8 oleadas de cycle-02",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 255000,
+          "tokens_out": 45000,
+          "tokens_total": 300000,
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "reviewer",
+          "label": "revision completa del ciclo, verificacion de los 9 follow-ups, gates de cierre",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 191961,
+          "tokens_out": 33876,
+          "tokens_total": 225837,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
         }
-      ]
-    }
+      ],
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 2892611,
+          "tokens_out": 510459,
+          "approx": false,
+          "source": "agent-usage-notification"
+        },
+        "claude/opus": {
+          "tokens_in": 662320,
+          "tokens_out": 116880,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      },
+      "tokens_total": 4408433,
+      "approx": true,
+      "source": "agent-usage-notification",
+      "duration_minutes": 560
+    },
+    "tasks_skipped": 0
   },
   "tables_created": [],
   "endpoints_implemented": [],
   "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "issues_found": [
+    "MEDIO (evidencia, no del codigo) — HU-07 CA-3 NO se observo: la mitad autenticada del harness TESTNET (session.logon, userDataStream.subscribe con sesion, un executionReport real de un fill IOC, renovacion y reconexion) no corrio porque la clave Ed25519 de TESTNET todavia no existe: solo el dueno de la cuenta de Binance puede crearla. No se simulo nada y el bloque se auto-skipea con el motivo escrito en la salida. La mitad sin credenciales SI corrio contra el exchange real y paso (ping 200, time 200 con serverTime, userDataStream.subscribe sin sesion rechazado con -1193), que es evidencia positiva de que el metodo existe detras de la autenticacion. Evidencia: cycles/cycle-02/artifacts/testnet-verification-2026-09-05.md",
+    "MEDIO (preexistente de cycle-01, NO se toco en este ciclo) — `pnpm typecheck:api` falla con 6 errores `TS2304: Cannot find name 'jest'` en apps/api/src/reactive/reactive-coordination.test-double.ts: el doble vive dentro de tsconfig.app.json sin los tipos de jest. Se introdujo en cycle-01 (commit 6c0a76bf5) y el reviewer de aquel ciclo nunca corrio typecheck:api, solo `nx lint test`. `nx run-many -t lint test` queda verde igual, asi que el defecto no se ve desde el gate del ciclo. El doble nuevo de este ciclo (user-stream-ws-api.test-double.ts) no agrega errores.",
+    "BAJO (cobertura) — HU-08 CA-3 no tiene el test directo que pedia architect.md §11.2 T-08b para la rama ABSENT (1 log tras 10 barridos, 2 tras userStreamMissingCredentialLogIntervalMs). El mecanismo esta implementado (registerNegotiationFailure('ABSENT') fija el cooldown de 1 h y el sweep saltea antes de resolver y loguear) y su equivalente exacto SI esta testeado sobre la rama INVALID (T-08d: 1 warn tras 10 sweeps), asi que la propiedad se apoya en el mismo camino de codigo con otra constante — pero la fila ABSENT no esta protegida contra regresion por si misma.",
+    "MENOR (estilo, regla ✍️) — apps/api/src/reactive/user-data-stream.service.ts introduce el unico comentario del ciclo fuera de directivas de tooling: dos lineas justificando el cast `row.mode as TradingMode` entre la union de strings que genera Prisma y el enum nominal compartido. Cae del lado de 'restriccion que el codigo no puede expresar', pero excede la linea unica que la regla admite y su segunda mitad es narrativa. El arreglo idiomatico es extraer `toUserStreamTradingConfig(row)` y que el nombre sea la explicacion. No bloquea el cierre.",
+    "MENOR (forma de la verificacion) — HU-02 CA-1 esta cubierto de forma composicional (el test del claim CAS en entry-order.service.spec.ts 'stops when the conditional claim finds no RESTING row' + las ramas SETTLED/ALREADY_SETTLED y los tests de dedupe del stream) y no como la matriz de tres filas (stream x2, stream+sonda, sonda+barrido) que describia T-02a. La propiedad queda verificada; su presentacion no coincide con el contrato del architect.",
+    "PREEXISTENTE, arrastrada de cycle-01 y no agrandada aca — settleFill hace el claim CAS y despues crea Position, Trade y bot_actions fuera de una transaccion: si el proceso muere en el medio, la fila queda FILLED sin Position y ningun detector la vuelve a mirar. El brief la declaro explicitamente fuera de alcance."
+  ],
+  "reviewer_report": {
+    "approved": true,
+    "date": "2026-09-05",
+    "ca_results": {
+      "HU-01 CA-1": "PASS (contra dobles) — user-data-stream.service.spec.ts 'matches by clientOrderId and settles the fill without waiting for any market tick': con cero ticks emitidos, un execution-report produce 1 llamada a settleFill.",
+      "HU-01 CA-2": "PASS (contra dobles) — tabla de correlacion: clientOrderId exacto, sufijo -l de la pierna OCO sobre la fila sin sufijo, y respaldo por orderId/limitLegOrderId/stopLegOrderId/orderListId acotado por userId+symbol+RESTING.",
+      "HU-01 CA-3": "PASS (contra dobles) — execution-report-fill.spec.ts compara toEntryFillStatus(report) deep-equal contra el EntryOrderExchangeStatus del camino REST para LIMIT_MAKER y para la pierna STOP_LOSS_LIMIT. Test heredado de cycle-01, intacto: el cambio de transporte no toco el mapper.",
+      "HU-01 CE-1": "PASS (contra dobles) — 'produces zero effects and no warn/error log when nothing correlates' y el rechazo por symbol distinto: 0 settleFill, 0 gateway, 0 notificaciones.",
+      "HU-01 CE-2": "PASS (contra dobles) — misma tabla de CA-2: el match por identificador de respaldo resuelve la fila correcta cuando el clientOrderId no alcanza.",
+      "HU-02 CA-1": "PASS (contra dobles, verificado de forma composicional) — el punto de serializacion es el claim CAS de settleFill, testeado en entry-order.service.spec.ts ('stops when the conditional claim finds no RESTING row'); cada detector llega a ese mismo claim y el segundo obtiene ALREADY_SETTLED. No existe la matriz de tres filas que describia T-02a (ver issues_found).",
+      "HU-02 CA-2": "PASS (contra dobles) — 'a redelivered identical execution report is a complete no-op: zero Prisma calls on the second delivery'; con la fila ya FILLED, settleFill devuelve ALREADY_SETTLED y no se invalida el cache del fast-path ni se emite nada.",
+      "HU-02 CA-3": "PASS (contra dobles) — describe 'the identity is marked seen only after a successful settle': (a) settleFill lanza en la 1a entrega y la 2a vuelve a settlear; (b) config null en la 1a y settle en la 2a; (c/d) SETTLED y ALREADY_SETTLED no reintentan; (e/f) evento no decodificable o sin correlacion se marcan visto. En el codigo, recordSeenEvent() corre despues del await de settleFill.",
+      "HU-02 CE-1": "PASS (contra dobles) — 'settles exactly once when the same execution report is emitted twice within the same event-loop tick': la guarda inFlightEvents corta la segunda entrega.",
+      "HU-03 CA-1": "PASS (contra dobles + DI real de Nest) — reactive-module-wiring.spec.ts: sin USER_DATA_STREAM_FILLS_ENABLED el provider resuelve null y los dobles de transporte y de resolver registran 0 llamadas despues de avanzar todos los intervalos userStream*.",
+      "HU-03 CA-2": "PASS (contra dobles + diff del ciclo) — el servicio no inyecta AppGateway ni NotificationsService (constructor verificado: prisma, coordination, entryOrders, fastPath, authCredentials, wsApiFactory, thresholds, instanceId); el diff del ciclo no toca apps/web, EP-017 ni ninguno de los seis eventos entry-order:*.",
+      "HU-03 CA-3": "PASS (contra dobles) — user-data-stream-flag.spec.ts: 'true' enciende; '1', 'TRUE', 'yes', '' y undefined apagan. El codigo es `=== 'true'` a secas (issue-7 cerrado) y .env.example entrega la variable vacia.",
+      "HU-04 CA-1": "PASS (contra dobles) — 'relogons at least once after userStreamSessionMaxAgeMs elapses, reading the threshold from the thresholds object', mas los invariantes de umbrales de reactive-runtime-thresholds.spec.ts.",
+      "HU-04 CA-2": "PASS (contra dobles) — describe 'reconnection re-authenticates on every cause': close limpio, error+close y cierre del exchange producen +1 logon y +1 subscribeUserDataStream antes de volver a considerar operativa la escucha. En el codigo, el listener 'connected' dispara authenticateAndSubscribe en cada reconexion (RN-10).",
+      "HU-04 CA-3": "PASS (contra dobles) — 'stops the session timers, then unsubscribes, logs out, disconnects and releases the lease, in that order', y sin release redundante cuando el lease ya se habia perdido.",
+      "HU-04 CA-4": "PASS (contra dobles) — dos instancias contra createSharedFakeCoordination(): exactamente una hace connect/logon, la otra cero.",
+      "HU-04 CA-5": "PASS (contra dobles) — issue-2 cerrado. describe 'failSession releases the credit on every session failure' con siete filas: connect, time, logon transitorio, logon -1022, subscribe, relogon periodico y session-lost. En todas, release 1 vez y getOwnedCredentialKeys() vacio. El codigo tiene un unico camino de fallo (failSession) que siempre libera el lease, en vez del `return` de user-data-stream.service.ts:731-737 de cycle-01.",
+      "HU-04 CA-6": "PASS (contra dobles) — issue-3 cerrado. 'grows the retry delay exponentially, logs one warn per real attempt (not per sweep tick), and resets the delay after a success': base * 2^(n-1) con jitter +/-20 %, tope userStreamNegotiateMaxDelayMs, y el sweep saltea mientras el backoff esta activo.",
+      "HU-04 CE-1": "PASS (contra dobles) — 'rejected session never reads as HEALTHY': tras el rechazo, getHealth() nunca devuelve HEALTHY.",
+      "HU-05 CA-1": "PASS (contra dobles) — resolveUserDataStreamHealth devuelve HEALTHY / DEGRADED(HEARTBEAT_STALE|SESSION_AUTH_STALE) / UNKNOWN(NO_RECORD), y el servicio publica el record por coordinacion.",
+      "HU-05 CA-2": "PASS (contra dobles) — issue-5 cerrado. Test DE COMPORTAMIENTO en entry-fill-watch.service.spec.ts: se publica un health record vencido en rx:v1:uds:health:{u}:{env}, se emite un tick que cruza el nivel y se assertea settleFill 1 llamada, mas cero lecturas de claves rx:v1:uds:health: por parte de EntryFillWatchService. La sonda dejo de estar verificada por inspeccion manual. Confirmado ademas por grep: fuera del propio modulo reactivo, ningun servicio referencia UserDataStreamService ni la salud del stream.",
+      "HU-05 CA-3": "PASS (contra dobles) — describe 'RN-03: silence is never health': variando lastEventAtMs en todo su rango el veredicto no cambia; moviendo lastHeartbeatAtMs o lastSessionAuthAtMs mas alla de su umbral cambia a DEGRADED con la razon correspondiente.",
+      "HU-05 CA-4": "PASS (contra dobles) — 'returns to HEALTHY automatically after a fresh heartbeat, with no manual call'.",
+      "HU-05 CE-1": "PASS (contra dobles) — coordinacion no sana: 0 connect, 0 logon, sin excepcion, salud no HEALTHY; y con isEnabled() === false no se loguea nada.",
+      "HU-06 CA-1": "PASS (contra dobles, centinela en runtime) — tres centinelas (API-KEY-SENTINEL, PRIVATE-KEY-SENTINEL, SIGNATURE-SENTINEL) recorriendo connect, time, logon, subscribe, evento, relogon, relogon rechazado con -1022 y shutdown, con spies sobre Logger#log/warn/error/debug: ninguna llamada capturada los contiene. Sin string-matching sobre el texto fuente.",
+      "HU-06 CA-2": "PASS (contra dobles) — mismo centinela sobre gateway.emitToUser (0 llamadas), mas JSON.stringify(signer) === '{}' y BinanceWsApiError que solo lleva status/code/method/msg, nunca el request que fallo.",
+      "HU-06 CE-1": "PASS (contra dobles) — redactWsApiRequest enmascara apiKey y signature dejando el resto intacto; el listener de 'error' loguea unicamente err.message aunque el objeto de error cargue la credencial en una propiedad extra.",
+      "HU-07 CA-1": "PASS (contra la toolchain real, verificado por el reviewer) — `pnpm nx run-many -t lint test --projects=api,data-fetcher,shared,analysis` verde sin variables de TESTNET: api 1043 tests / 106 suites, data-fetcher 190 passed + 10 skipped (los dos harness opt-in), analysis 17 archivos, shared 3 archivos; lint 0 errores.",
+      "HU-07 CA-2": "PASS (contra el exchange real + registro honesto) — el harness es opt-in por BINANCE_TESTNET_E2E=1, no corre en CI, y su mitad autenticada se auto-skipea con el motivo del bloqueo escrito en la salida. El ciclo registra que esa verificacion no se ejecuto, sin inventar evidencia y dejando constancia de que el bloqueo es la ausencia de la credencial y no un defecto del transporte.",
+      "HU-07 CA-3": "NO VERIFICADO (bloqueado) — la corrida autenticada NO ocurrio: no hay sesion real creada, ni renovacion/reconexion sostenida, ni un executionReport real llegando a settleFill. Falta la clave Ed25519 que solo el dueno de la cuenta de TESTNET puede crear. NO se aprueba este criterio y NO se simulo nada. Lo unico observado contra el exchange real es la mitad sin credenciales.",
+      "HU-07 CA-4": "PASS (contra el exchange real) — el harness construye el cliente con { testnet: true } y aborta si getBaseUrl() no es BINANCE_WS_API_TESTNET_URL (y si la base REST no es testnet.binance.vision). Las guardas corrieron antes del primer frame en la corrida registrada. Nunca se toco LIVE: ni URL, ni clave, ni orden.",
+      "HU-08 CA-1": "PASS (contra dobles + DI real) — con el resolver en ABSENT para toda credencial, onModuleInit resuelve sin lanzar, tryAcquire 0 llamadas y connect 0; reactive-module-wiring.spec.ts lo repite arrancando el EnvUserStreamAuthCredentialResolver real.",
+      "HU-08 CA-2": "PASS (contra dobles) — en el mismo test, settleFill sigue disponible por el camino de la sonda con la credencial ABSENT.",
+      "HU-08 CA-3": "PARCIAL (contra dobles) — el cooldown esta implementado (ABSENT fija userStreamMissingCredentialLogIntervalMs = 1 h y el sweep saltea antes de loguear) y su equivalente INVALID esta testeado: 1 warn tras 10 barridos. La fila ABSENT de T-08b (1 log tras 10 sweeps, 2 tras el intervalo) no tiene test propio. Ver issues_found.",
+      "HU-08 CA-4": "PASS (contra dobles) — 'resolves credentials independently per user: a RESOLVED user-A does not unblock an ABSENT user-B'.",
+      "HU-08 CE-1": "PASS (contra dobles) — tabla del resolver: PEM corrupto => INVALID/MALFORMED_PEM, clave RSA => INVALID/NOT_ED25519, _PATH inexistente => INVALID/UNREADABLE_KEY_FILE; en el servicio, INVALID => 0 tryAcquire, 0 connect, sin excepcion, salud no HEALTHY y 1 warn con cooldown.",
+      "HU-09 CA-1": "PASS (contra dobles) — issue-4 cerrado del lado del user data stream: emitError('boom') sobre el doble no lanza, deja 1 warn y no empuja la salud a HEALTHY. El listener 'error' esta registrado en attachWsListeners y desenganchado en detachWsListeners.",
+      "HU-09 CA-2": "PASS (contra dobles) — issue-4 cerrado del lado del mercado: market-stream.service.ts:87 registra on('error') sobre BinanceWsClient y el test 'survives an error emitted by the ws client, logging only its message via warn' lo cubre.",
+      "HU-09 CA-3": "PASS (contra dobles) — issue-8 cerrado: 'evicts the oldest config/credential/executor once resolver traffic exceeds userStreamResolverCacheSize' sobre las tres cachas, mas el test directo de BoundedTtlCache (FIFO + expiracion). Los any de ConfigCacheEntry.config y resolveTradingConfig() se fueron: la config del stream tiene tipo propio UserStreamTradingConfig."
+    },
+    "tests": {
+      "sdd:validate": "OK — 33 files valid, cross-checks passed (corrido antes de revisar y despues de todas las actualizaciones de cierre)",
+      "nx run-many -t lint test --projects=api,data-fetcher,shared,analysis": "OK — 8/8 targets. api: 106 suites / 1043 tests passed. data-fetcher: 8 archivos passed + 2 skipped (los dos harness opt-in), 190 tests passed + 10 skipped. analysis: 17 archivos passed. shared: 3 archivos passed. lint: 0 errores (1079 warnings preexistentes de no-explicit-any, ninguno nuevo del ciclo fuera de helpers de test).",
+      "TESTNET ws-api — mitad sin credenciales (contra el exchange real)": "PASS — ping status 200; time status 200 con serverTime; userDataStream.subscribe sin sesion rechazado con BinanceWsApiError { status: 400, code: -1193 }. Guardas de aborto verificadas antes del primer frame. Nunca LIVE.",
+      "TESTNET ws-api — mitad autenticada": "NO EJECUTADO — bloqueado por la ausencia de la clave Ed25519 de TESTNET, que solo el dueno de la cuenta puede crear. Se auto-skipea con el motivo escrito en la salida. Sin simulacion.",
+      "typecheck:api": "FALLA — 6 errores TS2304 'Cannot find name jest' en apps/api/src/reactive/reactive-coordination.test-double.ts. Defecto PREEXISTENTE introducido en cycle-01 (commit 6c0a76bf5); este ciclo no lo agranda ni lo arregla. Registrado en issues_found."
+    },
+    "notes": "APROBADO como implementacion, con la evidencia contra el exchange explicitamente incompleta y anotada como tal. || Que se construyo: el transporte del user data stream dejo de colgar del listenKey REST retirado por Binance y pasa por la WebSocket API — BinanceWsApiClient con correlacion request/response por id, timeout por request, rechazo de todas las pendientes al cerrarse el socket, reconexion con backoff y jitter y ping aplicativo; firma Ed25519 de session.logon con node:crypto y sin dependencias nuevas; extractUserDataEvent que acepta las dos envolturas posibles del evento empujado; puerto de resolucion de la credencial con ABSENT e INVALID como estados de primera clase; y UserDataStreamService reorganizado alrededor de un unico camino de fallo. Se borro entero el transporte de cycle-01 (cliente WS single-stream, sus tests, su harness y los tres helpers REST del listenKey). || Invariantes duras: verificadas. UserDataStreamService no crea Position, Trade ni bot_actions, no llama placeInitialProtection, no emite ningun entry-order:* y no inyecta gateway ni notificaciones — su unica salida de reconciliacion es entryOrders.settleFill (grep sobre el archivo: una sola aparicion, linea 643). La sonda por tick NO esta gateada por la salud del stream, y eso paso de inspeccion manual a propiedad de runtime (test de HU-05 CA-2). La SPA, EP-017 y los seis eventos entry-order:* no se tocaron: el diff del ciclo no incluye un solo archivo de apps/web. El interruptor viaja apagado y con una sola forma valida de encenderse. || Los nueve follow-ups estan cerrados, cada uno con su test: issue-2 (failSession libera el lease en las siete formas de fallar una negociacion), issue-3 (backoff exponencial con jitter y tope, un warn por intento real), issue-4 (listener 'error' en el cliente del user data stream y en BinanceWsClient de MarketStreamService), issue-5 (test de comportamiento de HU-05 CA-2), issue-6 (la identidad se marca vista despues del settle), issue-7 (flag === 'true' a secas), issue-8 (las tres cachas acotadas con BoundedTtlCache y el fin de los any en la config del stream), y el noveno que encontro el arquitecto: la correlacion executionReport -> entry_orders acotada por userId en sus dos vias. || Contra que esta verificado: todo lo ejecutable, contra dobles y verde. Contra el exchange REAL corrio la mitad sin credenciales del harness y paso — y eso no es poco: probo que el socket abre, que la envoltura de respuesta es la que el cliente asume, y que userDataStream.subscribe sigue vivo detras de la autenticacion (-1193). Es el contraste exacto con el 410 Gone de cycle-01. Lo que NO se observo es la mitad autenticada: no hay una sola sesion real creada ni un executionReport real llegando a settleFill, porque falta la clave Ed25519 que solo el dueno de la cuenta de TESTNET puede crear. HU-07 CA-3 queda NO VERIFICADO y no se aprueba. || Por que apruebo igual: el propio HU-07 CA-2 de este ciclo contempla este estado y exige exactamente lo que se hizo — registrar el bloqueo sin inventar evidencia — y CA-3 esta redactado de forma condicional ('si y cuando esa corrida se ejecuta'). El bloqueo es material del dueno de la cuenta, no un defecto del transporte ni del codigo. Condicion que acompana esta aprobacion: el interruptor USER_DATA_STREAM_FILLS_ENABLED no debe encenderse en ningun entorno hasta que esa corrida exista. || Tasks: 26/26 en done, 0 skipped. TASK-026 se cierra en done siguiendo el precedente que fijo el reviewer de cycle-01 con TASK-013: la task escribio, commiteo y corrio su entregable — el criterio que existe para satisfacer es el que no se cumplio, y eso se registra en ca_results, no falseando el estado de la task. Nota de proceso: el orquestador pidio dejarla en in-progress con 25/26, pero validate-sdd.mjs falla en duro un ciclo completed con tasks_completed + tasks_skipped < tasks_total, y el gate de validacion no admite excepcion. || Registros: sdd/api.json, sdd/schema.json y sdd/components.json NO se tocaron y asi corresponde — architect §7 no declara endpoints, tablas ni componentes, y ninguno de los tres contiene una sola referencia a spec-e-burgos-010. sdd/fixes.json no tenia ningun fix en implemented para reconciliar. El modulo queda en in_progress_modules con cycles_completed 2 y la spec sigue in-progress: su §3 lista ciclos posteriores y la corrida contra el exchange esta pendiente. || Telemetria: by_agent llego completo desde aguas arriba (18 entradas, 17 con source agent-usage-notification y la del orquestador como estimacion declarada) — nada faltante que reportar. Agregue mi propia entrada como estimacion declarada (approx true, source declared-estimate: corro como subagente y no tengo contador propio) y derive by_tier agrupando por provider_model. claude/opus queda approx true porque mezcla medido con estimado. || Estilo: el codigo del ciclo no tiene comentarios narrativos ni codigo muerto comentado ni TODOs; las unicas lineas de comentario agregadas son directivas eslint-disable y un comentario de dos lineas que justifica un cast de TradingMode (ver issues_found, no bloqueante). Ningun test afirma sobre el texto fuente ni sobre un rango entre dos simbolos.",
+    "follow_ups": [
+      "BLOQUEANTE PARA ENCENDER EL INTERRUPTOR: el dev crea la clave Ed25519 en su cuenta de Binance TESTNET (instructivo en architect.md §1.2 y en el artifact del ciclo), la carga en .env y corre `set -a && source .env && set +a && BINANCE_TESTNET_E2E=1 pnpm nx test data-fetcher --skip-nx-cache`. Recien con esa corrida HU-07 CA-3 pasa de NO VERIFICADO a PASS. Hasta entonces USER_DATA_STREAM_FILLS_ENABLED se queda apagado en todos los entornos.",
+      "Fix repo-level: arreglar `pnpm typecheck:api` — apps/api/src/reactive/reactive-coordination.test-double.ts necesita los tipos de jest o quedar fuera de tsconfig.app.json. Preexistente de cycle-01, invisible para `nx lint test`. Considerar sumar typecheck al gate de revision de ciclo para que no vuelva a pasar desapercibido.",
+      "Test: agregar la fila ABSENT de T-08b (1 log tras 10 barridos, 2 tras userStreamMissingCredentialLogIntervalMs) para que HU-08 CA-3 quede protegida por si misma y no por analogia con la rama INVALID.",
+      "Estilo: reemplazar el comentario de dos lineas de resolveTradingConfig por una funcion nombrada (`toUserStreamTradingConfig(row)`), que es como la regla ✍️ pide expresar una explicacion.",
+      "Deuda preexistente sin resolver, arrastrada de cycle-01: settleFill hace el claim CAS y despues crea Position, Trade y bot_actions fuera de una transaccion. Registrar como fix o ciclo propio.",
+      "Sin medir: los pesos de rate limit de la WebSocket API. La sonda del orquestador solo observo REQUEST_WEIGHT limit 6000; la mitad autenticada del harness es la que permitiria medir el costo real de session.logon y userDataStream.subscribe."
+    ]
+  }
 }

@@ -267,12 +267,12 @@
           "tokens_in": 763750,
           "tokens_out": 90662,
           "approx": true,
-          "source": "mixed"
+          "source": "declared-estimate"
         }
       },
       "duration_minutes": 230,
       "approx": true,
-      "source": "mixed"
+      "source": "declared-estimate"
     },
     "tasks_skipped": 0
   },

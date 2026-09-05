@@ -1,7 +1,7 @@
 # Constitución — apps/api
 
-> Versión 1.7 | Última actualización: cycle-01 | Fecha: 2026-09-04
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01) + spec-e-burgos-005 cycle-02 (2026-09-01) + FIX-e-burgos-016, -017, -022, -023, -024, -025 (2026-09-02/03) + spec-e-burgos-010 cycle-01 (2026-09-04)
+> Versión 1.8 | Última actualización: cycle-02 | Fecha: 2026-09-05
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01) + spec-e-burgos-005 cycle-02 (2026-09-01) + FIX-e-burgos-016, -017, -022, -023, -024, -025 (2026-09-02/03) + spec-e-burgos-010 cycle-01 (2026-09-04) + spec-e-burgos-010 cycle-02 (2026-09-05)
 
 ## 1. Propósito
 
@@ -274,39 +274,67 @@ contra `/api/health` cerraría el hueco (mejora, no requisito).
 - **`apps/api/prisma/seed.ts` es código de producción: corre en cada arranque del contenedor** — el `CMD` del Dockerfile invoca `prisma db seed` antes de arrancar y la imagen **no incluye `src/`** (copia `dist/`, `prisma/` y `generated/`). Solo puede importar `prisma/`, `generated/` y `node_modules`; nunca `src/`. `SEED_DEMO_ACCOUNTS=false` **no protege** contra un import roto: se evalúa al cargar el módulo. El seed demo siembra una credencial LLM placeholder con `selectedModel: 'e2e/placeholder'`, cifrada con `node:crypto` (AES-256-GCM, IV 12 bytes, authTag anexado, base64) directamente en el archivo, replicando el formato de `encryption.util.ts` **sin importarlo** (FIX-e-burgos-024). Antes de tocar el seed, correrlo como lo hace la imagen: `SEED_DEMO_ACCOUNTS=false npx tsx prisma/seed.ts` desde `apps/api` con `src/` fuera del alcance. Restauración de emergencia que funcionó: `docker-compose.override.yml` con un `command` que salta el seed + `up -d --force-recreate --no-deps api` + recrear nginx; retirar el override una vez desplegada la imagen corregida.
 - **`MarketService` mapea el fallo del upstream de Binance a `503`** (`ServiceUnavailableException`, antes `500` genérico) en `getOhlcv`/`getSnapshot`/`getEnrichedSnapshot`, y a `400` (`BadRequestException`) ante asset/interval/símbolo inválido (FIX-e-burgos-025).
 
-### 3.12 Transporte user data stream — implementado pero inerte, Binance retiró el endpoint (spec-e-burgos-010 cycle-01, DEC-001)
+### 3.12 Transporte user data stream — WebSocket API con Ed25519 (spec-e-burgos-010 cycle-01/02, DEC-001)
 
-> ⚠️ Ciclo cerrado `completed` con `reviewer_report.approved: false`. Lo que sigue está
-> **implementado y con tests unitarios verdes contra dobles**, pero **inerte contra la Binance de
-> hoy**: `POST /api/v3/userDataStream` responde **`410 Gone`** desde nginx tanto en
-> `testnet.binance.vision` como en `api.binance.com` (probado sin credenciales, dos veces, con
-> `GET /api/v3/ping` respondiendo `200` en el mismo probe) — Binance retiró el endpoint a nivel de
-> infraestructura, no es un problema de firma, de API key ni de IP.
+> cycle-01 cerró `completed` con `reviewer_report.approved: false`: implementó el ciclo de vida
+> completo del `listenKey` REST (crear/keepalive/renegociar/cerrar) con tests unitarios verdes
+> contra dobles, pero quedó **inerte** — `POST /api/v3/userDataStream` responde **`410 Gone`**
+> (probado sin credenciales, en TESTNET y en producción: Binance retiró el endpoint a nivel de
+> infraestructura, no es problema de firma/API key/IP). **cycle-02 reemplazó el transporte por la
+> WebSocket API de Binance y es el transporte vigente hoy** — el `listenKey` queda solo como
+> historia (DEC-001, `sdd/specs/spec-e-burgos-010-user-data-stream-fills/`).
 
 - `src/reactive/user-data-stream.service.ts` (`UserDataStreamService`): lease por credencial
-  `(userId, env)` sobre `ReactiveCoordinationPort`, ciclo de vida del `listenKey` (crear /
-  keepalive / renegociar / cerrar), consumo de `executionReport` y publicación de salud. Nace
-  detrás de `USER_DATA_STREAM_FILLS_ENABLED` (`isUserDataStreamFillsEnabled()`, leída una sola vez
-  en el composition root) — **apagado**, no se instancia. Sin regresión: `EntryFillWatchService` y
-  `ReconciliationService` siguen sin tocar y sin gatear por su salud (la sonda por tick sigue
-  siendo el detector real de fills), y el servicio no crea `Position`/`Trade`/`bot_actions` ni
-  llama `placeInitialProtection` — su único camino de reconciliación es
-  `EntryOrderService.settleFill`, y tras un `SETTLED` sólo invalida el cache de posiciones
-  abiertas de `FastPathService`.
-- **DEC-001** (`sdd/specs/spec-e-burgos-010-user-data-stream-fills/spec-e-burgos-010-user-data-stream-fills.spec.md`):
-  cycle-02 migra el transporte a la **WebSocket API** de Binance
+  `(userId, env)` sobre `ReactiveCoordinationPort`, sesión `connect → time → session.logon`
   (`wss://ws-api.binance.com/ws-api/v3`, TESTNET `wss://ws-api.testnet.binance.vision/ws-api/v3`)
-  autenticando con `session.logon` (clave Ed25519) y luego `userDataStream.subscribe`. Todo lo
-  transporte-independiente entregado este ciclo se reusa tal cual: el lease de credencial, la
-  máquina de estados del ciclo de vida, la correlación con `entry_orders` vía
-  `EntryOrderService.settleFill`, el dedupe, el modelo de salud/staleness y el apagado por
-  composition root — solo cambia el transporte REST/WS del `listenKey`.
-- Defecto heredado por cycle-02: si `createListenKey` falla **durante una renegociación**, el
-  lease de la credencial queda retenido para siempre (ninguna otra réplica lo toma) con el
-  keepalive detenido; en el arranque el mismo fallo sí libera el lease y reintenta cada
-  `userStreamSweepIntervalMs` (10 s) sin backoff. Falta también el test de comportamiento de HU-05
-  CA-2 (stream `DEGRADED` + tick que cruza nivel ⇒ `settleFill`), hoy sólo verificado
-  estructuralmente.
+  firmada con Ed25519 → `userDataStream.subscribe`, con re-logon periódico y re-autenticación
+  obligatoria tras **cualquier** reconexión del socket. Un único camino de fallo,
+  `failSession(key, reason, failureClass)`: desengancha listeners y timers, desconecta, **siempre
+  libera el lease** y registra el backoff (exponencial+jitter con tope para fallos transitorios,
+  cooldown fijo para `AUTH_REJECTED`/`INVALID`, una hora para `ABSENT`) — resuelve el defecto de
+  renegociación heredado de cycle-01 (el lease ya no queda retenido para siempre). Sin regresión:
+  sigue sin crear `Position`/`Trade`/`bot_actions` ni llamar `placeInitialProtection`; su único
+  camino de reconciliación sigue siendo `EntryOrderService.settleFill`, y tras un `SETTLED` sólo
+  invalida el cache de posiciones abiertas de `FastPathService`. `EntryFillWatchService` y
+  `ReconciliationService` siguen sin gatearse por la salud del stream — ahora **verificado por
+  test** (`entry-fill-watch.service.spec.ts`: health record `DEGRADED` publicado + tick que cruza
+  nivel ⇒ `settleFill`, y cero lecturas de `rx:v1:uds:health:`), cierra el pendiente HU-05 CA-2.
+- `USER_DATA_STREAM_FILLS_ENABLED` (`isUserDataStreamFillsEnabled()`, leída una sola vez en el
+  composition root) se entrega **apagado**, con una sola forma de encenderse (`=== 'true'`; `'1'`
+  ya no alcanza), pendiente de la corrida autenticada contra TESTNET — falta que el dueño de la
+  cuenta cree la clave Ed25519. Ausencia de credencial es estado de primera clase: la plataforma
+  arranca normal, esa credencial queda sin sesión (cubierta por la sonda por tick) y el aviso se
+  loguea con cooldown de una hora en vez de una vez por barrido.
+- Archivos nuevos en `src/reactive/`: `user-stream-auth-credential.port.ts` (puerto `RESOLVED |
+  ABSENT | INVALID`), `env-user-stream-auth-credential.resolver.ts` (variables
+  `BINANCE_API_TESTNET_ED25519_*`/`BINANCE_API_ED25519_*`, `_PATH` con precedencia sobre el PEM en
+  línea, razones tipadas `MALFORMED_PEM | NOT_ED25519 | UNREADABLE_KEY_FILE`),
+  `bounded-ttl-cache.ts` (FIFO+TTL con tope de tamaño — `configCache`/`credentialsCache`/
+  `executorCache` pasaron a usarla; la config del stream tiene tipo propio
+  `UserStreamTradingConfig`, sin `any`), y el test double `user-stream-ws-api.test-double.ts`.
+- Dedupe con `inFlightEvents` (guarda intra-tick) + `seenEvents`, marcado **solo después** de que
+  `settleFill` resolvió (un settle fallido, o config/executor ausente, dejan la identidad sin
+  marcar para permitir reentrega). Correlación `executionReport → entry_orders` acotada por
+  `userId` (match por `clientOrderId` e identificadores de respaldo): un reporte nunca resuelve la
+  fila de otro usuario.
+- Listener de `'error'` registrado sobre el cliente WS del user data stream y sobre
+  `BinanceWsClient` en `MarketStreamService` (agujero preexistente): un `emit('error')` ya no
+  voltea el proceso.
+- Umbrales nuevos en `reactive-runtime-thresholds.ts` (reemplazan a los del keepalive del
+  `listenKey`, retirados): `userStreamRelogonIntervalMs`, `userStreamSessionMaxAgeMs`,
+  `userStreamSessionPingIntervalMs`, `userStreamSessionAuthMaxAgeMs`, `userStreamRequestTimeoutMs`,
+  `userStreamNegotiateBaseDelayMs`, `userStreamNegotiateMaxDelayMs`,
+  `userStreamAuthRejectedCooldownMs`, `userStreamMissingCredentialLogIntervalMs`,
+  `userStreamResolverCacheSize`.
+- Sin dependencias npm nuevas: la firma Ed25519 usa `node:crypto` y la lectura del PEM `node:fs`.
+  Variables de entorno nuevas (`.env.example`): `BINANCE_API_TESTNET_ED25519_KEY`,
+  `BINANCE_API_TESTNET_ED25519_PRIVATE_KEY`, `BINANCE_API_TESTNET_ED25519_PRIVATE_KEY_PATH`,
+  `BINANCE_API_TESTNET_ED25519_PRIVATE_KEY_PASSPHRASE`, sus equivalentes LIVE
+  (`BINANCE_API_ED25519_*`, sin usar todavía) y `USER_DATA_STREAM_ED25519_USER_IDS`. Consume de
+  `libs/data-fetcher` el transporte nuevo (`BinanceWsApiClient`, `createEd25519Signer`,
+  `extractUserDataEvent`) en lugar de los helpers REST del `listenKey`.
+- El transporte se verificó **contra el exchange real de TESTNET** en su mitad sin credenciales;
+  la corrida autenticada (`session.logon` + `executionReport` real) sigue pendiente.
 
 ## 4. Convenciones propias
 

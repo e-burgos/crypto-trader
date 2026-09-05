@@ -63,8 +63,8 @@
     ],
     "files_deleted": [],
     "usage": {
-      "tokens_in": 2358307,
-      "tokens_out": 372289,
+      "tokens_in": 2567263,
+      "tokens_out": 408929,
       "by_agent": [
         {
           "agent": "custom",
@@ -109,30 +109,6 @@
           "tokens_total": 139692,
           "approx": false,
           "source": "agent-usage-notification",
-          "recorded_at": "2026-09-04"
-        },
-        {
-          "agent": "implementor-back",
-          "label": "TASK-001/003/004 (wave 1; subagent notification lost with the previous orchestrator turn)",
-          "provider_model": "claude/sonnet",
-          "effort": "medium",
-          "tokens_in": 132000,
-          "tokens_out": 23000,
-          "tokens_total": 155000,
-          "approx": true,
-          "source": "declared-estimate",
-          "recorded_at": "2026-09-04"
-        },
-        {
-          "agent": "implementor-back",
-          "label": "TASK-002 (wave 1; subagent notification lost with the previous orchestrator turn)",
-          "provider_model": "claude/sonnet",
-          "effort": "medium",
-          "tokens_in": 82000,
-          "tokens_out": 15000,
-          "tokens_total": 97000,
-          "approx": true,
-          "source": "declared-estimate",
           "recorded_at": "2026-09-04"
         },
         {
@@ -230,13 +206,61 @@
           "approx": false,
           "source": "agent-usage-notification",
           "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-001 (wave 1, notification recovered by the main loop)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 111196,
+          "tokens_out": 19623,
+          "tokens_total": 130819,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-002 (wave 1, notification recovered by the main loop)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 130602,
+          "tokens_out": 23048,
+          "tokens_total": 153650,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-003 (wave 1, notification recovered by the main loop)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 93107,
+          "tokens_out": 16431,
+          "tokens_total": 109538,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-004 (wave 1, notification recovered by the main loop)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 88051,
+          "tokens_out": 15538,
+          "tokens_total": 103589,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
         }
       ],
       "by_tier": {
         "claude/sonnet": {
-          "tokens_in": 1594557,
-          "tokens_out": 281627,
-          "approx": true,
+          "tokens_in": 1803513,
+          "tokens_out": 318267,
+          "approx": false,
           "source": "declared-estimate"
         },
         "claude/opus": {

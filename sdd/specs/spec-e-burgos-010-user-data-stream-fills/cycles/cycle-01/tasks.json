@@ -34,11 +34,12 @@
         "provider_model": "claude/sonnet",
         "effort": "medium",
         "agent": "implementor-back",
-        "tokens_in": 68000,
-        "tokens_out": 12000,
-        "approx": true,
-        "source": "declared-estimate",
-        "recorded_at": "2026-09-04"
+        "tokens_in": 111196,
+        "tokens_out": 19623,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04",
+        "tokens_total": 130819
       }
     },
     {
@@ -62,11 +63,12 @@
         "provider_model": "claude/sonnet",
         "effort": "medium",
         "agent": "implementor-back",
-        "tokens_in": 82000,
-        "tokens_out": 15000,
-        "approx": true,
-        "source": "declared-estimate",
-        "recorded_at": "2026-09-04"
+        "tokens_in": 130602,
+        "tokens_out": 23048,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04",
+        "tokens_total": 153650
       }
     },
     {
@@ -87,11 +89,12 @@
         "provider_model": "claude/sonnet",
         "effort": "medium",
         "agent": "implementor-back",
-        "tokens_in": 30000,
-        "tokens_out": 5000,
-        "approx": true,
-        "source": "declared-estimate",
-        "recorded_at": "2026-09-04"
+        "tokens_in": 93107,
+        "tokens_out": 16431,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04",
+        "tokens_total": 109538
       }
     },
     {
@@ -113,11 +116,12 @@
         "provider_model": "claude/sonnet",
         "effort": "medium",
         "agent": "implementor-back",
-        "tokens_in": 34000,
-        "tokens_out": 6000,
-        "approx": true,
-        "source": "declared-estimate",
-        "recorded_at": "2026-09-04"
+        "tokens_in": 88051,
+        "tokens_out": 15538,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04",
+        "tokens_total": 103589
       }
     },
     {

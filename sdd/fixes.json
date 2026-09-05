@@ -1344,6 +1344,40 @@
         "recorded_at": "2026-09-04",
         "agent": "implementor-back"
       }
+    },
+    {
+      "id": "FIX-e-burgos-032",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-010-user-data-stream-fills",
+      "fix_document": "sdd/fixes/fix-e-burgos-032.md",
+      "type": "HOTFIX",
+      "severity": "high",
+      "created_at": "2026-09-05",
+      "resolved_at": "2026-09-05",
+      "validated_at": "2026-09-05",
+      "title": "CI en rojo en main: el test double de coordinacion reactiva entra en el typecheck de la app y no conoce jest",
+      "estimation_hours": 0.25,
+      "description": "apps/api/src/reactive/reactive-coordination.test-double.ts (extraido en spec-010 cycle-01, commit 6c0a76bf5) usa jest.fn() pero su nombre no matchea ninguna exclusion de apps/api/tsconfig.app.json (*.spec.ts, *.test.ts, __mocks__), asi que pnpm typecheck:api falla con 6 x TS2304 Cannot find name jest. El job CI corre pnpm typecheck y esta rojo en main desde entonces; nx lint test no lo detecta porque el archivo si esta incluido en tsconfig.spec.json.",
+      "justification": "CI bloqueado en main: ningun PR puede ponerse verde hasta corregirlo. Una linea de configuracion.",
+      "related_modules": [
+        "api"
+      ],
+      "affected_files": [
+        "apps/api/tsconfig.app.json"
+      ],
+      "test_reference": "pnpm typecheck:api exit 0 tras excluir src/**/*.test-double.ts en apps/api/tsconfig.app.json; pnpm nx test api --testPathPatterns=reactive-module-wiring|entry-fill-watch en verde (los specs que importan el double siguen compilando via tsconfig.spec.json). Evidencia del rojo: job CI \"Typecheck all projects\" en runs de main desde 8dc05abab hasta 2c250ea54.",
+      "status": "validated",
+      "cycle": "cycle-02",
+      "usage": {
+        "provider_model": "claude/fable",
+        "effort": "low",
+        "tokens_in": 25000,
+        "tokens_out": 3000,
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-05",
+        "agent": "implementor-back"
+      }
     }
   ]
 }

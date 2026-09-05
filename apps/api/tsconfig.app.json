@@ -11,5 +11,10 @@
     "rootDir": "../../"
   },
   "include": ["src/**/*.ts", "generated/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/__mocks__/**"]
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test-double.ts",
+    "src/**/__mocks__/**"
+  ]
 }

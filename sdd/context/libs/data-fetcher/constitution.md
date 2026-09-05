@@ -1,7 +1,7 @@
 # Constitución — libs/data-fetcher
 
-> Versión 1.4 | Última actualización: cycle-02 | Fecha: 2026-09-03
-> Fragmentos consolidados: spec-e-burgos-001 cycle-02 (2026-08-17) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-005 cycle-02 (2026-09-01)
+> Versión 1.5 | Última actualización: cycle-01 | Fecha: 2026-09-04
+> Fragmentos consolidados: spec-e-burgos-001 cycle-02 (2026-08-17) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-005 cycle-02 (2026-09-01) + spec-e-burgos-010 cycle-01 (2026-09-04)
 
 ## 1. Propósito
 
@@ -42,6 +42,8 @@
   - `BinanceWsConfig` suma `wsPingIntervalMs` y `wsPongTimeoutMs` (ambos opcionales).
   Streams que consume `apps/api` por símbolo: `{symbol}@miniTicker` (precio, ~1/s) y `{symbol}@kline_1h` (vela en curso). **El intervalo de la kline debe coincidir con el timeframe del `IndicatorSnapshot`** (`getKlines('1h', 200)`): cambiarlo de un lado sin el otro deja al detector de eventos comparando contra una referencia de otro timeframe.
 - `ExchangeOrderState` / `ExchangeOrderStatus` viven en **`libs/shared`**, no acá: es lo que permite que `libs/trading-engine` tipe su `OrderExecutorPort` sin depender de esta lib. El resto del contrato (`SymbolFilters`, `OrderValidationError`, `OcoOrderResult`) sí es propio.
+- **`BinanceRestClient` expone el ciclo de vida del `listenKey`** (`createListenKey`, `keepAliveListenKey`, `closeListenKey`, spec-e-burgos-010 cycle-01) sobre un `keyedRequest` privado "con API key y sin firma": los tres devuelven **`410 Gone`** hoy — Binance retiró `POST /api/v3/userDataStream` a nivel de infraestructura, en TESTNET y en producción (probado sin credenciales, dos veces; no es un problema de firma, de API key ni de IP). `ENDPOINT_WEIGHTS` lleva tres entradas nuevas (POST/PUT/DELETE) con peso **2 declarado, no medido** — medirlo exige un `listenKey` vivo, que hoy no se puede obtener.
+- **`BinanceUserDataStreamClient`** (`binance/binance-user-data-stream.client.ts`, spec-e-burgos-010 cycle-01): socket single-stream `/ws/<listenKey>`, parseo de `executionReport` a `ExecutionReportEvent` tipado, heartbeat ping/pong con `terminate()` al vencer el pong, reconexión con backoff exponencial + jitter, evento `stream-expired` (`LISTEN_KEY_EXPIRED` | `RECONNECT_EXHAUSTED`). El `listenKey` entra como argumento de `connect()` y se guarda en un campo privado sin getter ni `toJSON` — la única forma de que se filtre sería loguear el objeto de error de axios, y por eso el consumidor sólo loguea `getBinanceErrorCode(err)` + `err.message`. **Nunca se conectó a un stream real:** el harness TESTNET opt-in (`binance-user-data-stream.testnet.spec.ts`, `BINANCE_TESTNET_E2E=1`, aborta si `getBaseUrl()` no es la URL de testnet) abortó en `createListenKey` con el mismo `410`; queda `skipped` en la suite normal. La alternativa viva de Binance es el user data stream de la **WebSocket API** (`userDataStream.subscribe`, autenticado con Ed25519) — DEC-001 de spec-e-burgos-010 migra a ese transporte en cycle-02.
 
 ## 4. Convenciones propias
 

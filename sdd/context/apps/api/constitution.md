@@ -1,7 +1,7 @@
 # Constitución — apps/api
 
-> Versión 1.6 | Última actualización: cycle-02 | Fecha: 2026-09-03
-> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01) + spec-e-burgos-005 cycle-02 (2026-09-01) + FIX-e-burgos-016, -017, -022, -023, -024, -025 (2026-09-02/03)
+> Versión 1.7 | Última actualización: cycle-01 | Fecha: 2026-09-04
+> Fragmentos consolidados: spec-e-burgos-001 cycle-03 (2026-08-18) + spec-e-burgos-004 cycle-01 (2026-08-19) + spec-e-burgos-005 cycle-01 (2026-08-30) + spec-e-burgos-008 cycle-01..04 (2026-09-01) + spec-e-burgos-005 cycle-02 (2026-09-01) + FIX-e-burgos-016, -017, -022, -023, -024, -025 (2026-09-02/03) + spec-e-burgos-010 cycle-01 (2026-09-04)
 
 ## 1. Propósito
 
@@ -273,6 +273,40 @@ contra `/api/health` cerraría el hueco (mejora, no requisito).
 - **`UsersService.setLLMKey`/`updateLLMKeySelection`** responden 4xx con mensaje en vez de 500 (FIX-e-burgos-023): proveedor desconocido (`assertKnownLLMProvider`) o inactivo, `apiKey` vacía tras `trim()` (`BadRequestException`), credencial inexistente al actualizar el modelo seleccionado (`NotFoundException` sobre `P2025` de Prisma).
 - **`apps/api/prisma/seed.ts` es código de producción: corre en cada arranque del contenedor** — el `CMD` del Dockerfile invoca `prisma db seed` antes de arrancar y la imagen **no incluye `src/`** (copia `dist/`, `prisma/` y `generated/`). Solo puede importar `prisma/`, `generated/` y `node_modules`; nunca `src/`. `SEED_DEMO_ACCOUNTS=false` **no protege** contra un import roto: se evalúa al cargar el módulo. El seed demo siembra una credencial LLM placeholder con `selectedModel: 'e2e/placeholder'`, cifrada con `node:crypto` (AES-256-GCM, IV 12 bytes, authTag anexado, base64) directamente en el archivo, replicando el formato de `encryption.util.ts` **sin importarlo** (FIX-e-burgos-024). Antes de tocar el seed, correrlo como lo hace la imagen: `SEED_DEMO_ACCOUNTS=false npx tsx prisma/seed.ts` desde `apps/api` con `src/` fuera del alcance. Restauración de emergencia que funcionó: `docker-compose.override.yml` con un `command` que salta el seed + `up -d --force-recreate --no-deps api` + recrear nginx; retirar el override una vez desplegada la imagen corregida.
 - **`MarketService` mapea el fallo del upstream de Binance a `503`** (`ServiceUnavailableException`, antes `500` genérico) en `getOhlcv`/`getSnapshot`/`getEnrichedSnapshot`, y a `400` (`BadRequestException`) ante asset/interval/símbolo inválido (FIX-e-burgos-025).
+
+### 3.12 Transporte user data stream — implementado pero inerte, Binance retiró el endpoint (spec-e-burgos-010 cycle-01, DEC-001)
+
+> ⚠️ Ciclo cerrado `completed` con `reviewer_report.approved: false`. Lo que sigue está
+> **implementado y con tests unitarios verdes contra dobles**, pero **inerte contra la Binance de
+> hoy**: `POST /api/v3/userDataStream` responde **`410 Gone`** desde nginx tanto en
+> `testnet.binance.vision` como en `api.binance.com` (probado sin credenciales, dos veces, con
+> `GET /api/v3/ping` respondiendo `200` en el mismo probe) — Binance retiró el endpoint a nivel de
+> infraestructura, no es un problema de firma, de API key ni de IP.
+
+- `src/reactive/user-data-stream.service.ts` (`UserDataStreamService`): lease por credencial
+  `(userId, env)` sobre `ReactiveCoordinationPort`, ciclo de vida del `listenKey` (crear /
+  keepalive / renegociar / cerrar), consumo de `executionReport` y publicación de salud. Nace
+  detrás de `USER_DATA_STREAM_FILLS_ENABLED` (`isUserDataStreamFillsEnabled()`, leída una sola vez
+  en el composition root) — **apagado**, no se instancia. Sin regresión: `EntryFillWatchService` y
+  `ReconciliationService` siguen sin tocar y sin gatear por su salud (la sonda por tick sigue
+  siendo el detector real de fills), y el servicio no crea `Position`/`Trade`/`bot_actions` ni
+  llama `placeInitialProtection` — su único camino de reconciliación es
+  `EntryOrderService.settleFill`, y tras un `SETTLED` sólo invalida el cache de posiciones
+  abiertas de `FastPathService`.
+- **DEC-001** (`sdd/specs/spec-e-burgos-010-user-data-stream-fills/spec-e-burgos-010-user-data-stream-fills.spec.md`):
+  cycle-02 migra el transporte a la **WebSocket API** de Binance
+  (`wss://ws-api.binance.com/ws-api/v3`, TESTNET `wss://ws-api.testnet.binance.vision/ws-api/v3`)
+  autenticando con `session.logon` (clave Ed25519) y luego `userDataStream.subscribe`. Todo lo
+  transporte-independiente entregado este ciclo se reusa tal cual: el lease de credencial, la
+  máquina de estados del ciclo de vida, la correlación con `entry_orders` vía
+  `EntryOrderService.settleFill`, el dedupe, el modelo de salud/staleness y el apagado por
+  composition root — solo cambia el transporte REST/WS del `listenKey`.
+- Defecto heredado por cycle-02: si `createListenKey` falla **durante una renegociación**, el
+  lease de la credencial queda retenido para siempre (ninguna otra réplica lo toma) con el
+  keepalive detenido; en el arranque el mismo fallo sí libera el lease y reintenta cada
+  `userStreamSweepIntervalMs` (10 s) sin backoff. Falta también el test de comportamiento de HU-05
+  CA-2 (stream `DEGRADED` + tick que cruza nivel ⇒ `settleFill`), hoy sólo verificado
+  estructuralmente.
 
 ## 4. Convenciones propias
 

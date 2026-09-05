@@ -77,7 +77,8 @@
       "apps": [
         "apps/api",
         "libs/data-fetcher",
-        "libs/shared"
+        "libs/shared",
+        "libs/analysis"
       ],
       "cycles_completed": 0,
       "description": "Deteccion de fills de ordenes de entrada por el user data stream de Binance (listenKey + executionReport) en lugar de la sonda por tick, con reconciliacion idempotente, fallback a la sonda cuando el stream no esta sano y todo detras de un interruptor que nace apagado"

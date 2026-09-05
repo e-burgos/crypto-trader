@@ -134,6 +134,23 @@
           "tasks_done": 19
         }
       }
+    },
+    "spec-e-burgos-010-user-data-stream-fills": {
+      "cycles": {
+        "cycle-01": {
+          "file": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/tasks.json",
+          "module": "user-data-stream-fills",
+          "apps": [
+            "apps/api",
+            "libs/data-fetcher",
+            "libs/shared",
+            "libs/analysis"
+          ],
+          "status": "in-progress",
+          "tasks_total": 13,
+          "tasks_done": 0
+        }
+      }
     }
   }
 }

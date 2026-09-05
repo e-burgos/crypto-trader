@@ -1,0 +1,213 @@
+{
+  "$schema": "../../../../schemas/cycle-tasks.schema.json",
+  "spec": "spec-e-burgos-010-user-data-stream-fills",
+  "cycle": 1,
+  "module": "user-data-stream-fills",
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/shared",
+    "libs/analysis"
+  ],
+  "flow": "full",
+  "user_stories_generated": true,
+  "prerequisites": {
+    "tasks_generated": true
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Helper REST del ciclo de vida del listenKey (libs/data-fetcher)",
+      "user_stories": [
+        "HU-04",
+        "HU-06"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-002",
+      "title": "Cliente WS del endpoint single-stream del listenKey (libs/data-fetcher)",
+      "user_stories": [
+        "HU-01",
+        "HU-04",
+        "HU-06"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-003",
+      "title": "Interruptor de plataforma por variable de entorno",
+      "user_stories": [
+        "HU-03"
+      ],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-004",
+      "title": "Umbrales nuevos del listenKey en reactive-runtime-thresholds.ts",
+      "user_stories": [
+        "HU-04",
+        "HU-05"
+      ],
+      "estimation_hours": 1,
+      "story_points": 1,
+      "depends_on": [],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-005",
+      "title": "Lease por credencial sobre ReactiveCoordinationPort para el listenKey",
+      "user_stories": [
+        "HU-04",
+        "HU-05"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-006",
+      "title": "Ciclo de vida del listenKey orquestado por el lease (crear/keepalive/renegociar/cerrar)",
+      "user_stories": [
+        "HU-04",
+        "HU-06"
+      ],
+      "estimation_hours": 4,
+      "story_points": 5,
+      "depends_on": [
+        "TASK-001",
+        "TASK-005"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-007",
+      "title": "Conexión y consumo del WS del listenKey en el servicio reactivo",
+      "user_stories": [
+        "HU-01",
+        "HU-04"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-002",
+        "TASK-006"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-008",
+      "title": "Modelo de salud/staleness de la suscripción del user data stream",
+      "user_stories": [
+        "HU-05"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-006",
+        "TASK-007"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-009",
+      "title": "Guard de apagado sobre la adquisición del lease",
+      "user_stories": [
+        "HU-03"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [
+        "TASK-003",
+        "TASK-005"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-010",
+      "title": "Correlación executionReport -> entry_orders RESTING y llamada a settleFill existente",
+      "user_stories": [
+        "HU-01",
+        "HU-02"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-002"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-011",
+      "title": "Deduplicación de redeliveries del mismo executionReport",
+      "user_stories": [
+        "HU-02"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [
+        "TASK-010"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-012",
+      "title": "Wiring del módulo reactivo (composition root)",
+      "user_stories": [
+        "HU-01",
+        "HU-04"
+      ],
+      "estimation_hours": 2,
+      "story_points": 2,
+      "depends_on": [
+        "TASK-001",
+        "TASK-002",
+        "TASK-006",
+        "TASK-007",
+        "TASK-008",
+        "TASK-009",
+        "TASK-010",
+        "TASK-011"
+      ],
+      "status": "pending",
+      "files": []
+    },
+    {
+      "id": "TASK-013",
+      "title": "Verificación end-to-end contra Binance TESTNET (opt-in, no corre en CI)",
+      "user_stories": [
+        "HU-07"
+      ],
+      "estimation_hours": 3,
+      "story_points": 3,
+      "depends_on": [
+        "TASK-012"
+      ],
+      "status": "pending",
+      "files": []
+    }
+  ]
+}

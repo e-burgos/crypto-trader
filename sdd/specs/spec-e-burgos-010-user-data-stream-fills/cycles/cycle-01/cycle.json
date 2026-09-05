@@ -6,7 +6,8 @@
   "apps": [
     "apps/api",
     "libs/data-fetcher",
-    "libs/shared"
+    "libs/shared",
+    "libs/analysis"
   ],
   "phase": "exchange-event-driven-fills",
   "objectives": [
@@ -20,21 +21,25 @@
   "started_at": "2026-09-04",
   "completed_at": null,
   "documents": {
-    "brief": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/brief.yaml"
+    "brief": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/tasks.json"
   },
   "artifacts": [
     "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/artifacts/existing-fill-path-map.md"
   ],
   "metrics": {
-    "tasks_total": 0,
+    "tasks_total": 13,
     "tasks_completed": 0,
-    "story_points": 0,
+    "story_points": 38,
     "files_created": [],
     "files_modified": [],
     "files_deleted": [],
     "usage": {
-      "tokens_in": 115725,
-      "tokens_out": 20422,
+      "tokens_in": 513585,
+      "tokens_out": 90633,
       "by_agent": [
         {
           "agent": "custom",
@@ -44,6 +49,39 @@
           "tokens_in": 115725,
           "tokens_out": 20422,
           "tokens_total": 136147,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "functional",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 109041,
+          "tokens_out": 19243,
+          "tokens_total": 128284,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "architect",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 170081,
+          "tokens_out": 30014,
+          "tokens_total": 200095,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "planner",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 118738,
+          "tokens_out": 20954,
+          "tokens_total": 139692,
           "approx": false,
           "source": "agent-usage-notification",
           "recorded_at": "2026-09-04"

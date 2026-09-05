@@ -395,7 +395,7 @@ describe('UserDataStreamService', () => {
     });
   });
 
-  describe('credential resolution (D-12, HU-08, T-08a/T-08c/T-08d)', () => {
+  describe('credential resolution (D-12, HU-08, T-08a/T-08b/T-08c/T-08d)', () => {
     it('never acquires the lease nor connects when the Ed25519 credential is ABSENT for every active credential, while the tick probe keeps a working settleFill (T-08a)', async () => {
       const coordination = createSharedFakeCoordination();
       const wsClient = new FakeUserStreamWsApiClient();
@@ -478,6 +478,41 @@ describe('UserDataStreamService', () => {
 
       await jest.advanceTimersByTimeAsync(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSweepIntervalMs * 10);
       expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      await service.onApplicationShutdown();
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    });
+
+    it('logs an ABSENT credential once per cooldown window, not once per sweep (T-08b)', async () => {
+      jest.useFakeTimers();
+      const coordination = createSharedFakeCoordination();
+      const wsClient = new FakeUserStreamWsApiClient();
+      const authCredentials = new FakeUserStreamAuthCredentialResolver({ kind: 'ABSENT' });
+      const prisma = createFakePrisma({ configs: [{ userId: 'user-1', mode: TradingMode.LIVE }] });
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const service = buildService(
+        prisma,
+        coordination,
+        authCredentials,
+        jest.fn().mockReturnValue(wsClient),
+        'instance-a',
+      );
+
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+
+      expect(coordination.tryAcquire).not.toHaveBeenCalled();
+      expect(wsClient.connectCallCount).toBe(0);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSweepIntervalMs * 10);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamMissingCredentialLogIntervalMs +
+          DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSweepIntervalMs,
+      );
+      expect(warnSpy).toHaveBeenCalledTimes(2);
 
       await service.onApplicationShutdown();
       warnSpy.mockRestore();

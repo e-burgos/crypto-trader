@@ -1378,6 +1378,67 @@
         "recorded_at": "2026-09-05",
         "agent": "implementor-back"
       }
+    },
+    {
+      "author": "e-burgos",
+      "type": "IMPROVEMENT",
+      "severity": "low",
+      "created_at": "2026-09-05",
+      "resolved_at": "2026-09-05",
+      "validated_at": "2026-09-05",
+      "test_reference": "user-data-stream.service.spec.ts: 'logs an ABSENT credential once per cooldown window, not once per sweep (T-08b)' — 1 warn tras onModuleInit, sigue 1 tras 10 barridos, 2 tras userStreamMissingCredentialLogIntervalMs + un barrido; tryAcquire y connect nunca llamados. pnpm nx test api --testPathPatterns=user-data-stream.service: 64/64. pnpm typecheck:api exit 0. Reproducido en el main loop.",
+      "status": "validated",
+      "id": "FIX-e-burgos-033",
+      "spec_id": "spec-e-burgos-010-user-data-stream-fills",
+      "fix_document": "sdd/fixes/fix-e-burgos-033.md",
+      "cycle": "cycle-02",
+      "title": "HU-08 CA-3 sin test propio para la rama ABSENT y comentario narrativo en resolveTradingConfig",
+      "estimation_hours": 1,
+      "description": "Dos follow-ups del reviewer de spec-010 cycle-02 en apps/api/src/reactive/user-data-stream.service.ts: (1) la fila ABSENT de T-08b (1 log tras 10 barridos, 2 tras userStreamMissingCredentialLogIntervalMs) no tiene test, HU-08 CA-3 queda protegida solo por analogia con la rama INVALID; (2) resolveTradingConfig explica con un comentario de dos lineas la conversion de TradingMode de Prisma al enum compartido, que la regla de codigo sin comentarios pide expresar como funcion nombrada toUserStreamTradingConfig(row).",
+      "justification": "Cierre de follow-ups declarados por el reviewer al aprobar el ciclo; sin cambio de comportamiento.",
+      "related_modules": [
+        "api"
+      ],
+      "affected_files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "tokens_in": 106976,
+        "tokens_out": 18878,
+        "tokens_total": 125854,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05",
+        "agent": "implementor-back"
+      }
+    },
+    {
+      "author": "e-burgos",
+      "type": "IMPROVEMENT",
+      "severity": "low",
+      "created_at": "2026-09-05",
+      "resolved_at": null,
+      "validated_at": null,
+      "test_reference": null,
+      "status": "in-progress",
+      "id": "FIX-e-burgos-034",
+      "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
+      "fix_document": "sdd/fixes/fix-e-burgos-034.md",
+      "cycle": "cycle-02",
+      "title": "El guard de rango de la configuracion avanzada solo corta el submit en la edicion, no en el alta",
+      "estimation_hours": 1,
+      "description": "use-advanced-draft.ts expone isWithinRanges y edit-agent-modal.tsx hace early-return con el cuando algun campo avanzado quedo fuera de rango (D7 de spec-009 cycle-01). new-agent-stepper-modal.tsx no lo consume, asi que el alta puede enviar un valor fuera de rango que la edicion rechazaria.",
+      "justification": "Follow-up declarado por el reviewer de spec-009 cycle-02; asimetria de validacion visible para el trader.",
+      "related_modules": [
+        "web"
+      ],
+      "affected_files": [
+        "apps/web/src/components/config/new-agent-stepper-modal.tsx",
+        "apps/web/src/components/config/new-agent-stepper-modal.spec.tsx"
+      ]
     }
   ]
 }

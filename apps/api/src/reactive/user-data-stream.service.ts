@@ -129,6 +129,14 @@ export interface UserStreamTradingConfig {
   closeOnProtectionFailure: boolean;
 }
 
+type TradingConfigRow = NonNullable<
+  Awaited<ReturnType<PrismaService['tradingConfig']['findUnique']>>
+>;
+
+function toUserStreamTradingConfig(row: TradingConfigRow): UserStreamTradingConfig {
+  return { ...row, mode: row.mode as TradingMode };
+}
+
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -713,9 +721,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     const row = await this.prisma.tradingConfig.findUnique({ where: { id: configId } });
     if (!row) return null;
 
-    // Prisma's generated TradingMode is a plain string union; the shared TradingMode is a
-    // nominal enum with the same values, so the field needs an explicit conversion here.
-    const config: UserStreamTradingConfig = { ...row, mode: row.mode as TradingMode };
+    const config = toUserStreamTradingConfig(row);
     this.configCache.set(configId, config, now);
     return config;
   }

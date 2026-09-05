@@ -28,18 +28,43 @@
     "tasks": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/tasks.json"
   },
   "artifacts": [
-    "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/artifacts/existing-fill-path-map.md"
+    "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/artifacts/existing-fill-path-map.md",
+    "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/artifacts/testnet-verification-2026-09-04.md"
   ],
   "metrics": {
     "tasks_total": 13,
-    "tasks_completed": 0,
+    "tasks_completed": 13,
     "story_points": 38,
-    "files_created": [],
-    "files_modified": [],
+    "files_created": [
+      "apps/api/src/reactive/execution-report-fill.spec.ts",
+      "apps/api/src/reactive/execution-report-fill.ts",
+      "apps/api/src/reactive/reactive-coordination.test-double.ts",
+      "apps/api/src/reactive/user-data-stream-flag.spec.ts",
+      "apps/api/src/reactive/user-data-stream-flag.ts",
+      "apps/api/src/reactive/user-data-stream.service.spec.ts",
+      "apps/api/src/reactive/user-data-stream.service.ts",
+      "libs/analysis/src/lib/reactive/user-data-stream-health.spec.ts",
+      "libs/analysis/src/lib/reactive/user-data-stream-health.ts",
+      "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts",
+      "libs/data-fetcher/src/lib/binance/binance-user-data-stream.testnet.spec.ts"
+    ],
+    "files_modified": [
+      "apps/api/src/reactive/market-stream.service.spec.ts",
+      "apps/api/src/reactive/reactive-module-wiring.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts",
+      "apps/api/src/reactive/reactive-runtime-thresholds.ts",
+      "apps/api/src/reactive/reactive.module.ts",
+      "libs/analysis/src/lib/reactive/index.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts",
+      "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+      "libs/data-fetcher/src/lib/binance/index.ts",
+      "libs/shared/src/types/interfaces.ts"
+    ],
     "files_deleted": [],
     "usage": {
-      "tokens_in": 513585,
-      "tokens_out": 90633,
+      "tokens_in": 2358307,
+      "tokens_out": 372289,
       "by_agent": [
         {
           "agent": "custom",
@@ -85,13 +110,202 @@
           "approx": false,
           "source": "agent-usage-notification",
           "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-001/003/004 (wave 1; subagent notification lost with the previous orchestrator turn)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 132000,
+          "tokens_out": 23000,
+          "tokens_total": 155000,
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-002 (wave 1; subagent notification lost with the previous orchestrator turn)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 82000,
+          "tokens_out": 15000,
+          "tokens_total": 97000,
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-008 pure half (shared record + analysis resolver)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 94217,
+          "tokens_out": 16626,
+          "tokens_total": 110843,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-010 pure half (toEntryFillStatus parity)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 130946,
+          "tokens_out": 23108,
+          "tokens_total": 154054,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-005 + TASK-006 (lease + listenKey lifecycle)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 259757,
+          "tokens_out": 45839,
+          "tokens_total": 305596,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-007/008/010/011 (event pipeline + health publication)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 248046,
+          "tokens_out": 43773,
+          "tokens_total": 291819,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-009 + TASK-012 (off-switch + composition root)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 169373,
+          "tokens_out": 29889,
+          "tokens_total": 199262,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "TASK-013 (TESTNET harness)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 134714,
+          "tokens_out": 23773,
+          "tokens_total": 158487,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "orchestrator",
+          "label": "cycle resume, wave coordination, verification and registry writes",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 420000,
+          "tokens_out": 30000,
+          "tokens_total": 450000,
+          "approx": true,
+          "source": "declared-estimate",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "reviewer",
+          "label": "revisión de cierre del ciclo (quality pass, gates de contexto y memoria, reviewer_report)",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 173669,
+          "tokens_out": 30648,
+          "tokens_total": 204317,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
         }
-      ]
-    }
+      ],
+      "by_tier": {
+        "claude/sonnet": {
+          "tokens_in": 1594557,
+          "tokens_out": 281627,
+          "approx": true,
+          "source": "declared-estimate"
+        },
+        "claude/opus": {
+          "tokens_in": 763750,
+          "tokens_out": 90662,
+          "approx": true,
+          "source": "declared-estimate"
+        }
+      },
+      "duration_minutes": 230,
+      "approx": true,
+      "source": "declared-estimate"
+    },
+    "tasks_skipped": 0
   },
   "tables_created": [],
   "endpoints_implemented": [],
   "components_created": [],
-  "issues_found": [],
-  "reviewer_report": null
+  "issues_found": [
+    "BLOQUEANTE (exchange, no del código) — `POST /api/v3/userDataStream` responde `410 Gone` desde nginx en `testnet.binance.vision` y en `api.binance.com`. El resto de TESTNET está sano (`/api/v3/ping` 200, `getTickerPrice` y `getOpenOrders` OK con las credenciales del repo), así que no es firma, ni key, ni IP: el endpoint está retirado a nivel de infraestructura. D-03 y D-04 se apoyan enteros en él, así que el mecanismo de detección completo del ciclo es INERTE contra la Binance de hoy pese a estar implementado y verificado unitariamente. Evidencia: cycles/cycle-01/artifacts/testnet-verification-2026-09-04.md",
+    "ALTO (liveness) — `UserDataStreamService.renegotiate()`: si `createListenKey()` falla durante una renegociación, el método hace `return` después de haber parado el keepalive y desconectado el ws, dejando el crédito en `ownedCredentials`. `renewOwnedLeases()` sigue renovando el lease y `acquireActiveCredentials()` saltea la key por estar ya en el mapa: el stream nunca se recupera y ninguna otra réplica puede tomar la credencial hasta reiniciar el proceso. Contrasta con `negotiateAndConnect()`, que ante el mismo fallo sí libera el lease. Ningún test cubre este camino (los tres de renegociación asumen un `createListenKey` exitoso). apps/api/src/reactive/user-data-stream.service.ts:731-737",
+    "MEDIO (rate limit / ruido) — Con el flag encendido y el endpoint en 410, `negotiateAndConnect()` libera el lease ante el fallo y el sweep vuelve a intentar cada `userStreamSweepIntervalMs` (10 s) por credencial, sin backoff y con un `logger.warn` por intento: reintento indefinido, peso de rate limit gastado y flood de logs. El camino de fallo de creación necesita backoff. apps/api/src/reactive/user-data-stream.service.ts:352-358",
+    "MEDIO (crash) — `attachWsListeners()` registra `heartbeat`, `connected`, `reconnecting`, `execution-report` y `stream-expired`, pero NO `error`. `BinanceUserDataStreamClient` hace `this.emit('error', err)` ante cualquier error de transporte del socket; un `EventEmitter` de Node sin listener de `'error'` lanza la excepción y voltea el proceso. Es un patrón preexistente replicado (`MarketStreamService` tampoco escucha `'error'` de `BinanceWsClient`), no una regresión de este ciclo, pero ahora son dos superficies.",
+    "BAJO (cobertura) — HU-05 CA-2 no tiene el test de comportamiento que pide architect.md §9 ('con el servicio del stream en DEGRADED, un tick que cruza el nivel sigue produciendo settleFill'). La propiedad se verificó estructuralmente en la revisión (ni `EntryFillWatchService` ni `ReconciliationService` referencian `UserDataStreamService` ni ningún estado de salud del stream), pero no está protegida por ningún test contra una regresión futura.",
+    "BAJO (idempotencia) — `handleExecutionReport()` marca la identidad como vista ANTES de que `settleExecutionReport()` termine. Si el settle falla (error transitorio de Prisma, config ausente), una reentrega idéntica de Binance queda descartada durante `userStreamSeenEventTtlMs` (10 min). No se pierde el fill —la sonda por tick lo cubre por D-07— pero el stream deja de ser el detector rápido justo en el caso en que falló. apps/api/src/reactive/user-data-stream.service.ts:424-434",
+    "BAJO (desvío de contrato) — `isUserDataStreamFillsEnabled()` acepta `'true'` **y** `'1'`. D-08 fija literalmente `=== 'true'` citando el precedente de `SignalCacheService`, que efectivamente sólo acepta `'true'`. Inocuo (ausente sigue siendo `false`, se entrega apagado), pero el código y el contrato no dicen lo mismo: hay que alinear uno de los dos.",
+    "MENOR (calidad) — `configCache`, `credentialsCache` y `executorCache` se llenan con TTL pero nunca se purgan: crecen con la cantidad de usuarios/configs vistos y sólo se vacían al reiniciar. Y `ConfigCacheEntry.config` / `resolveTradingConfig()` están tipados `any`, perdiendo el chequeo del payload que se pasa a `settleFill`."
+  ],
+  "reviewer_report": {
+    "approved": false,
+    "date": "2026-09-04",
+    "ca_results": {
+      "HU-01 CA-1 (protección sin esperar ningún tick)": "PASS contra dobles — user-data-stream.service.spec.ts:665: con el doble WS y sin emitir un solo tick, un `execution-report` produce exactamente 1 `settleFill`. Nunca ejercitado contra el exchange (issue #1).",
+      "HU-01 CA-3 (mismo contenido para cualquier detector)": "PASS — execution-report-fill.spec.ts:98 y :127 comparan `toEntryFillStatus(report)` deep-equal contra el `EntryOrderExchangeStatus` que produce `BinanceRestClient` para el mismo fill (LIMIT_MAKER suelto y pierna OCO STOP_LOSS_LIMIT). :162 fija además el promedio ponderado `quoteQty/executedQty` en vez de `lastExecutedPrice`.",
+      "HU-02 CA-2 (el efecto del segundo aviso es nulo)": "PASS — spec:829: la reentrega idéntica es un no-op completo, 0 llamadas a Prisma en la segunda entrega; spec:810: con `settleFill` devolviendo ALREADY_SETTLED no se invalida el fast-path. Sobre notificaciones y `emitToUser` la propiedad vale por construcción y es más fuerte que el assert que pedía §9: el servicio no inyecta `AppGateway` ni `NotificationsService`.",
+      "HU-03 CA-1 (no abre conexión ni pide clave con el interruptor apagado)": "PASS — reactive-module-wiring.spec.ts:148: sin la variable, `moduleRef.get(UserDataStreamService)` es `null` y los dobles REST/WS registran 0 `createListenKey` y 0 `connect` tras avanzar timers falsos más allá de la suma de todos los intervalos `userStream*`. El flag se lee una sola vez en el composition root.",
+      "HU-04 CA-1 (nunca transcurre el vencimiento completo sin renovación)": "PASS — (a) reactive-runtime-thresholds.spec.ts:69 y :76 fijan el invariante `userStreamKeepaliveIntervalMs (900_000) + userStreamKeepaliveGraceMs (600_000) < userStreamKeyExpiryMs (3_600_000)`; (b) spec:460 avanza timers falsos hasta el vencimiento y verifica ≥1 `keepAliveListenKey` exitoso, leyendo el umbral del objeto y no como literal.",
+      "HU-04 CA-2 (renegociación automática)": "PASS parcial contra dobles — spec:501 (`listenKeyExpired`, incluso si falla cerrar el key viejo), :515 (`-1125`) y :529 (RECONNECT_EXHAUSTED) renegocian y conectan un key nuevo. NO cubre el camino en que `createListenKey` falla durante la renegociación, que deja el servicio colgado reteniendo el lease (issue #2).",
+      "HU-04 CA-3 (cierre explícito de la sesión al apagar)": "PASS — spec:543: el shutdown para los tres timers, desconecta el ws, hace `closeListenKey` y libera el lease; spec:579 cubre el caso del lease ya perdido, sin DELETE ni release redundantes.",
+      "HU-04 CA-4 (una sola sesión por dueño y ambiente)": "PASS — spec:306: dos instancias del servicio contra `createSharedFakeCoordination()`; exactamente una llama `createListenKey`, la otra registra 0 `createListenKey` y 0 `connect`.",
+      "HU-05 CA-1 (estado observable de degradación)": "PASS — `resolveUserDataStreamHealth` distingue HEALTHY / DEGRADED(HEARTBEAT_STALE|KEEPALIVE_STALE) / UNKNOWN(NO_RECORD); el registro se publica por `coordination.setJson` con TTL (spec:1010) y la transición se loguea en `checkHealthTransition`. Nota: la primera observación de un crédito no loguea transición, así que un stream que nace DEGRADED no deja rastro en el log hasta que cambie de estado.",
+      "HU-05 CA-2 (ningún fill sin reconciliar en degradado)": "PASS por propiedad estructural verificada por el reviewer, NO por un test — `UserDataStreamService` sólo aparece en su propio wiring y sus propios specs; `EntryFillWatchService` y `ReconciliationService` no lo referencian ni consultan ningún estado de salud del stream. No existe variable que apague la sonda. Falta el test de comportamiento que pide §9 (issue #5).",
+      "HU-05 CA-3 (el silencio no es salud ni muerte)": "PASS — user-data-stream-health.spec.ts:99-160: variando SOLO `lastEventAtMs` en todo su rango (`null`, `now`, `now - 24h`) el veredicto no cambia; moviendo `lastHeartbeatAtMs`/`lastKeepaliveAtMs` más allá de su umbral pasa a DEGRADED con la razón correspondiente. `lastEventAtMs` no es entrada del cálculo.",
+      "HU-05 CA-4 (retoma sola al volver a estar sano)": "PASS — spec:993: vuelve a HEALTHY con sólo un heartbeat fresco, sin ninguna llamada manual.",
+      "HU-06 CA-1/CA-2 (el listenKey y la API key nunca se filtran)": "PASS — spec:610, centinela en runtime, no string-matching de fuente: se recorre el ciclo de vida con `listenKey='LISTEN-KEY-SENTINEL'` y `apiKey='API-KEY-SENTINEL'`, con el doble REST plantando el key dentro de `error.config.url` (la vía de fuga exacta que §8-6 nombra) y spies sobre `Logger#log/warn/error/debug`; ningún `JSON.stringify` de los argumentos capturados contiene ninguno de los dos centinelas. Refuerzos estructurales: `#listenKey` privado sin getter ni `toJSON`, key como argumento de `connect()` y no de config, y `UserDataStreamHealthRecord` con lista de campos congelada por typecheck (`AssertNoKeyDrift`). A la SPA no puede llegar: el servicio no inyecta gateway.",
+      "HU-07 CA-1 (la suite pasa sin red)": "PASS — `pnpm nx run-many -t lint test --projects=api,data-fetcher,shared,analysis` verde sin variables de TESTNET (exit 0). El único test que instancia el `BinanceUserDataStreamClient` real es el harness gateado por `BINANCE_TESTNET_E2E`, que queda skipped.",
+      "HU-07 CA-2/CA-3 (evidencia TESTNET real, nunca LIVE)": "FAIL — la corrida aborta en `createListenKey` con `410 Gone`. No existe evidencia de un ciclo de vida real de `listenKey` ni de un `executionReport` real, que es exactamente lo que el criterio exige. La mitad prohibitiva sí se cumplió: el harness aborta si `getBaseUrl()` no es la URL de testnet y no se tocó LIVE en ningún momento. Evidencia: artifacts/testnet-verification-2026-09-04.md."
+    },
+    "tests": {
+      "sdd:validate": "OK — 31 files valid, cross-checks passed",
+      "nx lint+test api": "OK — 104 suites / 982 tests",
+      "nx lint+test data-fetcher": "OK — 6 archivos pasados + 2 skipped (los dos harness TESTNET opt-in)",
+      "nx lint+test shared": "OK — 3 archivos",
+      "nx lint+test analysis": "OK — 17 archivos",
+      "nx run-many -t lint test (api,data-fetcher,shared,analysis)": "OK — reejecutado por el reviewer, exit 0, 'Successfully ran targets lint, test for 4 projects'; lint 0 errores / 1064 warnings preexistentes",
+      "TESTNET E2E (BINANCE_TESTNET_E2E=1 nx test data-fetcher)": "FAIL — AxiosError 410 en BinanceRestClient.createListenKey. Verificado además por el orquestador con curl sin credenciales: 410 en testnet.binance.vision Y en api.binance.com; /api/v3/ping devuelve 200. Evidencia: artifacts/testnet-verification-2026-09-04.md",
+      "reglas de estilo del ciclo": "OK — ningún comentario narrativo, JSDoc, TODO ni código muerto comentado en las líneas agregadas (los únicos `//` nuevos son directivas `eslint-disable-next-line`, excepción permitida); ningún test hace string-matching sobre el texto fuente ni asserts sobre rangos entre dos símbolos"
+    },
+    "notes": "NO APROBADO. Qué se construyó: el ciclo entrega, completo y con tests verdes, el camino de detección de fills de entrada por `executionReport` — helper REST del ciclo de vida del `listenKey` en `BinanceRestClient`, cliente WS `BinanceUserDataStreamClient` con heartbeat y backoff, `UserDataStreamService` con lease por credencial `(userId, env)` sobre `ReactiveCoordinationPort`, mapper puro `toEntryFillStatus` con paridad campo por campo contra el detector REST, deduplicación de reentregas, modelo de salud/staleness en `libs/analysis` y wiring detrás de un interruptor de plataforma que se entrega apagado. Las invariantes duras del ciclo se cumplen y están verificadas: `UserDataStreamService` no crea `Position`, `Trade` ni `bot_actions`, no llama `placeInitialProtection`, no emite ningún `entry-order:*` y no inyecta gateway ni notificaciones — su único camino de reconciliación es `settleFill` (RN-01/D1-2); ni `EntryFillWatchService` ni `ReconciliationService` quedaron gateados por la salud del stream (D-07); la SPA, EP-017 y los seis eventos `entry-order:*` están intactos; y el material sensible está protegido por construcción, con un centinela en runtime que lo prueba sobre argumentos reales de log. || Contra qué está verificado: SÓLO contra dobles. Todo el árbol de tests del ciclo corre sobre `FakeUserStreamRestClient`/`FakeUserStreamWsClient` y `createSharedFakeCoordination()`. No existe una sola corrida contra el exchange. || Por qué no se puede ejercitar de punta a punta: Binance responde `410 Gone` (nginx, no la capa de aplicación) a `POST /api/v3/userDataStream`, en TESTNET y en producción, con el resto de TESTNET sano. Sin `createListenKey` no hay key; sin key no hay socket `/ws/<listenKey>`. D-03 y D-04 —el transporte entero del ciclo— dependen de ese endpoint, así que el mecanismo de detección está INERTE contra la Binance de hoy. No hay regresión ni cambio de comportamiento en producción, porque el interruptor se entrega apagado: lo que falla es el objetivo del ciclo, y HU-07 CA-2/CA-3 en concreto. || Tasks: 13/13 en `done`, ninguna `skipped`. TASK-013 está correctamente en `done` —el harness TESTNET se escribió y se corrió— pero el criterio que existe para satisfacer (HU-07 CA-2/CA-3) es FAIL: la task se hizo, la evidencia que buscaba no se pudo obtener. || Registros: `sdd/api.json`, `sdd/schema.json` y `sdd/components.json` no se tocaron y así corresponde (architect §5, §6 y §13: sin endpoints, tablas ni componentes nuevos). El módulo queda en `in_progress_modules` de `global.json` y la spec en `in-progress` en `specs/index.json`, porque el ciclo no cierra. `sdd/fixes.json` no tenía ningún fix en `implemented` para reconciliar. || Telemetría: `by_agent` llegó completo desde aguas arriba (13 entradas, una por unidad de trabajo) — nada faltante que reportar. Agregué mi propia entrada como estimación declarada (`approx: true`, `source: declared-estimate`): corro como subagente de Claude Code y no tengo contador propio; si el orquestador captura la notificación de uso de este subagente, conviene reemplazarla por el número medido. `by_tier` está derivado agrupando `by_agent` por `provider_model`, y las dos entradas quedan `approx: true` porque mezclan mediciones con estimaciones. || Contexto: fragmentos aditivos escritos para los cuatro subproyectos, todos con la advertencia explícita de que el transporte es inerte y el interruptor viaja apagado; los archivos base no se tocaron. En el global sólo se actualizaron las cuatro filas propias de la tabla-snapshot de `constitution.md` §3; `context_prompt.md` §2 es un índice de rutas y no se creó ninguna app/lib, así que no correspondía tocarlo.",
+    "follow_ups": [
+      "DECISIÓN HUMANA, escalada por el orquestador al dev y fuera del alcance del reviewer: migrar al user data stream de la WebSocket API de Binance (transporte distinto, autenticado con una clave Ed25519 que el dev debe crear), parquear el ciclo tal como está, o revertirlo. Nada de esta migración debe empezarse antes de esa decisión.",
+      "Fix: `renegotiate()` debe liberar el lease (o reintentar con backoff) cuando `createListenKey` falla, como ya hace `negotiateAndConnect()`. Hoy deja el crédito colgado para siempre y bloquea a las demás réplicas (issue #2). Agregar el test del camino no cubierto.",
+      "Fix: backoff exponencial en el reintento de creación del `listenKey` desde el sweep, en vez de un intento cada 10 s por credencial con un `warn` cada vez (issue #3).",
+      "Fix: registrar un listener de `'error'` sobre el cliente WS en `UserDataStreamService` — y de paso en `MarketStreamService` sobre `BinanceWsClient`, donde el mismo agujero es preexistente. Un `emit('error')` sin listener voltea el proceso (issue #4).",
+      "Test: escribir la verificación de comportamiento de HU-05 CA-2 que pide architect.md §9 (stream en DEGRADED + tick que cruza el nivel ⇒ `settleFill`), para que la propiedad quede protegida contra regresiones y no dependa de una inspección manual (issue #5).",
+      "Decisión de diseño: marcar la identidad del evento como vista sólo después de un settle exitoso, o registrar el fallo para permitir la reentrega (issue #6).",
+      "Alinear `isUserDataStreamFillsEnabled()` con D-08 (`=== 'true'` a secas) o actualizar D-08 para admitir `'1'` — hoy código y contrato difieren (issue #7).",
+      "Deuda preexistente que el architect ya señaló en §14.2 y este ciclo no agranda: `settleFill` hace el claim CAS y después crea `Position`, `Trade` y `bot_actions` fuera de una transacción; si el proceso muere en el medio la fila queda FILLED sin `Position` y ningún detector la vuelve a mirar. Registrar como fix o ciclo propio.",
+      "Pregunta abierta del architect §14.3 que queda sin resolver: el peso real de `/api/v3/userDataStream` no se pudo medir (el `PUT` necesita un `listenKey` vivo). Las tres entradas de `ENDPOINT_WEIGHTS` quedan en el 2 conservador declarado."
+    ]
+  }
 }

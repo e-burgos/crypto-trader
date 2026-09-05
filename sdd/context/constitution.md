@@ -88,16 +88,16 @@ Para el detalle técnico de cada subproyecto, ver su constitución específica:
 
 | Subproyecto | Stack base | Última actualización |
 | ----------- | ---------- | -------------------- |
-| `apps/api` | NestJS 11, Prisma 7, PostgreSQL 16, Redis 7 (Bull + ioredis directo para coordinación entre réplicas), Bull, Socket.io, Passport+JWT, zod 4 | spec-e-burgos-005 cycle-02 (2026-09-01) |
+| `apps/api` | NestJS 11, Prisma 7, PostgreSQL 16, Redis 7 (Bull + ioredis directo para coordinación entre réplicas), Bull, Socket.io, Passport+JWT, zod 4 | spec-e-burgos-010 cycle-01 (2026-09-04, en curso — user data stream de fills detrás de interruptor apagado e inerte contra el exchange) |
 | `apps/web` | React 19, Vite 8, TanStack Query 5, Zustand 5, Tailwind 3, react-i18next | spec-e-burgos-009 cycle-02 (2026-09-04) |
 | `apps/api-e2e` | Jest + Supertest | cycle-0 (inicial) |
 | `apps/web-e2e` | Playwright | cycle-0 (inicial) |
-| `libs/analysis` | TypeScript, SDKs LLM (OpenRouter, Anthropic, OpenAI, Groq, Gemini, Mistral) | spec-e-burgos-005 cycle-01 (2026-08-30) |
-| `libs/data-fetcher` | TypeScript, Binance REST/WS (spot: MARKET/LIMIT/LIMIT_MAKER/STOP_LOSS_LIMIT con trailingDelta/OCO de venta y de compra; WS con heartbeat ping/pong y suscripción dinámica), rss-parser | spec-e-burgos-005 cycle-02 (2026-09-01) |
+| `libs/analysis` | TypeScript, SDKs LLM (OpenRouter, Anthropic, OpenAI, Groq, Gemini, Mistral) | spec-e-burgos-010 cycle-01 (2026-09-04, en curso) |
+| `libs/data-fetcher` | TypeScript, Binance REST/WS (spot: MARKET/LIMIT/LIMIT_MAKER/STOP_LOSS_LIMIT con trailingDelta/OCO de venta y de compra; WS con heartbeat ping/pong y suscripción dinámica; cliente user data stream `/ws/<listenKey>` **inerte: el endpoint REST del listenKey devuelve 410 Gone**), rss-parser | spec-e-burgos-010 cycle-01 (2026-09-04, en curso) |
 | `libs/trading-engine` | TypeScript (Jest) | spec-e-burgos-005 cycle-02 (2026-09-01) |
 | `libs/openrouter` | TypeScript, @openrouter/sdk | cycle-0 (inicial) |
 | `libs/providers` | TypeScript (Vitest), APIs públicas de mercado | cycle-0 (inicial) |
-| `libs/shared` | TypeScript puro | spec-e-burgos-009 cycle-02 (2026-09-04) |
+| `libs/shared` | TypeScript puro | spec-e-burgos-010 cycle-01 (2026-09-04, en curso) |
 | `libs/ui` | React 19, Tailwind, Radix UI, lucide-react (Vitest) | spec-e-burgos-009 cycle-02 (2026-09-04) |
 
 ---

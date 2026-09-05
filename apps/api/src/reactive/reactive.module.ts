@@ -2,7 +2,11 @@ import { Module } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { getQueueToken } from '@nestjs/bull';
 import type { Queue } from 'bull';
-import { BinanceRestClient, BinanceWsClient } from '@crypto-trader/data-fetcher';
+import {
+  BinanceRestClient,
+  BinanceWsClient,
+  BinanceUserDataStreamClient,
+} from '@crypto-trader/data-fetcher';
 import { PrismaModule } from '../prisma/prisma.module';
 import { PrismaService } from '../prisma/prisma.service';
 import { GatewayModule } from '../gateway/gateway.module';
@@ -30,6 +34,14 @@ import { StreamHealthController } from './stream-health.controller';
 import { FastPathService } from './fast-path.service';
 import { EntryFillWatchService } from './entry-fill-watch.service';
 import { MaterialEventService } from './material-event.service';
+import {
+  USER_STREAM_REST_FACTORY,
+  USER_STREAM_WS_FACTORY,
+  UserDataStreamService,
+  type UserStreamRestFactory,
+  type UserStreamWsFactory,
+} from './user-data-stream.service';
+import { isUserDataStreamFillsEnabled } from './user-data-stream-flag';
 
 @Module({
   imports: [
@@ -161,6 +173,56 @@ import { MaterialEventService } from './material-event.service';
         REACTIVE_COORDINATION,
         getQueueToken(TRADING_QUEUE),
         AppGateway,
+      ],
+    },
+    {
+      provide: USER_STREAM_REST_FACTORY,
+      useFactory: (): UserStreamRestFactory =>
+        ({ apiKey, apiSecret, testnet }) => new BinanceRestClient({ apiKey, apiSecret, testnet }),
+    },
+    {
+      provide: USER_STREAM_WS_FACTORY,
+      useFactory: (): UserStreamWsFactory =>
+        ({ testnet }) =>
+          new BinanceUserDataStreamClient({
+            testnet,
+            wsPingIntervalMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.wsPingIntervalMs,
+            wsPongTimeoutMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.wsPongTimeoutMs,
+            reconnectBaseDelayMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamReconnectBaseDelayMs,
+            reconnectMaxDelayMs: DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamReconnectMaxDelayMs,
+            reconnectAttemptsBeforeExhaustion:
+              DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamReconnectAttemptsBeforeRenegotiate,
+          }),
+    },
+    {
+      provide: UserDataStreamService,
+      useFactory: (
+        prisma: PrismaService,
+        coordination: ReactiveCoordinationPort,
+        entryOrders: EntryOrderService,
+        fastPath: FastPathService,
+        restFactory: UserStreamRestFactory,
+        wsFactory: UserStreamWsFactory,
+      ): UserDataStreamService | null =>
+        isUserDataStreamFillsEnabled()
+          ? new UserDataStreamService(
+              prisma,
+              coordination,
+              entryOrders,
+              fastPath,
+              restFactory,
+              wsFactory,
+              DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+              randomUUID(),
+            )
+          : null,
+      inject: [
+        PrismaService,
+        REACTIVE_COORDINATION,
+        EntryOrderService,
+        FastPathService,
+        USER_STREAM_REST_FACTORY,
+        USER_STREAM_WS_FACTORY,
       ],
     },
   ],

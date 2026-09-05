@@ -256,8 +256,23 @@
         "TASK-003",
         "TASK-005"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/reactive.module.ts",
+        "apps/api/src/reactive/reactive-module-wiring.spec.ts",
+        "apps/api/src/reactive/user-data-stream-flag.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 84686,
+        "tokens_out": 14945,
+        "tokens_total": 99631,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-010",
@@ -337,8 +352,22 @@
         "TASK-010",
         "TASK-011"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/reactive.module.ts",
+        "apps/api/src/reactive/reactive-module-wiring.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 84686,
+        "tokens_out": 14945,
+        "tokens_total": 99631,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-013",

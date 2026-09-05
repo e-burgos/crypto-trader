@@ -52,8 +52,22 @@
       "estimation_hours": 4,
       "story_points": 5,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.spec.ts",
+        "libs/data-fetcher/src/lib/binance/index.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 82000,
+        "tokens_out": 15000,
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-003",

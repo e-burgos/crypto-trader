@@ -10,6 +10,10 @@ import {
 import { DEFAULT_REACTIVE_RUNTIME_THRESHOLDS } from './reactive-runtime-thresholds';
 import type { ReactiveRuntimeThresholds } from './reactive-runtime-thresholds';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
+import {
+  createSharedFakeCoordination,
+  type FakeCoordination,
+} from './reactive-coordination.test-double';
 import type { SymbolFilters, TickerUpdate, KlineUpdate } from '@crypto-trader/data-fetcher';
 
 class FakeWsClient extends EventEmitter implements MarketStreamWsClient {
@@ -39,40 +43,6 @@ function createFakeRestClient(): MarketStreamRestClient {
   return { getSymbolFilters: jest.fn().mockResolvedValue(filters) };
 }
 
-interface FakeCoordination extends ReactiveCoordinationPort {
-  setHealthy(value: boolean): void;
-  ownerOf(key: string): string | undefined;
-}
-
-function createSharedFakeCoordination(): FakeCoordination {
-  const store = new Map<string, string>();
-  let healthy = true;
-  return {
-    setHealthy(value: boolean) {
-      healthy = value;
-    },
-    ownerOf(key: string) {
-      return store.get(key);
-    },
-    isHealthy: () => healthy,
-    tryAcquire: jest.fn(async (key: string, holderId: string) => {
-      if (!healthy) return false;
-      if (store.has(key)) return false;
-      store.set(key, holderId);
-      return true;
-    }),
-    renew: jest.fn(async (key: string, holderId: string) => {
-      if (!healthy) return false;
-      return store.get(key) === holderId;
-    }),
-    release: jest.fn(async (key: string, holderId: string) => {
-      if (store.get(key) === holderId) store.delete(key);
-    }),
-    tryConsumeToken: jest.fn(async () => false),
-    setJson: jest.fn(async () => undefined),
-    getJson: jest.fn(async () => null),
-  };
-}
 
 function createFakePrisma(configs: Array<{ asset: string; pair: string }>) {
   return {

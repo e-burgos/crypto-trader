@@ -1306,6 +1306,44 @@
         "recorded_at": "2026-09-04",
         "agent": "implementor-front"
       }
+    },
+    {
+      "id": "FIX-e-burgos-031",
+      "author": "e-burgos",
+      "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
+      "fix_document": "sdd/fixes/fix-e-burgos-031.md",
+      "type": "IMPROVEMENT",
+      "severity": "low",
+      "created_at": "2026-09-04",
+      "resolved_at": "2026-09-04",
+      "validated_at": "2026-09-04",
+      "title": "Retirar TradingConfigData de libs/shared junto con su unica cadena consumidora, que era codigo muerto",
+      "estimation_hours": 0.5,
+      "description": "TradingConfigData (14 campos) convivia con TradingConfigWire como segundo wire de configuracion. Ningun proyecto la importaba por nombre, pero era el tipo de LLMAnalysisInput.userConfig, consumido solo por buildAnalysisPrompt en libs/analysis, funcion exportada por el barrel que ningun consumidor usaba fuera de su propio test (apps/api arma el prompt por otro camino). Se retiran TradingConfigData, LLMAnalysisInput, buildAnalysisPrompt, su describe en llm.spec.ts y el export del barrel.",
+      "justification": "Seguimiento declarado por el reviewer de spec-009 cycle-02: era la unica ambiguedad sobre cual es el wire de configuracion. Codigo muerto sin cambio de comportamiento; no amerita ciclo.",
+      "related_modules": [
+        "shared",
+        "analysis"
+      ],
+      "affected_files": [
+        "libs/shared/src/types/interfaces.ts",
+        "libs/analysis/src/lib/llm/llm-types.ts",
+        "libs/analysis/src/lib/llm/llm.spec.ts",
+        "libs/analysis/src/lib/llm/index.ts"
+      ],
+      "test_reference": "grep repo-wide sin ocurrencias de TradingConfigData, LLMAnalysisInput ni buildAnalysisPrompt. pnpm nx run-many -t typecheck --projects=shared,analysis,api,web en verde; pnpm nx run-many -t test lint --projects=shared,analysis: 3+16 archivos, 20+160 tests, 0 errores de lint.",
+      "status": "validated",
+      "cycle": "cycle-02",
+      "usage": {
+        "provider_model": "claude/fable",
+        "effort": "low",
+        "tokens_in": 60000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04",
+        "agent": "implementor-back"
+      }
     }
   ]
 }

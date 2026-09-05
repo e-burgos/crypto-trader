@@ -1,12 +1,6 @@
-import { parseLLMResponse, buildAnalysisPrompt } from './llm-types';
+import { parseLLMResponse } from './llm-types';
 import { createLLMProvider } from './llm-factory';
-import {
-  LLMProvider,
-  Asset,
-  QuoteCurrency,
-  TradingMode,
-} from '@crypto-trader/shared';
-import type { LLMAnalysisInput } from '@crypto-trader/shared';
+import { LLMProvider } from '@crypto-trader/shared';
 
 describe('parseLLMResponse', () => {
   it('should parse valid JSON response', () => {
@@ -74,82 +68,6 @@ describe('parseLLMResponse', () => {
       }),
     );
     expect(result.reasoning.length).toBeLessThanOrEqual(500);
-  });
-});
-
-describe('buildAnalysisPrompt', () => {
-  it('should produce system and user prompts', () => {
-    const input: LLMAnalysisInput = {
-      asset: Asset.BTC,
-      pair: QuoteCurrency.USDT,
-      indicatorSnapshot: {
-        rsi: { value: 55, signal: 'NEUTRAL' as const },
-        macd: {
-          macd: 10,
-          signal: 8,
-          histogram: 2,
-          crossover: 'BULLISH' as const,
-        },
-        bollingerBands: {
-          upper: 70000,
-          middle: 65000,
-          lower: 60000,
-          bandwidth: 10000,
-          position: 'INSIDE' as const,
-        },
-        emaCross: {
-          ema9: 65500,
-          ema21: 65000,
-          ema50: 64000,
-          ema200: 60000,
-          trend: 'BULLISH' as const,
-        },
-        volume: {
-          current: 100,
-          average: 80,
-          ratio: 1.25,
-          signal: 'NORMAL' as const,
-        },
-        supportResistance: { support: [60000], resistance: [70000] },
-        timestamp: Date.now(),
-      },
-      recentCandles: [
-        {
-          openTime: 1,
-          open: 65000,
-          high: 65500,
-          low: 64500,
-          close: 65200,
-          volume: 100,
-          closeTime: 2,
-        },
-      ],
-      newsItems: [],
-      recentTrades: [],
-      userConfig: {
-        id: 'cfg-1',
-        userId: 'u-1',
-        asset: Asset.BTC,
-        pair: QuoteCurrency.USDT,
-        buyThreshold: 70,
-        sellThreshold: 70,
-        stopLossPct: 0.03,
-        takeProfitPct: 0.05,
-        maxTradePct: 0.05,
-        maxConcurrentPositions: 2,
-        minIntervalMinutes: 5,
-        mode: TradingMode.SANDBOX,
-        isRunning: true,
-      },
-    };
-
-    const { system, user } = buildAnalysisPrompt(input);
-
-    expect(system).toContain('JSON');
-    expect(system).toContain('BUY');
-    expect(user).toContain('BTC/USDT');
-    expect(user).toContain('RSI');
-    expect(user).toContain('MACD');
   });
 });
 

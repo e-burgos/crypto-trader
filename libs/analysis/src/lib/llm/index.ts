@@ -5,7 +5,7 @@ export type {
   LLMAnalysisResult,
   LLMCallOptions,
 } from './llm-types';
-export { buildAnalysisPrompt, parseLLMResponse } from './llm-types';
+export { parseLLMResponse } from './llm-types';
 
 export type { PromptCacheStyle, PromptCacheCapability } from './prompt-cache';
 export {

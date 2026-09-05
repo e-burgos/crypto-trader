@@ -1,9 +1,27 @@
 import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
+import type {
+  EntryOrderExchangeStatus,
+  StreamHealthState,
+  UserDataStreamHealthRecord,
+} from '@crypto-trader/shared';
 import { TradingMode } from '@crypto-trader/shared';
-import { getBinanceErrorCode } from '@crypto-trader/data-fetcher';
+import { getBinanceErrorCode, BinanceRestClient } from '@crypto-trader/data-fetcher';
 import type { ExecutionReportEvent } from '@crypto-trader/data-fetcher';
+import { LiveOrderExecutor, type OrderExecutorPort } from '@crypto-trader/trading-engine';
+import {
+  resolveUserDataStreamHealth,
+  type UserDataStreamHealthReason,
+} from '@crypto-trader/analysis';
 import type { PrismaService } from '../prisma/prisma.service';
 import { decrypt } from '../users/utils/encryption.util';
+import {
+  normalizeEntryClientOrderId,
+  type EntryOrderService,
+  type RestingEntryOrder,
+  type SettleFillOutcome,
+} from '../trading/entry-order.service';
+import type { FastPathService } from './fast-path.service';
+import { toEntryFillStatus } from './execution-report-fill';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
 import type { ReactiveRuntimeThresholds } from './reactive-runtime-thresholds';
 
@@ -11,6 +29,7 @@ export const USER_STREAM_REST_FACTORY = Symbol('USER_STREAM_REST_FACTORY');
 export const USER_STREAM_WS_FACTORY = Symbol('USER_STREAM_WS_FACTORY');
 
 const OWNER_KEY_PREFIX = 'rx:v1:uds:owner:';
+const HEALTH_KEY_PREFIX = 'rx:v1:uds:health:';
 
 export const USER_STREAM_COORDINATION_UNAVAILABLE =
   'user data stream coordination unavailable: Redis not reachable; the tick probe and reconciliation remain the only fill detectors';
@@ -21,12 +40,20 @@ export function userStreamOwnerLeaseKey(userId: string, env: CredentialEnv): str
   return `${OWNER_KEY_PREFIX}${userId}:${env}`;
 }
 
+export function userStreamHealthKey(userId: string, env: CredentialEnv): string {
+  return `${HEALTH_KEY_PREFIX}${userId}:${env}`;
+}
+
 export function credentialKeyOf(userId: string, env: CredentialEnv): string {
   return `${userId}:${env}`;
 }
 
 function envOf(mode: TradingMode): CredentialEnv {
   return mode === TradingMode.TESTNET ? 'testnet' : 'live';
+}
+
+function seenEventIdentity(report: ExecutionReportEvent): string {
+  return `${report.symbol}:${report.orderId}:${report.orderStatus}:${report.cumulativeFilledQuantity}`;
 }
 
 export interface UserStreamRestClient {
@@ -95,6 +122,16 @@ interface CredentialsCacheEntry {
   fetchedAt: number;
 }
 
+interface ConfigCacheEntry {
+  config: any;
+  fetchedAt: number;
+}
+
+interface ExecutorCacheEntry {
+  executor: OrderExecutorPort;
+  fetchedAt: number;
+}
+
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -110,14 +147,22 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
   private readonly logger = new Logger(UserDataStreamService.name);
   private readonly ownedCredentials = new Map<string, OwnedCredentialStream>();
   private readonly credentialsCache = new Map<string, CredentialsCacheEntry>();
+  private readonly configCache = new Map<string, ConfigCacheEntry>();
+  private readonly executorCache = new Map<string, ExecutorCacheEntry>();
+  private readonly seenEvents = new Map<string, number>();
+  private readonly lastKnownHealthState = new Map<string, StreamHealthState>();
+  private uncorrelatedEventCount = 0;
   private activeCredentials = new Map<string, ActiveCredential>();
   private subscriptionRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
+  private healthPublishTimer: ReturnType<typeof setInterval> | null = null;
   private coordinationUnavailableLogged = false;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly coordination: ReactiveCoordinationPort,
+    private readonly entryOrders: EntryOrderService,
+    private readonly fastPath: FastPathService,
     private readonly restFactory: UserStreamRestFactory,
     private readonly wsFactory: UserStreamWsFactory,
     private readonly thresholds: ReactiveRuntimeThresholds,
@@ -139,13 +184,22 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
         this.logger.error(`User data stream ownership cycle failed: ${errorMessage(err)}`),
       );
     }, this.thresholds.userStreamSweepIntervalMs);
+
+    await this.publishHealth();
+    this.healthPublishTimer = setInterval(() => {
+      this.publishHealth().catch((err) =>
+        this.logger.error(`Failed to publish user data stream health: ${errorMessage(err)}`),
+      );
+    }, this.thresholds.userStreamHealthPublishIntervalMs);
   }
 
   async onApplicationShutdown(): Promise<void> {
     if (this.subscriptionRefreshTimer) clearInterval(this.subscriptionRefreshTimer);
     if (this.sweepTimer) clearInterval(this.sweepTimer);
+    if (this.healthPublishTimer) clearInterval(this.healthPublishTimer);
     this.subscriptionRefreshTimer = null;
     this.sweepTimer = null;
+    this.healthPublishTimer = null;
 
     const owned = [...this.ownedCredentials.keys()];
     await Promise.all(owned.map((key) => this.releaseCredential(key, 'SHUTDOWN')));
@@ -363,8 +417,240 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     state.ws.off('stream-expired', state.listeners.streamExpired);
   }
 
-  private handleExecutionReport(state: OwnedCredentialStream, _report: ExecutionReportEvent): void {
-    state.lastEventAtMs = Date.now();
+  private handleExecutionReport(state: OwnedCredentialStream, report: ExecutionReportEvent): void {
+    const now = Date.now();
+    state.lastEventAtMs = now;
+
+    if (this.isSeenEvent(report, now)) return;
+    this.recordSeenEvent(report, now);
+
+    const fillStatus = toEntryFillStatus(report);
+    if (!fillStatus) return;
+
+    this.settleExecutionReport(state, report, fillStatus).catch((err) =>
+      this.logger.error(
+        `Failed to settle the execution report for ${credentialKeyOf(state.userId, state.env)}: ${errorMessage(err)}`,
+      ),
+    );
+  }
+
+  private isSeenEvent(report: ExecutionReportEvent, now: number): boolean {
+    const identity = seenEventIdentity(report);
+    const seenAt = this.seenEvents.get(identity);
+    if (seenAt === undefined) return false;
+    if (now - seenAt > this.thresholds.userStreamSeenEventTtlMs) {
+      this.seenEvents.delete(identity);
+      return false;
+    }
+    return true;
+  }
+
+  private recordSeenEvent(report: ExecutionReportEvent, now: number): void {
+    this.seenEvents.set(seenEventIdentity(report), now);
+    while (this.seenEvents.size > this.thresholds.userStreamSeenEventCacheSize) {
+      const oldestIdentity = this.seenEvents.keys().next().value;
+      if (oldestIdentity === undefined) break;
+      this.seenEvents.delete(oldestIdentity);
+    }
+  }
+
+  getUncorrelatedEventCount(): number {
+    return this.uncorrelatedEventCount;
+  }
+
+  private async settleExecutionReport(
+    state: OwnedCredentialStream,
+    report: ExecutionReportEvent,
+    status: EntryOrderExchangeStatus,
+  ): Promise<void> {
+    const credentialKey = credentialKeyOf(state.userId, state.env);
+    const order = await this.correlateRestingOrder(state.userId, report);
+    if (!order) {
+      this.uncorrelatedEventCount += 1;
+      this.logger.debug(
+        `Execution report for ${credentialKey} did not correlate with any RESTING entry order (uncorrelated so far: ${this.uncorrelatedEventCount})`,
+      );
+      return;
+    }
+
+    const config = await this.resolveTradingConfig(order.configId);
+    if (!config) {
+      this.logger.warn(
+        `No trading config ${order.configId} for the entry order correlated to an execution report on ${credentialKey} — skipping settle`,
+      );
+      return;
+    }
+
+    const executor = await this.resolveOrderExecutor(state.userId, state.env === 'testnet');
+    if (!executor) {
+      this.logger.warn(`No ${state.env} credentials for ${credentialKey} — skipping settle`);
+      return;
+    }
+
+    const outcome: SettleFillOutcome = await this.entryOrders.settleFill({
+      userId: state.userId,
+      config,
+      symbol: report.symbol,
+      mode: config.mode,
+      executor,
+      order,
+      status,
+    });
+
+    if (outcome === 'SETTLED') {
+      this.fastPath.invalidateOpenPositions(order.configId);
+    }
+  }
+
+  private isAcceptableEntryOrderMatch(
+    row: { status: string; symbol: string } | null,
+    report: ExecutionReportEvent,
+  ): boolean {
+    return (
+      row !== null &&
+      report.side === 'BUY' &&
+      row.status === 'RESTING' &&
+      row.symbol === report.symbol
+    );
+  }
+
+  private async correlateRestingOrder(
+    userId: string,
+    report: ExecutionReportEvent,
+  ): Promise<RestingEntryOrder | null> {
+    const normalizedClientOrderId = normalizeEntryClientOrderId(report.clientOrderId);
+    const byClientOrderId = await this.prisma.entryOrder.findUnique({
+      where: { clientOrderId: normalizedClientOrderId },
+    });
+    if (this.isAcceptableEntryOrderMatch(byClientOrderId, report)) {
+      return byClientOrderId as unknown as RestingEntryOrder;
+    }
+
+    const byBackupIdentifier = await this.prisma.entryOrder.findFirst({
+      where: {
+        userId,
+        status: 'RESTING',
+        symbol: report.symbol,
+        OR: [
+          { orderId: report.orderId },
+          { limitLegOrderId: report.orderId },
+          { stopLegOrderId: report.orderId },
+          ...(report.orderListId ? [{ orderListId: report.orderListId }] : []),
+        ],
+      },
+    });
+    if (this.isAcceptableEntryOrderMatch(byBackupIdentifier, report)) {
+      return byBackupIdentifier as unknown as RestingEntryOrder;
+    }
+
+    return null;
+  }
+
+  private async resolveTradingConfig(configId: string): Promise<any | null> {
+    const now = Date.now();
+    const cached = this.configCache.get(configId);
+    if (cached && now - cached.fetchedAt < this.thresholds.userStreamSubscriptionRefreshIntervalMs) {
+      return cached.config;
+    }
+
+    const config = await this.prisma.tradingConfig.findUnique({ where: { id: configId } });
+    if (!config) return null;
+
+    this.configCache.set(configId, { config, fetchedAt: now });
+    return config;
+  }
+
+  private async resolveOrderExecutor(
+    userId: string,
+    isTestnet: boolean,
+  ): Promise<OrderExecutorPort | null> {
+    const now = Date.now();
+    const cacheKey = `${userId}:${isTestnet}`;
+    const cached = this.executorCache.get(cacheKey);
+    if (cached && now - cached.fetchedAt < this.thresholds.userStreamSubscriptionRefreshIntervalMs) {
+      return cached.executor;
+    }
+
+    const credentials = await this.resolveCredentials(userId, isTestnet);
+    if (!credentials) return null;
+
+    const executor = new LiveOrderExecutor(
+      new BinanceRestClient({
+        apiKey: credentials.apiKey,
+        apiSecret: credentials.apiSecret,
+        testnet: isTestnet,
+      }),
+    );
+    this.executorCache.set(cacheKey, { executor, fetchedAt: now });
+    return executor;
+  }
+
+  getHealth(
+    userId: string,
+    env: CredentialEnv,
+  ): { state: StreamHealthState; reason: UserDataStreamHealthReason } {
+    const owned = this.ownedCredentials.get(credentialKeyOf(userId, env));
+    const record = owned ? this.healthRecordFor(owned) : null;
+    return this.resolveHealthRecord(record);
+  }
+
+  private resolveHealthRecord(
+    record: UserDataStreamHealthRecord | null,
+  ): { state: StreamHealthState; reason: UserDataStreamHealthReason } {
+    return resolveUserDataStreamHealth({
+      now: Date.now(),
+      record,
+      thresholds: {
+        heartbeatMaxAgeMs: this.thresholds.userStreamHeartbeatMaxAgeMs,
+        keepaliveMaxAgeMs: this.thresholds.userStreamKeepaliveMaxAgeMs,
+      },
+    });
+  }
+
+  private healthRecordFor(state: OwnedCredentialStream): UserDataStreamHealthRecord {
+    return {
+      credentialKey: credentialKeyOf(state.userId, state.env),
+      ownerId: this.instanceId,
+      connectedAt: state.connectedAt,
+      lastHeartbeatAtMs: state.lastHeartbeatAtMs,
+      lastKeepaliveAtMs: state.lastKeepaliveAtMs,
+      lastEventAtMs: state.lastEventAtMs,
+      publishedAt: Date.now(),
+    };
+  }
+
+  private async publishHealth(): Promise<void> {
+    await Promise.all(
+      [...this.ownedCredentials.values()].map((state) => this.publishCredentialHealth(state)),
+    );
+  }
+
+  private async publishCredentialHealth(state: OwnedCredentialStream): Promise<void> {
+    const key = credentialKeyOf(state.userId, state.env);
+    const record = this.healthRecordFor(state);
+
+    await this.coordination.setJson(
+      userStreamHealthKey(state.userId, state.env),
+      record,
+      this.thresholds.userStreamHealthTtlMs,
+    );
+
+    const { state: verdict, reason } = this.resolveHealthRecord(record);
+    this.checkHealthTransition(key, verdict, reason);
+  }
+
+  private checkHealthTransition(
+    key: string,
+    state: StreamHealthState,
+    reason: UserDataStreamHealthReason,
+  ): void {
+    const previous = this.lastKnownHealthState.get(key);
+    this.lastKnownHealthState.set(key, state);
+    if (previous === undefined || previous === state) return;
+
+    this.logger.log(
+      `User data stream health transition for ${key}: ${previous} -> ${state}${reason ? ` (${reason})` : ''}`,
+    );
   }
 
   private async handleStreamExpired(key: string, _reason: string): Promise<void> {
@@ -467,6 +753,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     state.ws.disconnect();
     this.detachWsListeners(state);
     this.ownedCredentials.delete(key);
+    this.lastKnownHealthState.delete(key);
     this.logger.log(`Released the user data stream for ${key} (LEASE_LOST)`);
   }
 
@@ -491,6 +778,7 @@ export class UserDataStreamService implements OnModuleInit, OnApplicationShutdow
     }
 
     this.ownedCredentials.delete(key);
+    this.lastKnownHealthState.delete(key);
     this.logger.log(`Released the user data stream for ${key} (${reason})`);
   }
 }

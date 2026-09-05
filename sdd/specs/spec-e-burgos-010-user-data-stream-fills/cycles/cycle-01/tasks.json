@@ -194,8 +194,22 @@
         "TASK-002",
         "TASK-006"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 67649,
+        "tokens_out": 11938,
+        "tokens_total": 79587,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-008",
@@ -209,8 +223,26 @@
         "TASK-006",
         "TASK-007"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts",
+        "libs/shared/src/types/interfaces.ts",
+        "libs/analysis/src/lib/reactive/user-data-stream-health.ts",
+        "libs/analysis/src/lib/reactive/user-data-stream-health.spec.ts",
+        "libs/analysis/src/lib/reactive/index.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 161866,
+        "tokens_out": 28564,
+        "tokens_total": 190430,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-009",
@@ -239,8 +271,24 @@
       "depends_on": [
         "TASK-002"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts",
+        "apps/api/src/reactive/execution-report-fill.ts",
+        "apps/api/src/reactive/execution-report-fill.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 198595,
+        "tokens_out": 35046,
+        "tokens_total": 233641,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-011",
@@ -253,8 +301,22 @@
       "depends_on": [
         "TASK-010"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 45099,
+        "tokens_out": 7959,
+        "tokens_total": 53058,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-012",

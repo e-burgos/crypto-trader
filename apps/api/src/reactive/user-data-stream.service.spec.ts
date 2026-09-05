@@ -1,16 +1,22 @@
 import { EventEmitter } from 'events';
 import { Logger } from '@nestjs/common';
 import { TradingMode } from '@crypto-trader/shared';
+import type { ExecutionReportEvent } from '@crypto-trader/data-fetcher';
 import {
   UserDataStreamService,
   userStreamOwnerLeaseKey,
+  userStreamHealthKey,
   type UserStreamRestClient,
   type UserStreamWsClient,
 } from './user-data-stream.service';
-import { DEFAULT_REACTIVE_RUNTIME_THRESHOLDS } from './reactive-runtime-thresholds';
+import {
+  DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+  type ReactiveRuntimeThresholds,
+} from './reactive-runtime-thresholds';
 import type { ReactiveCoordinationPort } from './reactive-coordination.port';
 import { createSharedFakeCoordination } from './reactive-coordination.test-double';
 import { decrypt } from '../users/utils/encryption.util';
+import type { SettleFillOutcome } from '../trading/entry-order.service';
 
 jest.mock('../users/utils/encryption.util', () => ({
   decrypt: jest.fn((value: string) => `decrypted:${value}`),
@@ -127,16 +133,41 @@ function createFakePrisma(
     configs?: Array<{ userId: string; mode: TradingMode }>;
     restingOrders?: Array<{ userId: string; mode: TradingMode }>;
     credential?: typeof DEFAULT_CREDENTIAL_ROW | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    entryOrderByClientId?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    entryOrderByBackupId?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tradingConfigById?: any;
   } = {},
 ) {
   return {
-    tradingConfig: { findMany: jest.fn().mockResolvedValue(opts.configs ?? []) },
-    entryOrder: { findMany: jest.fn().mockResolvedValue(opts.restingOrders ?? []) },
+    tradingConfig: {
+      findMany: jest.fn().mockResolvedValue(opts.configs ?? []),
+      findUnique: jest.fn().mockResolvedValue(opts.tradingConfigById ?? null),
+    },
+    entryOrder: {
+      findMany: jest.fn().mockResolvedValue(opts.restingOrders ?? []),
+      findUnique: jest.fn().mockResolvedValue(opts.entryOrderByClientId ?? null),
+      findFirst: jest.fn().mockResolvedValue(opts.entryOrderByBackupId ?? null),
+    },
     binanceCredential: {
       findUnique: jest.fn().mockResolvedValue(
         opts.credential === undefined ? DEFAULT_CREDENTIAL_ROW : opts.credential,
       ),
     },
+  };
+}
+
+function buildEntryOrderService(overrides: { settle?: SettleFillOutcome } = {}) {
+  return {
+    settleFill: jest.fn().mockResolvedValue(overrides.settle ?? 'SETTLED'),
+  };
+}
+
+function buildFastPath() {
+  return {
+    invalidateOpenPositions: jest.fn(),
   };
 }
 
@@ -146,16 +177,119 @@ function buildService(
   restFactory: jest.Mock,
   wsFactory: jest.Mock,
   instanceId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  deps: { entryOrderService?: any; fastPath?: any } = {},
 ) {
   return new UserDataStreamService(
     prisma as never,
     coordination,
+    (deps.entryOrderService ?? buildEntryOrderService()) as never,
+    (deps.fastPath ?? buildFastPath()) as never,
     restFactory as never,
     wsFactory as never,
     DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
     instanceId,
   );
 }
+
+function buildPipelineFixture(
+  prismaOpts: Parameters<typeof createFakePrisma>[0] = {},
+  overrides: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    entryOrderService?: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    fastPath?: any;
+    thresholds?: ReactiveRuntimeThresholds;
+    rest?: FakeUserStreamRestClient;
+  } = {},
+) {
+  const coordination = createSharedFakeCoordination();
+  const restClient = overrides.rest ?? new FakeUserStreamRestClient();
+  const wsClient = new FakeUserStreamWsClient();
+  const entryOrderService = overrides.entryOrderService ?? buildEntryOrderService();
+  const fastPath = overrides.fastPath ?? buildFastPath();
+  const prisma = createFakePrisma({
+    configs: [{ userId: 'user-1', mode: TradingMode.LIVE }],
+    ...prismaOpts,
+  });
+  const service = new UserDataStreamService(
+    prisma as never,
+    coordination,
+    entryOrderService as never,
+    fastPath as never,
+    jest.fn().mockReturnValue(restClient) as never,
+    jest.fn().mockReturnValue(wsClient) as never,
+    overrides.thresholds ?? DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+    'instance-a',
+  );
+  return { service, prisma, coordination, restClient, wsClient, entryOrderService, fastPath };
+}
+
+function buildRestingOrderRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'entry-1',
+    userId: 'user-1',
+    configId: 'config-1',
+    symbol: 'BTCUSDT',
+    asset: 'BTC',
+    pair: 'USDT',
+    mode: TradingMode.LIVE,
+    entryMode: 'LIMIT_MAKER',
+    quantity: 1,
+    limitPrice: 100,
+    stopPrice: null,
+    stopLimitPrice: null,
+    trailingDeltaBips: null,
+    referencePrice: 100,
+    plannedNotionalUsd: 100,
+    clientOrderId: 'ent-abc123',
+    orderListId: null,
+    orderId: 'order-1',
+    limitLegOrderId: null,
+    stopLegOrderId: null,
+    placedAt: new Date(),
+    expiresAt: new Date(),
+    decisionId: null,
+    cancelReason: null,
+    status: 'RESTING',
+    ...overrides,
+  };
+}
+
+function buildTradingConfigRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'config-1',
+    userId: 'user-1',
+    asset: 'BTC',
+    pair: 'USDT',
+    mode: TradingMode.LIVE,
+    isRunning: true,
+    nativeProtectionEnabled: false,
+    stopLossPct: 0.02,
+    takeProfitPct: 0.04,
+    ...overrides,
+  };
+}
+
+const BASE_EXECUTION_REPORT: ExecutionReportEvent = {
+  eventTimeMs: 1_700_000_000_000,
+  transactionTimeMs: 1_700_000_000_000,
+  symbol: 'BTCUSDT',
+  clientOrderId: 'ent-abc123',
+  originalClientOrderId: null,
+  side: 'BUY',
+  orderType: 'LIMIT_MAKER',
+  executionType: 'TRADE',
+  orderStatus: 'FILLED',
+  orderId: 'order-1',
+  orderListId: null,
+  orderQuantity: 1,
+  lastExecutedQuantity: 1,
+  cumulativeFilledQuantity: 1,
+  lastExecutedPrice: 100,
+  cumulativeQuoteQuantity: 100,
+  tradeId: 'trade-1',
+};
 
 async function flushMicrotasks(times = 8): Promise<void> {
   for (let i = 0; i < times; i += 1) {
@@ -499,6 +633,9 @@ describe('UserDataStreamService', () => {
       await service.onModuleInit();
       await jest.advanceTimersByTimeAsync(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveIntervalMs);
 
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
       expect(restClient.keepAliveCallCount).toBeGreaterThan(0);
       expect(wsClient.connectCalls).toContain('LISTEN-KEY-SENTINEL');
 
@@ -521,6 +658,380 @@ describe('UserDataStreamService', () => {
       warnSpy.mockRestore();
       errorSpy.mockRestore();
       debugSpy.mockRestore();
+    });
+  });
+
+  describe('correlation (D-05, TASK-010)', () => {
+    it('matches by clientOrderId and settles the fill without waiting for any market tick (HU-01 CA-1)', async () => {
+      const row = buildRestingOrderRow();
+      const { service, prisma, wsClient, entryOrderService, fastPath } = buildPipelineFixture({
+        entryOrderByClientId: row,
+        tradingConfigById: buildTradingConfigRow(),
+      });
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
+      expect(prisma.entryOrder.findUnique).toHaveBeenCalledWith({
+        where: { clientOrderId: 'ent-abc123' },
+      });
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+      expect(entryOrderService.settleFill.mock.calls[0][0]).toMatchObject({
+        userId: 'user-1',
+        symbol: 'BTCUSDT',
+        mode: TradingMode.LIVE,
+        order: row,
+        status: expect.objectContaining({ state: 'FILLED' }),
+      });
+      expect(fastPath.invalidateOpenPositions).toHaveBeenCalledWith('config-1');
+
+      await service.onApplicationShutdown();
+    });
+
+    it('matches an OCO leg whose report clientOrderId carries the -l suffix while the row holds the unsuffixed id', async () => {
+      const row = buildRestingOrderRow({ clientOrderId: 'ent-abc123' });
+      const { service, prisma, wsClient, entryOrderService } = buildPipelineFixture({
+        entryOrderByClientId: row,
+        tradingConfigById: buildTradingConfigRow(),
+      });
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, clientOrderId: 'ent-abc123-l' });
+      await flushMicrotasks();
+
+      expect(prisma.entryOrder.findUnique).toHaveBeenCalledWith({
+        where: { clientOrderId: 'ent-abc123' },
+      });
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+
+      await service.onApplicationShutdown();
+    });
+
+    it.each([
+      ['orderId', { orderId: 'fallback-id' }, { orderId: 'fallback-id' }],
+      ['limitLegOrderId', { limitLegOrderId: 'fallback-id' }, { orderId: 'fallback-id' }],
+      ['stopLegOrderId', { stopLegOrderId: 'fallback-id' }, { orderId: 'fallback-id' }],
+      [
+        'orderListId',
+        { orderListId: 'fallback-list-id' },
+        { orderId: 'unrelated-order-id', orderListId: 'fallback-list-id' },
+      ],
+    ])(
+      'falls back to matching by %s when clientOrderId does not resolve a RESTING row',
+      async (_label, rowOverrides, reportOverrides) => {
+        const row = buildRestingOrderRow(rowOverrides);
+        const { service, prisma, wsClient, entryOrderService } = buildPipelineFixture({
+          entryOrderByClientId: null,
+          entryOrderByBackupId: row,
+          tradingConfigById: buildTradingConfigRow(),
+        });
+
+        await service.onModuleInit();
+        wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, ...reportOverrides });
+        await flushMicrotasks();
+
+        expect(prisma.entryOrder.findFirst).toHaveBeenCalled();
+        expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+
+        await service.onApplicationShutdown();
+      },
+    );
+
+    it('produces zero effects and no warn/error log when nothing correlates', async () => {
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      const { service, wsClient, entryOrderService } = buildPipelineFixture({
+        entryOrderByClientId: null,
+        entryOrderByBackupId: null,
+      });
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
+      expect(entryOrderService.settleFill).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      await service.onApplicationShutdown();
+      errorSpy.mockRestore();
+      warnSpy.mockRestore();
+    });
+
+    it('rejects a clientOrderId match whose symbol differs from the report symbol', async () => {
+      const row = buildRestingOrderRow({ symbol: 'ETHUSDT' });
+      const { service, wsClient, entryOrderService } = buildPipelineFixture({
+        entryOrderByClientId: row,
+        entryOrderByBackupId: null,
+      });
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
+      expect(entryOrderService.settleFill).not.toHaveBeenCalled();
+
+      await service.onApplicationShutdown();
+    });
+
+    it('ignores a SELL report entirely, without even querying for correlation', async () => {
+      const { service, prisma, wsClient, entryOrderService } = buildPipelineFixture();
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, side: 'SELL' });
+      await flushMicrotasks();
+
+      expect(prisma.entryOrder.findUnique).not.toHaveBeenCalled();
+      expect(entryOrderService.settleFill).not.toHaveBeenCalled();
+
+      await service.onApplicationShutdown();
+    });
+  });
+
+  describe('settle outcome branching (D-06/§2.4)', () => {
+    it('invalidates the fast-path open-positions cache for the order config when settleFill returns SETTLED', async () => {
+      const row = buildRestingOrderRow();
+      const fastPath = buildFastPath();
+      const { service, wsClient } = buildPipelineFixture(
+        { entryOrderByClientId: row, tradingConfigById: buildTradingConfigRow() },
+        { entryOrderService: buildEntryOrderService({ settle: 'SETTLED' }), fastPath },
+      );
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
+      expect(fastPath.invalidateOpenPositions).toHaveBeenCalledWith('config-1');
+
+      await service.onApplicationShutdown();
+    });
+
+    it('does not invalidate the fast-path cache when settleFill returns ALREADY_SETTLED', async () => {
+      const row = buildRestingOrderRow();
+      const fastPath = buildFastPath();
+      const { service, wsClient } = buildPipelineFixture(
+        { entryOrderByClientId: row, tradingConfigById: buildTradingConfigRow() },
+        { entryOrderService: buildEntryOrderService({ settle: 'ALREADY_SETTLED' }), fastPath },
+      );
+
+      await service.onModuleInit();
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
+      expect(fastPath.invalidateOpenPositions).not.toHaveBeenCalled();
+
+      await service.onApplicationShutdown();
+    });
+  });
+
+  describe('deduplication of redeliveries (HU-02 CA-2, TASK-011)', () => {
+    it('a redelivered identical execution report is a complete no-op: zero Prisma calls on the second delivery', async () => {
+      const row = buildRestingOrderRow();
+      const { service, prisma, wsClient, entryOrderService } = buildPipelineFixture({
+        entryOrderByClientId: row,
+        tradingConfigById: buildTradingConfigRow(),
+      });
+
+      await service.onModuleInit();
+
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+
+      prisma.entryOrder.findUnique.mockClear();
+      prisma.entryOrder.findFirst.mockClear();
+      prisma.tradingConfig.findUnique.mockClear();
+
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+      expect(prisma.entryOrder.findUnique).not.toHaveBeenCalled();
+      expect(prisma.entryOrder.findFirst).not.toHaveBeenCalled();
+      expect(prisma.tradingConfig.findUnique).not.toHaveBeenCalled();
+
+      await service.onApplicationShutdown();
+    });
+
+    it('does not dedupe two distinct execution reports for the same order (a partial event followed by the final fill)', async () => {
+      const row = buildRestingOrderRow();
+      const { service, wsClient, entryOrderService } = buildPipelineFixture({
+        entryOrderByClientId: row,
+        tradingConfigById: buildTradingConfigRow(),
+      });
+
+      await service.onModuleInit();
+
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, cumulativeFilledQuantity: 0.5 });
+      await flushMicrotasks();
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, cumulativeFilledQuantity: 1 });
+      await flushMicrotasks();
+
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(2);
+
+      await service.onApplicationShutdown();
+    });
+
+    it('evicts the oldest identity once the cache exceeds userStreamSeenEventCacheSize (FIFO)', async () => {
+      const row = buildRestingOrderRow();
+      const smallThresholds: ReactiveRuntimeThresholds = {
+        ...DEFAULT_REACTIVE_RUNTIME_THRESHOLDS,
+        userStreamSeenEventCacheSize: 2,
+      };
+      const { service, wsClient, entryOrderService } = buildPipelineFixture(
+        { entryOrderByClientId: row, tradingConfigById: buildTradingConfigRow() },
+        { thresholds: smallThresholds },
+      );
+
+      await service.onModuleInit();
+
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, orderId: 'order-A' });
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, orderId: 'order-B' });
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, orderId: 'order-C' });
+      await flushMicrotasks();
+      entryOrderService.settleFill.mockClear();
+
+      wsClient.emit('execution-report', { ...BASE_EXECUTION_REPORT, orderId: 'order-A' });
+      await flushMicrotasks();
+
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+
+      await service.onApplicationShutdown();
+    });
+
+    it('forgets a seen identity after userStreamSeenEventTtlMs elapses', async () => {
+      jest.useFakeTimers();
+      const row = buildRestingOrderRow();
+      const { service, wsClient, entryOrderService } = buildPipelineFixture({
+        entryOrderByClientId: row,
+        tradingConfigById: buildTradingConfigRow(),
+      });
+
+      await service.onModuleInit();
+
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(1);
+
+      await jest.advanceTimersByTimeAsync(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamSeenEventTtlMs + 1);
+
+      wsClient.emit('execution-report', BASE_EXECUTION_REPORT);
+      await flushMicrotasks();
+      expect(entryOrderService.settleFill).toHaveBeenCalledTimes(2);
+
+      await service.onApplicationShutdown();
+      jest.useRealTimers();
+    });
+  });
+
+  describe('health model (HU-05, TASK-008)', () => {
+    it('reads HEALTHY with zero fill events but a fresh heartbeat and keepalive', async () => {
+      jest.useFakeTimers();
+      const { service } = buildPipelineFixture();
+
+      await service.onModuleInit();
+
+      expect(service.getHealth('user-1', 'live')).toEqual({ state: 'HEALTHY', reason: null });
+
+      await service.onApplicationShutdown();
+      jest.useRealTimers();
+    });
+
+    it('reads DEGRADED once the heartbeat goes stale beyond userStreamHeartbeatMaxAgeMs', async () => {
+      jest.useFakeTimers();
+      const { service } = buildPipelineFixture();
+
+      await service.onModuleInit();
+      await jest.advanceTimersByTimeAsync(
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHeartbeatMaxAgeMs + 1,
+      );
+
+      expect(service.getHealth('user-1', 'live')).toEqual({
+        state: 'DEGRADED',
+        reason: 'HEARTBEAT_STALE',
+      });
+
+      await service.onApplicationShutdown();
+      jest.useRealTimers();
+    });
+
+    it('reads DEGRADED once the keepalive goes stale, even while the heartbeat stays fresh', async () => {
+      jest.useFakeTimers();
+      class AlwaysFailingKeepaliveRestClient extends FakeUserStreamRestClient {
+        async keepAliveListenKey(): Promise<void> {
+          throw new Error('network blip');
+        }
+      }
+      const { service, wsClient } = buildPipelineFixture(
+        {},
+        { rest: new AlwaysFailingKeepaliveRestClient() },
+      );
+
+      await service.onModuleInit();
+
+      const heartbeatStepMs = Math.floor(
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHeartbeatMaxAgeMs / 2,
+      );
+      const totalMs = DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveMaxAgeMs + heartbeatStepMs;
+      let elapsed = 0;
+      while (elapsed < totalMs) {
+        await jest.advanceTimersByTimeAsync(heartbeatStepMs);
+        elapsed += heartbeatStepMs;
+        wsClient.emit('heartbeat', { at: Date.now() });
+      }
+
+      expect(service.getHealth('user-1', 'live')).toEqual({
+        state: 'DEGRADED',
+        reason: 'KEEPALIVE_STALE',
+      });
+
+      await service.onApplicationShutdown();
+      jest.useRealTimers();
+    });
+
+    it('returns to HEALTHY automatically after a fresh heartbeat, with no manual call', async () => {
+      jest.useFakeTimers();
+      const { service, wsClient } = buildPipelineFixture();
+
+      await service.onModuleInit();
+      await jest.advanceTimersByTimeAsync(
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHeartbeatMaxAgeMs + 1,
+      );
+      expect(service.getHealth('user-1', 'live').state).toBe('DEGRADED');
+
+      wsClient.emit('heartbeat', { at: Date.now() });
+      expect(service.getHealth('user-1', 'live')).toEqual({ state: 'HEALTHY', reason: null });
+
+      await service.onApplicationShutdown();
+      jest.useRealTimers();
+    });
+
+    it('publishes a health record via coordination.setJson with none of the frozen-list-forbidden fields', async () => {
+      jest.useFakeTimers();
+      const { service, coordination } = buildPipelineFixture();
+
+      await service.onModuleInit();
+      await flushMicrotasks();
+
+      expect(coordination.setJson).toHaveBeenCalled();
+      const [key, record, ttl] = (coordination.setJson as jest.Mock).mock.calls[0];
+      expect(key).toBe(userStreamHealthKey('user-1', 'live'));
+      expect(ttl).toBe(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHealthTtlMs);
+      expect(Object.keys(record as object).sort()).toEqual(
+        [
+          'connectedAt',
+          'credentialKey',
+          'lastEventAtMs',
+          'lastHeartbeatAtMs',
+          'lastKeepaliveAtMs',
+          'ownerId',
+          'publishedAt',
+        ].sort(),
+      );
+
+      await service.onApplicationShutdown();
+      jest.useRealTimers();
     });
   });
 });

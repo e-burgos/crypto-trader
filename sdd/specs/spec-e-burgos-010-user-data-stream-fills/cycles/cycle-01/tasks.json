@@ -380,8 +380,21 @@
       "depends_on": [
         "TASK-012"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-user-data-stream.testnet.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 134714,
+        "tokens_out": 23773,
+        "tokens_total": 158487,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     }
   ]
 }

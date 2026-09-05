@@ -25,8 +25,21 @@
       "estimation_hours": 3,
       "story_points": 3,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 68000,
+        "tokens_out": 12000,
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-002",
@@ -51,8 +64,21 @@
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream-flag.ts",
+        "apps/api/src/reactive/user-data-stream-flag.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 30000,
+        "tokens_out": 5000,
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-004",
@@ -64,8 +90,21 @@
       "estimation_hours": 1,
       "story_points": 1,
       "depends_on": [],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/reactive-runtime-thresholds.ts",
+        "apps/api/src/reactive/reactive-runtime-thresholds.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 34000,
+        "tokens_out": 6000,
+        "approx": true,
+        "source": "declared-estimate",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-005",

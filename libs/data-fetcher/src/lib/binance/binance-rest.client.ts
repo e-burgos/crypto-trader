@@ -38,6 +38,9 @@ const ENDPOINT_WEIGHTS: Array<{
   { prefix: '/api/v3/order', method: 'GET', weight: 4 },
   { prefix: '/api/v3/order', method: 'POST', weight: 1 },
   { prefix: '/api/v3/order', method: 'DELETE', weight: 1 },
+  { prefix: '/api/v3/userDataStream', method: 'POST', weight: 2 },
+  { prefix: '/api/v3/userDataStream', method: 'PUT', weight: 2 },
+  { prefix: '/api/v3/userDataStream', method: 'DELETE', weight: 2 },
 ];
 
 function getEndpointWeight(url: string, method: string): number {
@@ -1210,6 +1213,34 @@ export class BinanceRestClient {
       clientOrderId: o.clientOrderId,
       orderListId: o.orderListId > 0 ? String(o.orderListId) : null,
     }));
+  }
+
+  async createListenKey(): Promise<string> {
+    const { data } = await this.keyedRequest<{ listenKey: string }>(
+      '/api/v3/userDataStream',
+      'POST',
+    );
+    return data.listenKey;
+  }
+
+  async keepAliveListenKey(listenKey: string): Promise<void> {
+    await this.keyedRequest('/api/v3/userDataStream', 'PUT', { listenKey });
+  }
+
+  async closeListenKey(listenKey: string): Promise<void> {
+    await this.keyedRequest('/api/v3/userDataStream', 'DELETE', { listenKey });
+  }
+
+  private async keyedRequest<T>(
+    path: string,
+    method: 'POST' | 'PUT' | 'DELETE',
+    params: Record<string, string> = {},
+  ): Promise<{ data: T }> {
+    if (!this.apiKey) {
+      throw new Error('API key is required for user data stream requests');
+    }
+
+    return this.client.request<T>({ method, url: path, params });
   }
 
   /**

@@ -20,6 +20,22 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
       entryFillProbeDebounceMs: 15_000,
       coordinationCommandTimeoutMs: 2_000,
       coordinationBootstrapTimeoutMs: 5_000,
+      userStreamOwnerLeaseTtlMs: 30_000,
+      userStreamOwnerRenewIntervalMs: 10_000,
+      userStreamSweepIntervalMs: 10_000,
+      userStreamSubscriptionRefreshIntervalMs: 30_000,
+      userStreamKeyExpiryMs: 3_600_000,
+      userStreamKeepaliveIntervalMs: 900_000,
+      userStreamKeepaliveGraceMs: 600_000,
+      userStreamHeartbeatMaxAgeMs: 240_000,
+      userStreamKeepaliveMaxAgeMs: 2_400_000,
+      userStreamHealthPublishIntervalMs: 5_000,
+      userStreamHealthTtlMs: 25_000,
+      userStreamReconnectBaseDelayMs: 1_000,
+      userStreamReconnectMaxDelayMs: 30_000,
+      userStreamReconnectAttemptsBeforeRenegotiate: 3,
+      userStreamSeenEventTtlMs: 600_000,
+      userStreamSeenEventCacheSize: 500,
     });
   });
 
@@ -48,6 +64,43 @@ describe('DEFAULT_REACTIVE_RUNTIME_THRESHOLDS', () => {
     expect(
       DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.coordinationBootstrapTimeoutMs,
     ).toBeLessThanOrEqual(10_000);
+  });
+
+  it('renegotiates the listenKey before its 60-minute expiry, even after the last keepalive attempt lands right at the grace window', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveIntervalMs +
+        DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveGraceMs,
+    ).toBeLessThan(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeyExpiryMs);
+  });
+
+  it('declares the keepalive channel stale strictly before the listenKey itself would expire', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveMaxAgeMs,
+    ).toBeLessThan(DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeyExpiryMs);
+  });
+
+  it('gives the keepalive timer room for multiple ticks before its own staleness threshold trips', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveIntervalMs,
+    ).toBeLessThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamKeepaliveMaxAgeMs,
+    );
+  });
+
+  it('lets the user stream owner renew its lease well before that lease would lapse', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamOwnerRenewIntervalMs,
+    ).toBeLessThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamOwnerLeaseTtlMs,
+    );
+  });
+
+  it('sizes the user stream health record TTL to outlive its own publish cadence', () => {
+    expect(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHealthTtlMs,
+    ).toBeGreaterThan(
+      DEFAULT_REACTIVE_RUNTIME_THRESHOLDS.userStreamHealthPublishIntervalMs,
+    );
   });
 
   it('keeps every threshold a positive, finite number', () => {

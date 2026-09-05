@@ -16,6 +16,22 @@ export interface ReactiveRuntimeThresholds {
   entryFillProbeDebounceMs: number;
   coordinationCommandTimeoutMs: number;
   coordinationBootstrapTimeoutMs: number;
+  userStreamOwnerLeaseTtlMs: number;
+  userStreamOwnerRenewIntervalMs: number;
+  userStreamSweepIntervalMs: number;
+  userStreamSubscriptionRefreshIntervalMs: number;
+  userStreamKeyExpiryMs: number;
+  userStreamKeepaliveIntervalMs: number;
+  userStreamKeepaliveGraceMs: number;
+  userStreamHeartbeatMaxAgeMs: number;
+  userStreamKeepaliveMaxAgeMs: number;
+  userStreamHealthPublishIntervalMs: number;
+  userStreamHealthTtlMs: number;
+  userStreamReconnectBaseDelayMs: number;
+  userStreamReconnectMaxDelayMs: number;
+  userStreamReconnectAttemptsBeforeRenegotiate: number;
+  userStreamSeenEventTtlMs: number;
+  userStreamSeenEventCacheSize: number;
 }
 
 export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
@@ -36,4 +52,20 @@ export const DEFAULT_REACTIVE_RUNTIME_THRESHOLDS: ReactiveRuntimeThresholds = {
   entryFillProbeDebounceMs: 15_000,
   coordinationCommandTimeoutMs: 2_000,
   coordinationBootstrapTimeoutMs: 5_000,
+  userStreamOwnerLeaseTtlMs: 30_000,
+  userStreamOwnerRenewIntervalMs: 10_000,
+  userStreamSweepIntervalMs: 10_000,
+  userStreamSubscriptionRefreshIntervalMs: 30_000,
+  userStreamKeyExpiryMs: 3_600_000,
+  userStreamKeepaliveIntervalMs: 900_000,
+  userStreamKeepaliveGraceMs: 600_000,
+  userStreamHeartbeatMaxAgeMs: 240_000,
+  userStreamKeepaliveMaxAgeMs: 2_400_000,
+  userStreamHealthPublishIntervalMs: 5_000,
+  userStreamHealthTtlMs: 25_000,
+  userStreamReconnectBaseDelayMs: 1_000,
+  userStreamReconnectMaxDelayMs: 30_000,
+  userStreamReconnectAttemptsBeforeRenegotiate: 3,
+  userStreamSeenEventTtlMs: 600_000,
+  userStreamSeenEventCacheSize: 500,
 };

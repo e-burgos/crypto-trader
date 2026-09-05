@@ -146,7 +146,7 @@
             "libs/shared",
             "libs/analysis"
           ],
-          "status": "in-progress",
+          "status": "completed",
           "tasks_total": 13,
           "tasks_done": 13
         }

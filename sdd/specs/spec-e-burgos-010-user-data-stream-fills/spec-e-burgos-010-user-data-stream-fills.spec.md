@@ -88,6 +88,34 @@ velocidad — y esa idempotencia es el verdadero entregable de esta spec.
    se entrega en `false`: con el default, el comportamiento observable es idéntico al actual y el
    detector sigue siendo la sonda.
 
+### Cycle-02 — Migración del transporte a la WebSocket API (`session.logon` + Ed25519)
+
+Cycle-01 quedó **inerte**: Binance retiró `POST /api/v3/userDataStream` (410 Gone en TESTNET y en
+producción, ver DEC-001). El objetivo de la spec no cambia; cambia el riel por el que viaja.
+
+1. **Reemplazo del transporte, no del diseño.** Se sustituye únicamente el par
+   `listenKey REST` + `wss://.../ws/<listenKey>` por la **WebSocket API** de Binance
+   (`wss://ws-api.binance.com/ws-api/v3`, TESTNET `wss://ws-api.testnet.binance.vision/ws-api/v3`):
+   `session.logon` autenticado con una clave **Ed25519**, seguido de `userDataStream.subscribe`.
+   El payload de `executionReport` es el mismo, así que el mapper `toEntryFillStatus` no cambia.
+2. **Se reutiliza todo lo que es independiente del transporte**, ya construido y verde en cycle-01:
+   lease de credencial sobre `ReactiveCoordinationPort`, máquina de estados del ciclo de vida,
+   correlación con `entry_orders` (incluido el respaldo por sufijo `-l` / `-s` de la OCO),
+   deduplicación de reentregas, publicación de salud y staleness, interruptor apagado por default y
+   wiring del composition root.
+3. **Ciclo de vida propio del nuevo transporte.** La sesión de `session.logon` reemplaza al
+   keepalive de 60 minutos del `listenKey`: renovación/relogon antes del vencimiento de sesión,
+   `session.logout` o cierre limpio en el shutdown, y re-`logon` + re-`subscribe` tras cualquier
+   reconexión del socket.
+4. **Credencial Ed25519 nueva, provista por el dev.** El diseño no puede asumir que la clave ya
+   existe: las variables de entorno se declaran explícitamente en `architect.md`, el arranque con la
+   clave ausente deja la capa apagada sin romper nada, y la corrida contra TESTNET es opt-in local.
+5. **Follow-ups de cycle-01 que sobreviven al cambio de transporte** entran como tasks de este
+   ciclo: liberación del lease en el camino de renegociación fallida, listener de `'error'` sobre el
+   cliente WS, backoff en los reintentos, marcado de identidad vista sólo tras el settle, alineación
+   de `isUserDataStreamFillsEnabled()` con D-08, purga de cachés y el test de comportamiento de
+   HU-05 CA-2.
+
 ### Ciclos posteriores (no comprometidos en esta spec)
 
 - Consumir del mismo stream los eventos de las órdenes de **protección** (`prot-`) y de las ventas,
@@ -142,3 +170,44 @@ velocidad — y esa idempotencia es el verdadero entregable de esta spec.
 | CA-006 | Con el stream de user data caído o stale, el estado degradado es observable y la sonda por tick sigue detectando fills: ningún fill queda sin reconciliar por la caída del stream. El silencio nunca se reporta como salud. |
 | CA-007 | Ningún log, respuesta de API o payload de WebSocket contiene el `listenKey` ni una clave de API. |
 | CA-008 | La suite de `apps/api`, `libs/data-fetcher` y `libs/shared` pasa sin acceso a red; la verificación contra Binance TESTNET queda registrada como evidencia del ciclo, ejecutada localmente y nunca contra LIVE. |
+
+> **Reinterpretación vigente desde cycle-02 (DEC-001).** Donde CA-001, CA-005 y CA-007 dicen
+> `listenKey`, léase **la sesión autenticada de la WebSocket API** (`session.logon` + `userDataStream.subscribe`)
+> y **la clave privada Ed25519**: el criterio es el mismo — no abrir sesión ni pedir credencial con el
+> interruptor apagado, renovar la sesión antes de que venza y cerrarla en el shutdown, y no filtrar
+> jamás el material sensible. El resto de los criterios no cambia porque no dependen del transporte.
+
+## 7. Decisiones (DEC)
+
+### DEC-001 — El transporte del user data stream migra a la WebSocket API (2026-09-04)
+
+**Contexto.** `cycle-01` implementó la detección de fills sobre el ciclo de vida REST del
+`listenKey` (`POST/PUT/DELETE /api/v3/userDataStream`) más el socket single-stream
+`wss://.../ws/<listenKey>`. Al ejercitarlo contra el exchange, ese endpoint respondió **`410 Gone`
+desde nginx** — no desde la capa de aplicación de Binance — tanto en `testnet.binance.vision` como
+en `api.binance.com`, mientras `GET /api/v3/ping` seguía en `200`. Se comprobó dos veces y sin
+credenciales, así que no es firma, ni key, ni IP: el endpoint está **retirado**.
+
+**Evidencia.** `cycles/cycle-01/artifacts/testnet-verification-2026-09-04.md` y el issue bloqueante
+#1 de `cycles/cycle-01/cycle.json`.
+
+**Consecuencia.** `cycle-01` entrega 13/13 tasks en `done` con la suite verde (982 tests de `apps/api`)
+pero su `reviewer_report.approved` queda en `false` y HU-07 CA-2/CA-3 en `FAIL`: el mecanismo está
+construido y verificado contra dobles, e **inerte** contra la Binance de hoy. No hay regresión ni
+cambio observable en producción porque el interruptor se entrega apagado.
+
+**Decisión (del dev, 2026-09-04).** No revertir ni parquear: **migrar el transporte** en `cycle-02` a
+la WebSocket API de Binance — `wss://ws-api.binance.com/ws-api/v3` (TESTNET
+`wss://ws-api.testnet.binance.vision/ws-api/v3`), `session.logon` autenticado con una clave
+**Ed25519** que el dev crea en su cuenta de TESTNET, y luego `userDataStream.subscribe`. Se conserva
+todo lo que no depende del transporte (lease, máquina de estados, correlación, deduplicación, salud,
+interruptor, wiring); se reemplaza únicamente el helper REST del `listenKey` y
+`BinanceUserDataStreamClient`.
+
+**Verificación previa del transporte (2026-09-04, sin credenciales).** Socket abierto contra
+`wss://ws-api.testnet.binance.vision/ws-api/v3`: `ping` → `status 200`; `time` → `status 200`
+(`serverTime`); `userDataStream.subscribe` sin sesión → `status 400`, `code -1193`
+(_"WebSocket session not authenticated. Recommendation: use `session.logon`"_); `session.logon` sin
+parámetros → `status 400`, `code -1102` (_"Mandatory parameter 'apiKey' was not sent"_). El
+transporte responde y expone exactamente los dos métodos que el diseño necesita. Registrado también
+en `cycles/cycle-02/brief.yaml`.

@@ -571,11 +571,22 @@
       "depends_on": [
         "TASK-019"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-rest.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-rest.client.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 43670,
+        "tokens_out": 7706,
+        "tokens_total": 51376,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-021",
@@ -589,12 +600,23 @@
         "TASK-002",
         "TASK-019"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts",
         "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.spec.ts",
         "libs/data-fetcher/src/lib/binance/binance-user-data-stream.testnet.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 43668,
+        "tokens_out": 7706,
+        "tokens_total": 51374,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-022",
@@ -609,10 +631,21 @@
         "TASK-020",
         "TASK-021"
       ],
-      "status": "pending",
+      "status": "done",
       "files": [
         "libs/data-fetcher/src/lib/binance/index.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 43668,
+        "tokens_out": 7706,
+        "tokens_total": 51374,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     },
     {
       "id": "TASK-023",
@@ -709,10 +742,21 @@
         "TASK-021",
         "TASK-022"
       ],
-      "status": "pending",
+      "status": "in-progress",
       "files": [
         "libs/data-fetcher/src/lib/binance/binance-ws-api.testnet.spec.ts"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 159507,
+        "tokens_out": 28148,
+        "tokens_total": 187655,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05"
+      }
     }
   ]
 }

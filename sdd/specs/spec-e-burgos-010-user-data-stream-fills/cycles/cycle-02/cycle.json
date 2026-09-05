@@ -27,17 +27,19 @@
     "architect": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/architect.md",
     "tasks": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/tasks.json"
   },
-  "artifacts": [],
+  "artifacts": [
+    "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/artifacts/testnet-verification-2026-09-05.md"
+  ],
   "metrics": {
     "tasks_total": 26,
-    "tasks_completed": 22,
+    "tasks_completed": 25,
     "story_points": 66,
     "files_created": [],
     "files_modified": [],
     "files_deleted": [],
     "usage": {
-      "tokens_in": 2817458,
-      "tokens_out": 497196,
+      "tokens_in": 3107970,
+      "tokens_out": 548463,
       "by_agent": [
         {
           "agent": "functional",
@@ -212,6 +214,30 @@
           "tokens_in": 122352,
           "tokens_out": 21591,
           "tokens_total": 143943,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-7 TASK-020/021/022 retire the listenKey transport",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 131005,
+          "tokens_out": 23119,
+          "tokens_total": 154124,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-05"
+        },
+        {
+          "agent": "implementor-back",
+          "label": "wave-8 TASK-026 TESTNET harness (credential-free half run for real; authenticated half blocked)",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 159507,
+          "tokens_out": 28148,
+          "tokens_total": 187655,
           "approx": false,
           "source": "agent-usage-notification",
           "recorded_at": "2026-09-05"

@@ -16,22 +16,6 @@ export type {
 export { BinanceWsClient } from './binance-ws.client';
 export type { BinanceWsConfig, TickerUpdate, KlineUpdate } from './binance-ws.client';
 
-export {
-  BinanceUserDataStreamClient,
-  BINANCE_USER_STREAM_WS_URL,
-  BINANCE_TESTNET_USER_STREAM_WS_URL,
-} from './binance-user-data-stream.client';
-export type {
-  BinanceUserDataStreamConfig,
-  ExecutionReportEvent,
-  StreamConnectedEvent,
-  StreamDisconnectedEvent,
-  StreamReconnectingEvent,
-  StreamHeartbeatEvent,
-  StreamExpiredEvent,
-  StreamExpiredReason,
-} from './binance-user-data-stream.client';
-
 export { BinanceRateLimiter } from './binance-rate-limiter';
 
 export {
@@ -58,3 +42,7 @@ export {
 export type { Ed25519Signer } from './ed25519-signer';
 
 export { parseExecutionReport, extractUserDataEvent } from './execution-report';
+export type {
+  ExecutionReportEvent,
+  RawUserDataStreamMessage,
+} from './execution-report';

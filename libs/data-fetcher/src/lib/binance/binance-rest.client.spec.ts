@@ -201,9 +201,6 @@ describe('BinanceRestClient', () => {
       ['/api/v3/order', 'GET', 4],
       ['/api/v3/order', 'POST', 1],
       ['/api/v3/order', 'DELETE', 1],
-      ['/api/v3/userDataStream', 'POST', 2],
-      ['/api/v3/userDataStream', 'PUT', 2],
-      ['/api/v3/userDataStream', 'DELETE', 2],
     ];
 
     for (const [url, method, expected] of cases) {
@@ -211,29 +208,6 @@ describe('BinanceRestClient', () => {
         await expect(weightFor(url, method)).resolves.toBe(expected);
       });
     }
-  });
-
-  describe('listenKey lifecycle — no api key configured', () => {
-    it('rejects createListenKey without touching the transport', async () => {
-      await expect(client.createListenKey()).rejects.toThrow(
-        'API key is required for user data stream requests',
-      );
-      expect(getMockClient().request).not.toHaveBeenCalled();
-    });
-
-    it('rejects keepAliveListenKey without touching the transport', async () => {
-      await expect(
-        client.keepAliveListenKey('some-listen-key'),
-      ).rejects.toThrow('API key is required for user data stream requests');
-      expect(getMockClient().request).not.toHaveBeenCalled();
-    });
-
-    it('rejects closeListenKey without touching the transport', async () => {
-      await expect(client.closeListenKey('some-listen-key')).rejects.toThrow(
-        'API key is required for user data stream requests',
-      );
-      expect(getMockClient().request).not.toHaveBeenCalled();
-    });
   });
 });
 
@@ -1830,83 +1804,6 @@ describe('BinanceRestClient — native orders (cycle-02)', () => {
     });
   });
 
-  describe('listenKey lifecycle', () => {
-    function callParams() {
-      return getMockClient().request.mock.calls[0][0];
-    }
-
-    it('creates a listenKey with a keyed, unsigned POST', async () => {
-      getMockClient().request.mockResolvedValueOnce({
-        data: { listenKey: 'a-fresh-listen-key' },
-      });
-
-      const listenKey = await client.createListenKey();
-
-      expect(listenKey).toBe('a-fresh-listen-key');
-      const call = callParams();
-      expect(call.method).toBe('POST');
-      expect(call.url).toBe('/api/v3/userDataStream');
-      expect(call.params).toEqual({});
-    });
-
-    it('renews a listenKey with a keyed, unsigned PUT', async () => {
-      getMockClient().request.mockResolvedValueOnce({ data: {} });
-
-      await client.keepAliveListenKey('existing-listen-key');
-
-      const call = callParams();
-      expect(call.method).toBe('PUT');
-      expect(call.url).toBe('/api/v3/userDataStream');
-      expect(call.params).toEqual({ listenKey: 'existing-listen-key' });
-      expect(call.params.timestamp).toBeUndefined();
-      expect(call.params.recvWindow).toBeUndefined();
-      expect(call.params.signature).toBeUndefined();
-    });
-
-    it('closes a listenKey with a keyed, unsigned DELETE', async () => {
-      getMockClient().request.mockResolvedValueOnce({ data: {} });
-
-      await client.closeListenKey('existing-listen-key');
-
-      const call = callParams();
-      expect(call.method).toBe('DELETE');
-      expect(call.url).toBe('/api/v3/userDataStream');
-      expect(call.params).toEqual({ listenKey: 'existing-listen-key' });
-      expect(call.params.timestamp).toBeUndefined();
-      expect(call.params.recvWindow).toBeUndefined();
-      expect(call.params.signature).toBeUndefined();
-    });
-
-    it('propagates an exchange rejection without leaking the listenKey or the api key', async () => {
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-      const warnSpy = vi
-        .spyOn(console, 'warn')
-        .mockImplementation(() => undefined);
-      const errorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => undefined);
-      const secretListenKey = 'super-secret-listen-key-value';
-      getMockClient().request.mockRejectedValueOnce({
-        response: { status: 400, data: { code: -1125, msg: 'rejected' } },
-      });
-
-      await expect(
-        client.keepAliveListenKey(secretListenKey),
-      ).rejects.toMatchObject({ response: { status: 400 } });
-
-      const allLoggedText = [...logSpy.mock.calls, ...warnSpy.mock.calls, ...errorSpy.mock.calls]
-        .flat()
-        .map((entry) => JSON.stringify(entry))
-        .join('\n');
-      expect(allLoggedText).not.toContain(secretListenKey);
-      expect(allLoggedText).not.toContain('test-secret');
-      expect(allLoggedText).not.toContain('test-key');
-
-      logSpy.mockRestore();
-      warnSpy.mockRestore();
-      errorSpy.mockRestore();
-    });
-  });
 });
 
 describe('Binance error code classification', () => {

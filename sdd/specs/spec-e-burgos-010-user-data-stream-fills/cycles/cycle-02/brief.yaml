@@ -1,0 +1,160 @@
+# sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/brief.yaml
+# Generado por: sdd-orchestrator
+# Al: iniciar el ciclo
+
+cycle: 2
+module: user-data-stream-fills
+phase: exchange-event-driven-fills
+date: 2026-09-04
+app_context: sdd/context/apps/api/context_prompt.md
+
+objective: |
+  Volver vivo el mecanismo que cycle-01 dejo inerte: reemplazar el transporte del user data
+  stream — hoy listenKey REST (POST/PUT/DELETE /api/v3/userDataStream, retirado por Binance con
+  410 Gone) mas el socket /ws/<listenKey> — por la WebSocket API de Binance (session.logon
+  autenticado con clave Ed25519 + userDataStream.subscribe), conservando intacto todo lo que no
+  depende del transporte. Al cerrar el ciclo, un executionReport real de TESTNET debe llegar al
+  mismo settleFill que ya existe, con el interruptor entregado apagado y sin un solo cambio en la
+  SPA, en EP-017 ni en los seis eventos entry-order:*.
+
+# ---------------------------------------------------------------------------
+# Verificacion previa del transporte (PASO 2 del orquestador) — OBLIGATORIA
+# ---------------------------------------------------------------------------
+transport_probe:
+  date: 2026-09-04
+  method: socket ws abierto sin credenciales desde node (ws@8.20.0), cuatro mensajes JSON
+  url: wss://ws-api.testnet.binance.vision/ws-api/v3
+  results:
+    - request: '{"id":"probe-ping","method":"ping","params":{}}'
+      response: 'status 200, result {}, rateLimits REQUEST_WEIGHT limit 6000'
+    - request: '{"id":"probe-time","method":"time","params":{}}'
+      response: 'status 200, result { serverTime: 1788574991966 }'
+    - request: '{"id":"probe-subscribe","method":"userDataStream.subscribe","params":{}}'
+      response: 'status 400, code -1193, msg "WebSocket session not authenticated. Recommendation: use session.logon."'
+    - request: '{"id":"probe-logon-noparams","method":"session.logon","params":{}}'
+      response: 'status 400, code -1102, msg "Mandatory parameter apiKey was not sent, was empty/null, or malformed."'
+  verdict: |
+    TRANSPORTE DISPONIBLE. El socket abre, responde JSON y expone exactamente los dos metodos que
+    el diseno necesita: userDataStream.subscribe existe y solo exige sesion autenticada (-1193), y
+    session.logon existe y solo exige apiKey (-1102). Ninguna de las dos respuestas es un endpoint
+    muerto — contrastan de frente con el 410 Gone de nginx que mato al listenKey. El ciclo puede
+    disenarse. No se probo LIVE ni se enviaron credenciales.
+  live_url_for_reference: wss://ws-api.binance.com/ws-api/v3
+  never_probed: LIVE — restriccion §5 de la spec
+
+scope:
+  - Cliente de transporte nuevo en libs/data-fetcher sobre la WebSocket API — session.logon firmado con Ed25519, userDataStream.subscribe/unsubscribe, correlacion request/response por id, heartbeat ping/pong, reconexion con backoff y re-logon + re-subscribe automatico tras cada reconexion
+  - Firma Ed25519 del payload de session.logon (apiKey + timestamp + signature) con node:crypto, sin dependencias nuevas, y clave privada PEM leida de entorno o de archivo
+  - Resolucion de la credencial Ed25519 por (userId, env) detras de un puerto, con una implementacion respaldada por variables de entorno; una credencial sin contraparte Ed25519 simplemente no abre stream y sigue con la sonda, sin romper el arranque
+  - Adaptacion de UserDataStreamService al nuevo transporte conservando lease por credencial, maquina de estados, correlacion con entry_orders, deduplicacion, salud/staleness, interruptor y composition root
+  - Retiro de los helpers REST del listenKey (createListenKey/keepAliveListenKey/closeListenKey) y del cliente WS single-stream de cycle-01, con sus tests y el harness TESTNET que ya no aplican
+  - Follow-ups de cycle-01 que sobreviven al cambio de transporte — ver follow_ups_absorbed
+  - Harness TESTNET opt-in reescrito contra la WebSocket API, gateado por variable de entorno y por la guarda de aborto si la URL no es la de testnet
+
+out_of_scope:
+  - Cambios en la SPA, en EP-017 y en los seis eventos entry-order:* — el requisito es que NO cambien
+  - Endpoints REST nuevos, tablas nuevas y componentes nuevos
+  - Persistir la clave Ed25519 por usuario en la base (hoy la credencial de trading guarda apiKey/apiSecret HMAC): la clave del ciclo viene de entorno y es del dueno de la cuenta de TESTNET. La credencial Ed25519 por usuario, con su UI y su cifrado, es ciclo aparte
+  - Reconciliacion por stream de las ordenes de proteccion (prot-) y de las ventas
+  - Cualquier contacto con Binance LIVE — claves, bots, ordenes o sockets
+  - La deuda preexistente de settleFill sin transaccion (architect cycle-01 §14.2): se registra, no se arregla aca
+
+dependencies_required:
+  - spec-e-burgos-010 cycle-01 — completed (approved false, DEC-001 registrada en la spec)
+  - spec-e-burgos-005 cycle-02 — entry_orders, entryOrderMode y el camino settleFill
+  - Clave Ed25519 creada por el dev en su cuenta de Binance TESTNET y cargada en .env — bloquea SOLO la task de verificacion TESTNET, no el diseno ni la implementacion
+
+follow_ups_absorbed:
+  - issue-2: renegotiate() debe liberar el lease (o reintentar con backoff) cuando falla la creacion de la sesion, como ya hace negotiateAndConnect(). Hoy user-data-stream.service.ts:731-737 deja el credito colgado en ownedCredentials para siempre y bloquea a las demas replicas. Ningun test cubre el camino
+  - issue-3: backoff exponencial en el reintento de negociacion desde el sweep, en vez de un intento cada 10 s por credencial con un warn por intento
+  - issue-4: registrar listener de 'error' sobre el cliente WS en UserDataStreamService — y en MarketStreamService sobre BinanceWsClient, donde el mismo agujero es preexistente. Un emit('error') sin listener voltea el proceso
+  - issue-5: test de comportamiento de HU-05 CA-2 (stream en DEGRADED + tick que cruza el nivel produce settleFill)
+  - issue-6: marcar la identidad del evento como vista solo despues de que el settle resuelva, o registrar el fallo para permitir la reentrega
+  - issue-7: alinear isUserDataStreamFillsEnabled() con D-08 — hoy acepta 'true' y '1', el contrato dice === 'true'
+  - issue-8: purgar configCache, credentialsCache y executorCache (hoy crecen sin cota) y quitar los any de ConfigCacheEntry.config / resolveTradingConfig()
+
+agent_contexts:
+  functional:
+    goal: |
+      Escribir las historias de usuario y criterios de aceptacion de cycle-02 partiendo de las de
+      cycle-01 (functional.md del ciclo anterior es el insumo principal): las HU no cambian de
+      intencion, cambian de transporte. Donde HU-04 hablaba del ciclo de vida del listenKey, ahora
+      habla del ciclo de vida de la sesion autenticada (logon, resubscripcion tras reconexion,
+      cierre en el shutdown). Sumar las HU de los follow_ups absorbidos y una HU explicita para el
+      caso de la credencial Ed25519 ausente. Cada criterio tiene que ser ejecutable contra dobles
+      salvo el de la corrida TESTNET.
+    business_context: |
+      El valor del ciclo es que el mecanismo deje de estar inerte: hoy el sistema detecta los fills
+      de entradas descansando por una sonda que corre por tick de mercado, y entre el fill real y
+      la sonda hay una ventana en la que la posicion existe en Binance y no existe para el sistema,
+      sin proteccion nativa. Cycle-01 construyo el detector por evento y Binance retiro el endpoint
+      del que colgaba. Nada de lo observable cambia con el interruptor apagado.
+    relevant_spec_sections:
+      - '§2 Objetivo'
+      - '§3 Cycle-02 — Migracion del transporte a la WebSocket API'
+      - '§5 Restricciones de diseno'
+      - '§6 Criterios de aceptacion + la reinterpretacion de CA-001/CA-005/CA-007 vigente desde cycle-02'
+      - '§7 DEC-001'
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/functional.md
+
+  architect:
+    goal: |
+      Definir el contrato tecnico del transporte nuevo y del reemplazo dentro de UserDataStreamService.
+    must_decide_early_and_state_plainly: |
+      LOS NOMBRES EXACTOS DE LAS VARIABLES DE ENTORNO de la credencial Ed25519 (TESTNET y LIVE),
+      en un bloque propio y literal de architect.md, porque el dev tiene que crear la clave en su
+      cuenta de Binance TESTNET y cargarla ANTES de que la task de verificacion pueda correr. El
+      diseno NO puede asumir que la clave existe: con las variables ausentes el arranque es normal,
+      no se abre stream, no se loguea un error por segundo y el detector sigue siendo la sonda.
+      Convencion vigente del repo a respetar: BINANCE_API_TESTNET_KEY / BINANCE_API_TESTNET_SECRET
+      y BINANCE_API_KEY / BINANCE_API_SECRET. Documentar ademas si la clave privada se admite como
+      ruta a un PEM, como PEM en linea, o ambas, y como se pasa un PEM multilinea por .env.
+    open_questions_to_resolve: |
+      1. Envoltura del evento empujado tras userDataStream.subscribe: disenar el parser para
+         aceptar tanto { event: { e: 'executionReport', ... } } como el payload desnudo
+         { e: 'executionReport', ... }, y dejarlo verificado con dobles en ambos formatos — la
+         forma exacta no se puede confirmar sin credenciales y no puede bloquear el ciclo.
+      2. Vencimiento de la sesion: la WebSocket API no tiene el keepalive de 60 min del listenKey,
+         pero la conexion tiene limite propio. Definir el invariante temporal equivalente al de
+         cycle-01 (userStreamKeepaliveIntervalMs + graceMs < keyExpiryMs) sobre el relogon, y
+         mantener re-logon + re-subscribe obligatorio despues de CADA reconexion.
+      3. Ambito de la credencial Ed25519: hoy el lease es por (userId, env) y las credenciales de
+         trading salen cifradas de la base. Definir el puerto de resolucion y la regla de matcheo
+         de la implementacion por entorno, de modo que una credencial sin Ed25519 quede sin stream
+         (y con la sonda) en vez de romper.
+      4. Que se borra de cycle-01 y que se conserva, archivo por archivo.
+    existing_tables: []
+    existing_endpoints: []
+    inputs:
+      - sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/architect.md
+      - sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-01/cycle.json (issues_found y follow_ups)
+      - apps/api/src/reactive/user-data-stream.service.ts
+      - libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/architect.md
+
+  planner:
+    goal: |
+      Convertir el contrato del arquitecto en tasks ordenadas por carril de archivos, con dueno
+      unico por archivo para poder correr oleadas en paralelo. La task de verificacion TESTNET va
+      ultima y se declara explicitamente bloqueable por la ausencia de la clave Ed25519.
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/planner.md
+
+  implementor_back:
+    goal: Implementar el transporte nuevo y adaptar el consumidor, una task por vez
+    app: 'libs/data-fetcher, libs/shared, libs/analysis, apps/api'
+    app_context: sdd/context/apps/api/context_prompt.md
+    note: 'No hay carril frontend en este ciclo — la SPA no se toca por requisito'
+
+  reviewer:
+    goal: Validar todo el output del ciclo y ejecutar los gates de cierre
+    output_file: sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/cycle.json
+
+constraints:
+  - Nunca LIVE — ni claves, ni bots, ni ordenes, ni sockets contra ws-api.binance.com
+  - El interruptor USER_DATA_STREAM_FILLS_ENABLED se entrega apagado
+  - Los tests unitarios y de integracion corren sin red (CI recibe 451 de Binance): transporte por doble
+  - libs/trading-engine nunca depende de libs/data-fetcher; el vocabulario comun vive en libs/shared
+  - La lib es transporte: no toca Prisma, no decide reconciliacion
+  - Sin comentarios narrativos en el codigo (regla ✍️ del dual-harness)
+  - Prohibido testear sobre el texto fuente de un rango entre dos simbolos
+  - Ni el material de la clave privada Ed25519, ni la firma, ni la apiKey pueden aparecer en logs, respuestas de API o payloads de WS hacia la SPA

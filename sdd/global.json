@@ -80,8 +80,8 @@
         "libs/shared",
         "libs/analysis"
       ],
-      "cycles_completed": 0,
-      "description": "Deteccion de fills de ordenes de entrada por el user data stream de Binance (listenKey + executionReport) en lugar de la sonda por tick, con reconciliacion idempotente, fallback a la sonda cuando el stream no esta sano y todo detras de un interruptor que nace apagado"
+      "cycles_completed": 1,
+      "description": "Deteccion de fills de ordenes de entrada por el user data stream de Binance en lugar de la sonda por tick, con reconciliacion idempotente, fallback a la sonda cuando el stream no esta sano y todo detras de un interruptor que nace apagado. cycle-01 (2026-09-04) construyo el mecanismo completo sobre el ciclo de vida REST del listenKey y cerro con approved false: Binance retiro POST /api/v3/userDataStream (410 Gone desde nginx en TESTNET y en produccion, con /api/v3/ping en 200), asi que el detector quedo implementado, verde contra dobles e INERTE contra el exchange, sin regresion porque el interruptor viaja apagado. cycle-02 migra el transporte a la WebSocket API (session.logon con clave Ed25519 + userDataStream.subscribe) conservando todo lo que no depende del transporte (DEC-001)."
     }
   ],
   "pending_modules": [],

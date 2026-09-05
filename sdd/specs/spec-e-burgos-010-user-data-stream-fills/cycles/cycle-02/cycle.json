@@ -1,0 +1,83 @@
+{
+  "$schema": "../../../../schemas/cycle.schema.json",
+  "cycle": 2,
+  "module": "user-data-stream-fills",
+  "spec": "spec-e-burgos-010-user-data-stream-fills",
+  "apps": [
+    "apps/api",
+    "libs/data-fetcher",
+    "libs/shared",
+    "libs/analysis"
+  ],
+  "phase": "exchange-event-driven-fills",
+  "objectives": [
+    "Reemplazar el transporte del user data stream: de listenKey REST (410 Gone, retirado por Binance) a la WebSocket API con session.logon firmado con Ed25519 + userDataStream.subscribe",
+    "Conservar intacto todo lo que no depende del transporte: lease por credencial, maquina de estados del ciclo de vida, correlacion con entry_orders, deduplicacion, salud y staleness, interruptor apagado y composition root",
+    "Resolver la credencial Ed25519 detras de un puerto con implementacion por entorno, de modo que su ausencia deje la capa apagada sin romper el arranque",
+    "Absorber los follow-ups de cycle-01 que sobreviven al cambio de transporte: liberacion del lease en la renegociacion fallida, listener de 'error', backoff, dedupe tras el settle, alineacion del flag con D-08, purga de caches y el test de HU-05 CA-2",
+    "Dejar evidencia de una corrida real contra Binance TESTNET, nunca LIVE, sin cambiar la SPA, EP-017 ni los seis eventos entry-order:*"
+  ],
+  "status": "in-progress",
+  "started_at": "2026-09-04",
+  "completed_at": null,
+  "documents": {
+    "brief": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/brief.yaml",
+    "functional": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/functional.md",
+    "planner": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/planner.md",
+    "architect": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/architect.md",
+    "tasks": "sdd/specs/spec-e-burgos-010-user-data-stream-fills/cycles/cycle-02/tasks.json"
+  },
+  "artifacts": [],
+  "metrics": {
+    "tasks_total": 26,
+    "tasks_completed": 0,
+    "story_points": 66,
+    "files_created": [],
+    "files_modified": [],
+    "files_deleted": [],
+    "usage": {
+      "tokens_in": 537834,
+      "tokens_out": 94911,
+      "by_agent": [
+        {
+          "agent": "functional",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 116013,
+          "tokens_out": 20473,
+          "tokens_total": 136486,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "architect",
+          "provider_model": "claude/opus",
+          "effort": "high",
+          "tokens_in": 215359,
+          "tokens_out": 38004,
+          "tokens_total": 253363,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        },
+        {
+          "agent": "planner",
+          "provider_model": "claude/sonnet",
+          "effort": "medium",
+          "tokens_in": 206462,
+          "tokens_out": 36434,
+          "tokens_total": 242896,
+          "approx": false,
+          "source": "agent-usage-notification",
+          "recorded_at": "2026-09-04"
+        }
+      ]
+    }
+  },
+  "tables_created": [],
+  "endpoints_implemented": [],
+  "components_created": [],
+  "issues_found": [],
+  "reviewer_report": null
+}

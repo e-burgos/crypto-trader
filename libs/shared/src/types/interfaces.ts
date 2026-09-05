@@ -16,6 +16,7 @@ import {
   Trend,
   VolumeSignal,
 } from './enums';
+import type { AssertNoKeyDrift, ExactKeys } from './trading-config-wire';
 
 // ── Candle / Market Data ─────────────────────────────────
 export interface Candle {
@@ -360,3 +361,24 @@ export interface StreamHealthRecord {
   lastHeartbeatAtMs: number;
   publishedAt: number;
 }
+
+export interface UserDataStreamHealthRecord {
+  credentialKey: string;
+  ownerId: string;
+  connectedAt: number;
+  lastHeartbeatAtMs: number;
+  lastKeepaliveAtMs: number;
+  lastEventAtMs: number | null;
+  publishedAt: number;
+}
+
+export const USER_DATA_STREAM_HEALTH_FIELDS = [
+  'credentialKey', 'ownerId', 'connectedAt', 'lastHeartbeatAtMs', 'lastKeepaliveAtMs',
+  'lastEventAtMs', 'publishedAt',
+] as const;
+
+export type UserDataStreamHealthField = (typeof USER_DATA_STREAM_HEALTH_FIELDS)[number];
+
+export type _UserDataStreamHealthFieldsAreExhaustive = AssertNoKeyDrift<
+  ExactKeys<UserDataStreamHealthRecord, Record<UserDataStreamHealthField, unknown>>
+>;

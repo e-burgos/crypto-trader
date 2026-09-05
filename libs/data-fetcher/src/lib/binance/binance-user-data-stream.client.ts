@@ -18,6 +18,7 @@ export interface BinanceUserDataStreamConfig {
   reconnectMaxDelayMs?: number;
   wsPingIntervalMs?: number;
   wsPongTimeoutMs?: number;
+  reconnectAttemptsBeforeExhaustion?: number;
 }
 
 export interface StreamConnectedEvent {
@@ -123,6 +124,7 @@ export class BinanceUserDataStreamClient extends EventEmitter {
   private readonly reconnectMaxDelayMs: number;
   private readonly wsPingIntervalMs: number;
   private readonly wsPongTimeoutMs: number;
+  private readonly reconnectAttemptsBeforeExhaustion?: number;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private pongTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
@@ -140,6 +142,7 @@ export class BinanceUserDataStreamClient extends EventEmitter {
     this.reconnectMaxDelayMs = config.reconnectMaxDelayMs ?? DEFAULT_RECONNECT_MAX_DELAY_MS;
     this.wsPingIntervalMs = config.wsPingIntervalMs ?? DEFAULT_WS_PING_INTERVAL_MS;
     this.wsPongTimeoutMs = config.wsPongTimeoutMs ?? DEFAULT_WS_PONG_TIMEOUT_MS;
+    this.reconnectAttemptsBeforeExhaustion = config.reconnectAttemptsBeforeExhaustion;
   }
 
   connect(listenKey: string): void {
@@ -203,6 +206,14 @@ export class BinanceUserDataStreamClient extends EventEmitter {
       this.stopHeartbeat();
       this.emit('disconnected', { at: Date.now(), code } satisfies StreamDisconnectedEvent);
       if (this.autoReconnect && !this.isClosing) {
+        if (this.reconnectAttemptsExhausted()) {
+          this.isClosing = true;
+          this.emit('stream-expired', {
+            at: Date.now(),
+            reason: 'RECONNECT_EXHAUSTED',
+          } satisfies StreamExpiredEvent);
+          return;
+        }
         this.scheduleReconnect();
       }
     });
@@ -224,6 +235,13 @@ export class BinanceUserDataStreamClient extends EventEmitter {
         reason: 'LISTEN_KEY_EXPIRED',
       } satisfies StreamExpiredEvent);
     }
+  }
+
+  private reconnectAttemptsExhausted(): boolean {
+    return (
+      this.reconnectAttemptsBeforeExhaustion !== undefined &&
+      this.reconnectAttempts >= this.reconnectAttemptsBeforeExhaustion
+    );
   }
 
   private scheduleReconnect(): void {

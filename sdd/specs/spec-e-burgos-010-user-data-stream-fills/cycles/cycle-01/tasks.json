@@ -132,8 +132,22 @@
       "depends_on": [
         "TASK-004"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 129878,
+        "tokens_out": 22920,
+        "tokens_total": 152798,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-006",
@@ -148,8 +162,24 @@
         "TASK-001",
         "TASK-005"
       ],
-      "status": "pending",
-      "files": []
+      "status": "done",
+      "files": [
+        "apps/api/src/reactive/user-data-stream.service.ts",
+        "apps/api/src/reactive/user-data-stream.service.spec.ts",
+        "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.ts",
+        "libs/data-fetcher/src/lib/binance/binance-user-data-stream.client.spec.ts"
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "agent": "implementor-back",
+        "tokens_in": 129878,
+        "tokens_out": 22920,
+        "tokens_total": 152798,
+        "approx": true,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-04"
+      }
     },
     {
       "id": "TASK-007",

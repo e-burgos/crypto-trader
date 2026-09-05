@@ -141,6 +141,52 @@ describe('BinanceUserDataStreamClient', () => {
 
       expect(onReconnecting).not.toHaveBeenCalled();
     });
+
+    it('emits stream-expired with RECONNECT_EXHAUSTED after reconnectAttemptsBeforeExhaustion consecutive failures, and stops reconnecting', () => {
+      client = new BinanceUserDataStreamClient({
+        reconnectBaseDelayMs: 100,
+        reconnectAttemptsBeforeExhaustion: 2,
+      });
+      const attempts: Array<{ attempt: number }> = [];
+      const onExpired = vi.fn();
+      client.on('reconnecting', (event) => attempts.push(event));
+      client.on('stream-expired', onExpired);
+
+      client.connect('lk-1');
+      currentWs(client).emit('close', 1006);
+      expect(attempts).toEqual([{ at: expect.any(Number), attempt: 0, delayMs: 100 }]);
+
+      vi.advanceTimersByTime(100);
+      currentWs(client).emit('close', 1006);
+      expect(attempts.map((a) => a.attempt)).toEqual([0, 1]);
+      expect(onExpired).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(200);
+      currentWs(client).emit('close', 1006);
+
+      expect(onExpired).toHaveBeenCalledWith({ at: expect.any(Number), reason: 'RECONNECT_EXHAUSTED' });
+      expect(attempts).toHaveLength(2);
+
+      vi.advanceTimersByTime(10_000);
+      expect(attempts).toHaveLength(2);
+    });
+
+    it('reconnects forever when reconnectAttemptsBeforeExhaustion is left unset (default behaviour)', () => {
+      client = new BinanceUserDataStreamClient({ reconnectBaseDelayMs: 100 });
+      const onExpired = vi.fn();
+      const attempts: number[] = [];
+      client.on('stream-expired', onExpired);
+      client.on('reconnecting', (event) => attempts.push(event.attempt));
+
+      client.connect('lk-1');
+      for (let i = 0; i < 5; i += 1) {
+        currentWs(client).emit('close', 1006);
+        vi.advanceTimersByTime(30_000);
+      }
+
+      expect(attempts).toEqual([0, 1, 2, 3, 4]);
+      expect(onExpired).not.toHaveBeenCalled();
+    });
   });
 
   describe('session invalidation vs generic disconnect', () => {

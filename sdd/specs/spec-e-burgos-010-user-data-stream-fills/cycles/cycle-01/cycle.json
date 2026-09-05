@@ -261,18 +261,18 @@
           "tokens_in": 1803513,
           "tokens_out": 318267,
           "approx": false,
-          "source": "declared-estimate"
+          "source": "agent-usage-notification"
         },
         "claude/opus": {
           "tokens_in": 763750,
           "tokens_out": 90662,
           "approx": true,
-          "source": "declared-estimate"
+          "source": "mixed"
         }
       },
       "duration_minutes": 230,
       "approx": true,
-      "source": "declared-estimate"
+      "source": "mixed"
     },
     "tasks_skipped": 0
   },

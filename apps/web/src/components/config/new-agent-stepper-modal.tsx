@@ -66,6 +66,7 @@ export function NewAgentStepperModal({
     draft: advancedDraft,
     setField: setAdvancedField,
     changedFields: advancedChangedFields,
+    isWithinRanges: isAdvancedWithinRanges,
   } = useAdvancedDraft(DEFAULT_ADVANCED_DRAFT);
 
   const totalSteps = STEPS.length;
@@ -82,6 +83,7 @@ export function NewAgentStepperModal({
   }
 
   function handleSubmit() {
+    if (!isAdvancedWithinRanges) return;
     const dto: CreateTradingConfigInput = {
       name: form.name || undefined,
       asset: form.asset,

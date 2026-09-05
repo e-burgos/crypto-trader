@@ -8,7 +8,7 @@
 | **Keyword**   | [IMPROVEMENT]                                                         |
 | **Fecha**     | 2026-09-05                                                            |
 | **Autor**     | e-burgos                                                              |
-| **Estado**    | in-progress                                                           |
+| **Estado**    | validated                                                             |
 | **Spec**      | spec-e-burgos-009-agent-advanced-config-ui (follow-up del reviewer, cycle-02) |
 
 ## Problema
@@ -21,7 +21,11 @@ Follow-up declarado por el reviewer de spec-009 cycle-02; asimetría de validaci
 
 ## Solución aplicada
 
-Pendiente.
+`handleSubmit` del stepper hace el mismo early-return silencioso que `handleSave` de la edición cuando
+`isWithinRanges` es falso, tomándolo del `useAdvancedDraft` que el stepper ya usaba. Sin texto nuevo ni
+locales: la edición tampoco muestra mensaje. Nota: los controles clampean todo valor numérico a su rango
+antes de llegar al draft, así que hoy el guard es defensivo; protege el submit si un control futuro deja
+pasar un valor fuera de rango. Fix puramente correctivo: sin cambios de contexto.
 
 ### Archivos modificados
 
@@ -30,13 +34,15 @@ Pendiente.
 
 ### Test de validación
 
-- **Referencia:** pendiente.
+- **Referencia:** `new-agent-stepper-modal.spec.tsx` → `blocks the create submit when an advanced field is out of range` y
+  `submits normally when an advanced numeric field is changed to an in-range value`. `pnpm nx test web -- new-agent-stepper-modal` 4/4;
+  `pnpm nx typecheck web` OK; lint sin warnings nuevos.
 
 ### Decisión del Reviewer
 
-> [A completar por sdd-reviewer al cerrar el ciclo]
+> Validado el 2026-09-05 en el main loop: tests reproducidos en verde y diff de dos líneas revisado.
 >
-> - [ ] `validated` — fix correcto, no requiere seguimiento
+> - [x] `validated` — fix correcto, no requiere seguimiento
 > - [ ] `absorbed` — debe formalizarse en próxima spec: SPEC-XXX
 
 ---

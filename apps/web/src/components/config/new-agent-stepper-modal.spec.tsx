@@ -1,9 +1,17 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { CreateTradingConfigInput } from '@crypto-trader/shared';
+import type {
+  CreateTradingConfigInput,
+  TradingConfigAdvancedField,
+} from '@crypto-trader/shared';
 import '../../lib/i18n';
 import { NewAgentStepperModal } from './new-agent-stepper-modal';
+import {
+  DEFAULT_ADVANCED_DRAFT,
+  useAdvancedDraft,
+  type UseAdvancedDraftResult,
+} from './advanced';
 
 vi.mock('../../lib/api', () => ({
   api: {
@@ -14,6 +22,16 @@ vi.mock('../../lib/api', () => ({
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
+
+const advancedDraftHookRef = vi.hoisted(() => ({
+  actual: undefined as unknown,
+}));
+
+vi.mock('./advanced', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./advanced')>();
+  advancedDraftHookRef.actual = actual.useAdvancedDraft;
+  return { ...actual, useAdvancedDraft: vi.fn(actual.useAdvancedDraft) };
+});
 
 import { api } from '../../lib/api';
 
@@ -68,6 +86,9 @@ describe('NewAgentStepperModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(api.post).mockResolvedValue({});
+    vi.mocked(useAdvancedDraft).mockImplementation(
+      advancedDraftHookRef.actual as typeof useAdvancedDraft,
+    );
   });
 
   it('emits the same POST body as before this cycle when the advanced step is never touched (CA-002)', async () => {
@@ -111,6 +132,62 @@ describe('NewAgentStepperModal', () => {
     expect(api.post).toHaveBeenCalledWith('/trading/config', {
       ...POST_BODY_BEFORE_CYCLE,
       nativeProtectionEnabled: true,
+    });
+  });
+
+  it('blocks the create submit when an advanced field is out of range (FIX-e-burgos-034)', async () => {
+    vi.mocked(useAdvancedDraft).mockReturnValue({
+      draft: {
+        ...DEFAULT_ADVANCED_DRAFT,
+        reactiveLoopEnabled: true,
+        minActionIntervalSec: '999999',
+      },
+      setField: vi.fn(),
+      isFieldEnabled: () => true,
+      changedFields: new Set<TradingConfigAdvancedField>([
+        'reactiveLoopEnabled',
+        'minActionIntervalSec',
+      ]),
+      isWithinRanges: false,
+    } satisfies UseAdvancedDraftResult);
+
+    renderModal();
+
+    advanceThrough('identity');
+    fireEvent.change(nameInput(), { target: { value: 'Mi bot' } });
+    advanceThrough('thresholds', 'risk', 'timing', 'advanced', 'review');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('submits normally when an advanced numeric field is changed to an in-range value (FIX-e-burgos-034)', async () => {
+    renderModal();
+
+    advanceThrough('identity');
+    fireEvent.change(nameInput(), { target: { value: 'Mi bot' } });
+
+    advanceThrough('thresholds', 'risk', 'timing', 'advanced');
+
+    fireEvent.click(screen.getByRole('button', { name: /Reactive loop/ }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Reactive loop' }));
+    fireEvent.change(
+      screen.getByRole('slider', { name: 'Maximum actions per hour' }),
+      { target: { value: '30' } },
+    );
+
+    advanceThrough('review');
+    fireEvent.click(screen.getByRole('button', { name: 'Create Agent' }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledTimes(1);
+    });
+    expect(api.post).toHaveBeenCalledWith('/trading/config', {
+      ...POST_BODY_BEFORE_CYCLE,
+      reactiveLoopEnabled: true,
+      maxActionsPerHour: 30,
     });
   });
 });

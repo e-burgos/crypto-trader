@@ -1420,10 +1420,10 @@
       "type": "IMPROVEMENT",
       "severity": "low",
       "created_at": "2026-09-05",
-      "resolved_at": null,
-      "validated_at": null,
-      "test_reference": null,
-      "status": "in-progress",
+      "resolved_at": "2026-09-05",
+      "validated_at": "2026-09-05",
+      "test_reference": "new-agent-stepper-modal.spec.tsx: 'blocks the create submit when an advanced field is out of range (FIX-e-burgos-034)' (useAdvancedDraft mockeado con isWithinRanges false, POST nunca llamado) y 'submits normally when an advanced numeric field is changed to an in-range value' (hook real, body con reactiveLoopEnabled true y maxActionsPerHour 30). pnpm nx test web -- new-agent-stepper-modal 4/4; pnpm nx typecheck web OK; lint sin warnings nuevos. Reproducido en el main loop.",
+      "status": "validated",
       "id": "FIX-e-burgos-034",
       "spec_id": "spec-e-burgos-009-agent-advanced-config-ui",
       "fix_document": "sdd/fixes/fix-e-burgos-034.md",
@@ -1438,7 +1438,18 @@
       "affected_files": [
         "apps/web/src/components/config/new-agent-stepper-modal.tsx",
         "apps/web/src/components/config/new-agent-stepper-modal.spec.tsx"
-      ]
+      ],
+      "usage": {
+        "provider_model": "claude/sonnet",
+        "effort": "medium",
+        "tokens_in": 133480,
+        "tokens_out": 23555,
+        "tokens_total": 157035,
+        "approx": false,
+        "source": "agent-usage-notification",
+        "recorded_at": "2026-09-05",
+        "agent": "implementor-front"
+      }
     }
   ]
 }
